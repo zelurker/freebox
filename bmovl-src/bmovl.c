@@ -3,141 +3,21 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <SDL/SDL.h>
-#include <SDL/SDL_image.h>
 #include <SDL/SDL_ttf.h>
-
-#define DEBUG 0
-
-static void
-blit(int fifo, unsigned char *bitmap, int width, int height,
-     int xpos, int ypos, int alpha, int clear)
-{
-	char str[100];
-	int  nbytes;
-	
-	sprintf(str, "RGBA32 %d %d %d %d %d %d\n",
-	        width, height, xpos, ypos, alpha, clear);
-	
-	if(DEBUG) printf("Sending %s", str);
-
-	write(fifo, str, strlen(str));
-	nbytes = write(fifo, bitmap, width*height*4);
-
-	if(DEBUG) printf("Sent %d bytes of bitmap data...\n", nbytes);
-}
-
-static void
-set_alpha(int fifo, int width, int height, int xpos, int ypos, int alpha) {
-	char str[100];
-
-	sprintf(str, "ALPHA %d %d %d %d %d\n",
-	        width, height, xpos, ypos, alpha);
-	
-	if(DEBUG) printf("Sending %s", str);
-
-	write(fifo, str, strlen(str));
-}
-
-static void
-paint(unsigned char* bitmap, int size, int red, int green, int blue, int alpha) {
-
-	int i;
-
-	for(i=0; i < size; i+=4) {
-		bitmap[i+0] = red;
-		bitmap[i+1] = green;
-		bitmap[i+2] = blue;
-		bitmap[i+3] = alpha;
-	}
-}
-
-static void send_command(int fifo,char *cmd) {
-	write(fifo,cmd,strlen(cmd));
-}
-
-static void reformat_string(char *str, int len) {
-	if (strlen(str) > len) {
-		char *t = str;
-		while (strlen(t) > len) {
-			char old = t[len]; t[len] = 0;
-			char *s = strrchr(t,' ');
-			t[len] = old;
-			if (s) *s = '\n'; else break;
-			t = s+1;
-		}
-	}
-}
-
-static void get_size(TTF_Font *font, char *text, int *w, int *h) {
-	/* Version de TTF_SizeText qui s'adapte aux retours charriots */
-	*w = 0; *h = 0;
-	char *beg = text, *s;
-	int myw,myh;
-	do {
-		s = strchr(beg,'\n');
-		if (s) *s = 0;
-		TTF_SizeText(font,beg,&myw,&myh);
-		if (myw > *w) *w = myw;
-		*h += myh;
-		if (s) {
-			*s = '\n';
-			beg = s+1;
-		}
-	} while (s);
-}
-
-static int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
-		char *text, int color)
-{
-	/* Gère les retours charriots dans la chaine, renvoie la hauteur totale */
-	int h = 0;
-	char *beg = text,*s;
-	do {
-		s = strchr(beg,'\n');
-		if (s) *s = 0;
-		if (*beg) {
-			SDL_Rect dest;
-			dest.x = x; dest.y = y;
-			SDL_Color *col = (SDL_Color*)&color; // dirty hack !
-			SDL_Surface *tf = TTF_RenderText_Solid(font,beg,*col);
-			SDL_BlitSurface(tf,NULL,sf,&dest);
-			h += tf->h;
-			y += tf->h;
-			SDL_FreeSurface(tf);
-		} else {
-			h += 12;
-			y += 12;
-		}
-		if (s) {
-			*s = '\n';
-			beg = s+1;
-		}
-	} while (s && *beg);
-	return h;
-}
-
-static int myfgets(char *buff, int size, FILE *f) {
-  fgets(buff,size,f);
-  int len = strlen(buff);
-  while (len > 0 && buff[len-1] < 32)
-    buff[--len] = 0;
-  return len;
-}
+#include <SDL/SDL_image.h>
+#include "lib.h"
 
 int main(int argc, char **argv) {
 
 	int fifo=-1;
-	int width=0, height=0, xpos=0, ypos=0, alpha=0, clear=0;
+	int width=0, height=0;
 	int i;
 
-	
-	/*
-	if(argc<3) {
+	if(argc<4) {
 		printf("Usage: %s <bmovl fifo> <width> <height> <font size>\n", argv[0]);
 		printf("width and height are w/h of MPlayer's screen!\n");
 		exit(10);
 	}
-	*/
 
 	int fsize = atoi(argv[4]);
 	TTF_Init();
@@ -156,12 +36,11 @@ int main(int argc, char **argv) {
 	picture = strdup(buff);
 	if (*channel) chan = IMG_Load(channel);
 	if (*picture) pic = IMG_Load(picture);
-	printf("after img_load chan from %s:%x pic %s:%x\n",channel,chan,picture,pic);
 	myfgets(buff,2048,stdin);
 	heure = strdup(buff);
 	myfgets(buff,2048,stdin);
 	title = strdup(buff);
-	
+
 	/* Determine max length of text */
 	width = atoi(argv[2]);
 	height = atoi(argv[3]);
@@ -178,35 +57,41 @@ int main(int argc, char **argv) {
 	int myx,w=0,h;
 	if (chan) w = chan->w;
 	if (pic && pic->w>w) w = pic->w;
-	if (w) myx = 16+w; else myx = 8;
+	if (w) myx = 26+w; else myx = 18;
 	int wtext=0,htext=0;
-	TTF_SizeText(font,"abcdefghij",&w,&h);
-	int maxl = (width-myx-8)*10/w;
-	printf("maxl = %d myx %d\n",maxl,myx);
-	reformat_string(title,maxl);
 	buff[0] = 0;
 	int len = 0;
 	// Carrier returns are included, a loop is mandatory then
 	while (!feof(stdin) && len < 2047) {
-		myfgets(&buff[len],2048-len,stdin);
-		len = strlen(buff);
+		fgets(&buff[len],2048-len,stdin); // we keep the eol here
+		while (buff[len]) len++;
 	}
+	while (buff[len-1] < 32) buff[--len] = 0; // remove the last one though
 	desc = strdup(buff);
-	reformat_string(desc,maxl);
 	printf("time : %s\ntitle : %s\ndesc : %s\n...\n",heure,title,desc);
 
 	TTF_SetFontStyle(font,TTF_STYLE_BOLD);
-	TTF_SizeText(font,heure,&w,&h);
+	get_size(font,heure,&w,&h,width-32); // 1st string : all the width (top)
 	htext += h;
 	wtext = w;
-	get_size(font,title,&w,&h);
+	int himg = h;
+	int maxw = 0;
+	if (pic) maxw = pic->w;
+	if (chan && chan->w>maxw) maxw = chan->w;
+	if (maxw) maxw = width-maxw-24;
+	else
+		maxw = width - 32;
+
+	get_size(font,title,&w,&h,maxw);
 	htext += h;
 	if (w > wtext) wtext = w;
 	TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
 	htext += 12;
-	get_size(font,desc,&w,&h);
+	get_size(font,desc,&w,&h,maxw);
 	htext += h;
 	if (w > wtext) wtext = w;
+	if (h > height-16) h = height-16;
+
 	printf("text total width %d height %d\n",wtext,htext);
 
 	Uint32 rmask, gmask, bmask, amask;
@@ -225,22 +110,28 @@ int main(int argc, char **argv) {
 	amask = 0xff000000;
 #endif
 
-	w = (width >= 720 ? 720 : width);
-	h = 0;
-	if (pic) h = 8+pic->h;
-	if (chan) h += 8+chan->h;
-	if (h > htext) htext = h;
-	h = (htext + 16 < height ? htext + 16 : height);
+	if (pic) himg += 8+pic->h;
+	if (chan) himg += 8+chan->h;
+	if (himg > htext) htext = himg;
+	h = (htext + 16+12 < height-16 ? htext + 16+12 : height-16);
 
-	SDL_Surface *sf = SDL_CreateRGBSurface(SDL_SWSURFACE,w,
+	SDL_Surface *sf = SDL_CreateRGBSurface(SDL_SWSURFACE,width,
 			h,32,rmask,gmask,bmask,amask);
+	printf("bitmap %d x %d\n",sf->w,sf->h);
 	int bg = SDL_MapRGB(sf->format,0x20,0x20,0x70);
 	int fg = SDL_MapRGB(sf->format,0xff,0xff,0xff);
 	SDL_FillRect(sf,NULL,fg);
 	SDL_Rect r; r.x = r.y = 1; r.w = sf->w - 2; r.h = sf->h-2;
 	SDL_FillRect(sf,&r,bg);
-	r.x = 8;
-	r.y = 8;
+
+	// Ok, finalement on affiche les chaines (heure, titre, desc)
+	int x = myx;
+	int y = 8;
+	printf("output x : %d\n",x);
+	TTF_SetFontStyle(font,TTF_STYLE_BOLD);
+	y += put_string(sf,font,18,y,heure,fg,width-32,0,width,h-8);
+	r.x = 18;
+	r.y = y;
 	if (chan) {
 		SDL_BlitSurface(chan,NULL,sf,&r);
 		r.y += chan->h+8;
@@ -248,20 +139,14 @@ int main(int argc, char **argv) {
 	}
 	if (pic) {
 		SDL_BlitSurface(pic,NULL,sf,&r);
+		r.y += pic->h+8;
 		SDL_FreeSurface(pic);
 	}
-
-	// Ok, finalement on affiche les chaines (heure, titre, desc)
-	int x = myx;
-	int y = 8;
-	printf("output x : %d\n",x);
-	TTF_SetFontStyle(font,TTF_STYLE_BOLD);
-	y += put_string(sf,font,x,y,heure,fg);
-	y += put_string(sf,font,x,y,title,fg);
+	y += put_string(sf,font,x,y,title,fg,width-x-18,r.y,width,h-8);
 	y += 12;
 	TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
-	y += put_string(sf,font,x,y,desc,fg);
-	
+	y += put_string(sf,font,x,y,desc,fg,width-x-18,r.y,width,h-8);
+
 	fifo = open( argv[1], O_RDWR );
 	if(!fifo) {
 		fprintf(stderr, "Error opening FIFO %s!\n", argv[1]);
@@ -269,14 +154,14 @@ int main(int argc, char **argv) {
 	}
 
 	/*
-	image = IMG_Load(argv[2]);
-	if(!image) {
-		fprintf(stderr, "Couldn't load image %s!\n", argv[2]);
-		exit(10);
-	}
+	   image = IMG_Load(argv[2]);
+	   if(!image) {
+	   fprintf(stderr, "Couldn't load image %s!\n", argv[2]);
+	   exit(10);
+	   }
 
-	printf("Loaded image %s: width=%d, height=%d\n", argv[2], image->w, image->h);
-	*/
+	   printf("Loaded image %s: width=%d, height=%d\n", argv[2], image->w, image->h);
+	   */
 
 	// Display
 	send_command(fifo,"SHOW\n");
@@ -288,10 +173,11 @@ int main(int argc, char **argv) {
 	// Fade in sf
 	for(i=0; i >= -255; i-=5)
 		set_alpha(fifo, sf->w, sf->h,
-		          x, y, i);
+				x, y, i);
 
 	// Clean up
 	SDL_FreeSurface(sf);
 	send_command(fifo,"HIDE\n");
 	close(fifo);
+	return 0;
 }
