@@ -1,8 +1,56 @@
 
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
+#include <unistd.h>
+#include <sys/time.h>
+#include <sys/types.h>
 
 #define DEBUG 0
+
+int get_bg(SDL_Surface *sf) { return SDL_MapRGB(sf->format,0x20,0x20,0x70);}
+int get_fg(SDL_Surface *sf) { return SDL_MapRGB(sf->format,0xff,0xff,0xff);}
+
+SDL_Surface *create_surface(int w, int h)
+{
+	Uint32 rmask, gmask, bmask, amask;
+
+	/* SDL interprets each pixel as a 32-bit number, so our masks must depend
+	 *         on the endianness (byte order) of the machine */
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+	rmask = 0xff000000;
+	gmask = 0x00ff0000;
+	bmask = 0x0000ff00;
+	amask = 0x000000ff;
+#else
+	rmask = 0x000000ff;
+	gmask = 0x0000ff00;
+	bmask = 0x00ff0000;
+	amask = 0xff000000;
+#endif
+	SDL_Surface *sf = SDL_CreateRGBSurface(SDL_SWSURFACE,w,
+			h,32,rmask,gmask,bmask,amask);
+	int bg = get_bg(sf);
+	int fg = get_fg(sf);
+	SDL_FillRect(sf,NULL,fg);
+	SDL_Rect r; r.x = r.y = 1; r.w = sf->w - 2; r.h = sf->h-2;
+	SDL_FillRect(sf,&r,bg);
+	return sf;
+}
+
+static int write_select(int fifo, void *buff, int len)
+{
+	int ret = 0;
+	while (len > 0) {
+		int bout = write(fifo,buff,len);
+		len -= bout;
+		ret += bout;
+		buff += bout;
+		if (len)
+			printf("write_select: bout = %d fifo %d\n",bout,fifo);
+	}
+
+	return ret;
+}
 
 void
 blit(int fifo, unsigned char *bitmap, int width, int height,
@@ -16,8 +64,8 @@ blit(int fifo, unsigned char *bitmap, int width, int height,
 	
 	if(DEBUG) printf("Sending %s", str);
 
-	write(fifo, str, strlen(str));
-	nbytes = write(fifo, bitmap, width*height*4);
+	write_select(fifo, str, strlen(str));
+	nbytes = write_select(fifo, bitmap, width*height*4);
 
 	if(DEBUG) printf("Sent %d bytes of bitmap data...\n", nbytes);
 }
@@ -31,11 +79,11 @@ set_alpha(int fifo, int width, int height, int xpos, int ypos, int alpha) {
 	
 	if(DEBUG) printf("Sending %s", str);
 
-	write(fifo, str, strlen(str));
+	write_select(fifo, str, strlen(str));
 }
 
 void send_command(int fifo,char *cmd) {
-	write(fifo,cmd,strlen(cmd));
+	write_select(fifo,cmd,strlen(cmd));
 }
 
 void get_size(TTF_Font *font, char *text, int *w, int *h, int maxw) {
@@ -84,10 +132,14 @@ void get_size(TTF_Font *font, char *text, int *w, int *h, int maxw) {
 }
 
 int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
-		char *text, int color, int maxw, int maxy, int width, int maxh)
+		char *text, int color, int maxy)
 {
 	/* Gère les retours charriots dans la chaine, renvoie la hauteur totale */
+	/* maxy is the maximum y value beside the pictures, after this the text
+	 * goes back on the left */
+	int maxw = sf->w-x-8;
 	int h = 0;
+	int maxh = sf->h-8;
 	char *beg = text,*s;
 	do {
 		s = strchr(beg,'\n');
@@ -97,6 +149,12 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 			char *white,old;
 			int myw,myh,pos;;
 			do { // cut on whites
+				if (y > maxy && x > 18) {
+					// We just got below the pictures, use the space then !
+					x = 18;
+					maxw = sf->w-x-8;
+				}
+
 				white = NULL;
 				do {
 					TTF_SizeText(font,beg,&myw,&myh);
@@ -127,11 +185,6 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 				y += tf->h;
 				SDL_FreeSurface(tf);
 
-				if (y > maxy && x > 18) {
-					// We just got below the pictures, use the space then !
-					maxw = width-32;
-					x = 18;
-				}
 				if (white) {
 					*white = ' ';
 					beg = white+1;
@@ -153,7 +206,7 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 int myfgets(char *buff, int size, FILE *f) {
   fgets(buff,size,f);
   int len = strlen(buff);
-  while (len > 0 && buff[len-1] < 32)
+  while (len > 0 && abs(buff[len-1]) < 32)
     buff[--len] = 0;
   return len;
 }

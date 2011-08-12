@@ -1,14 +1,16 @@
 # debug flags
-CLFAGS=-Wall -g `sdl-config --cflags `
+CFLAGS=-Wall -g `sdl-config --cflags `
 
 # opt flags
-# CLFAGS=-O2 `sdl-config --cflags`
+# CFLAGS=-O2 `sdl-config --cflags`
 
 %.o: %.c
 	gcc $(CFLAGS) -c $< -o $@
 
+all: bmovl
+
 bmovl: bmovl.o lib.o
-	$(CC) -o $@ bmovl.o lib.o `sdl-config --libs` -lSDL_image -lSDL_ttf 
+	$(CC) -g -o $@ bmovl.o lib.o `sdl-config --libs` -lSDL_image -lSDL_ttf 
 
 clean:
-	rm -f bmovl lib.o
+	rm -f bmovl *.o 
