@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# lance le 1er process mplayer et dumpe le flux sur disque
+# Tache de toujours réussir, retourne à d'anciennes valeurs connues si tout
+# foire
+
+service=$1
+flavour=$2
+# echo run_mp1: going for $1 $2
+if [ -f player1.pid ] && ps -p `cat player1.pid` >& /dev/null; then
+	kill `cat player1.pid` && rm -f player1.pid
+fi
+rm -f stream.dump 
+ok=0
+while [ "$ok" == "0" ]; do
+    # echo run_mp1: service $service flavour $flavour
+	if [ "$flavour" == "" ]; then
+		# dvb
+		mplayer -quiet -dumpstream dvb://"$service" >& log &
+	else
+		mplayer -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" >& log &
+	fi
+	pid=$!
+	echo $pid > player1.pid
+	tries=0
+	# Laisse au moins 3s au flux pour commencer à arriver
+	while [ $tries -lt 3 ] && ! [ -f stream.dump ] && ps -p `cat player1.pid` >& /dev/null; do
+		sleep 1
+		tries=$(( $tries+1 ))
+	done
+	if ! ps -p `cat player1.pid` >& /dev/null && grep -q "Server returned 403" log
+	then
+		ps -p $pid
+		if [ "$tried" == "" ] && [ "$flavour" != "" ]; then
+			tried=flavour
+			if [ "$flavour" == "sd" ]; then
+				flavour=ld
+			elif [ "$flavour" == "ld" ]; then
+				flavour=sd
+			fi
+		else
+			serv=`head -n 3 current|tail -n 1`
+			flav=`head -n 4 current|tail -n 1`
+			if [ "$service" == "$serv" ] && [ "$flavour" == "$flav" ]; then
+				service=201
+				flavour=sd
+			else
+				service=$serv
+				flavour=$flav
+			fi
+		fi
+	else
+		size=0
+		# Et attend que la taille sur disque soit au moins d'1 Mo
+		while [ -f stream.dump ] && [ $size -lt 1024000 ]; do
+			size=`stat --printf=%s stream.dump`
+		done
+		ok=1 # fini !
+	fi
+done
+echo name "$service" $flavour > fifo_list
+chaine=`cat fifo_list`
+# echo run_mp1: fin
+echo $chaine > current
+if [ "$flavour" != "" ]; then
+	echo freebox >> current
+else
+	echo dvb >> current
+fi
+echo $service >> current
+echo $flavour >> current
+exit 0

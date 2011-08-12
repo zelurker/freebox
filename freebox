@@ -1,0 +1,107 @@
+#!/bin/bash
+
+function launch() {
+	rm -f fifo fifo_cmd
+	mkfifo fifo fifo_cmd
+	mplayer -quiet $length -vf bmovl=1:0:fifo,screenshot,kerndeint \
+		-stop-xscreensaver -identify -input \
+		conf=$PWD/input.conf:file=fifo_cmd \
+		stream.dump >& id &
+	echo $! > player2.pid
+}
+
+rm -f stream.dump id
+service=$1
+flavour=$2
+src=""
+if [ "$service" == "" ] || [ "$flavour" == "" ]; then
+	service=`head -n 3 current|tail -n 1`
+	flavour=`head -n 4 current|tail -n 1`
+	src=`head -n 2 current|tail -n 1`
+fi
+if [ "$service" == "" ] || [ "$src" == "freebox" ] && [ "$flavour" == "" ]; then
+	# reset to 1st working channel then
+	service=201
+	flavour=sd
+fi
+echo service $service flavour $flavour source $src
+# 1st kill all the old eventual processes, starting by freebox.pid
+for n in freebox.pid player1.pid list.pid info.pid; do
+	if [ -f $n ]; then
+		kill `cat $n` >& /dev/null
+		rm -f $n
+	fi
+done
+echo $$ > freebox.pid
+if ! ps -p `cat info_pl.pid`>&/dev/null; then
+	perl tv_grab_fr_iphone.pl &
+fi
+if [ ! -f info_list.pid ]; then
+	perl list.pl &
+elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_list.pid` ); then
+	kill `cat info_list.pid` >& /dev/null && rm -f info_list.pid
+	perl list.pl &
+fi
+./run_mp1 "$service" $flavour
+if [ -f stream.dump ]; then
+
+	again=1
+	# Cette boucle est pour récupérer la main quand on sort par erreur du
+	# fichier par la fin. On doit boucler sur l'identification du fichier parce
+	# que c'est réutiliser par eval_end.pl pour estimer où commencer la reprise
+	# inconvénient majeur : ça ralentit la reprise
+	while [ "$again" == "1" ]; do
+		# En cas de zapping, on se retrouve ici, faut remettre à jour chaine
+		chaine=`head -n 1 current`
+
+		if [ -f player2.pid ] && ps -p `cat player2.pid` >& /dev/null; then
+			# kill le 2ème process le + tard possible pour minimiser la
+			# disparition de la fenêtre pendant le zapping
+			kill `cat player2.pid`
+			rm -f player2.pid
+		fi
+		if [ -f info.pid ]; then
+			if ps -p `cat info.pid` >& /dev/null; then
+				echo disconnect > fifo_bmovl
+			else
+				rm -f info.pid
+			fi
+		fi
+		echo launch
+		launch
+		pid=$!
+		if ! [ -f info.pid ]; then
+			rm -f fifo_bmovl
+			./bmovl-src/bmovl fifo &
+		else
+			echo connect > fifo_bmovl
+		fi
+		if [ "$chaine" == "nolife" ] || [ "$chaine" == "Nolife" ]; then
+			(perl noair.pl &)
+		elif [ "$chaine" != "" ]; then
+			echo "prog $chaine" > fifo_info
+		fi
+		wait $pid
+		length=`perl eval_end.pl`
+		if [ "$length" != "0" ] && [ "$length" != "" ]; then
+			length="-ss $length"
+		else
+			length=""
+		fi
+
+		if ! ps -p `cat player1.pid`>&/dev/null || ! grep -q "End of file" id; then
+			again=0
+		fi
+		echo end of while loop length $length again $again
+	done
+	for n in player1.pid info.pid list.pid; do
+		if [ -f $n ]; then
+			kill `cat $n` >& /dev/null
+			rm -f $n
+		fi
+	done
+	rm -f player2.pid freebox.pid
+fi
+rm -f info_coords list_coords
+kill `cat info_list.pid` && rm -f info_list.pid
+
