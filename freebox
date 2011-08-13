@@ -12,6 +12,7 @@ function launch() {
 		conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 		stream.dump >& id &
 	echo $! > player2.pid
+	audio2=""
 }
 
 rm -f stream.dump id
@@ -117,6 +118,7 @@ if [ -f stream.dump ]; then
 			again=0
 		fi
 		# echo end of while loop length $length again $again
+		audio=`head -n 5 current|tail -n 1`
 	done
 	for n in player1.pid info.pid list.pid; do
 		if [ -f $n ]; then
