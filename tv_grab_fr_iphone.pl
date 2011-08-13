@@ -162,6 +162,7 @@ my $last_hour = 0;
 my $date_offset = 0;
 
 system("rm -f fifo_info && mkfifo fifo_info");
+my $start_timer = 0;
 read_fifo:
 my ($channel,$long) = ();
 # my $timer_start;
@@ -169,10 +170,10 @@ my $time;
 my $channel0 = "";
 if (!$reread) {
 	do {
-		my $start_timer;
+		# Celui là sert à vérifier les déclenchements externes (noair.pl)
 		$start_timer = 1 if (-f "info_coords" && ! -f "list_coords");
 		eval {
-			alarm(10);
+			alarm(5);
 			local $SIG{ALRM} = sub { die "alarm clock restart" };
 			open(F,"<fifo_info") || die "can't read fifo\n";
 			$channel0 = <F> || die "pass channel name on fifo\n";
@@ -185,6 +186,7 @@ if (!$reread) {
 			if ($start_timer && -f "info_coords" && ! -f "list_coords") {
 				alpha("info_coords",0,-255,-5);
 				unlink "info_coords";
+				$start_timer = 0;
 			}
 		}
 	} while (!$channel0);
@@ -195,6 +197,7 @@ if (!$reread) {
 		goto read_fifo;
 	} elsif ($channel0 =~ s/^prog //) {
 		$channel = lc($channel0);
+		$start_timer = 1;
 	} else {
 		print "commande inconnue $channel0\n";
 		goto read_fifo;
@@ -260,7 +263,7 @@ for (my $n=0; $n<=$#fields; $n++) {
 			print $out "$name\n";
 			print $out "picture.jpg" if ($sub[9]);
 
-			print $out "\n$sub[1] : $sub[3] - $sub[4]\n$sub[2]\n\n$sub[6]\n";
+			print $out "\n$sub[1] : $sub[3] - $sub[4]\n$sub[2]\n\n$sub[6]\n$sub[7]\n";
 			close($out);
 #			  system("feh picture.jpg &") if ($sub[9]);
 			$found = 2;
