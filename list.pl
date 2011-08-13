@@ -163,8 +163,8 @@ while (1) {
 	} elsif ($cmd =~ /^name /) {
 		open(F,">fifo_list") || die "can't write fifo_list\n";
 		my @arg = split(/ /,$cmd);
-		if ($#arg != 2 && $#arg != 1) {
-			print F "syntax: name service [flavour]\n";
+		if ($#arg != 2 && $source eq "freebox") {
+			print F "syntax: name service [flavour] $#arg\n";
 		} else {
 			if ($source eq "dvb") {
 				$cmd =~ s/^name //;
