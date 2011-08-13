@@ -47,6 +47,8 @@ static int write_select(int fifo, void *buff, int len)
 		buff += bout;
 		if (len)
 			printf("write_select: bout = %d fifo %d\n",bout,fifo);
+		if (bout < 0)
+		    break; // fifo closed probably
 	}
 
 	return ret;
@@ -131,6 +133,10 @@ void get_size(TTF_Font *font, char *text, int *w, int *h, int maxw) {
 	} while (s);
 }
 
+static char *next;
+
+char *get_next_string() { return next; }
+
 int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 		char *text, int color, int maxy)
 {
@@ -141,6 +147,8 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 	int h = 0;
 	int maxh = sf->h-8;
 	char *beg = text,*s;
+	int fin = 0;
+	next = NULL;
 	do {
 		s = strchr(beg,'\n');
 		if (s) *s = 0;
@@ -181,6 +189,10 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 				SDL_Surface *tf = TTF_RenderText_Solid(font,beg,*col);
 				if (y + tf->h < maxh)
 					SDL_BlitSurface(tf,NULL,sf,&dest);
+				else {
+					fin = 1;
+					next = beg;
+				}
 				h += tf->h;
 				y += tf->h;
 				SDL_FreeSurface(tf);
@@ -189,6 +201,7 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 					*white = ' ';
 					beg = white+1;
 				}
+				if (fin) break;
 			} while (white);
 
 		} else {
@@ -199,14 +212,16 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 			*s = '\n';
 			beg = s+1;
 		}
+		if (fin) break;
 	} while (s && *beg);
 	return h;
 }
 
 int myfgets(char *buff, int size, FILE *f) {
-  fgets(buff,size,f);
-  int len = strlen(buff);
-  while (len > 0 && abs(buff[len-1]) < 32)
-    buff[--len] = 0;
-  return len;
+	char *s = fgets(buff,size,f);
+	if (!s) return 0;
+	int len = strlen(buff);
+	while (len > 0 && abs(buff[len-1]) < 32)
+		buff[--len] = 0;
+	return len;
 }

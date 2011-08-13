@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <signal.h>
 
 /* Serveur bmovl : apparemment si on laisse 2 processes se partager la fifo
  * bmovl, les donn√©es se m√©langent ! Normalement √ßa ne devrait pas arriver,
@@ -18,127 +19,202 @@
  * charriot, ensuite stdin et redirig√© sur la fifo et le tout transmis √† une
  * fonction d√©di√©e en fonction de la ligne de commande, puis on boucle. */
 
+static int fifo;
+static char *fifo_str;
+
+/* Les commandes de connexion/dÈconnexion au fifo mplayer doivent Ítre passÈs
+ * par signaux et pas par le fifo de commande parce que malheureusement un
+ * mplayer peut quitter pendant qu'une commande est en cours, dans ce cas l‡
+ * pour ne pas rester bloquÈ en lecture rien de mieux que le signal */
+static void disconnect(int signal) {
+	if (fifo)
+		close(fifo);
+	fifo = 0;
+}
+
+static void connect(int signal) {
+	fifo = open( fifo_str, O_RDWR );
+	if (fifo <= 0) {
+		printf("server: could not open fifo !\n");
+	}
+}
+
 static int info(int fifo, int argc, char **argv)
 {
-	if(argc<4) {
-		printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
-		printf("width and height are w/h of MPlayer's screen!\n");
-		return -1;
-	}
+	char *s = strrchr(argv[0],'/');
+	if (s) argv[0] = s+1;
 
-	int maxh;
-	int width = atoi(argv[2]);
-	int height = atoi(argv[3]);
-	int deby = 0;
-	if (argc == 5) deby = atoi(argv[4]);
-	maxh = height - deby - 8;
-	int fsize = height/35;
-	TTF_Init();
-	TTF_Font *font = TTF_OpenFont("Vera.ttf",fsize);
-	if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
-	if (!font) {
-		printf("Could not load Vera.ttf, come back with it !\n");
-		return -1;
-	}
+	/* La gestion du dÈfilement du bandeau par page up/down doit se faire
+	 * ici et pas dans le script perl parce que le script balance tout le
+	 * bandeau sans savoir ce qui va pouvoir Ítre affichÈ */
 
-    char *channel,*picture,*heure, *title, *desc,buff[2048];
-    SDL_Surface *chan = NULL,*pic = NULL;
-    myfgets(buff,2048,stdin);
-    channel = strdup(buff);
-    myfgets(buff,2048,stdin);
-    picture = strdup(buff);
-    if (*channel) chan = IMG_Load(channel);
-    if (*picture) pic = IMG_Load(picture);
-    myfgets(buff,2048,stdin);
-    heure = strdup(buff);
-    myfgets(buff,2048,stdin);
-    title = strdup(buff);
+	static int width, height, fg, x0, y0, nb_prev;
+#define MAX_PREV 10
+	static char *desc, *next, *prev[MAX_PREV], *str;
+	static TTF_Font *font;
+	static SDL_Surface *sf;
+	static SDL_Rect r;
+	int x,y;
+	SDL_Surface *chan = NULL,*pic = NULL; 
 
-    /* Determine max length of text */
-	if (chan && (chan->w >= width/2 || chan->h+8+(pic ? pic->h : 0) > maxh)) {
-		/* Give priority to picture, remove channel logo 1st if not enough
-		 * space */
-		SDL_FreeSurface(chan);
-		chan = NULL;
-	}
-	if (pic && (pic->w >= width/2 || pic->h+8+(chan ? chan->h+8 : 0)>maxh)) {
-		SDL_FreeSurface(pic);
-		pic = NULL;
-	}
-
-    int myx,w=0,h;
-    if (chan) w = chan->w;
-    if (pic && pic->w>w) w = pic->w;
-    if (w) myx = 26+w; else myx = 18;
-    int wtext=0,htext=0;
-    buff[0] = 0;
-    int len = 0;
-    // Carrier returns are included, a loop is mandatory then
-    while (!feof(stdin) && len < 2047) {
-		fgets(&buff[len],2048-len,stdin); // we keep the eol here
-		while (buff[len]) len++;
-    }
-    while (len > 0 && buff[len-1] < 32) buff[--len] = 0; // remove the last one though
-    desc = strdup(buff);
-	while (!feof(stdin)) fgets(buff,2048,stdin); // empty the pipe
-
-    TTF_SetFontStyle(font,TTF_STYLE_BOLD);
-    get_size(font,heure,&w,&h,width-32); // 1st string : all the width (top)
-    htext += h;
-    wtext = w;
-    int himg = h;
-    int maxw = 0;
-    if (pic) maxw = pic->w;
-    if (chan && chan->w>maxw) maxw = chan->w;
-    if (maxw) maxw = width-maxw-24;
-    else
-	maxw = width - 32;
-
-    get_size(font,title,&w,&h,maxw);
-    htext += h;
-    if (w > wtext) wtext = w;
-    TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
-    htext += 12;
-    get_size(font,desc,&w,&h,maxw);
-    htext += h;
-    if (w > wtext) wtext = w;
-    if (h > height-16) h = height-16;
-
-    if (pic) himg += 8+pic->h;
-    if (chan) himg += 8+chan->h;
-    if (himg > htext) htext = himg;
-    h = (htext + 16+12 < height-16 ? htext + 16+12 : height-16);
-    if (h > maxh) h = maxh;
-
-    SDL_Surface *sf = create_surface(width,h);
-	int fg = get_fg(sf);
-
-	// Ok, finalement on affiche les chaines (heure, titre, desc)
-	int x = myx;
-	int y = 8;
-	TTF_SetFontStyle(font,TTF_STYLE_BOLD);
-	y += put_string(sf,font,18,y,heure,fg,0);
-	SDL_Rect r;
-	r.x = 18;
-	r.y = y;
-	if (chan) {
-		if (y + chan->h < sf->h) {
-			SDL_BlitSurface(chan,NULL,sf,&r);
-			r.y += chan->h+8;
+	if (!strcmp(argv[0],"bmovl")) {
+		if(argc<4) {
+			printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
+			printf("width and height are w/h of MPlayer's screen!\n");
+			return -1;
 		}
-		SDL_FreeSurface(chan);
-	}
-	if (pic) {
-		if (r.y + pic->h < sf->h) {
-			SDL_BlitSurface(pic,NULL,sf,&r);
-			r.y += pic->h+8;
+		char *channel,*picture,buff[8192];
+		char *heure, *title;
+		nb_prev = 0;
+		width = atoi(argv[2]);
+		height = atoi(argv[3]);
+		int deby = height/2;
+		if (argc == 5) deby = atoi(argv[4]);
+		int maxh = height - deby - 8;
+		int fsize = height/35;
+		if (desc) {
+			free(desc);
+			TTF_CloseFont(font);
+			SDL_FreeSurface(sf);
 		}
-		SDL_FreeSurface(pic);
+		font = TTF_OpenFont("Vera.ttf",fsize);
+		if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
+		if (!font) {
+			printf("Could not load Vera.ttf, come back with it !\n");
+			return -1;
+		}
+		myfgets(buff,8192,stdin);
+		channel = strdup(buff);
+		myfgets(buff,8192,stdin);
+		picture = strdup(buff);
+		if (*channel) chan = IMG_Load(channel);
+		if (*picture) pic = IMG_Load(picture);
+		myfgets(buff,8192,stdin);
+		heure = strdup(buff);
+		myfgets(buff,8192,stdin);
+		title = strdup(buff);
+
+		/* Determine max length of text */
+		if (chan && (chan->w >= width/2 || chan->h+8+(pic ? pic->h : 0) > maxh)) {
+			/* Give priority to picture, remove channel logo 1st if not enough
+			 * space */
+			SDL_FreeSurface(chan);
+			chan = NULL;
+		}
+		if (pic && (pic->w >= width/2 || pic->h+8+(chan ? chan->h+8 : 0)>maxh)) {
+			SDL_FreeSurface(pic);
+			pic = NULL;
+		}
+		int myx,w=0,h;
+		if (chan) w = chan->w;
+		if (pic && pic->w>w) w = pic->w;
+		if (w) myx = 26+w; else myx = 18;
+		int wtext=0,htext=0;
+		buff[0] = 0;
+		int len = 0;
+		// Carrier returns are included, a loop is mandatory then
+		while (!feof(stdin) && len < 8191) {
+			fgets(&buff[len],8192-len,stdin); // we keep the eol here
+			while (buff[len]) len++;
+		}
+		while (len > 0 && buff[len-1] < 32) buff[--len] = 0; // remove the last one though
+		desc = strdup(buff);
+		while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
+
+		TTF_SetFontStyle(font,TTF_STYLE_BOLD);
+		get_size(font,heure,&w,&h,width-32); // 1st string : all the width (top)
+		htext += h;
+		wtext = w;
+		int himg = h;
+		int maxw = 0;
+		if (pic) maxw = pic->w;
+		if (chan && chan->w>maxw) maxw = chan->w;
+		if (maxw) maxw = width-maxw-24;
+		else
+			maxw = width - 32;
+
+		get_size(font,title,&w,&h,maxw);
+		htext += h;
+		if (w > wtext) wtext = w;
+		TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
+		htext += 12;
+		get_size(font,desc,&w,&h,maxw);
+		htext += h;
+		if (w > wtext) wtext = w;
+		if (h > height-16) h = height-16;
+
+		if (pic) himg += 8+pic->h;
+		if (chan) himg += 8+chan->h;
+		if (himg > htext) htext = himg;
+		h = (htext + 16+12 < height-16 ? htext + 16+12 : height-16);
+		if (h > maxh) h = maxh;
+
+		sf = create_surface(width,h);
+		fg = get_fg(sf);
+
+		// Ok, finalement on affiche les chaines (heure, titre, desc)
+		x = myx;
+		y = 8;
+		TTF_SetFontStyle(font,TTF_STYLE_BOLD);
+		y += put_string(sf,font,18,y,heure,fg,0);
+		r.x = 18;
+		r.y = y;
+		if (chan) {
+			if (y + chan->h < sf->h) {
+				SDL_BlitSurface(chan,NULL,sf,&r);
+				r.y += chan->h+8;
+			}
+			SDL_FreeSurface(chan);
+		}
+		if (pic) {
+			if (r.y + pic->h < sf->h) {
+				SDL_BlitSurface(pic,NULL,sf,&r);
+				r.y += pic->h+8;
+			}
+			SDL_FreeSurface(pic);
+		}
+		y += put_string(sf,font,x,y,title,fg,r.y);
+		y += 12;
+		TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
+		str = desc;
+		next = NULL;
+		nb_prev = 0;
+		x0 = x; y0 = y;
+
+		// Clean up
+		free(channel);
+		free(picture);
+		free(heure);
+		free(title);
+	} else if (!strcmp(argv[0],"next")) {
+		x = x0; y = y0;
+		if (!next) return 0;
+		prev[nb_prev++] = str;
+		if (nb_prev == MAX_PREV) nb_prev = MAX_PREV-1;
+		str = next;
+		SDL_Rect b;
+		int bg = get_bg(sf);
+		b.x = x; b.y = y; b.w = sf->w-x-1; b.h = sf->h-y-1;
+		SDL_FillRect(sf,&b,bg);
+		b.x = 18; b.y = r.y; b.w = x-18; b.h = sf->h-r.y-1;
+		SDL_FillRect(sf,&b,bg);
+	} else if (!strcmp(argv[0],"prev")) {
+		if (!nb_prev) return 0;
+		str = prev[--nb_prev];
+		x = x0; y = y0;
+		SDL_Rect b;
+		int bg = get_bg(sf);
+		b.x = x; b.y = y; b.w = sf->w-x-1; b.h = sf->h-y-1;
+		SDL_FillRect(sf,&b,bg);
+		b.x = 18; b.y = r.y; b.w = x-18; b.h = sf->h-r.y-1;
+		SDL_FillRect(sf,&b,bg);
+	} else {
+		printf("info: unknown command %s\n",argv[0]);
+		return 1;
 	}
-	y += put_string(sf,font,x,y,title,fg,r.y);
-	y += 12;
-	TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
-	y += put_string(sf,font,x,y,desc,fg,r.y);
+		
+	y += put_string(sf,font,x,y,str,fg,r.y);
+	next = get_next_string();
 
 	// Display
 	x = (width-sf->w) / 2;
@@ -157,13 +233,6 @@ static int info(int fifo, int argc, char **argv)
 	fprintf(f,"%d %d %d %d ",sf->w, sf->h,
 			x, y);
 	fclose(f);
-	// Clean up
-	SDL_FreeSurface(sf);
-	free(heure);
-	free(title);
-	free(channel);
-	free(picture);
-	free(desc);
 
 	return 0;
 }
@@ -184,13 +253,12 @@ static int list(int fifo, int argc, char **argv)
 	// if (argc == 5) maxh = atoi(argv[4]);
 	// else maxh = height - 8;
 	int fsize = height/35;
-	TTF_Init();
 	TTF_Font *font = TTF_OpenFont("Vera.ttf",fsize);
 	if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
-	char *source,buff[2048],*list[20];
+	char *source,buff[4096],*list[20];
 	int num[20];
 	int current;
-	myfgets(buff,2048,stdin);
+	myfgets(buff,4096,stdin);
 	source = strdup(buff);
 	int nb=0,w,h;
 	int margew = width/36, margeh=height/36;
@@ -200,7 +268,7 @@ static int list(int fifo, int argc, char **argv)
 	int wlist,hlist;
 	get_size(font,source,&wlist,&hlist,maxw);
 	while (!feof(stdin) && nb<20) {
-		myfgets(buff,2048,stdin);
+		myfgets(buff,4096,stdin);
 		if (buff[0] == '*') current = nb;
 		char *end_nb = &buff[4];
 		while (*end_nb >= '0' && *end_nb <= '9')
@@ -301,6 +369,7 @@ static int list(int fifo, int argc, char **argv)
 	free(source);
 	for (n=0; n<nb; n++)
 		free(list[n]);
+	TTF_CloseFont(font);
 	return 0;
 }
 
@@ -321,18 +390,18 @@ void alpha(int fifo, int argc, char **argv)
 
 int main(int argc, char **argv) {
 
-	int fifo=-1;
+	signal(SIGUSR1, &connect);
+	signal(SIGUSR2, &disconnect);
 	unlink("fifo_bmovl");
 	mkfifo("fifo_bmovl",0700);
+	TTF_Init();
 	if (argc != 2) {
 		printf("pass fifo as unique argument\n");
 		return -1;
 	}
-	fifo = open( argv[1], O_RDWR );
-	if (fifo <= 0) {
-		printf("server: could not open fifo !\n");
-		return -1;
-	}
+	fifo_str = argv[1];
+	connect(0);
+	if (!fifo) return -1;
 	FILE *f = fopen("info.pid","w");
 	fprintf(f,"%d\n",getpid());
 	fclose(f);
@@ -354,6 +423,11 @@ int main(int argc, char **argv) {
 			}
 		}
 		int len = myfgets(buff,2048,server);
+		if (!len) {
+			fclose(server);
+			server = NULL;
+			continue;
+		}
 		argc = 1;
 		char *s = buff;
 		myargv[0] = buff;
@@ -365,12 +439,12 @@ int main(int argc, char **argv) {
 		}
 		stdin = server;
 		char *cmd = myargv[0];
-		if (!len) *cmd = 0;
 		s = strrchr(cmd,'/');
 		if (s) cmd =s+1;
 		if (fifo > 0) {
 			// commandes connect√©es
-			if (!strcmp(cmd,"bmovl"))
+			if (!strcmp(cmd,"bmovl") || !strcmp(cmd,"next") ||
+					!strcmp(cmd,"prev"))
 				info(fifo,argc,myargv);
 			else if (!strcmp(cmd,"list"))
 				list(fifo,argc,myargv);
@@ -378,35 +452,14 @@ int main(int argc, char **argv) {
 				clear(fifo,argc,myargv);
 			else if (!strcmp(cmd,"ALPHA"))
 				alpha(fifo,argc,myargv);
-			else if (!strcmp(cmd,"disconnect")) {
-				close(fifo);
-				fifo = 0;
-				printf("server: d√©connexion ok\n");
-			} else if (!strcmp(cmd,"connect")) {
-				close(fifo);
-				printf("connect reÁu... reconnexion...\n");
-				fifo = open( argv[1], O_RDWR );
-				if (fifo <= 0) {
-					printf("server: could not open fifo !\n");
-				} else
-					printf("server: reconnexion ok fifo %d\n",fifo);
-			
-			} else
-				printf("server: commande non reconnue :%s.\n",cmd);
 		} else {
-			// 1 seule commande accept√©e quand d√©connect√©
-			if (!strcmp(cmd,"connect")) {
-				fifo = open( argv[1], O_RDWR );
-				if (fifo <= 0) {
-					printf("server: could not open fifo !\n");
-				} else
-					printf("server: reconnexion ok fifo %d\n",fifo);
-			} else 
-				printf("server: commande ignor√©e : %s\n",cmd);
+			printf("server: commande ignor√©e : %s\n",cmd);
 		}
 		if (feof(server)) {
 				fclose(server);
 				server = NULL;
 		}
 	}
+	// never reach this point
+	// TTF_Quit();
 }

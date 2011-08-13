@@ -61,20 +61,25 @@ if [ -f stream.dump ]; then
 			rm -f player2.pid
 		fi
 		if [ -f info.pid ]; then
-			if ps -p `cat info.pid` >& /dev/null; then
-				echo disconnect > fifo_bmovl
-			else
+			if ! ps -p `cat info.pid` >& /dev/null; then
 				rm -f info.pid
 			fi
 		fi
-		echo launch
+		if [ "$length" != "" ]; then
+			# double check
+			length2=`perl eval_end.pl`
+			if [ "$length2" == "0" ] || [ "$length2" == "" ]; then
+				length=""
+			fi
+		fi
+		# echo launch length $length
 		launch
 		pid=$!
 		if ! [ -f info.pid ]; then
 			rm -f fifo_bmovl
 			./bmovl-src/bmovl fifo &
 		else
-			echo connect > fifo_bmovl
+			kill -USR1 `cat info.pid`
 		fi
 		if [ "$chaine" == "nolife" ] || [ "$chaine" == "Nolife" ]; then
 			(perl noair.pl &)
@@ -82,6 +87,7 @@ if [ -f stream.dump ]; then
 			echo "prog $chaine" > fifo_info
 		fi
 		wait $pid
+		kill -USR2 `cat info.pid`
 		length=`perl eval_end.pl`
 		if [ "$length" != "0" ] && [ "$length" != "" ]; then
 			length="-ss $length"
@@ -89,10 +95,17 @@ if [ -f stream.dump ]; then
 			length=""
 		fi
 
-		if ! ps -p `cat player1.pid`>&/dev/null || ! grep -q "End of file" id; then
+		if ! ps -p `cat player1.pid`>&/dev/null; then
 			again=0
 		fi
-		echo end of while loop length $length again $again
+		if  ! grep -q " signal " id && ! grep -q "ID_EXIT=EOF" id; then
+			# On est obligé d'essayer de deviner ce qui a fait sortir
+			# en cas d'eof on veut continuer
+			# mais si l'utilisateur quitte volontairement il ne faut pas
+			# le confondre avec un signal term (zapping) ou un segfault
+			again=0
+		fi
+		# echo end of while loop length $length again $again
 	done
 	for n in player1.pid info.pid list.pid; do
 		if [ -f $n ]; then
