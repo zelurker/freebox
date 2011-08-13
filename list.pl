@@ -161,7 +161,6 @@ while (1) {
 		"kill `cat player2.pid` && echo 'End of file' > id) &");
 		next;
 	} elsif ($cmd =~ /^name /) {
-		print "reçu commande $cmd\n";
 		open(F,">fifo_list") || die "can't write fifo_list\n";
 		my @arg = split(/ /,$cmd);
 		if ($#arg != 2 && $#arg != 1) {
