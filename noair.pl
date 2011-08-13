@@ -59,7 +59,7 @@ sub get_date {
 
 sub get_field {
 	my ($line,$field) = @_;
-	$line =~ /$field\=\"(.+?)\"/;
+	$line =~ /$field\=\"(.*?)\"/;
 	$1;
 }
 
@@ -152,7 +152,6 @@ sub find_prg {
 
 if (!find_prg()) {
 	print STDERR "did not find prg\n";
-	exit(1);
 	update_noair();
 	die "can't get noair listing\n" if (!open(F,"<air.xml"));
 	$xml = "";
