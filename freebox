@@ -5,7 +5,7 @@ function launch() {
 	mkfifo fifo fifo_cmd
 	mplayer -quiet $length -vf bmovl=1:0:fifo,screenshot,kerndeint \
 		-stop-xscreensaver -identify -input \
-		conf=$PWD/input.conf:file=fifo_cmd \
+		conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 		stream.dump >& id &
 	echo $! > player2.pid
 }
@@ -93,6 +93,11 @@ if [ -f stream.dump ]; then
 			length="-ss $length"
 		else
 			length=""
+		fi
+		if grep -q "no video" id || grep -q "NO AUDIO" id; then
+			demuxer="-demuxer lavf -framedrop -vo xv"
+		else
+			demuxer=""
 		fi
 
 		if ! ps -p `cat player1.pid`>&/dev/null; then
