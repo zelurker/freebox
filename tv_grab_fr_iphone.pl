@@ -156,7 +156,7 @@ if (open(F,"<day0")) {
 my $reread = 0;
 read_prg: $program_text = getListeProgrammes(0) if (!$program_text);
 my $nb_days = 1;
-debut: $program_text =~ s/:\$CH\$://g; # on se fiche de ce sparateur !
+debut: $program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
 my @fields = split(/\:\$\$\$\:/,$program_text);
 my $last_hour = 0;
 my $date_offset = 0;
@@ -195,6 +195,14 @@ if (!$reread) {
 	if ($channel0 eq "clear") {
 		clear("info_coords");
 		goto read_fifo;
+	} elsif ($channel0 =~ /^(next|prev)$/) {
+	    # Ces commandes sont juste passées à bmovl sans rien changer
+	    # mais en passant par ici ça permet de réinitialiser le timeout
+	    # de fondu, plutôt pratique...
+	    open(F,">fifo_bmovl") || die "can't open fifo bmovl\n";
+	    print F "$channel0\n";
+	    close(F);
+	    goto read_fifo;
 	} elsif ($channel0 =~ s/^prog //) {
 		$channel = lc($channel0);
 		$start_timer = 1;
@@ -274,7 +282,6 @@ for (my $n=0; $n<=$#fields; $n++) {
 # print "au final found $found pour channel $channel\n";
 if ($found == 1) {
 	print "found channel but not the time\n";
-	exit(1);
 	if ($nb_days++ == 1) {
 		my $before = "";
 		if (open(F,"<day-1")) {
@@ -289,7 +296,6 @@ if ($found == 1) {
 		}
 		goto debut;
 	}
-	exit(0);
 } elsif (!$found) {
 	my $out = setup_output("bmovl-src/bmovl","",0);
 
