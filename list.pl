@@ -20,9 +20,11 @@ open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
 close(F);
 
-open(F,"<current") || die "no current file\n";
-my ($chan,$source,$serv,$flav) = <F>;
-close(F);
+if (open(F,"<current")) {
+	@_ = <F>;
+	close(F);
+}
+my ($chan,$source,$serv,$flav) = @_;
 chomp ($chan,$source,$serv,$flav);
 $chan = lc($chan);
 # print "list: obtenu chan $chan source $source serv $serv flav $flav\n";
@@ -57,7 +59,7 @@ sub read_list {
 				$service = $flavour = $audio = $video = undef;
 			} elsif (/^#EXTVLCOPT:no-video/) {
 				$video = "no-video";
-			} elsif (/^audio-track-id=(\d+)/) {
+			} elsif (/audio-track-id=(\d+)/) {
 				$audio = $1;
 			} elsif (/service=(\d+)/) {
 				$service = $1;
@@ -108,18 +110,20 @@ sub get_name {
 			$sel = $_;
 		}
 	}
-	# retourne nom, service, flavour
+	# retourne nom, service, flavour, audio, video
 	# print  "*** get_name: $$sel[1],$$sel[2],$$sel[3]\n";
-	return ($$sel[1],$$sel[2],$$sel[3]);
+	return ($$sel[1],$$sel[2],$$sel[3],$$sel[4],$$sel[5]);
 }
 
 sub find_channel {
-	my ($serv,$flav) = @_;
+	my ($serv,$flav,$audio) = @_;
+	$flav = "" if ($flav eq "0");
 	if ($source eq "freebox") {
 		for (my $n=0; $n<=$#list; $n++) {
 			for (my $x=0; $x<=$#{$list[$n]}; $x++) {
 				if ($list[$n][$x][2] == $serv &&
-					$list[$n][$x][3] eq $flav) {
+					$list[$n][$x][3] eq $flav &&
+					($audio ? $list[$n][$x][4] == $audio : 1)) {
 					return ($n,$x);
 				}
 			}
@@ -155,22 +159,23 @@ while (1) {
 	} elsif ($cmd eq "left") {
 		$found -= $nb_elem;
 	} elsif ($cmd eq "zap1") {
-		my ($name,$serv,$flav) = get_name($list[$found]);
+		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 		unlink( "list_coords","info_coords");
-		system("(echo pause > fifo_cmd && ./run_mp1 \"$serv\" $flav && ".
+		$flav = 0 if (!$flav && $audio);
+		system("(echo pause > fifo_cmd && ./run_mp1 \"$serv\" $flav $audio $video && ".
 		"kill `cat player2.pid` && echo 'End of file' > id) &");
 		next;
 	} elsif ($cmd =~ /^name /) {
 		open(F,">fifo_list") || die "can't write fifo_list\n";
 		my @arg = split(/ /,$cmd);
-		if ($#arg != 2 && $source eq "freebox") {
-			print F "syntax: name service [flavour] $#arg\n";
+		if ($#arg < 2 && $source eq "freebox") {
+			print F "syntax: name service flavour [audio] $#arg\n";
 		} else {
 			if ($source eq "dvb") {
 				$cmd =~ s/^name //;
 				$arg[1] = $cmd;
 			}
-			my ($n,$x) = find_channel($arg[1],$arg[2]);
+			my ($n,$x) = find_channel($arg[1],$arg[2],$arg[3]);
 			if (!defined($n)) {
 				print F "not found $arg[1] $arg[2]\n";
 			} else {

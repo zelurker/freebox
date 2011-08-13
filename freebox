@@ -3,7 +3,11 @@
 function launch() {
 	rm -f fifo fifo_cmd
 	mkfifo fifo fifo_cmd
-	mplayer -quiet $length -vf bmovl=1:0:fifo,screenshot,kerndeint \
+	if [ "$audio" != "" ]; then
+		echo audio reçu $audio
+		audio2="-aid $audio"
+	fi
+	mplayer $audio2 -quiet $length -vf bmovl=1:0:fifo,screenshot,kerndeint \
 		-stop-xscreensaver -identify -input \
 		conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 		stream.dump >& id &
@@ -13,10 +17,12 @@ function launch() {
 rm -f stream.dump id
 service=$1
 flavour=$2
+audio=$3
 src=""
 if [ "$service" == "" ] || [ "$flavour" == "" ]; then
 	service=`head -n 3 current|tail -n 1`
 	flavour=`head -n 4 current|tail -n 1`
+	audio=`head -n 5 current|tail -n 1`
 	src=`head -n 2 current|tail -n 1`
 fi
 if [ "$service" == "" ] || [ "$src" == "freebox" ] && [ "$flavour" == "" ]; then
@@ -42,7 +48,7 @@ elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_li
 	kill `cat info_list.pid` >& /dev/null && rm -f info_list.pid
 	perl list.pl &
 fi
-./run_mp1 "$service" $flavour
+./run_mp1 "$service" $flavour $audio
 if [ -f stream.dump ]; then
 
 	again=1
