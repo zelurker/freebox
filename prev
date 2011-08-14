@@ -1,8 +1,7 @@
 #!/bin/sh
 
-echo on envoie prev
 if [ -f info_coords ]; then
-	echo prev > fifo_bmovl
+	echo prev > fifo_info
 else
 	echo seek 600 > fifo_cmd
 fi
