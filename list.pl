@@ -48,6 +48,16 @@ sub read_list {
 			$list = join("\n",@list);
 			@list = ();
 		}
+		my @rejets;
+		if (open(F,"<rejets/freebox")) {
+			while (<F>) {
+				chomp;
+				my ($serv,$flav,$audio,$video) = split(/:/);
+				push @rejets,[$serv,$flav,$audio,$video];
+			}
+			close(F);
+		}
+
 		Encode::from_to($list, "utf-8", "iso-8859-15");
 
 		my ($num,$name,$service,$flavour,$audio,$video);
@@ -67,6 +77,17 @@ sub read_list {
 					$flavour = $1;
 				}
 				die "pas de numéro pour $_\n" if (!$num);
+				my $reject = 0;
+				foreach (@rejets) {
+					if ($$_[0] == $service && $_[1] == $flavour &&
+						$$_[3] eq $audio && $$_[4] eq $video) {
+						print "rejecting $num,$name\n";
+						$reject = 1;
+						last;
+					}
+				}
+				next if ($reject);
+
 				my @cur = ($num,$name,$service,$flavour,$audio,$video);
 				if ($last_num != $num) {
 					$last_num = $num;
@@ -158,6 +179,17 @@ while (1) {
 		$found += $nb_elem;
 	} elsif ($cmd eq "left") {
 		$found -= $nb_elem;
+	} elsif ($cmd eq "reject") {
+		if (open(F,">>rejets/$source")) {
+			foreach (@{$list[$found]}) {
+				my ($num,$name,$service,$flavour,$audio,$video) = @{$_};
+				print F "$service:$flavour:$audio:$video\n";
+			}
+			close(F);
+		} else {
+			print "list: Can't open rejects\n";
+		}
+		splice @list,$found,1;
 	} elsif ($cmd eq "zap1") {
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 		unlink( "list_coords","info_coords");
