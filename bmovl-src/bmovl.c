@@ -101,7 +101,7 @@ static int info(int fifo, int argc, char **argv)
 			SDL_FreeSurface(chan);
 			chan = NULL;
 		}
-		if (pic && (pic->w >= width/2 || pic->h+8+(chan ? chan->h+8 : 0)>maxh)) {
+		if (pic && (pic->w >= width/2 || fsize+pic->h+8+(chan ? chan->h+8 : 0)>maxh)) {
 			SDL_FreeSurface(pic);
 			pic = NULL;
 		}
@@ -170,7 +170,7 @@ static int info(int fifo, int argc, char **argv)
 			if (r.y + pic->h < sf->h) {
 				SDL_BlitSurface(pic,NULL,sf,&r);
 				r.y += pic->h+8;
-			}
+			} 
 			SDL_FreeSurface(pic);
 		}
 		y += put_string(sf,font,x,y,title,fg,r.y);
