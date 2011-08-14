@@ -221,7 +221,7 @@ int myfgets(char *buff, int size, FILE *f) {
 	char *s = fgets(buff,size,f);
 	if (!s) return 0;
 	int len = strlen(buff);
-	while (len > 0 && abs(buff[len-1]) < 32)
+	while (len > 0 && ((unsigned char)(buff[len-1])) < 32)
 		buff[--len] = 0;
 	return len;
 }
