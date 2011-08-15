@@ -41,7 +41,7 @@ for n in freebox.pid player1.pid list.pid info.pid; do
 done
 echo $$ > freebox.pid
 if ! ps -p `cat info_pl.pid`>&/dev/null; then
-	perl tv_grab_fr_iphone.pl &
+	perl info.pl &
 fi
 if [ ! -f info_list.pid ]; then
 	perl list.pl &
@@ -70,13 +70,6 @@ if [ -f stream.dump ]; then
 		if [ -f info.pid ]; then
 			if ! ps -p `cat info.pid` >& /dev/null; then
 				rm -f info.pid
-			fi
-		fi
-		if [ "$length" != "" ]; then
-			# double check
-			length2=`perl eval_end.pl`
-			if [ "$length2" == "0" ] || [ "$length2" == "" ]; then
-				length=""
 			fi
 		fi
 		# echo launch length $length

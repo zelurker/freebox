@@ -1,4 +1,3 @@
 #!/bin/bash
 
-echo "right executed"
 ./direction right

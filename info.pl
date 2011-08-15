@@ -1,6 +1,12 @@
 #!/usr/bin/perl -w
 #
 
+# Commandes supportées 
+# prog "nom de la chaine"
+# nextprog
+# prevprog
+# next/prev : fait défiler le bandeau (transmission au serveur C).
+
 use strict;
 use warnings;
 use LWP::Simple;
@@ -99,6 +105,13 @@ my %icons = (
 	1500 => "http://upload.wikimedia.org/wikipedia/fr/thumb/3/3f/Logo_nolife.svg/208px-Logo_nolife.svg.png",
 );
 
+sub get_time {
+	my $time = shift;
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
+	# sprintf("%d/%02d/%02d %02d:%02d:%02d $tz",$year+1900,$mon,$mday,$hour,$min,$sec);
+	sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+}
+
 #
 # Parameters
 #
@@ -158,8 +171,47 @@ read_prg: $program_text = getListeProgrammes(0) if (!$program_text);
 my $nb_days = 1;
 debut: $program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
 my @fields = split(/\:\$\$\$\:/,$program_text);
-my $last_hour = 0;
+my %chaines = ();
+
 my $date_offset = 0;
+foreach (@fields) {
+	my @sub = split(/\$\$\$/);
+	my $chan = lc($sub[1]);
+	if (!$date_offset || $sub[12] ne $date) {
+		$date = $sub[12];
+		($mday,$mon,$year) = split(/\//,$sub[12]);
+		$mon--;
+		$year -= 1900;
+		$date_offset = timelocal(0,0,0,$mday,$mon,$year);
+	}
+	($hour,$min,$sec) = split(/\:/,$sub[3]);
+	my $start = $date_offset + $sec + 60*$min + 3600*$hour;
+	($hour,$min,$sec) = split(/\:/,$sub[4]);
+	my $end = $date_offset + $sec + 60*$min + 3600*$hour;
+	$end += 3600*24 if ($end < $start); # stupid
+	$sub[3] = $start; $sub[4] = $end;
+	my $rtab = $chaines{$chan};
+	if ($rtab) {
+		my $colision = undef;
+		foreach (@$rtab) {
+			if ($$_[3] == $start && $$_[4] == $end) {
+				$colision = $_;
+				last;
+			}
+		}
+		if ($colision) {
+			# Le nombre de colisions est hallucinant !
+			# un vrai gaspillage de bande passante leur truc !
+			# print "colision chaine $$colision[1] titre $$colision[2]\n";
+		} else {
+			push @$rtab,\@sub;
+		}
+	} else {
+		$chaines{$chan} = [\@sub];
+	}
+}
+
+my $last_hour = 0;
 
 system("rm -f fifo_info && mkfifo fifo_info");
 my $start_timer = 0;
@@ -167,7 +219,42 @@ read_fifo:
 my ($channel,$long) = ();
 # my $timer_start;
 my $time;
-my $channel0 = "";
+my $cmd = "";
+my ($last_prog, $last_chan,$last_long);
+
+sub disp_prog {
+	my ($sub,$long) = @_;
+	my $start = $$sub[3];
+	my $end = $$sub[4];
+	$start = get_time($start);
+	$end = get_time($end);
+	if ($$sub[9]) {
+		# Prsence d'une image...
+		my @date = split('/', $$sub[12]);
+		my @time = split(':', $start);
+		my $img = $date[2]."-".$date[1]."-".$date[0]."_".$$sub[0]."_".$time[0].":".$time[1].".jpg";
+		my $raw = get $site_img.$img || print STDERR "can't get image $img\n";
+		if ($raw) {
+			open(F,">picture.jpg") || die "can't create picture.jpg\n";
+			print F $raw;
+			close(F);
+		} else {
+			$$sub[9] = 0;
+		}
+	}
+	# Check channel logo
+	my $url = $icons{$$sub[0]};
+	my $name = setup_image($browser,$url);
+
+	my $out = setup_output("bmovl-src/bmovl",$$sub[9],$long);
+
+	print $out "$name\n";
+	print $out "picture.jpg" if ($$sub[9]);
+
+	print $out "\n$$sub[1] : $start - $end\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
+	close($out);
+}
+
 if (!$reread) {
 	do {
 		# Celui là sert à vérifier les déclenchements externes (noair.pl)
@@ -176,9 +263,9 @@ if (!$reread) {
 			alarm(5);
 			local $SIG{ALRM} = sub { die "alarm clock restart" };
 			open(F,"<fifo_info") || die "can't read fifo\n";
-			$channel0 = <F> || die "pass channel name on fifo\n";
+			$cmd = <F> || die "pass channel name on fifo\n";
 			$long = <F>; # 2me argument -> affichage long
-			chomp $channel0;
+			chomp $cmd;
 			alarm(0);
 			close(F);
 		};
@@ -189,25 +276,41 @@ if (!$reread) {
 				$start_timer = 0;
 			}
 		}
-	} while (!$channel0);
+	} while (!$cmd);
 	#$timer_start = [gettimeofday];
 	$time = time();
-	if ($channel0 eq "clear") {
+	if ($cmd eq "clear") {
 		clear("info_coords");
 		goto read_fifo;
-	} elsif ($channel0 =~ /^(next|prev)$/) {
+	} elsif ($cmd eq "nextprog" || $cmd eq "right") {
+		my $rtab = $chaines{$last_chan};
+		my $n = $last_prog+1;
+		$n-- if ($n > $#$rtab);
+		clear("info_coords");
+		disp_prog($$rtab[$n],$last_long);
+		$last_prog = $n;
+		goto read_fifo;
+	} elsif ($cmd eq "prevprog" || $cmd eq "left") {
+		my $rtab = $chaines{$last_chan};
+		my $n = $last_prog-1;
+		$n=0 if ($n < 0);
+		clear("info_coords");
+		disp_prog($$rtab[$n],$last_long);
+		$last_prog = $n;
+		goto read_fifo;
+	} elsif ($cmd =~ /^(next|prev)$/) {
 	    # Ces commandes sont juste passées à bmovl sans rien changer
 	    # mais en passant par ici ça permet de réinitialiser le timeout
 	    # de fondu, plutôt pratique...
 	    open(F,">fifo_bmovl") || die "can't open fifo bmovl\n";
-	    print F "$channel0\n";
+	    print F "$cmd\n";
 	    close(F);
 	    goto read_fifo;
-	} elsif ($channel0 =~ s/^prog //) {
-		$channel = lc($channel0);
+	} elsif ($cmd =~ s/^prog //) {
+		$channel = lc($cmd);
 		$start_timer = 1;
 	} else {
-		print "commande inconnue $channel0\n";
+		print "info: commande inconnue $cmd\n";
 		goto read_fifo;
 	}
 
@@ -215,13 +318,12 @@ if (!$reread) {
 	$reread = 0;
 }  
 ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
-my $found = 0;
 my $date2 = sprintf("%02d/%02d/%d",$mday,$mon+1,$year+1900);
 if ($date2 ne $date) { # changement de date
 	print G "$date2 != $date -> reread\n";
 	$reread = 1;
 	$date = $date2;
-	goto get_prg;
+	goto read_prg;
 }
 chomp $channel;
 chomp $long if ($long);
@@ -229,82 +331,50 @@ $channel = conv_channel($channel);
 # print "lecture from fifo channel $channel long ".($long ? $long : "")." fields $#fields\n";
 
 # print "recherche channel $channel\n";
-for (my $n=0; $n<=$#fields; $n++) {
-	my @sub = split(/\$\$\$/,$fields[$n]);
-
-	if ($channel eq lc($sub[1])) {
-		$channel0 = $sub[1] if (!$found);
-		$found = 1;
-		($hour,$min,$sec) = split(/\:/,$sub[3]);
-		if (!$date_offset || $hour < $last_hour) {
-			($mday,$mon,$year) = split(/\//,$sub[12]);
-			$mon--;
-			$year -= 1900;
-			$date_offset = timelocal(0,0,0,$mday,$mon,$year);
-		}
-		$last_hour = $hour;
-		my $start = $date_offset + $sec + 60*$min + 3600*$hour;
-		($hour,$min,$sec) = split(/\:/,$sub[4]);
-		my $end = $date_offset + $sec + 60*$min + 3600*$hour;
-		$end += 3600*24 if ($end < $start); # stupid
-		if ($start <= $time && ($time <= $end || $end < $start)) {
-			if ($sub[9]) {
-				# Prsence d'une image...
-				my @date = split('/', $sub[12]);
-				my @time = split(':', $sub[3]);
-				my $img = $date[2]."-".$date[1]."-".$date[0]."_".$sub[0]."_".$time[0].":".$time[1].".jpg";
-				my $raw = get $site_img.$img || print STDERR "can't get image $img\n";
-				if ($raw) {
-					open(F,">picture.jpg") || die "can't create picture.jpg\n";
-					print F $raw;
-					close(F);
-				} else {
-					$sub[9] = 0;
-				}
-			}
-			# Check channel logo
-			my $url = $icons{$sub[0]};
-			my $name = setup_image($browser,$url);
-
-			my $out = setup_output("bmovl-src/bmovl",$sub[9],$long);
-
-			print $out "$name\n";
-			print $out "picture.jpg" if ($sub[9]);
-
-			print $out "\n$sub[1] : $sub[3] - $sub[4]\n$sub[2]\n\n$sub[6]\n$sub[7]\n";
-			close($out);
-#			  system("feh picture.jpg &") if ($sub[9]);
-			$found = 2;
-			last;
-		}
-	}
-}
-# print "au final found $found pour channel $channel\n";
-if ($found == 1) {
-	print "found channel but not the time\n";
-	if ($nb_days++ == 1) {
-		my $before = "";
-		if (open(F,"<day-1")) {
-			while (<F>) {
-				$before .= $_;
-			}
-			close(F);
-			$program_text = $before.$program_text;
-		} else {
-			print "geting programs for day before...\n";
-			$program_text = getListeProgrammes(-1).$program_text;
-		}
-		goto debut;
-	}
-} elsif (!$found) {
+my $rtab = $chaines{$channel};
+if (!$rtab) {
+	# Pas trouvé la chaine
 	my $out = setup_output("bmovl-src/bmovl","",0);
 
 	print $out "\n\n";
 	($sec,$min,$hour) = localtime($time);
 
-	print $out "$channel0 : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
+	print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
 	close($out);
+	goto read_fifo;
 }
+
+for (my $n=0; $n<=$#$rtab; $n++) {
+	my $sub = $$rtab[$n];
+	my $start = $$sub[3];
+	my $end = $$sub[4];
+
+	if ($start <= $time && $time <= $end) {
+		disp_prog($sub,$long);
+		$last_chan = $channel;
+		$last_prog = $n;
+		$last_long = $long;
+#			  system("feh picture.jpg &") if ($$sub[9]);
+		goto read_fifo;
+	}
+}
+# print "au final found $found pour channel $channel\n";
+if ($time < $$rtab[0][3]) {
+	print "pas trouvé l'heure, mais on va récupérer le jour d'avant...\n";
+	my $before = "";
+	if (open(F,"<day-1")) {
+		while (<F>) {
+			$before .= $_;
+		}
+		close(F);
+		$program_text = $before.$program_text;
+	} else {
+		print "geting programs for day before...\n";
+		$program_text = getListeProgrammes(-1).$program_text;
+	}
+	goto debut;
+}
+print "vraiment pas trouvé l'heure ! channel $channel\n";
 # print G "temps d'execution ",tv_interval($timer_start,[gettimeofday])," found $found\n";
 goto read_fifo;
 

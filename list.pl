@@ -179,6 +179,10 @@ while (1) {
 		$found += $nb_elem;
 	} elsif ($cmd eq "left") {
 		$found -= $nb_elem;
+	} elsif ($cmd eq "home") {
+		$found = 0;
+	} elsif ($cmd eq "end") {
+		$found = $#list;
 	} elsif ($cmd eq "reject") {
 		if (open(F,">>rejets/$source")) {
 			foreach (@{$list[$found]}) {
