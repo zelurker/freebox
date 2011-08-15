@@ -310,6 +310,22 @@ if (!$reread) {
 	    print F "$cmd\n";
 	    close(F);
 	    goto read_fifo;
+	} elsif ($cmd =~ /^(up|down)$/) {
+		open(F,">fifo_list") || die "can't talk to fifo_list\n";
+		print F ($cmd eq "up" ? "next" : "prev")." $last_chan\n";
+		close(F);
+		open(F,"<fifo_list") || die "can't read from fifo_list\n";
+		$cmd = <F>;
+		close(F);
+		chomp $cmd;
+		$channel = lc($cmd);
+		$long = $last_long;
+		$start_timer = 1 if (!$long);
+	} elsif ($cmd eq "zap1") {
+		open(F,">fifo_list") || die "can't talk to fifo_list\n";
+		print F "zap2 $last_chan\n";
+		close(F);
+		goto read_fifo;
 	} elsif ($cmd =~ s/^prog //) {
 		$channel = lc($cmd);
 		$start_timer = 1 if (!$long);

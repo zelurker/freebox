@@ -7,6 +7,7 @@
 # name service flavour : renvoie le nom de la chaine sur la fifo
 # next/prev service flavour : renvoie le nom de la chaine suivante/précédente
 # zap1 : zappe sur la chaine sélectionnée dans la liste
+# zap2 : même chose mais en passant le nom de la chaine
 # clear : efface la liste et le cadre d'info éventuel
 # list : affiche la liste
 # switch_mode : change de mode
@@ -159,6 +160,18 @@ sub find_channel {
 	return undef;
 }
 
+sub find_name {
+	my $name = shift;
+	for (my $n=0; $n<=$#list; $n++) {
+		for (my $x=0; $x<=$#{$list[$n]}; $x++) {
+			if (lc($list[$n][$x][1]) eq $name) {
+				return ($n,$x);
+			}
+		}
+	}
+	return undef;
+}
+
 read_list();
 system("rm -f fifo_list && mkfifo fifo_list");
 my $nb_elem = 16;
@@ -194,7 +207,10 @@ while (1) {
 			print "list: Can't open rejects\n";
 		}
 		splice @list,$found,1;
-	} elsif ($cmd eq "zap1") {
+	} elsif ($cmd =~ /^zap(1|2)/) {
+		if ($cmd =~ s/^zap2 //) {
+			($found) = find_name($cmd);
+		}
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 		unlink( "list_coords","info_coords");
 		$flav = 0 if (!$flav && $audio);
@@ -222,17 +238,29 @@ while (1) {
 		close(F);
 		next;
 	} elsif ($cmd =~ /^(next|prev) /) {
-		open(F,">fifo_list") || die "can't write fifo_list\n";
-		my @arg = split(/ /,$cmd);
-		if ($#arg != 2) {
-			print F "syntax: next|prev service flavour\n";
+		open(F,">fifo_list") || die "can't write to fifo_list\n";
+		my $next;
+		$next = $cmd =~ s/^next //;
+		$cmd =~ s/^prev //;
+		if (!$cmd) {
+			print F "syntax: next|prev <nom de la chaine>\n";
 		} else {
-			my ($n,$x) = find_channel($arg[1],$arg[2]);
+			if (open(A,"<current")) {
+				<A>;
+				my $src = <A>;
+				close(A);
+				chomp $src;
+				if ($src ne $source) {
+					$source = $src;
+					read_list();
+				}
+			}
+			my ($n,$x) = find_name($cmd);
 			if (!defined($n)) {
-				print F "not found $arg[1] $arg[2]\n";
+				print F "not found $cmd\n";
 			} else {
 				my $name;
-				if ($cmd =~ /^next/) {
+				if ($next) {
 					my $next = $n+1;
 					$next = 0 if ($next > $#list);
 					($name) =get_name($list[$next]); 
@@ -257,7 +285,7 @@ while (1) {
 			read_list();
 		}
 	} elsif ($cmd ne "list") {
-		print "unknown command :$cmd!\n";
+		print "list: unknown command :$cmd!\n";
 		next;
 	}
 
