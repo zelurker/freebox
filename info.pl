@@ -258,7 +258,9 @@ sub disp_prog {
 if (!$reread) {
 	do {
 		# Celui là sert à vérifier les déclenchements externes (noair.pl)
-		$start_timer = 1 if (-f "info_coords" && ! -f "list_coords");
+		if (-f "info_coords" && ! -f "list_coords" && !$last_long) {
+			$start_timer = 1 
+		}
 		eval {
 			alarm(5);
 			local $SIG{ALRM} = sub { die "alarm clock restart" };
@@ -271,7 +273,7 @@ if (!$reread) {
 		};
 		if ($@) {
 			if ($start_timer && -f "info_coords" && ! -f "list_coords") {
-				alpha("info_coords",0,-255,-5);
+				alpha("info_coords",-40,-255,-5);
 				unlink "info_coords";
 				$start_timer = 0;
 			}
@@ -284,19 +286,21 @@ if (!$reread) {
 		goto read_fifo;
 	} elsif ($cmd eq "nextprog" || $cmd eq "right") {
 		my $rtab = $chaines{$last_chan};
-		my $n = $last_prog+1;
-		$n-- if ($n > $#$rtab);
-		clear("info_coords");
-		disp_prog($$rtab[$n],$last_long);
-		$last_prog = $n;
+		if ($rtab) {
+			my $n = $last_prog+1;
+			$n-- if ($n > $#$rtab);
+			disp_prog($$rtab[$n],$last_long);
+			$last_prog = $n;
+		}
 		goto read_fifo;
 	} elsif ($cmd eq "prevprog" || $cmd eq "left") {
 		my $rtab = $chaines{$last_chan};
-		my $n = $last_prog-1;
-		$n=0 if ($n < 0);
-		clear("info_coords");
-		disp_prog($$rtab[$n],$last_long);
-		$last_prog = $n;
+		if ($rtab) {
+			my $n = $last_prog-1;
+			$n=0 if ($n < 0);
+			disp_prog($$rtab[$n],$last_long);
+			$last_prog = $n;
+		}
 		goto read_fifo;
 	} elsif ($cmd =~ /^(next|prev)$/) {
 	    # Ces commandes sont juste passées à bmovl sans rien changer
@@ -308,7 +312,7 @@ if (!$reread) {
 	    goto read_fifo;
 	} elsif ($cmd =~ s/^prog //) {
 		$channel = lc($cmd);
-		$start_timer = 1;
+		$start_timer = 1 if (!$long);
 	} else {
 		print "info: commande inconnue $cmd\n";
 		goto read_fifo;
@@ -341,6 +345,7 @@ if (!$rtab) {
 
 	print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
 	close($out);
+	$last_chan = $channel;
 	goto read_fifo;
 }
 

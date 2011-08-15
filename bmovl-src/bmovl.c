@@ -219,7 +219,19 @@ static int info(int fifo, int argc, char **argv)
 	// Display
 	x = (width-sf->w) / 2;
 	y = height - sf->h - 8;
-	blit(fifo, sf->pixels, sf->w, sf->h, x, y, 0, 0);
+	FILE *f = fopen("info_coords","r");
+	if (f) {
+		int oldx,oldy,oldw,oldh;
+		fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+		fclose(f);
+		if (oldh > sf->h) {
+			char buff[2048];
+			sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy);
+			write(fifo, buff, strlen(buff));
+		}
+	}
+
+	blit(fifo, sf->pixels, sf->w, sf->h, x, y, -40, 0);
 	send_command(fifo,"SHOW\n");
 #if 0
 	sleep(10);
@@ -229,7 +241,7 @@ static int info(int fifo, int argc, char **argv)
 		set_alpha(fifo, sf->w, sf->h,
 				x, y, i);
 #endif
-	FILE *f = fopen("info_coords","w");
+	f = fopen("info_coords","w");
 	fprintf(f,"%d %d %d %d ",sf->w, sf->h,
 			x, y);
 	fclose(f);
@@ -337,12 +349,29 @@ static int list(int fifo, int argc, char **argv)
 		}
 	}
 
+	FILE *f = fopen("list_coords","r");
+	if (f) {
+		int oldx,oldy,oldw,oldh;
+		fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+		fclose(f);
+		if (oldh > sf->h) {
+			char buff[2048];
+			sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy+sf->h);
+			write(fifo, buff, strlen(buff));
+		}
+		if (oldw > sf->w) {
+			char buff[2048];
+			sprintf(buff,"CLEAR %d %d %d %d\n",oldw-sf->w,oldh,oldx+sf->w,oldy);
+			write(fifo, buff, strlen(buff));
+		}
+	}
+
     // Display
     x = margew;
     y = margeh;
-    blit(fifo, sf->pixels, sf->w, sf->h, x, y, 0, 1);
+    blit(fifo, sf->pixels, sf->w, sf->h, x, y, -40, 0);
     send_command(fifo,"SHOW\n");
-    FILE *f = fopen("list_coords","w");
+    f = fopen("list_coords","w");
     fprintf(f,"%d %d %d %d ",sf->w, sf->h,
 	    x, y);
     fclose(f);
