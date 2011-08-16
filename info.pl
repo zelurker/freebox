@@ -15,6 +15,7 @@ use POSIX qw(strftime);
 use Time::Local;
 # use Time::HiRes qw(gettimeofday tv_interval);
 use IO::Handle;
+use Encode;
 
 require HTTP::Cookies;
 require "output.pl";
@@ -105,6 +106,20 @@ my %icons = (
 	1500 => "http://upload.wikimedia.org/wikipedia/fr/thumb/3/3f/Logo_nolife.svg/208px-Logo_nolife.svg.png",
 );
 
+sub dateheure {
+	my $_ = shift;
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($_);
+	sprintf("%d/%d/%d %d:%02d",$mday,$mon+1,$year+1900,$hour,$min);
+}
+
+sub debug {
+	my $msg = shift;
+	while ($_ = shift) {
+		$msg .= " ".dateheure($_);
+	}
+	print "$msg\n";
+}
+
 sub get_time {
 	my $time = shift;
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
@@ -112,10 +127,125 @@ sub get_time {
 	sprintf("%02d:%02d:%02d",$hour,$min,$sec);
 }
 
+sub update_noair {
+	print STDERR "updating noair...\n";
+	my $xml = get "http://www.nolife-tv.com/noair/noair.xml";
+	open(F,">air.xml");
+	print F $xml;
+	close(F);
+}
+
+sub get_nolife {
+	sub conv_date {
+		my $date = shift;
+		my ($a,$mois,$j,$h,$m,$s) = $date =~ /^(....).(..).(..) (..).(..).(..)/;
+		$a -= 1900;
+		$mois--;
+		timegm($s,$m,$h,$j,$mois,$a);
+	}
+
+	sub get_date {
+		my $time = shift;
+		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
+		sprintf("%d%02d%02d",$year+1900,$mon,$mday);
+	}
+
+	sub get_field {
+		my ($line,$field) = @_;
+		$line =~ /$field\=\"(.*?)\"/;
+		$1;
+	}
+
+	my $rtab = shift;
+
+	if (!open(F,"<air.xml")) {
+		update_noair();
+		die "can't get noair listing\n" if (!open(F,"<air.xml"));
+	}
+
+	our $xml;
+	while (<F>) {
+		$xml .= $_;
+	}
+	close(F);
+	Encode::from_to($xml, "utf-8", "iso-8859-15");
+	$xml =~ s/½/oe/g;
+
+	my ($title,$start,$old_title,$sub,$desc,$old_sub,$old_shot,$shot,
+	$old_cat,$cat);
+	my $date;
+	foreach (split /\n/,$xml) {
+		next if (!/\<slot/);
+
+		$date = conv_date(get_field($_,"dateUTC"));
+		# print get_time($date)," ",$_->{title},"\n";
+		$start = $date if (!$start);
+		$old_title = $title;
+		$old_sub = $sub;
+		$old_shot = $shot;
+		$old_cat = $cat;
+		$title = get_field($_,"title");
+		$sub = get_field($_,"sub-title");
+		$title = $sub if (!$title);
+		$shot = get_field($_,"screenshot");
+		$cat = get_field($_,"type");
+		if ($start && $old_title ne $title && $old_title) {
+			# 0: channel id
+			# 1: channel name
+			# 2: Title
+			# 3: date start
+			# 4: date stop
+			# 5: category
+			# 6: description
+			# 7: details (duration, ...)
+			# 8: rating
+			# 9: image presence
+			# 10: stars
+			# 11: critical
+			# 12: airdate
+
+			my $colision = undef;
+			foreach (@$rtab) {
+				if ($$_[3] == $start && $$_[4] == $date) {
+					$colision = $_;
+					last;
+				}
+			}
+			next if ($colision);
+			my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
+				$desc,"","",$old_shot,0,0,get_date($start));
+			push @$rtab,\@tab;
+
+			$start = $date;
+			$desc = "";
+		}
+		my $d = get_field($_,"description");
+		if ($d ne $title) {
+			$desc .= "\n" if ($desc);
+			$desc .= "$d";
+			my $d = get_field($_,"detail");
+			$desc .= " $d" if ($d);
+		}
+	}
+	# Test le dernier programme !
+	my $colision = undef;
+	foreach (@$rtab) {
+		if ($$_[3] == $start && $$_[4] == $date) {
+			$colision = $_;
+			last;
+		}
+	}
+	if (!$colision) {
+		my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
+			$desc,"","",$old_shot,0,0,get_date($start));
+		push @$rtab,\@tab;
+	}
+	$rtab;
+}
+
 #
 # Parameters
 #
-my $input;
 
 my $channels_text = getListeChaines();
 my @chan = split(/\:\$\$\$\:/,$channels_text);
@@ -210,6 +340,12 @@ foreach (@fields) {
 		$chaines{$chan} = [\@sub];
 	}
 }
+$chaines{"nolife"} = get_nolife($chaines{"nolife"});
+# my $rtab = $chaines{"nolife"};
+# for (my $n=0; $n<=$#$rtab; $n++) {
+# 	print dateheure($$rtab[$n][3])," - ",dateheure($$rtab[$n][4]),
+# 	" : $$rtab[$n][2]\n";
+# }
 
 my $last_hour = 0;
 
@@ -230,10 +366,15 @@ sub disp_prog {
 	$end = get_time($end);
 	if ($$sub[9]) {
 		# Prsence d'une image...
-		my @date = split('/', $$sub[12]);
-		my @time = split(':', $start);
-		my $img = $date[2]."-".$date[1]."-".$date[0]."_".$$sub[0]."_".$time[0].":".$time[1].".jpg";
-		my $raw = get $site_img.$img || print STDERR "can't get image $img\n";
+		my $raw;
+		if ($$sub[9] !~ /^http/) {
+			my @date = split('/', $$sub[12]);
+			my @time = split(':', $start);
+			my $img = $date[2]."-".$date[1]."-".$date[0]."_".$$sub[0]."_".$time[0].":".$time[1].".jpg";
+			$raw = get $site_img.$img || print STDERR "can't get image $img\n";
+		} else {
+			$raw = get $$sub[9] || print STDERR "can't get nolife picture $$sub[9]\n";
+		}
 		if ($raw) {
 			open(F,">picture.jpg") || die "can't create picture.jpg\n";
 			print F $raw;
@@ -261,26 +402,35 @@ if (!$reread) {
 		if (-f "info_coords" && ! -f "list_coords" && !$last_long) {
 			$start_timer = 1 
 		}
-		eval {
-			alarm(5);
-			local $SIG{ALRM} = sub { die "alarm clock restart" };
+		if ($start_timer) {
+			eval {
+				alarm(5);
+				local $SIG{ALRM} = sub { die "alarm clock restart" };
+				open(F,"<fifo_info") || die "can't read fifo\n";
+				$cmd = <F> || die "pass channel name on fifo\n";
+				$long = <F>; # 2me argument -> affichage long
+				chomp $cmd;
+				alarm(0);
+				close(F);
+			};
+			if ($@) {
+				if ($start_timer && -f "info_coords" && ! -f "list_coords") {
+					alpha("info_coords",-40,-255,-5);
+					unlink "info_coords";
+					$start_timer = 0;
+				}
+			}
+		} else {
 			open(F,"<fifo_info") || die "can't read fifo\n";
 			$cmd = <F> || die "pass channel name on fifo\n";
 			$long = <F>; # 2me argument -> affichage long
 			chomp $cmd;
-			alarm(0);
 			close(F);
-		};
-		if ($@) {
-			if ($start_timer && -f "info_coords" && ! -f "list_coords") {
-				alpha("info_coords",-40,-255,-5);
-				unlink "info_coords";
-				$start_timer = 0;
-			}
 		}
 	} while (!$cmd);
 	#$timer_start = [gettimeofday];
 	$time = time();
+	print "info: reçu cmd $cmd\n";
 	if ($cmd eq "clear") {
 		clear("info_coords");
 		goto read_fifo;
@@ -365,6 +515,7 @@ if (!$rtab) {
 	goto read_fifo;
 }
 
+reprise_nolife:
 for (my $n=0; $n<=$#$rtab; $n++) {
 	my $sub = $$rtab[$n];
 	my $start = $$sub[3];
@@ -395,8 +546,22 @@ if ($time < $$rtab[0][3]) {
 	}
 	goto debut;
 }
-print "vraiment pas trouvé l'heure ! channel $channel\n";
-# print G "temps d'execution ",tv_interval($timer_start,[gettimeofday])," found $found\n";
+if ($channel eq "nolife") {
+	update_noair();
+	$rtab = $chaines{"nolife"} = get_nolife($chaines{"nolife"});
+	if ($$rtab[$#$rtab][3] >= $time) {
+		print "update noair parfaite\n";
+		goto reprise_nolife;
+	}
+}
+my $out = setup_output("bmovl-src/bmovl","",0);
+
+print $out "\n\n";
+($sec,$min,$hour) = localtime($time);
+
+print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nPas encore l'info à cette heure\n";
+close($out);
+$last_chan = $channel;
 goto read_fifo;
 
 #==============================================================================
@@ -417,45 +582,25 @@ sub getListeProgrammes {
     }
   }
 
-  if (!$input) {
-    my $response = $browser->get($url);
+  my $response = $browser->get($url);
 
-    die "$url error: ", $response->status_line
-      unless $response->is_success;
+  die "$url error: ", $response->status_line
+  unless $response->is_success;
 
-	open(F,">day".($offset));
-	print F $response->content;
-	close(F);
-    return $response->content;
-  } else {
-    $program_text = "";
-    open (FILE, "$input") || die "file $input not found";
-    while (<FILE>) {
-      $program_text = $program_text . $_;
-    }
-
-    return $program_text;
-  }
+  open(F,">day".($offset));
+  print F $response->content;
+  close(F);
+  return $response->content;
 }
 
 sub request {
     my $url = shift;
-    if (!$input) {
 	my $response = $browser->get($url);
 
 	die "$url error: ", $response->status_line
 	unless $response->is_success;
 
 	return $response->content;
-    } else {
-	$program_text = "";
-	open (FILE, "<$input") || die "file $input not found";
-	while (<FILE>) {
-	    $program_text = $program_text . $_;
-	}
-
-	return $program_text;
-    }
 }
 
 sub getListeChaines {

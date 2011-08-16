@@ -81,11 +81,7 @@ if [ -f stream.dump ]; then
 		else
 			kill -USR1 `cat info.pid`
 		fi
-		if [ "$chaine" == "nolife" ] || [ "$chaine" == "Nolife" ]; then
-			(perl noair.pl &)
-		elif [ "$chaine" != "" ]; then
-			echo "prog $chaine" > fifo_info
-		fi
+		echo "prog $chaine" > fifo_info
 		wait $pid
 		kill -USR2 `cat info.pid`
 		length=`perl eval_end.pl`

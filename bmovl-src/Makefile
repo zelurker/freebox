@@ -1,8 +1,8 @@
 # debug flags
-CFLAGS=-Wall -g `sdl-config --cflags `
+# CFLAGS=-Wall -g `sdl-config --cflags `
 
 # opt flags
-# CFLAGS=-O2 `sdl-config --cflags`
+CFLAGS=-O2 `sdl-config --cflags`
 
 %.o: %.c
 	gcc $(CFLAGS) -c $< -o $@

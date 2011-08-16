@@ -58,12 +58,14 @@ static int info(int fifo, int argc, char **argv)
 	SDL_Surface *chan = NULL,*pic = NULL; 
 
 	if (!strcmp(argv[0],"bmovl")) {
+		char *channel,*picture,buff[8192];
 		if(argc<4) {
 			printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
 			printf("width and height are w/h of MPlayer's screen!\n");
+			while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
+			fclose(stdin);
 			return -1;
 		}
-		char *channel,*picture,buff[8192];
 		char *heure, *title;
 		nb_prev = 0;
 		width = atoi(argv[2]);
@@ -81,6 +83,8 @@ static int info(int fifo, int argc, char **argv)
 		if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
 		if (!font) {
 			printf("Could not load Vera.ttf, come back with it !\n");
+			while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
+			fclose(stdin);
 			return -1;
 		}
 		myfgets(buff,8192,stdin);
@@ -120,6 +124,7 @@ static int info(int fifo, int argc, char **argv)
 		while (len > 0 && buff[len-1] < 32) buff[--len] = 0; // remove the last one though
 		desc = strdup(buff);
 		while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
+		fclose(stdin);
 
 		TTF_SetFontStyle(font,TTF_STYLE_BOLD);
 		get_size(font,heure,&w,&h,width-32); // 1st string : all the width (top)
@@ -253,9 +258,12 @@ static int list(int fifo, int argc, char **argv)
 {
     int width,height;
 
+	char *source,buff[4096],*list[20];
     if(argc<4) {
 		printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
 		printf("width and height are w/h of MPlayer's screen!\n");
+		while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
+		fclose(stdin);
 		return -1;
     }
 
@@ -267,7 +275,6 @@ static int list(int fifo, int argc, char **argv)
 	int fsize = height/35;
 	TTF_Font *font = TTF_OpenFont("Vera.ttf",fsize);
 	if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
-	char *source,buff[4096],*list[20];
 	int num[20];
 	int current;
 	myfgets(buff,4096,stdin);
@@ -297,6 +304,8 @@ static int list(int fifo, int argc, char **argv)
 		if (w > wlist) wlist = w;
 		hlist += h;
 	}
+	while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
+	fclose(stdin);
     get_size(font,">",&w,&h,maxw);
     int indicw = w;
 
@@ -377,15 +386,10 @@ static int list(int fifo, int argc, char **argv)
     fclose(f);
     // Clean up
     SDL_FreeSurface(sf);
-	if (!strcasecmp(list[current],"nolife")) {
-		sprintf(buff,"perl noair.pl %d &",y+sf->h);
-		system(buff);
-	} else {
-		FILE *f = fopen("fifo_info","w");
-		if (f) {
-			fprintf(f,"prog %s\n%d\n",list[current],y+sf->h);
-			fclose(f);
-		}
+	f = fopen("fifo_info","w");
+	if (f) {
+		fprintf(f,"prog %s\n%d\n",list[current],y+sf->h);
+		fclose(f);
 	}
 #if 0
 	sleep(10);
@@ -473,11 +477,15 @@ int main(int argc, char **argv) {
 		if (fifo > 0) {
 			// commandes connectées
 			if (!strcmp(cmd,"bmovl") || !strcmp(cmd,"next") ||
-					!strcmp(cmd,"prev"))
+					!strcmp(cmd,"prev")) {
 				info(fifo,argc,myargv);
-			else if (!strcmp(cmd,"list"))
+				server = NULL;
+				continue;
+			} else if (!strcmp(cmd,"list")) {
 				list(fifo,argc,myargv);
-			else if (!strcmp(cmd,"CLEAR"))
+				server = NULL;
+				continue;
+			} else if (!strcmp(cmd,"CLEAR"))
 				clear(fifo,argc,myargv);
 			else if (!strcmp(cmd,"ALPHA"))
 				alpha(fifo,argc,myargv);
