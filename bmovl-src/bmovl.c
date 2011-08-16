@@ -417,11 +417,35 @@ static int list(int fifo, int argc, char **argv)
     fclose(f);
     // Clean up
     SDL_FreeSurface(sf);
-	f = fopen("fifo_info","w");
-	if (f) {
-		fprintf(f,"prog %s\n%d\n",list[current],y+sf->h);
-		fclose(f);
+	int info=0;
+   	int tries = 0;
+	/* On communique dans l'autre sens avec info.pl par une fifo.
+	 * C'est un endroit hyper dangereux parce que si info.pl n'est pas en
+	 * écoute au moment de l'ouverture, ça bloque indéfiniment !
+	 * La solution est d'utiliser une ouverture non bloquante (voir fifo(7))
+	 * et ça ne sert à rien de faire plein de tentatives, apparemment c'est
+	 * une histoire de synchro, si ça foire au début, ça foire toujours.
+	 * J'ai quand même autorisé 4 tentatives après quelques essais.
+	 * Si ça dépasse 4, le message pour info est juste abandonné, généralement
+	 * ça veut dire qu'on parcourt les chaines trop vite dans la liste */
+	while (tries++ < 4 && info <= 0) {
+		info = open("fifo_info",O_WRONLY|O_NONBLOCK);
+		if (info <= 0) {
+			struct timeval tv;
+			tv.tv_sec = 0;
+			tv.tv_usec = 100000;
+			select(0,NULL, NULL, NULL, &tv);
+		}
 	}
+	if (tries > 1)
+		printf("bmovl: %d tries to open fifo !\n",tries);
+
+	if (info > 0) {
+		sprintf(buff,"prog %s\n%d\n",list[current],y+sf->h);
+		write(info,buff,strlen(buff));
+		close(info);
+	} else
+		printf("on abandonne fifo_info !\n");
 #if 0
 	sleep(10);
 
