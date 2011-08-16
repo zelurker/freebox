@@ -293,7 +293,7 @@ while (1) {
 	$found += $#list+1 while ($found < 0);
 
 	my $beg = $found - 9;
-	$beg += $#list+1 if ($beg < 0);
+	$beg = 0 if ($beg < 0);
 	my $out = setup_output("bmovl-src/list");
 	print $out "$source\n";
 	my $n = $beg-1;
