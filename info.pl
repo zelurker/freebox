@@ -1,5 +1,4 @@
 #!/usr/bin/perl -w
-#
 
 # Commandes supportées 
 # prog "nom de la chaine"
@@ -422,7 +421,7 @@ if (!$reread) {
 			}
 		} else {
 			open(F,"<fifo_info") || die "can't read fifo\n";
-			$cmd = <F> || die "pass channel name on fifo\n";
+			$cmd = <F> || print "pass channel name on fifo (2)\n";
 			$long = <F>; # 2me argument -> affichage long
 			chomp $cmd;
 			close(F);
