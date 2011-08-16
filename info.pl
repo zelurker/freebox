@@ -509,7 +509,7 @@ if (!$rtab) {
 	print $out "\n\n";
 	($sec,$min,$hour) = localtime($time);
 
-	print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
+	print $out "$cmd ($channel) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
 	close($out);
 	$last_chan = $channel;
 	goto read_fifo;

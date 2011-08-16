@@ -235,9 +235,33 @@ static int info(int fifo, int argc, char **argv)
 			write(fifo, buff, strlen(buff));
 		}
 	}
-
+#if 0
+	f = fopen("list_coords","r");
+	if (f) {
+		/* Ca, c'est un énorme bug mplayer apparemment.
+		 * Si on affiche la liste dans un blit séparé, le bandeau d'info fait
+		 * apparaitre des "déchets" sur la gauche de la liste.
+		 * Supprimer le blit fait disparaitre les déchets, mais il n'est pas
+		 * sensé toucher à cette zone.
+		 * Le + étrange c'est qu'un clear efface les déchets ! */
+		int oldx,oldy,oldw,oldh;
+		fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+		fclose(f);
+		oldx += oldw;
+		char buff[2048];
+		sprintf(buff,"CLEAR %d %d %d %d\n",width-oldx,oldh,oldx,oldy);
+		write(fifo, buff, strlen(buff));
+		// A gauche aussi !!!
+		oldx -= oldw;
+		sprintf(buff,"CLEAR %d %d %d %d\n",oldx,oldh,0,oldy);
+		write(fifo, buff, strlen(buff));
+	}
+#endif
+	/* printf("bmovl: blit %d %d %d %d avec width %d height %d\n",
+			sf->w,sf->h,x,y,width,height); */
 	blit(fifo, sf->pixels, sf->w, sf->h, x, y, -40, 0);
 	send_command(fifo,"SHOW\n");
+	// printf("bmovl: show done\n");
 #if 0
 	sleep(10);
 
@@ -312,6 +336,9 @@ static int list(int fifo, int argc, char **argv)
     int n;
     int x=8,y=8;
     wlist += numw+8; // le numÃ©ro sur la gauche (3 chiffres + sÃ©parateur)
+	if (wlist > width/2-indicw) {
+		wlist = width/2-indicw;
+	}
     int xright = x+wlist;
     wlist += indicw; // place pour le > Ã  la fin
     /*	if (hlist > maxh)
@@ -371,6 +398,7 @@ static int list(int fifo, int argc, char **argv)
 		if (oldw > sf->w) {
 			char buff[2048];
 			sprintf(buff,"CLEAR %d %d %d %d\n",oldw-sf->w,oldh,oldx+sf->w,oldy);
+			printf("list: %s",buff);
 			write(fifo, buff, strlen(buff));
 		}
 	}
@@ -378,7 +406,10 @@ static int list(int fifo, int argc, char **argv)
     // Display
     x = margew;
     y = margeh;
-    blit(fifo, sf->pixels, sf->w, sf->h, x, y, -40, 0);
+	// Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
+	// apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
+	// Pour l'instant le meilleur contournement c'est ça.
+    blit(fifo, sf->pixels, sf->w, sf->h, x, y, -40, 1);
     send_command(fifo,"SHOW\n");
     f = fopen("list_coords","w");
     fprintf(f,"%d %d %d %d ",sf->w, sf->h,

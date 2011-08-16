@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+# ATTENTION : ce fichier doit rester en latin1, encodage utilisé par les
+# programmes télé
+
 use strict;
 use Time::HiRes qw(usleep);
 
@@ -52,7 +55,7 @@ sub conv_channel {
 			return  lc($corresp{$_});
 		}
 	}
-	$channel =~ s/\(bas dÃ©bit\)//;
+	$channel =~ s/\(bas débit\)//;
 	$channel =~ s/hd$//i;
 	$channel =~ s/ *$//;
 	return lc($channel);
