@@ -15,6 +15,7 @@ use Time::Local;
 # use Time::HiRes qw(gettimeofday tv_interval);
 use IO::Handle;
 use Encode;
+use Fcntl;
 
 require HTTP::Cookies;
 require "output.pl";
@@ -105,6 +106,31 @@ my %icons = (
 	1500 => "http://upload.wikimedia.org/wikipedia/fr/thumb/3/3f/Logo_nolife.svg/208px-Logo_nolife.svg.png",
 );
 
+sub myget {
+	# un get avec cache
+	my $url = shift;
+	my $name = $url;
+	my $raw = undef;
+	$name =~ s/^.+\///;
+	if (-f "cache/$name") {
+		my $size = -s "cache/$name";
+		open(F,"<cache/$name");
+		sysread F,$raw,$size;
+		close(F);
+		print "info: used cache for $name\n";
+	} else {
+		$raw = get $url || print STDERR "can't get image $name\n";
+		if ($raw) {
+			mkdir "cache" if (! -d "cache");
+			if (open(F,">cache/$name")) {
+				syswrite(F,$raw,length($raw));
+				close(F);
+			}
+		}
+	}
+	$raw;
+}
+
 sub dateheure {
 	my $_ = shift;
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($_);
@@ -188,7 +214,7 @@ sub get_nolife {
 		$title = $sub if (!$title);
 		$shot = get_field($_,"screenshot");
 		$cat = get_field($_,"type");
-		if ($start && $old_title ne $title && $old_title) {
+		if ($start && $old_title && $old_title ne $title) {
 			# 0: channel id
 			# 1: channel name
 			# 2: Title
@@ -279,9 +305,6 @@ foreach (@selected_channels) {
 }
 
 # Get HTML page of TV program
-open(G,">debug_info");
-G->autoflush(1);
-print G "lecture day0\n";
 if (open(F,"<day0")) {
 	while (<F>) {
 		$program_text .= $_;
@@ -370,9 +393,12 @@ sub disp_prog {
 			my @date = split('/', $$sub[12]);
 			my @time = split(':', $start);
 			my $img = $date[2]."-".$date[1]."-".$date[0]."_".$$sub[0]."_".$time[0].":".$time[1].".jpg";
-			$raw = get $site_img.$img || print STDERR "can't get image $img\n";
+			$raw = myget $site_img.$img;
 		} else {
-			$raw = get $$sub[9] || print STDERR "can't get nolife picture $$sub[9]\n";
+			my $name = $$sub[9];
+			$name =~ s/^.+\///;
+
+			$raw = myget $$sub[9]; 
 		}
 		if ($raw) {
 			open(F,">picture.jpg") || die "can't create picture.jpg\n";
@@ -398,33 +424,21 @@ sub disp_prog {
 if (!$reread) {
 	do {
 		# Celui là sert à vérifier les déclenchements externes (noair.pl)
-		if (-f "info_coords" && ! -f "list_coords" && !$last_long) {
-			$start_timer = 1 
-		}
-		if ($start_timer) {
-			eval {
-				alarm(5);
-				local $SIG{ALRM} = sub { die "alarm clock restart" };
-				open(F,"<fifo_info") || die "can't read fifo\n";
-				$cmd = <F> || die "pass channel name on fifo\n";
-				$long = <F>; # 2me argument -> affichage long
-				chomp $cmd;
-				alarm(0);
-				close(F);
-			};
-			if ($@) {
-				if ($start_timer && -f "info_coords" && ! -f "list_coords") {
-					alpha("info_coords",-40,-255,-5);
-					unlink "info_coords";
-					$start_timer = 0;
-				}
+		if (sysopen(F,"fifo_info",O_RDONLY|O_NONBLOCK)) {
+			my $rin = "";
+			vec($rin,fileno(F),1) = 1;
+			my ($nfound) = select($rin, undef, undef, 5);
+			if ($nfound) {
+				($cmd,$long) = <F>;
+				chomp ($cmd,$long);
 			}
-		} else {
-			open(F,"<fifo_info") || die "can't read fifo\n";
-			$cmd = <F> || print "pass channel name on fifo (2)\n";
-			$long = <F>; # 2me argument -> affichage long
-			chomp $cmd;
 			close(F);
+		}
+		if ($start_timer && time - $start_timer >= 5 && -f "info_coords" &&
+			! -f "list_coords") {
+			alpha("info_coords",-40,-255,-5);
+			unlink "info_coords";
+			$start_timer = 0;
 		}
 	} while (!$cmd);
 	#$timer_start = [gettimeofday];
@@ -469,7 +483,7 @@ if (!$reread) {
 		chomp $cmd;
 		$channel = lc($cmd);
 		$long = $last_long;
-		$start_timer = 1 if (!$long);
+		$start_timer = time if (!$long);
 	} elsif ($cmd eq "zap1") {
 		open(F,">fifo_list") || die "can't talk to fifo_list\n";
 		print F "zap2 $last_chan\n";
@@ -477,7 +491,7 @@ if (!$reread) {
 		goto read_fifo;
 	} elsif ($cmd =~ s/^prog //) {
 		$channel = lc($cmd);
-		$start_timer = 1 if (!$long);
+		$start_timer = time if (!$long);
 	} else {
 		print "info: commande inconnue $cmd\n";
 		goto read_fifo;
@@ -489,7 +503,7 @@ if (!$reread) {
 ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
 my $date2 = sprintf("%02d/%02d/%d",$mday,$mon+1,$year+1900);
 if ($date2 ne $date) { # changement de date
-	print G "$date2 != $date -> reread\n";
+	print "$date2 != $date -> reread\n";
 	$reread = 1;
 	$date = $date2;
 	goto read_prg;
