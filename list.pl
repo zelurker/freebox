@@ -82,7 +82,6 @@ sub read_list {
 				foreach (@rejets) {
 					if ($$_[0] == $service && $_[1] == $flavour &&
 						$$_[3] eq $audio && $$_[4] eq $video) {
-						print "rejecting $num,$name\n";
 						$reject = 1;
 						last;
 					}
@@ -118,8 +117,28 @@ sub read_list {
 			}
 		}
 		close(F);
+	} elsif ($source eq "livetv") {
+		@list = ();
+		my $num = 1;
+		while (<livetv/*.ts>) {
+			my $service = $_;
+			my $name = $service;
+			$name =~ s/.ts$//;
+			$name =~ s/^.+\///;
+			my ($an,$mois,$jour,$heure,$minute,$sec,$chaine) = $name =~ /^(....)(..)(..) (..)(..)(..) (.+)/;
+			$name = "$jour/$mois $heure:$minute $chaine ";
+			my $taille = -s "$service";
+			$taille = sprintf("%d",$taille/1024/1024);
+			$name .= $taille."Mo";
+			push @list,[[$num++,$name,$service]];
+			if ($serv eq $service) {
+				$found = $#list;
+			}
+		}
+		print "lecture livetv: $#list\n";
+	} else {
+		print "read_list: source inconnue $source\n";
 	}
-
 }
 
 sub get_name {
@@ -172,6 +191,18 @@ sub find_name {
 	return undef;
 }
 
+sub switch {
+	if ($source eq "dvb") {
+		if (! -f "$ENV{HOME}/.mplayer/channels.conf" || ! -d "/dev/dvb") {
+			return 0;
+		}
+	} elsif ($source eq "livetv") {
+		my @tab = <livetv/*.ts>;
+		return 0 if (!@tab);
+	}
+	return 1;
+}
+
 read_list();
 system("rm -f fifo_list && mkfifo fifo_list");
 my $nb_elem = 16;
@@ -213,9 +244,35 @@ while (1) {
 		}
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 		unlink( "list_coords","info_coords");
-		$flav = 0 if (!$flav && $audio);
-		system("(echo pause > fifo_cmd && ./run_mp1 \"$serv\" $flav $audio $video && ".
-		"kill `cat player2.pid` && echo 'End of file' > id) &");
+		if ($source eq "livetv") {
+			if (open(F,">fifo_cmd")) {
+				print F "pause\n";
+				my $pid = `cat player1.pid`;
+				chomp $pid;
+				print "pid à tuer $pid.\n";
+				kill 1,$pid;
+			   	unlink "player1.pid";
+				print F "loadfile '$serv'\n";
+				close(F);
+				open(F,">live");
+				close(F);
+			}
+			next;
+		}
+		$flav = 0 if (!$flav);
+		$video = 0 if (!$video);
+		$audio = 0 if (!$audio);
+		print "lancement ./run_mp1 \"$serv\" $flav $audio $video $source\n";
+		system(<<END);
+(name=`head -n 7 current|tail -n 1`
+ if [ "\$name" != "" ]; then
+   mv stream.dump "\$name"
+ fi
+ echo pause > fifo_cmd
+ ./run_mp1 \"$serv\" $flav $audio $video "$source"
+ kill `cat player2.pid`
+ echo 'End of file' > id) &
+END
 		next;
 	} elsif ($cmd =~ /^name /) {
 		open(F,">fifo_list") || die "can't write fifo_list\n";
@@ -274,20 +331,39 @@ while (1) {
 		}
 		close(F);
 		next;
-	} elsif ($cmd eq "switch_mode") {
-		if ($source eq "freebox") {
-			if (-f "$ENV{HOME}/.mplayer/channels.conf") {
-				$source = "dvb";
-				read_list();
+	} elsif ($cmd =~ /^switch_mode/) {
+		my @arg = split(/ /,$cmd);
+		my @src = (
+			"freebox", "dvb", "livetv");
+		my $found = 0;
+		if ($#arg == 1) {
+			for (my $n=0; $n<=$#src; $n++) {
+				if ($src[$n] eq $arg[1]) {
+					$found = $n;
+					last;
+				}
 			}
+			$found--;
 		} else {
-			$source = "freebox";
-			read_list();
+			for (my $n=0; $n<=$#src; $n++) {
+				if ($source eq $src[$n]) {
+					$found = $n;
+					last;
+				}
+			}
 		}
+		do {
+			$found++;
+			$found = 0 if ($found > $#src);
+			$source = $src[$found];
+		} while (!switch());
+		read_list();
 	} elsif ($cmd ne "list") {
 		print "list: unknown command :$cmd!\n";
 		next;
 	}
+	$nb_elem = 16;
+	$nb_elem = $#list+1 if ($nb_elem > $#list);
 
 	$found -= $#list+1 while ($found > $#list);
 	$found += $#list+1 while ($found < 0);
