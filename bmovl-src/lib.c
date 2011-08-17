@@ -187,7 +187,7 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 				dest.x = x; dest.y = y;
 				SDL_Color *col = (SDL_Color*)&color; // dirty hack !
 				SDL_Surface *tf = TTF_RenderText_Solid(font,beg,*col);
-				if (y + tf->h < maxh)
+				if (y + tf->h <= maxh)
 					SDL_BlitSurface(tf,NULL,sf,&dest);
 				else {
 					fin = 1;

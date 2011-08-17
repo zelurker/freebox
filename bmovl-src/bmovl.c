@@ -311,7 +311,7 @@ static int list(int fifo, int argc, char **argv)
 	int wlist,hlist;
 	get_size(font,source,&wlist,&hlist,maxw);
 	while (!feof(stdin) && nb<20) {
-		myfgets(buff,4096,stdin);
+		if (!myfgets(buff,4096,stdin)) break;
 		if (buff[0] == '*') current = nb;
 		char *end_nb = &buff[4];
 		while (*end_nb >= '0' && *end_nb <= '9')
@@ -324,7 +324,7 @@ static int list(int fifo, int argc, char **argv)
 		int l = strlen(end_nb);
 		if (end_nb[l-1] == '>')
 			end_nb[l-1] = 0;
-		get_size(font,end_nb,&w,&h,maxw); 
+		get_size(font,end_nb,&w,&h,maxw-numw); 
 		if (w > wlist) wlist = w;
 		hlist += h;
 	}
