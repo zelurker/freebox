@@ -4,11 +4,26 @@
 # Tache de toujours réussir, retourne à d'anciennes valeurs connues si tout
 # foire
 
+if ! [ -d livetv ]; then
+	mkdir livetv
+fi
+find livetv/ -mtime 1 -delete
+
 service=$1
 flavour=$2
 audio=$3
 video=$4
-# echo run_mp1: going for $1 $2
+src=$5
+if [ "$src" == "0" ]; then
+	src=freebox
+fi
+if [ "$audio" == "0" ]; then
+	audio=""
+fi
+if [ "$video" == "0" ]; then
+	video=""
+fi
+echo run_mp1: src=$src video=$video audio=$audio flavour=$flavour service=$service
 if [ -f player1.pid ] && ps -p `cat player1.pid` >& /dev/null; then
 	kill `cat player1.pid` && rm -f player1.pid
 fi
@@ -19,12 +34,17 @@ while [ "$ok" == "0" ]; do
 		audio2="-aid $audio"
 	fi
     # echo run_mp1: service $service flavour $flavour
-	if [ "$flavour" == "" ] && [ "$audio" == "" ]; then
-		# dvb
-		mplayer -quiet -dumpstream dvb://"$service" >& log &
-	else
-		mplayer $audio2 -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" >& log &
-	fi
+	case $src in
+		dvb)
+			mplayer -quiet -dumpstream dvb://"$service" >& log &
+			;;
+		freebox)
+			mplayer $audio2 -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" >& log &
+			;;
+		flux)
+			mplayer -quiet -dumpstream "$service" >& log &
+			;;
+	esac
 	pid=$!
 	echo $pid > player1.pid
 	tries=0
@@ -48,6 +68,13 @@ while [ "$ok" == "0" ]; do
 			flav=`head -n 4 current|tail -n 1`
 			audio=`head -n 5 current|tail -n 1`
 			video=`head -n 6 current|tail -n 1`
+			src=`head -n 2 current|tail -n 1`
+			if [ "$audio" == "0" ]; then
+				audio=""
+			fi
+			if [ "$video" == "0" ]; then
+				video=""
+			fi
 			if [ "$service" == "$serv" ] && [ "$flavour" == "$flav" ]; then
 				service=201
 				flavour=sd
@@ -65,17 +92,24 @@ while [ "$ok" == "0" ]; do
 		ok=1 # fini !
 	fi
 done
+echo envoi name "$service" $flavour $audio
 echo name "$service" $flavour $audio > fifo_list
 chaine=`cat fifo_list`
 # echo run_mp1: fin
 echo $chaine > current
-if [ "$flavour" != "" ] || [ "$audio" != "" ]; then
-	echo freebox >> current
+if [ "$src" != "" ]; then
+	echo $src >> current
 else
-	echo dvb >> current
+	if [ "$flavour" != "" ] || [ "$audio" != "" ]; then
+		echo freebox >> current
+	else
+		echo dvb >> current
+	fi
 fi
 echo $service >> current
 echo $flavour >> current
 echo $audio >> current
 echo $video >> current
+name=`date +"%Y%m%d %H%M%S $chaine.ts"`
+echo livetv/$name >> current
 exit 0

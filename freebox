@@ -1,10 +1,58 @@
 #!/bin/bash
 
+ulimit -c unlimited
+
+function init_mp1 {
+service=$1
+flavour=$2
+audio=$3
+video=$4
+src=""
+if [ "$service" == "" ] || [ "$flavour" == "" ]; then
+	service=`head -n 3 current|tail -n 1`
+	flavour=`head -n 4 current|tail -n 1`
+	audio=`head -n 5 current|tail -n 1`
+	video=`head -n 6 current|tail -n 1`
+	src=`head -n 2 current|tail -n 1`
+fi
+if [ "$flavour" == "0" ]; then
+	flavour=""
+fi
+if [ "$audio" == "0" ]; then
+	audio=""
+fi
+if [ "$video" == "0" ]; then
+	video=""
+fi
+if [ "$service" == "" ]; then
+	# reset to 1st working channel then
+	service=201
+	flavour=sd
+	video=""
+	audio=""
+	src=freebox
+fi
+echo service $service flavour $flavour source $src
+cmd=""
+append $flavour
+append $audio
+append $video
+append $src
+./run_mp1 "$service" $cmd
+}
+
+function append {
+  if [ "$1" = "" ]; then
+	  cmd="$cmd 0"
+  else
+	  cmd="$cmd $1"
+  fi
+}
+
 function launch() {
 	rm -f fifo fifo_cmd
 	mkfifo fifo fifo_cmd
 	if [ "$audio" != "" ]; then
-		echo audio reçu $audio
 		audio2="-aid $audio"
 	fi
 	mplayer $audio2 -quiet $length -vf bmovl=1:0:fifo,screenshot,kerndeint \
@@ -16,30 +64,13 @@ function launch() {
 }
 
 rm -f stream.dump id
-service=$1
-flavour=$2
-audio=$3
-src=""
-if [ "$service" == "" ] || [ "$flavour" == "" ]; then
-	service=`head -n 3 current|tail -n 1`
-	flavour=`head -n 4 current|tail -n 1`
-	audio=`head -n 5 current|tail -n 1`
-	src=`head -n 2 current|tail -n 1`
-fi
-if [ "$service" == "" ] || [ "$src" == "freebox" ] && [ "$flavour" == "" ]; then
-	# reset to 1st working channel then
-	service=201
-	flavour=sd
-fi
-echo service $service flavour $flavour source $src
-# 1st kill all the old eventual processes, starting by freebox.pid
-for n in freebox.pid player1.pid list.pid info.pid; do
+# 1st kill all the old eventual processes
+for n in player1.pid info.pid; do
 	if [ -f $n ]; then
 		kill `cat $n` >& /dev/null
 		rm -f $n
 	fi
 done
-echo $$ > freebox.pid
 if ! ps -p `cat info_pl.pid`>&/dev/null; then
 	perl info.pl &
 fi
@@ -49,7 +80,7 @@ elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_li
 	kill `cat info_list.pid` >& /dev/null && rm -f info_list.pid
 	perl list.pl &
 fi
-./run_mp1 "$service" $flavour $audio
+init_mp1 "$1" $2 $3 $4 $5
 if [ -f stream.dump ]; then
 
 	again=1
@@ -106,17 +137,29 @@ if [ -f stream.dump ]; then
 			# le confondre avec un signal term (zapping) ou un segfault
 			again=0
 		fi
+		if [ -f live ]; then
+			rm -f live
+			if ! grep -q ID_EXIT=QUIT id; then
+				src=`head -n 2 current|tail -n 1`
+				echo switch_mode $src > fifo_list
+				init_mp1
+				again=1
+			fi
+		fi
 		# echo end of while loop length $length again $again
 		audio=`head -n 5 current|tail -n 1`
 	done
-	for n in player1.pid info.pid list.pid; do
+	name=`head -n 7 current|tail -n 1`
+	if [ "$name" != "" ]; then
+		mv stream.dump "$name"
+	fi
+	for n in player1.pid info.pid info_list.pid; do
 		if [ -f $n ]; then
 			kill `cat $n` >& /dev/null
 			rm -f $n
 		fi
 	done
-	rm -f player2.pid freebox.pid
+	rm -f player2.pid
 fi
 rm -f info_coords list_coords
-kill `cat info_list.pid` && rm -f info_list.pid
 
