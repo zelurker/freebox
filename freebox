@@ -1,6 +1,7 @@
 #!/bin/bash
 
 ulimit -c unlimited
+find cache/ -mtime 3 -delete
 
 function init_mp1 {
 service=$1
@@ -52,18 +53,20 @@ function append {
 function launch() {
 	rm -f fifo fifo_cmd
 	mkfifo fifo fifo_cmd
+	# On récupère le nom à jour
+	name=`head -n 7 current|tail -n 1`
 	if [ "$audio" != "" ]; then
 		audio2="-aid $audio"
 	fi
 	mplayer $audio2 -quiet $length -vf bmovl=1:0:fifo,screenshot,kerndeint \
 		-stop-xscreensaver -identify -input \
 		conf=$PWD/input.conf:file=fifo_cmd $demuxer \
-		stream.dump >& id &
+		"$name" >& id &
 	echo $! > player2.pid
 	audio2=""
 }
 
-rm -f stream.dump id
+rm -f id fifo_list
 # 1st kill all the old eventual processes
 for n in player1.pid info.pid; do
 	if [ -f $n ]; then
@@ -81,7 +84,8 @@ elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_li
 	perl list.pl &
 fi
 init_mp1 "$1" $2 $3 $4 $5
-if [ -f stream.dump ]; then
+name=`head -n 7 current|tail -n 1`
+if [ -f "$name" ]; then
 
 	again=1
 	# Cette boucle est pour récupérer la main quand on sort par erreur du
@@ -149,10 +153,6 @@ if [ -f stream.dump ]; then
 		# echo end of while loop length $length again $again
 		audio=`head -n 5 current|tail -n 1`
 	done
-	name=`head -n 7 current|tail -n 1`
-	if [ "$name" != "" ]; then
-		mv stream.dump "$name"
-	fi
 	for n in player1.pid info.pid info_list.pid; do
 		if [ -f $n ]; then
 			kill `cat $n` >& /dev/null
