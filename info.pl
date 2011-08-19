@@ -114,6 +114,7 @@ sub myget {
 	$name =~ s/^.+\///;
 	if (-f "cache/$name") {
 		my $size = -s "cache/$name";
+		utime(undef,undef,"cache/$name");
 		open(F,"<cache/$name");
 		sysread F,$raw,$size;
 		close(F);
@@ -319,6 +320,7 @@ if (open(F,"<day0")) {
 	}
 }
 my $reread = 0;
+my ($channel,$long);
 read_prg: $program_text = getListeProgrammes(0) if (!$program_text);
 my $nb_days = 1;
 debut: $program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
@@ -374,7 +376,7 @@ my $last_hour = 0;
 system("rm -f fifo_info && mkfifo fifo_info");
 my $start_timer = 0;
 read_fifo:
-my ($channel,$long) = ();
+($channel,$long) = () if (!$reread);
 # my $timer_start;
 my $time;
 my $cmd = "";
@@ -504,6 +506,7 @@ if (!$reread) {
 my $date2 = sprintf("%02d/%02d/%d",$mday,$mon+1,$year+1900);
 if ($date2 ne $date) { # changement de date
 	print "$date2 != $date -> reread\n";
+	$program_text = undef;
 	$reread = 1;
 	$date = $date2;
 	goto read_prg;
@@ -557,6 +560,7 @@ if ($time < $$rtab[0][3]) {
 		print "geting programs for day before...\n";
 		$program_text = getListeProgrammes(-1).$program_text;
 	}
+	$reread = 1; # On récupère l'ancienne commande...
 	goto debut;
 }
 if ($channel eq "nolife") {
