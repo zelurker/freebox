@@ -4,6 +4,7 @@
 # programmes télé
 
 use strict;
+use Fcntl;
 use Time::HiRes qw(usleep);
 
 sub clear($) {
@@ -114,8 +115,18 @@ sub setup_output {
 		} # else pass long as is...
 		# print "calling $prog fifo $width $height $long\n";
 		if ($width > 100 && $height > 100) {
-			open($out,">fifo_bmovl") || die "can't open fifo bmovl\n";
-			print $out "$prog fifo $width $height $long\n"
+			my $tries = 0;
+			my $ret;
+			while ($tries < 10 && 
+				!($ret = sysopen($out,"fifo_bmovl",O_WRONLY|O_NONBLOCK))) {
+				select(undef,undef,undef,0.1);
+			}
+			if ($ret) {
+				print $out "$prog fifo $width $height $long\n"
+			} else {
+				print "select_output: timeout, falling back to stderr\n";
+				$out = *STDERR;
+			}
 		} else {
 			print "*** width $width height $height, on annule bmovl\n";
 			$out = *STDERR;
