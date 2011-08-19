@@ -509,6 +509,8 @@ if ($date2 ne $date) { # changement de date
 	$program_text = undef;
 	$reread = 1;
 	$date = $date2;
+	unlink "day-1";
+	rename "day0","day-1";
 	goto read_prg;
 }
 chomp $channel;
@@ -546,7 +548,7 @@ for (my $n=0; $n<=$#$rtab; $n++) {
 		goto read_fifo;
 	}
 }
-# print "au final found $found pour channel $channel\n";
+# print "time ",dateheure($time)," start ",dateheure($$rtab[0][3]),"\n";
 if ($time < $$rtab[0][3]) {
 	print "pas trouvé l'heure, mais on va récupérer le jour d'avant...\n";
 	my $before = "";
@@ -555,6 +557,16 @@ if ($time < $$rtab[0][3]) {
 			$before .= $_;
 		}
 		close(F);
+		($sec,$min,$hour,$mday,$mon,$year) = localtime($time-3600*24);
+		my $date = sprintf("%02d/%02d/%d",$mday,$mon+1,$year+1900);
+		my @fields = split(/\:\$\$\$\:/,$before);
+		my @sub = split(/\$\$\$/,$fields[0]);
+		if ($date ne $sub[12]) {
+			print "verif day-1 échouée, $date != $sub[12]\n";
+			$before = undef;
+		}
+	}
+	if ($before) {
 		$program_text = $before.$program_text;
 	} else {
 		print "geting programs for day before...\n";
