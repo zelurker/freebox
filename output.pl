@@ -113,8 +113,13 @@ sub setup_output {
 			$long = "";
 		} # else pass long as is...
 		# print "calling $prog fifo $width $height $long\n";
-		open($out,">fifo_bmovl") || die "can't open fifo bmovl\n";
-		print $out "$prog fifo $width $height $long\n"
+		if ($width > 100 && $height > 100) {
+			open($out,">fifo_bmovl") || die "can't open fifo bmovl\n";
+			print $out "$prog fifo $width $height $long\n"
+		} else {
+			print "*** width $width height $height, on annule bmovl\n";
+			$out = *STDERR;
+		}
 	} else {
 		print STDERR "no fifo, output on STDERR\n";
 		$out = *STDERR;
