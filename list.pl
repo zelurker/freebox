@@ -32,6 +32,7 @@ $chan = lc($chan);
 
 my (@list);
 my $found = undef;
+my $base_flux = "";
 
 sub read_list {
 	if ($source eq "freebox") {
@@ -136,6 +137,32 @@ sub read_list {
 			}
 		}
 		print "lecture livetv: $#list\n";
+	} elsif ($source eq "flux") {
+		@list = ();
+		my $num = 1;
+		if (!$base_flux) {
+			while (<flux/*>) {
+				my $service = $_;
+				my $name = $service;
+				$name =~ s/^.+\///;
+				push @list,[[$num++,$name,$service]];
+				if ($serv eq $service) {
+					$found = $#list;
+				}
+			}
+		} else {
+			if (open(F,"<flux/$base_flux")) {
+				while (<F>) {
+					my $name = $_;
+					my $service = <F>;
+					chomp ($name,$service);
+					push @list,[[$num++,$name,$service]];
+				}
+				print "list: ".($#list+1)." flux\n";
+				$found = 0 if ($found > $#list);
+				close(F);
+			}
+		}
 	} else {
 		print "read_list: source inconnue $source\n";
 	}
@@ -199,8 +226,28 @@ sub switch {
 	} elsif ($source eq "livetv") {
 		my @tab = <livetv/*.ts>;
 		return 0 if (!@tab);
+	} elsif ($source eq "flux") {
+		my @tab = <flux/*>;
+		return 0 if (!@tab);
 	}
 	return 1;
+}
+
+sub get_mms {
+	my $url = shift;
+	my $page = get $url;
+	if (!$page) {
+		print STDERR "could not get $url\n";
+	} elsif ($page =~ /"(mms.+?)"/) {
+		print "mms url : $1 from $url\n";
+		return $1;
+	} else {
+		print "did not find mms from $url\n";
+		open(F,">dump");
+		print F $page;
+		close(F);
+	}
+	return $url;
 }
 
 read_list();
@@ -243,7 +290,6 @@ while (1) {
 			($found) = find_name($cmd);
 		}
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-		unlink( "list_coords","info_coords");
 		if ($source eq "livetv") {
 			if (open(F,">fifo_cmd")) {
 				print F "pause\n";
@@ -256,24 +302,63 @@ while (1) {
 				close(F);
 				open(F,">live");
 				close(F);
+				unlink( "list_coords","info_coords");
 			}
 			next;
-		}
-		$flav = 0 if (!$flav);
-		$video = 0 if (!$video);
-		$audio = 0 if (!$audio);
-		print "lancement ./run_mp1 \"$serv\" $flav $audio $video $source\n";
-		system(<<END);
-(name=`head -n 7 current|tail -n 1`
- if [ "\$name" != "" ]; then
-   mv stream.dump "\$name"
- fi
- echo pause > fifo_cmd
+		} elsif ($source eq "flux") {
+			if (!$base_flux) {
+				$base_flux = $name;
+				print "base_flux = $name\n";
+				read_list();
+				print "après read_list $#list élém\n";
+				for (my $n=0; $n<=$#list; $n++) {
+					print "$n: $list[$n][0][0] $list[$n][0][1] $list[$n][0][2]\n";
+				}
+			} else {
+				if ($serv !~ /(mp3|ogg|flac|mpc|wav|m3u|pls)$/i) {
+					# flux non audio -> vidéo
+					if (open(F,">fifo_cmd")) {
+						print F "pause\n";
+						if (-f "player1.pid") {
+							my $pid = `cat player1.pid`;
+							chomp $pid;
+							print "pid à tuer $pid.\n";
+							kill 1,$pid;
+							unlink "player1.pid";
+						}
+						$serv = get_mms($serv) if ($serv =~ /^http/);
+						print "flux: loadfile $serv\n";
+						print F "loadfile '$serv'\n";
+						close(F);
+						open(F,">live");
+						close(F);
+						unlink( "list_coords","info_coords");
+					}
+				}
+			}
+		} else {
+			# On a pas trop le choix pour le else à rallonge ici
+			# on a besoin que le flux relise sa liste et sans goto c'est la
+			# seule façon d'y arriver. Ca va, ça reste lisible quand même...
+			open(F,"<current");
+			my ($n,$src,$s,$f,$a,$v) =  <F>;
+			close(F);
+			chomp($s,$f,$a,$v,$src);
+			if ($s ne $serv || $flav ne $f || $audio ne $a || $v ne $video || $src ne $source) {
+				unlink( "list_coords","info_coords");
+				$flav = 0 if (!$flav);
+				$video = 0 if (!$video);
+				$audio = 0 if (!$audio);
+				print "lancement ./run_mp1 \"$serv\" $flav $audio $video $source\n";
+				system(<<END);
+(echo pause > fifo_cmd
  ./run_mp1 \"$serv\" $flav $audio $video "$source"
  kill `cat player2.pid`
  echo 'End of file' > id) &
 END
-		next;
+			}
+			next;
+		}
 	} elsif ($cmd =~ /^name /) {
 		open(F,">fifo_list") || die "can't write fifo_list\n";
 		my @arg = split(/ /,$cmd);
@@ -334,7 +419,7 @@ END
 	} elsif ($cmd =~ /^switch_mode/) {
 		my @arg = split(/ /,$cmd);
 		my @src = (
-			"freebox", "dvb", "livetv");
+			"freebox", "dvb", "livetv", "flux");
 		my $found = 0;
 		if ($#arg == 1) {
 			for (my $n=0; $n<=$#src; $n++) {
