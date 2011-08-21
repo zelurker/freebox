@@ -437,8 +437,6 @@ static int list(int fifo, int argc, char **argv)
 			select(0,NULL, NULL, NULL, &tv);
 		}
 	}
-	if (tries > 1)
-		printf("bmovl: %d tries to open fifo !\n",tries);
 
 	if (info > 0) {
 		sprintf(buff,"prog %s\n%d\n",list[current],y+sf->h);
