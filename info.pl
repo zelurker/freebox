@@ -420,6 +420,8 @@ sub disp_prog {
 	print $out "picture.jpg" if ($$sub[9]);
 
 	print $out "\n$$sub[1] : $start - $end\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
+	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
+	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
 	close($out);
 }
 
@@ -427,16 +429,43 @@ if (!$reread) {
 	do {
 		# Celui là sert à vérifier les déclenchements externes (noair.pl)
 		if (sysopen(F,"fifo_info",O_RDONLY|O_NONBLOCK)) {
+			my $delay = undef;
+			if ($last_chan && defined($last_prog) && $chaines{$last_chan}) {
+				$delay = $chaines{$last_chan}[$last_prog][4];
+				if ($delay < time) {
+					# on obtient un delay négatif ici quand nolife n'a pas
+					# encore les programmes actuels
+					$delay = undef;
+				}
+			}
+			if ($start_timer && $start_timer <= time) {
+				# start_timer peut se retrouver en anomalie comme ici
+				# si l'un des cadres change de status avant qu'il soit à 0
+				# dans ce cas on le remet à 0 ici.
+				$start_timer = 0;
+			}
+
+			if ($start_timer && # $start_timer > time && 
+				(!$delay || $start_timer < $delay)) {
+				$delay = $start_timer;
+			}
+			$delay -= time() if ($delay);
+
 			my $rin = "";
 			vec($rin,fileno(F),1) = 1;
-			my ($nfound) = select($rin, undef, undef, 5);
+			my ($nfound) = select($rin, undef, undef, $delay);
+			if ($last_chan && defined($last_prog) && $chaines{$last_chan} && time >= $chaines{$last_chan}[$last_prog][4] && time < $chaines{$last_chan}[$last_prog+1][4]) {
+				print "programme suivant affiché last $last_prog < ",$#{$chaines{$last_chan}},"\n";
+				$last_prog++;
+				disp_prog($chaines{$last_chan}[$last_prog],$last_long);
+			}
 			if ($nfound) {
 				($cmd,$long) = <F>;
 				chomp ($cmd,$long);
 			}
 			close(F);
 		}
-		if ($start_timer && time - $start_timer >= 5 && -f "info_coords" &&
+		if ($start_timer && time - $start_timer >= 0 && -f "info_coords" &&
 			! -f "list_coords") {
 			alpha("info_coords",-40,-255,-5);
 			unlink "info_coords";
@@ -485,7 +514,7 @@ if (!$reread) {
 		chomp $cmd;
 		$channel = lc($cmd);
 		$long = $last_long;
-		$start_timer = time if (!$long);
+		$start_timer = time+5 if (!$long);
 	} elsif ($cmd eq "zap1") {
 		open(F,">fifo_list") || die "can't talk to fifo_list\n";
 		print F "zap2 $last_chan\n";
@@ -493,7 +522,7 @@ if (!$reread) {
 		goto read_fifo;
 	} elsif ($cmd =~ s/^prog //) {
 		$channel = lc($cmd);
-		$start_timer = time if (!$long);
+		$start_timer = time+5 if (!$long);
 	} else {
 		print "info: commande inconnue $cmd\n";
 		goto read_fifo;
