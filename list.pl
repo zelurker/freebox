@@ -35,7 +35,7 @@ my $found = undef;
 my $base_flux = "";
 
 sub read_list {
-	if ($source eq "freebox") {
+	if ($source =~ /freebox/) {
 		my $list;
 		if (!-f "freebox.m3u" || -M "freebox.m3u" >= 1) {
 			$list = get "http://mafreebox.freebox.fr/freeboxtv/playlist.m3u";
@@ -51,7 +51,7 @@ sub read_list {
 			@list = ();
 		}
 		my @rejets;
-		if (open(F,"<rejets/freebox")) {
+		if (open(F,"<rejets/$source")) {
 			while (<F>) {
 				chomp;
 				my ($serv,$flav,$audio,$video) = split(/:/);
@@ -65,6 +65,8 @@ sub read_list {
 		my ($num,$name,$service,$flavour,$audio,$video);
 		my $last_num = undef;
 		@list = ();
+		my $tv;
+		$tv = 1 if ($source eq "freeboxtv" || $source eq "freebox");
 		foreach (split(/\n/,$list)) {
 			if (/^#EXTINF:(\d+),(\d+) \- (.+?) *$/) {
 				($num,$name) = ($2,$3);
@@ -88,6 +90,10 @@ sub read_list {
 					}
 				}
 				next if ($reject);
+				next if (($tv && $video eq "no-video") ||
+					(!$tv && $video ne "no-video"));
+
+				$num -= 10000 if (!$tv);
 
 				my @cur = ($num,$name,$service,$flavour,$audio,$video);
 				if ($last_num != $num) {
@@ -101,6 +107,9 @@ sub read_list {
 					$found = $#list;
 				}
 			}
+		}
+		if (!$tv) {
+			@list = sort { $$a[0][1] cmp $$b[0][1] } @list;
 		}
 	} elsif ($source eq "dvb") {
 		open(F,"<$ENV{HOME}/.mplayer/channels.conf") || die "can't open channels.conf\n";
@@ -186,7 +195,7 @@ sub get_name {
 sub find_channel {
 	my ($serv,$flav,$audio) = @_;
 	$flav = "" if ($flav eq "0");
-	if ($source eq "freebox") {
+	if ($source =~ /freebox/) {
 		for (my $n=0; $n<=$#list; $n++) {
 			for (my $x=0; $x<=$#{$list[$n]}; $x++) {
 				if ($list[$n][$x][2] == $serv &&
@@ -349,7 +358,7 @@ while (1) {
 				$flav = 0 if (!$flav);
 				$video = 0 if (!$video);
 				$audio = 0 if (!$audio);
-				print "lancement ./run_mp1 \"$serv\" $flav $audio $video $source\n";
+				print "lancement ./run_mp1 \"$serv\" $flav $audio $video \"$source\"\n";
 				system(<<END);
 (echo pause > fifo_cmd
  ./run_mp1 \"$serv\" $flav $audio $video "$source"
@@ -362,7 +371,7 @@ END
 	} elsif ($cmd =~ /^name /) {
 		open(F,">fifo_list") || die "can't write fifo_list\n";
 		my @arg = split(/ /,$cmd);
-		if ($#arg < 2 && $source eq "freebox") {
+		if ($#arg < 2 && $source =~ /freebox/) {
 			print F "syntax: name service flavour [audio] $#arg\n";
 		} else {
 			if ($source eq "dvb") {
@@ -419,7 +428,7 @@ END
 	} elsif ($cmd =~ /^switch_mode/) {
 		my @arg = split(/ /,$cmd);
 		my @src = (
-			"freebox", "dvb", "livetv", "flux");
+			"freeboxtv", "radios freebox", "dvb", "livetv", "flux");
 		my $found = 0;
 		if ($#arg == 1) {
 			for (my $n=0; $n<=$#src; $n++) {
