@@ -5,6 +5,8 @@
 # nextprog
 # prevprog
 # next/prev : fait défiler le bandeau (transmission au serveur C).
+# up/down : montre les info pour la chaine suivante/précédente
+# zap1 : transmet à list.pl pour zapper
 
 use strict;
 use warnings;
@@ -20,10 +22,19 @@ use Fcntl;
 require HTTP::Cookies;
 require "output.pl";
 
+sub REAPER {
+	my $waitedpid = wait;
+	# loathe SysV: it makes us not only reinstate
+	# the handler, but place it after the wait
+	$SIG{CHLD} = \&REAPER;
+}
+$SIG{CHLD} = \&REAPER;
+
 #
 # Constants
 #
 
+my @records = ();
 my @def_chan = ("France 2", "France 3", "France 4", "Arte", "TV5MONDE",
 "RTL 9", "AB1", "Direct 8", "TMC", "NT1", "NRJ 12", "La Chaîne Parlementaire",
 "BFM TV", "France 5", "Direct Star", "NRJ Paris", "Vivolta", "NRJ Hits",
@@ -156,6 +167,7 @@ sub get_time {
 sub update_noair {
 	print STDERR "updating noair...\n";
 	my $xml = get "http://www.nolife-tv.com/noair/noair.xml";
+	rename "air.xml", "air0.xml";
 	open(F,">air.xml");
 	print F $xml;
 	close(F);
@@ -189,7 +201,7 @@ sub get_nolife {
 		die "can't get noair listing\n" if (!open(F,"<air.xml"));
 	}
 
-	our $xml;
+	my $xml = "";
 	while (<F>) {
 		$xml .= $_;
 	}
@@ -216,20 +228,6 @@ sub get_nolife {
 		$shot = get_field($_,"screenshot");
 		$cat = get_field($_,"type");
 		if ($start && $old_title && $old_title ne $title) {
-			# 0: channel id
-			# 1: channel name
-			# 2: Title
-			# 3: date start
-			# 4: date stop
-			# 5: category
-			# 6: description
-			# 7: details (duration, ...)
-			# 8: rating
-			# 9: image presence
-			# 10: stars
-			# 11: critical
-			# 12: airdate
-
 			my $colision = undef;
 			foreach (@$rtab) {
 				if ($$_[3] == $start && $$_[4] == $date) {
@@ -237,10 +235,12 @@ sub get_nolife {
 					last;
 				}
 			}
-			next if ($colision);
-			my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
-				$desc,"","",$old_shot,0,0,get_date($start));
-			push @$rtab,\@tab;
+				
+			if (!$colision) {
+				my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
+					$desc,"","",$old_shot,0,0,get_date($start));
+				push @$rtab,\@tab;
+			}
 
 			$start = $date;
 			$desc = "";
@@ -425,39 +425,98 @@ sub disp_prog {
 	close($out);
 }
 
+sub send_list {
+	# envoie une commande à fifo_list et récupère la réponse
+	my $cmd = shift;
+	open(F,">fifo_list");
+	print F $cmd;
+	close(F);
+	open(F,"<fifo_list") || die "can't read from fifo_list\n";
+	$cmd = <F>;
+	close(F);
+	chomp $cmd;
+	$cmd;
+}
+
 if (!$reread) {
 	do {
 		# Celui là sert à vérifier les déclenchements externes (noair.pl)
+		$time = time;
 		if (sysopen(F,"fifo_info",O_RDONLY|O_NONBLOCK)) {
 			my $delay = undef;
 			if ($last_chan && defined($last_prog) && $chaines{$last_chan}) {
 				$delay = $chaines{$last_chan}[$last_prog][4];
-				if ($delay < time) {
+				if ($delay < $time) {
 					# on obtient un delay négatif ici quand nolife n'a pas
 					# encore les programmes actuels
 					$delay = undef;
 				}
 			}
-			if ($start_timer && $start_timer <= time) {
+			if ($start_timer && $start_timer <= $time) {
 				# start_timer peut se retrouver en anomalie comme ici
 				# si l'un des cadres change de status avant qu'il soit à 0
 				# dans ce cas on le remet à 0 ici.
 				$start_timer = 0;
 			}
 
-			if ($start_timer && # $start_timer > time && 
+			if ($start_timer && # $start_timer > $time && 
 				(!$delay || $start_timer < $delay)) {
 				$delay = $start_timer;
 			}
-			$delay -= time() if ($delay);
+			foreach (@records) {
+				if ($$_[0] > $time && (!$delay || $$_[0]-$time < $delay)) {
+					$delay = $$_[0];
+				} elsif ($$_[1] > $time && (!$delay || $$_[1]-$time < $delay)) {
+					$delay = $$_[1];
+				}
+			}
+			$delay -= $time if ($delay);
 
 			my $rin = "";
 			vec($rin,fileno(F),1) = 1;
 			my ($nfound) = select($rin, undef, undef, $delay);
-			if ($last_chan && defined($last_prog) && $chaines{$last_chan} && time >= $chaines{$last_chan}[$last_prog][4] && time < $chaines{$last_chan}[$last_prog+1][4]) {
-				print "programme suivant affiché last $last_prog < ",$#{$chaines{$last_chan}},"\n";
-				$last_prog++;
-				disp_prog($chaines{$last_chan}[$last_prog],$last_long);
+			$time = time;
+			if ($last_chan && defined($last_prog) && $chaines{$last_chan} && $time >= $chaines{$last_chan}[$last_prog][4] && $time < $chaines{$last_chan}[$last_prog+1][4]) {
+				if (-f "info_coords" && $time - $chaines{$last_chan}[$last_prog+1][3] < 5) {
+					print "programme suivant affiché last $last_prog < ",$#{$chaines{$last_chan}},"\n";
+					$last_prog++;
+					disp_prog($chaines{$last_chan}[$last_prog],$last_long);
+				}
+			}
+			foreach (@records) {
+				if ($time >= $$_[0] && $time - $$_[0] <= 10) {
+					# Début d'un enregistrement
+					$$_[0] = 0; # invalider
+					my $audio2 = $$_[4];
+					my $name = $$_[7];
+					if ($audio2) {
+						open(F,">$name.audio");
+						print F $audio2;
+						close(F);
+					}
+					my $service = $$_[2];
+					my $flavour = $$_[3];
+					if ($$_[6] =~ /freebox/) {
+						my $pid = fork();
+						if ($pid == 0) {
+							exec("mplayer", "-dumpfile",$name,"-really-quiet", "-dumpstream","rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour");
+						} else {
+							push @$_,$pid;
+							print "pid to kill $$_[8]\n";
+						}
+					}
+				} elsif ($time >= $$_[1] && $time - $$_[1] <= 10) {
+					print "kill pid $$_[8]\n";
+					kill 15,$$_[8];
+					$$_[8] = 0;
+				}
+			}
+			for (my $n=0; $n<=$#records; $n++) {
+				if ($records[$n][0] == 0 && $records[$n][8] == 0) {
+					splice @records,$n,1;
+					last if ($n > $#records);
+					redo;
+				}
 			}
 			if ($nfound) {
 				($cmd,$long) = <F>;
@@ -465,7 +524,7 @@ if (!$reread) {
 			}
 			close(F);
 		}
-		if ($start_timer && time - $start_timer >= 0 && -f "info_coords" &&
+		if ($start_timer && $time - $start_timer >= 0 && -f "info_coords" &&
 			! -f "list_coords") {
 			alpha("info_coords",-40,-255,-5);
 			unlink "info_coords";
@@ -482,7 +541,16 @@ if (!$reread) {
 		my $rtab = $chaines{$last_chan};
 		if ($rtab) {
 			my $n = $last_prog+1;
-			$n-- if ($n > $#$rtab);
+			if ($n > $#$rtab) {
+				if ($last_chan eq "nolife") {
+					print "info: tentative update nolife (right) ",$chaines{"nolife"},"\n";
+					update_noair();
+					$rtab = $chaines{"nolife"} = get_nolife($chaines{"nolife"});
+				} else {
+					print "channel: $last_chan\n";
+				}
+				$n-- if ($n > $#$rtab);
+			}
 			disp_prog($$rtab[$n],$last_long);
 			$last_prog = $n;
 		}
@@ -505,13 +573,7 @@ if (!$reread) {
 	    close(F);
 	    goto read_fifo;
 	} elsif ($cmd =~ /^(up|down)$/) {
-		open(F,">fifo_list") || die "can't talk to fifo_list\n";
-		print F ($cmd eq "up" ? "next" : "prev")." $last_chan\n";
-		close(F);
-		open(F,"<fifo_list") || die "can't read from fifo_list\n";
-		$cmd = <F>;
-		close(F);
-		chomp $cmd;
+		$cmd = send_list(($cmd eq "up" ? "next" : "prev")." $last_chan\n");
 		$channel = lc($cmd);
 		$long = $last_long;
 		$start_timer = time+5 if (!$long);
@@ -523,6 +585,23 @@ if (!$reread) {
 	} elsif ($cmd =~ s/^prog //) {
 		$channel = lc($cmd);
 		$start_timer = time+5 if (!$long);
+	} elsif ($cmd eq "record") {
+		my $rtab = $chaines{$last_chan}[$last_prog];
+		$cmd = send_list("info ".lc($$rtab[1])."\n");
+		my ($src,$num,$name,$service,$flavour,$audio,$video) = split(/\,/,$cmd);
+		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($$rtab[3]);
+		my $file = "records/".sprintf("%d%02d%02d %02d%02d%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec)." $$rtab[1].ts";
+		my @cur = ($$rtab[3],$$rtab[4],$service,$flavour,$audio,$video,$src,$file);
+		print "info pour enregistrement : ",dateheure($$rtab[3])," ",dateheure($$rtab[4])," ",$$rtab[1]," serv $service flav $flavour audio $audio video $video src $src\n";
+		push @records,\@cur;
+		@records = sort { $$a[0] <=> $$b[0] } @records;
+		open(F,">recordings");
+		foreach (@records) {
+			print F join(",",@$_),"\n";
+		}
+		close(F);
+		mkdir "records" if (! -d "records");
+		goto read_fifo;
 	} else {
 		print "info: commande inconnue $cmd\n";
 		goto read_fifo;
