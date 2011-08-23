@@ -31,15 +31,14 @@ if [ "$service" == "" ]; then
 	flavour=sd
 	video=""
 	audio=""
-	src=freebox
+	src=freeboxtv
 fi
 echo service $service flavour $flavour source $src
 cmd=""
 append $flavour
 append $audio
 append $video
-append $src
-./run_mp1 "$service" $cmd
+./run_mp1 "$service" $cmd "$src"
 }
 
 function append {
