@@ -259,6 +259,20 @@ sub get_mms {
 	return $url;
 }
 
+sub reset_current {
+	# replace le mode sur le mode courant
+	if (open(A,"<current")) {
+		<A>;
+		my $src = <A>;
+		close(A);
+		chomp $src;
+		if ($src ne $source) {
+			$source = $src;
+			read_list();
+		}
+	}
+}
+
 read_list();
 system("rm -f fifo_list && mkfifo fifo_list");
 my $nb_elem = 16;
@@ -396,16 +410,7 @@ END
 		if (!$cmd) {
 			print F "syntax: next|prev <nom de la chaine>\n";
 		} else {
-			if (open(A,"<current")) {
-				<A>;
-				my $src = <A>;
-				close(A);
-				chomp $src;
-				if ($src ne $source) {
-					$source = $src;
-					read_list();
-				}
-			}
+			reset_current();
 			my ($n,$x) = find_name($cmd);
 			if (!defined($n)) {
 				print F "not found $cmd\n";
@@ -421,6 +426,21 @@ END
 					($name) =get_name($list[$prev]); 
 				}
 				print F "$name\n";
+			}
+		}
+		close(F);
+		next;
+	} elsif ($cmd =~ s/^info //) {
+		open(F,">fifo_list") || die "can't write to fifo_list\n";
+		if (!$cmd) {
+			print F "syntax: info <nom de la chaine>\n";
+		} else {
+			reset_current();
+			my ($n,$x) = find_name($cmd);
+			if (!defined($n)) {
+				print F "not found $cmd\n";
+			} else {
+				print F "$source,",join(",",@{$list[$n][$x]}),"\n";
 			}
 		}
 		close(F);
