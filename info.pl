@@ -212,12 +212,27 @@ sub get_nolife {
 	my ($title,$start,$old_title,$sub,$desc,$old_sub,$old_shot,$shot,
 	$old_cat,$cat);
 	my $date;
+	my $cut_date = undef;
+	$cut_date = $$rtab[0][3] if ($rtab);
 	foreach (split /\n/,$xml) {
 		next if (!/\<slot/);
 
 		$date = conv_date(get_field($_,"dateUTC"));
 		# print get_time($date)," ",$_->{title},"\n";
 		$start = $date if (!$start);
+		if ($cut_date) {
+			if ($start > $cut_date) {
+				# Des fois nolife corrige ses programmes, le nouveau qui arrive a
+				# priorité dans ce cas là
+				my $n;
+				for ($n=0; $n<=$#$rtab; $n++) {
+					last if ($$rtab[$n][3] >= $start);
+				}
+				splice @$rtab,$n if ($n < $#$rtab);
+			}
+			$cut_date = undef;
+		}
+
 		$old_title = $title;
 		$old_sub = $sub;
 		$old_shot = $shot;
@@ -228,20 +243,9 @@ sub get_nolife {
 		$shot = get_field($_,"screenshot");
 		$cat = get_field($_,"type");
 		if ($start && $old_title && $old_title ne $title) {
-			my $colision = undef;
-			foreach (@$rtab) {
-				if ($$_[3] == $start && $$_[4] == $date) {
-					$colision = $_;
-					last;
-				}
-			}
-				
-			if (!$colision) {
-				my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
-					$desc,"","",$old_shot,0,0,get_date($start));
-				push @$rtab,\@tab;
-			}
-
+			my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
+				$desc,"","",$old_shot,0,0,get_date($start));
+			push @$rtab,\@tab;
 			$start = $date;
 			$desc = "";
 		}
@@ -254,18 +258,9 @@ sub get_nolife {
 		}
 	}
 	# Test le dernier programme !
-	my $colision = undef;
-	foreach (@$rtab) {
-		if ($$_[3] == $start && $$_[4] == $date) {
-			$colision = $_;
-			last;
-		}
-	}
-	if (!$colision) {
-		my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
-			$desc,"","",$old_shot,0,0,get_date($start));
-		push @$rtab,\@tab;
-	}
+	my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
+		$desc,"","",$old_shot,0,0,get_date($start));
+	push @$rtab,\@tab;
 	$rtab;
 }
 
@@ -438,6 +433,14 @@ sub send_list {
 	$cmd;
 }
 
+sub save_recordings {
+	open(F,">recordings");
+	foreach (@records) {
+		print F join(",",@$_),"\n";
+	}
+	close(F);
+}
+
 if (!$reread) {
 	do {
 		# Celui là sert à vérifier les déclenchements externes (noair.pl)
@@ -483,6 +486,7 @@ if (!$reread) {
 					disp_prog($chaines{$last_chan}[$last_prog],$last_long);
 				}
 			}
+			my $finished = 0;
 			foreach (@records) {
 				if ($time >= $$_[0] && $time - $$_[0] <= 10) {
 					# Début d'un enregistrement
@@ -505,18 +509,22 @@ if (!$reread) {
 							print "pid to kill $$_[8]\n";
 						}
 					}
-				} elsif ($time >= $$_[1] && $time - $$_[1] <= 10) {
+				} elsif ($time >= $$_[1] && $time - $$_[1] <= 10 && $$_[8]) {
 					print "kill pid $$_[8]\n";
 					kill 15,$$_[8];
 					$$_[8] = 0;
+					$finished = 1;
 				}
 			}
-			for (my $n=0; $n<=$#records; $n++) {
-				if ($records[$n][0] == 0 && $records[$n][8] == 0) {
-					splice @records,$n,1;
-					last if ($n > $#records);
-					redo;
+			if ($finished) {
+				for (my $n=0; $n<=$#records; $n++) {
+					if ($records[$n][0] == 0 && $records[$n][8] == 0) {
+						splice @records,$n,1;
+						last if ($n > $#records);
+						redo;
+					}
 				}
+				save_recordings();
 			}
 			if ($nfound) {
 				($cmd,$long) = <F>;
@@ -595,11 +603,7 @@ if (!$reread) {
 		print "info pour enregistrement : ",dateheure($$rtab[3])," ",dateheure($$rtab[4])," ",$$rtab[1]," serv $service flav $flavour audio $audio video $video src $src\n";
 		push @records,\@cur;
 		@records = sort { $$a[0] <=> $$b[0] } @records;
-		open(F,">recordings");
-		foreach (@records) {
-			print F join(",",@$_),"\n";
-		}
-		close(F);
+		save_recordings();
 		mkdir "records" if (! -d "records");
 		goto read_fifo;
 	} else {
