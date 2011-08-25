@@ -34,12 +34,13 @@ $SIG{CHLD} = \&REAPER;
 # Constants
 #
 
+my $read_before = undef;
 my @records = ();
 my @def_chan = ("France 2", "France 3", "France 4", "Arte", "TV5MONDE",
 "RTL 9", "AB1", "Direct 8", "TMC", "NT1", "NRJ 12", "La Chaîne Parlementaire",
 "BFM TV", "France 5", "Direct Star", "NRJ Paris", "Vivolta", "NRJ Hits",
 "Game One", "TF1", "M6", "W9", "Canal+", "Equidia", "AB Moteurs",
-"France Ô",
+"France Ô", "Onzéo", "Liberty tv"
 );
 
 open(F,">info_pl.pid");
@@ -208,6 +209,8 @@ sub get_nolife {
 	close(F);
 	Encode::from_to($xml, "utf-8", "iso-8859-15");
 	$xml =~ s/½/oe/g;
+	$xml =~ s/\&quot\;/\"/g;
+	$xml =~ s/\&amp\;/\&/g;
 
 	my ($title,$start,$old_title,$sub,$desc,$old_sub,$old_shot,$shot,
 	$old_cat,$cat);
@@ -272,10 +275,11 @@ my $channels_text = getListeChaines();
 my @chan = split(/\:\$\$\$\:/,$channels_text);
 my $sel = "";
 foreach (@def_chan) {
+	s/\+/\\+/g;
 	my $found = 0;
 	for (my $n=0; $n<=$#chan; $n++) {
-		if ($chan[$n] =~ /$_/) {
-			my ($num,$name) = split(/\$\$\$/,$chan[$n]);
+		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
+		if ($name =~ /^$_$/i) {
 			$sel .= ",$num";
 			$found = 1;
 			last;
@@ -490,9 +494,9 @@ if (!$reread || !$channel) {
 						my $audio2 = $$_[4];
 						my $name = $$_[7];
 						if ($audio2) {
-							open(F,">$name.audio");
-							print F $audio2;
-							close(F);
+							open(G,">$name.audio");
+							print G $audio2;
+							close(G);
 						}
 						my $service = $$_[2];
 						my $flavour = $$_[3];
@@ -524,10 +528,12 @@ if (!$reread || !$channel) {
 				}
 				if ($nfound) {
 					($cmd) = <F>;
-					chomp ($cmd);
-					my @tab = split(/ /,$cmd);
-					($tab[0],$long) = split(/\:/,$tab[0]);
-					$cmd = join(" ",@tab);
+					if ($cmd) {
+						chomp ($cmd);
+						my @tab = split(/ /,$cmd);
+						($tab[0],$long) = split(/\:/,$tab[0]);
+						$cmd = join(" ",@tab);
+					}
 				}
 				close(F);
 			}
@@ -555,8 +561,16 @@ if (!$reread || !$channel) {
 			if ($n > $#$rtab) {
 				if ($last_chan eq "nolife") {
 					print "info: tentative update nolife (right) ",$chaines{"nolife"},"\n";
+					my $start = $$rtab[3];
+					my $end = $$rtab[4];
 					update_noair();
 					$rtab = $chaines{"nolife"} = get_nolife($chaines{"nolife"});
+					# Les programmes de nolife changent vraiment beaucoup
+					# d'un jour à l'autre surtout sur la fin de journée
+					# il faut tout réindicer du coup !
+					for ($n=0; $n<=$#$rtab; $n++) {
+						last if ($$rtab[3] >= $start || $$rtab[4] >= $end);
+					}
 				} else {
 					my $date = $$rtab[$#$rtab][12];
 					my ($j,$m,$a) = split(/\//,$date);
@@ -681,11 +695,12 @@ for (my $n=0; $n<=$#$rtab; $n++) {
 	}
 }
 # print "time ",dateheure($time)," start ",dateheure($$rtab[0][3]),"\n";
-if ($time < $$rtab[0][3]) {
-	print "pas trouvé l'heure, mais on va récupérer le jour d'avant...\n";
+if ($time < $$rtab[0][3] && !$read_before) {
+	print "pas trouvé l'heure ",dateheure($time)," cmp ",dateheure($$rtab[0][3]),", mais on va récupérer le jour d'avant...\n";
 	$program_text = getListeProgrammes(-1).$program_text;
 	$old_nolife = $chaines{"nolife"};
 	$reread = 1; # On récupère l'ancienne commande...
+	$read_before = 1;
 	goto debut;
 }
 if ($channel eq "nolife") {
@@ -780,14 +795,16 @@ sub request {
 
 sub getListeChaines {
 	my $r;
-	if (!-f "liste_chaines" || -M "liste_chaines" > 1) {
+	if (!-f "liste_chaines" || -M "liste_chaines" > 30 || -s "liste_chaines" < 512) {
 		print "geting liste_chaines from web...\n";
-		open(F,">liste_chaines") || die "can't create liste_chaines\n";
 		my $url = $site_prefix."ListeChaines.php";
 
 		$r = request($url);
-		print F $r;
-		close(F);
+		if ($r) {
+			open(F,">liste_chaines") || die "can't create liste_chaines\n";
+			print F $r;
+			close(F);
+		}
 	} else {
 		print "using cache for liste_chaines\n";
 		open(F,"<liste_chaines") || die "can't read liste_chaines\n";
