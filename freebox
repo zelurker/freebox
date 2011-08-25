@@ -54,111 +54,138 @@ function launch() {
 	mkfifo fifo fifo_cmd
 	# On récupère le nom à jour
 	name=`head -n 7 current|tail -n 1`
-	if [ "$audio" != "" ]; then
-		audio2="-aid $audio"
+	if [ "$src" == "flux" ]; then
+		echo "lancement flux name=$name"
+		echo mplayer -quiet mf://musique.jpg -audiofile "$name" \
+			-stop-xscreensaver -identify -input \
+			conf=$PWD/input.conf:file=fifo_cmd 
+		mplayer -quiet mf://musique.jpg -audiofile "$name" -vf bmovl=1:0:fifo \
+			-stop-xscreensaver -identify -input \
+			conf=$PWD/input.conf:file=fifo_cmd \
+			>& id &
+	else
+		if [ "$audio" != "" ]; then
+			audio2="-aid $audio"
+		fi
+		mplayer $audio2 -quiet $length -vf bmovl=1:0:fifo,screenshot,kerndeint \
+			-stop-xscreensaver -identify -input \
+			conf=$PWD/input.conf:file=fifo_cmd $demuxer \
+			"$name" >& id &
 	fi
-	mplayer $audio2 -quiet $length -vf bmovl=1:0:fifo,screenshot,kerndeint \
-		-stop-xscreensaver -identify -input \
-		conf=$PWD/input.conf:file=fifo_cmd $demuxer \
-		"$name" >& id &
 	echo $! > player2.pid
 	audio2=""
 }
 
-rm -f id fifo_list
-# 1st kill all the old eventual processes
-for n in player1.pid info.pid; do
-	if [ -f $n ]; then
-		kill `cat $n` >& /dev/null
-		rm -f $n
-	fi
-done
-if ! ps -p `cat info_pl.pid`>&/dev/null; then
-	perl info.pl &
-fi
-if [ ! -f info_list.pid ]; then
-	perl list.pl &
-elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_list.pid` ); then
-	kill `cat info_list.pid` >& /dev/null && rm -f info_list.pid
-	perl list.pl &
-fi
-init_mp1 "$1" $2 $3 $4 $5
-name=`head -n 7 current|tail -n 1`
-if [ -f "$name" ]; then
-
-	again=1
-	# Cette boucle est pour récupérer la main quand on sort par erreur du
-	# fichier par la fin. On doit boucler sur l'identification du fichier parce
-	# que c'est réutiliser par eval_end.pl pour estimer où commencer la reprise
-	# inconvénient majeur : ça ralentit la reprise
-	while [ "$again" == "1" ]; do
-		# En cas de zapping, on se retrouve ici, faut remettre à jour chaine
-		chaine=`head -n 1 current`
-
-		if [ -f player2.pid ] && ps -p `cat player2.pid` >& /dev/null; then
-			# kill le 2ème process le + tard possible pour minimiser la
-			# disparition de la fenêtre pendant le zapping
-			kill `cat player2.pid`
-			rm -f player2.pid
-		fi
-		if [ -f info.pid ]; then
-			if ! ps -p `cat info.pid` >& /dev/null; then
-				rm -f info.pid
-			fi
-		fi
-		# echo launch length $length
-		launch
-		pid=$!
-		if ! [ -f info.pid ]; then
-			rm -f fifo_bmovl
-			./bmovl-src/bmovl fifo &
-		else
-			kill -USR1 `cat info.pid`
-		fi
-		echo "prog $chaine" > fifo_info
-		wait $pid
-		kill -USR2 `cat info.pid`
-		length=`perl eval_end.pl`
-		if [ "$length" != "0" ] && [ "$length" != "" ]; then
-			length="-ss $length"
-		else
-			length=""
-		fi
-		if grep -q "no video" id || grep -q "NO AUDIO" id; then
-			demuxer="-demuxer lavf -framedrop -vo xv"
-		else
-			demuxer=""
-		fi
-
-		if ! ps -p `cat player1.pid`>&/dev/null; then
-			again=0
-		fi
-		if  ! grep -q " signal " id && ! grep -q "ID_EXIT=EOF" id; then
-			# On est obligé d'essayer de deviner ce qui a fait sortir
-			# en cas d'eof on veut continuer
-			# mais si l'utilisateur quitte volontairement il ne faut pas
-			# le confondre avec un signal term (zapping) ou un segfault
-			again=0
-		fi
-		if [ -f live ]; then
-			rm -f live
-			if ! grep -q ID_EXIT=QUIT id; then
-				src=`head -n 2 current|tail -n 1`
-				echo switch_mode $src > fifo_list
-				init_mp1
-				again=1
-			fi
-		fi
-		# echo end of while loop length $length again $again
-		audio=`head -n 5 current|tail -n 1`
-	done
-	for n in player1.pid info.pid info_list.pid; do
+exit=0
+while [ "$exit" != "1" ]; do
+	rm -f id fifo_list
+	# 1st kill all the old eventual processes
+	for n in player1.pid info.pid; do
 		if [ -f $n ]; then
 			kill `cat $n` >& /dev/null
 			rm -f $n
 		fi
 	done
-	rm -f player2.pid
-fi
-rm -f info_coords list_coords
+	if ! ps -p `cat info_pl.pid`>&/dev/null; then
+		perl info.pl &
+	fi
+	if [ ! -f info_list.pid ]; then
+		perl list.pl &
+	elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_list.pid` ); then
+		kill `cat info_list.pid` >& /dev/null && rm -f info_list.pid
+		perl list.pl &
+	fi
+	init_mp1 "$1" $2 $3 $4 $5
+	name=`head -n 7 current|tail -n 1`
+	if [ -f "$name" ] || [ "$src" == "flux" ]; then
+
+		again=1
+		# Cette boucle est pour récupérer la main quand on sort par erreur du
+		# fichier par la fin. On doit boucler sur l'identification du fichier parce
+		# que c'est réutiliser par eval_end.pl pour estimer où commencer la reprise
+		# inconvénient majeur : ça ralentit la reprise
+		while [ "$again" == "1" ]; do
+			# En cas de zapping, on se retrouve ici, faut remettre à jour chaine
+			chaine=`head -n 1 current`
+			if [ "$src" != "flux" ]; then
+				cp -f current current0
+			fi
+
+			if [ -f player2.pid ] && ps -p `cat player2.pid` >& /dev/null; then
+				# kill le 2ème process le + tard possible pour minimiser la
+				# disparition de la fenêtre pendant le zapping
+				kill `cat player2.pid`
+				rm -f player2.pid
+			fi
+			if [ -f info.pid ]; then
+				if ! ps -p `cat info.pid` >& /dev/null; then
+					rm -f info.pid
+				fi
+			fi
+			# echo launch length $length
+			launch
+			pid=$!
+			if ! [ -f info.pid ]; then
+				rm -f fifo_bmovl
+				./bmovl-src/bmovl fifo &
+			else
+				kill -USR1 `cat info.pid`
+			fi
+			echo "prog $chaine" > fifo_info
+			wait $pid
+			kill -USR2 `cat info.pid`
+			if [ "$src" != "flux" ]; then
+				length=`perl eval_end.pl`
+			fi
+			if [ "$length" != "0" ] && [ "$length" != "" ]; then
+				length="-ss $length"
+			else
+				length=""
+			fi
+			if grep -q "no video" id || grep -q "NO AUDIO" id; then
+				demuxer="-demuxer lavf -framedrop -vo xv"
+			else
+				demuxer=""
+			fi
+
+			if ! ps -p `cat player1.pid`>&/dev/null; then
+				again=0
+			fi
+			if  ! grep -q " signal " id && ! grep -q "ID_EXIT=EOF" id; then
+				# On est obligé d'essayer de deviner ce qui a fait sortir
+				# en cas d'eof on veut continuer
+				# mais si l'utilisateur quitte volontairement il ne faut pas
+				# le confondre avec un signal term (zapping) ou un segfault
+				again=0
+			fi
+			src=`head -n 2 current|tail -n 1`
+			if [ -f live ]; then
+				rm -f live
+				if ! grep -q ID_EXIT=QUIT id; then
+					echo switch_mode $src > fifo_list
+					init_mp1
+					again=1
+				fi
+			fi
+			# echo end of while loop length $length again $again
+			audio=`head -n 5 current|tail -n 1`
+			if [ "$src" == "flux" ] && ! grep -q ID_EXIT=QUIT id; then
+				again=1
+			fi
+		done
+		for n in player1.pid info.pid info_list.pid; do
+			if [ -f $n ]; then
+				kill `cat $n` >& /dev/null
+				rm -f $n
+			fi
+		done
+		rm -f player2.pid
+	fi
+	rm -f info_coords list_coords
+	if [ "$src" != "flux" ]; then
+		exit=1
+	else
+		cp -f current0 current
+	fi
+done
 

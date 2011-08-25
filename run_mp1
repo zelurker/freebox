@@ -14,8 +14,8 @@ flavour=$2
 audio=$3
 video=$4
 src=$5
-if [ "$src" == "0" ]; then
-	src=freebox
+if [ "$src" == "0" ] || [ "$src" == "" ]; then
+	src=freeboxtv
 fi
 if [ "$audio" == "0" ]; then
 	audio=""
@@ -24,6 +24,9 @@ if [ "$video" == "0" ]; then
 	video=""
 fi
 echo run_mp1: src=$src video=$video audio=$audio flavour=$flavour service=$service
+if [ "$src" == "flux" ]; then
+	exit 0
+fi
 if [ -f player1.pid ] && ps -p `cat player1.pid` >& /dev/null; then
 	kill `cat player1.pid` && rm -f player1.pid
 fi
@@ -43,7 +46,7 @@ while [ "$ok" == "0" ]; do
 		dvb)
 			mplayer -quiet -dumpfile "$name" -dumpstream dvb://"$service" >& log &
 			;;
-		freebox)
+		freebox|freeboxtv|"radios freebox")
 			mplayer $audio2 -dumpfile "$name" -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" >& log &
 			;;
 		flux)
