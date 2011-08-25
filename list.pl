@@ -338,17 +338,40 @@ while (1) {
 					print "$n: $list[$n][0][0] $list[$n][0][1] $list[$n][0][2]\n";
 				}
 			} else {
-				if ($serv !~ /(mp3|ogg|flac|mpc|wav|m3u|pls)$/i) {
-					# flux non audio -> vidéo
-					if (open(F,">fifo_cmd")) {
-						print F "pause\n";
-						if (-f "player1.pid") {
-							my $pid = `cat player1.pid`;
-							chomp $pid;
-							print "pid à tuer $pid.\n";
-							kill 1,$pid;
-							unlink "player1.pid";
+				if (open(F,">fifo_cmd")) {
+					print F "pause\n";
+					if (-f "player1.pid") {
+						my $pid = `cat player1.pid`;
+						chomp $pid;
+						print "pid à tuer $pid.\n";
+						kill 1,$pid;
+						unlink "player1.pid";
+					}
+					if ($serv =~ /(mp3|ogg|flac|mpc|wav|m3u|pls)$/i) {
+						if ($serv =~ /pls$/) {
+							my $xml = get $serv;
+							my @lines = split(/\n/,$xml);
+							foreach (@lines) {
+								if (/^file\d*\= *(.+)/i) {
+									print "pls trouvé url $1\n";
+									$serv = $1;
+									last;
+								}
+							}
+							if ($serv =~ /pls$/) {
+								print "pls: could not find url in $xml\n";
+								print F "pause\n";
+								close(F);
+								next;
+							}
 						}
+						open(G,">current");
+						print G "$name\n$source\n$serv\n$flav\n$audio\n$video\n$serv\n";
+						close(G);
+						print F "quit\n";
+						close(F);
+						unlink "id";
+					} else {
 						$serv = get_mms($serv) if ($serv =~ /^http/);
 						print "flux: loadfile $serv\n";
 						print F "loadfile '$serv'\n";
