@@ -7,15 +7,30 @@ use strict;
 use Fcntl;
 use Time::HiRes qw(usleep);
 
+sub open_bmovl {
+	my $tries = 0;
+	my $ret;
+	my $out = undef;
+	while ($tries++ < 10 && 
+		!($ret = sysopen($out,"fifo_bmovl",O_WRONLY|O_NONBLOCK))) {
+		select(undef,undef,undef,0.1);
+	}
+	if (!$ret) {
+		print "open_bmovl: open failed, using stderr\n";
+		return *STDERR;
+	}
+	$out;
+}
+
 sub clear($) {
 	my $name = shift;
 	if (open(F,"<$name")) {
 		my $coords = <F>;
 		chomp $coords;
 		close(F);
-		open(F,">fifo_bmovl") || die "can't open fifo bmovl\n";
-		print F "CLEAR $coords\n";
-		close(F);
+		my $f = open_bmovl();
+		print $f "CLEAR $coords\n";
+		close($f);
 		unlink("$name");
 	}
 }
@@ -26,11 +41,11 @@ sub alpha {
 		my $coords = <F>;
 		chomp $coords;
 		close(F);
-		open(F,">fifo_bmovl") || die "can't write to fifo\n";
+		my $f = open_bmovl();
 		for(my $i=$start; $i != $stop; $i+=$step) {
-			print F "ALPHA $coords $i\n";
+			print $f "ALPHA $coords $i\n";
 		}
-		close(F);
+		close($f);
 	}
 }
 
@@ -115,18 +130,8 @@ sub setup_output {
 		} # else pass long as is...
 		# print "calling $prog fifo $width $height $long\n";
 		if ($width > 100 && $height > 100) {
-			my $tries = 0;
-			my $ret;
-			while ($tries < 10 && 
-				!($ret = sysopen($out,"fifo_bmovl",O_WRONLY|O_NONBLOCK))) {
-				select(undef,undef,undef,0.1);
-			}
-			if ($ret) {
-				print $out "$prog fifo $width $height $long\n"
-			} else {
-				print "select_output: timeout, falling back to stderr\n";
-				$out = *STDERR;
-			}
+			$out = open_bmovl();
+			print $out "$prog fifo $width $height $long\n"
 		} else {
 			print "*** width $width height $height, on annule bmovl\n";
 			$out = *STDERR;
