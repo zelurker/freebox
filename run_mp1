@@ -39,7 +39,11 @@ while [ "$ok" == "0" ]; do
 	while ! [ -p fifo_list ]; do
 		echo attente >& /dev/null
 	done
-	echo name "$service" $flavour $audio > fifo_list
+	if [ "$src" == "dvb" ]; then
+		echo name $service > fifo_list
+	else
+		echo name "$service" $flavour $audio > fifo_list
+	fi
 	chaine=`cat fifo_list`
 	name=livetv/`date +"%Y%m%d %H%M%S $chaine.ts"`
 	case $src in
@@ -100,7 +104,6 @@ while [ "$ok" == "0" ]; do
 		ok=1 # fini !
 	fi
 done
-echo envoi name "$service" $flavour $audio
 # echo run_mp1: fin
 echo $chaine > current
 if [ "$src" != "" ]; then
