@@ -33,7 +33,7 @@ static void disconnect(int signal) {
 }
 
 static void connect(int signal) {
-	fifo = open( fifo_str, O_RDWR );
+	fifo = open( fifo_str, O_RDWR);
 	if (fifo <= 0) {
 		printf("server: could not open fifo !\n");
 	}
@@ -99,13 +99,13 @@ static int info(int fifo, int argc, char **argv)
 		title = strdup(buff);
 
 		/* Determine max length of text */
-		if (chan && (chan->w >= width/2 || chan->h+8+(pic ? pic->h : 0) > maxh)) {
+		if (chan && (chan->w >= width/2 || 3+fsize+chan->h+8+(pic ? pic->h+8 : 0) >= maxh)) {
 			/* Give priority to picture, remove channel logo 1st if not enough
 			 * space */
 			SDL_FreeSurface(chan);
 			chan = NULL;
 		}
-		if (pic && (pic->w >= width/2 || fsize+pic->h+8+(chan ? chan->h+8 : 0)>maxh)) {
+		if (pic && (pic->w >= width/2 || 3+fsize+pic->h+8+(chan ? chan->h+8 : 0)>=maxh)) {
 			SDL_FreeSurface(pic);
 			pic = NULL;
 		}
@@ -428,7 +428,7 @@ static int list(int fifo, int argc, char **argv)
 	 * J'ai quand même autorisé 4 tentatives après quelques essais.
 	 * Si ça dépasse 4, le message pour info est juste abandonné, généralement
 	 * ça veut dire qu'on parcourt les chaines trop vite dans la liste */
-	while (tries++ < 4 && info <= 0) {
+	while (tries++ < 40 && info <= 0) {
 		info = open("fifo_info",O_WRONLY|O_NONBLOCK);
 		if (info <= 0) {
 			struct timeval tv;
@@ -459,19 +459,21 @@ static int list(int fifo, int argc, char **argv)
 	return 0;
 }
 
-void clear(int fifo, int argc, char **argv)
+int clear(int fifo, int argc, char **argv)
 {
 	char buff[2048];
 	sprintf(buff,"CLEAR %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4]);
-	write(fifo, buff, strlen(buff));
+	int len = strlen(buff);
+	return write(fifo, buff, len) != len;
 }
 
-void alpha(int fifo, int argc, char **argv)
+int alpha(int fifo, int argc, char **argv)
 {
 	char buff[2048];
 	sprintf(buff,"ALPHA %s %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4],
 			argv[5]);
-	write(fifo, buff, strlen(buff));
+	int len = strlen(buff);
+	return write(fifo, buff, len) != len;
 }
 
 int main(int argc, char **argv) {
@@ -527,21 +529,27 @@ int main(int argc, char **argv) {
 		char *cmd = myargv[0];
 		s = strrchr(cmd,'/');
 		if (s) cmd =s+1;
+		int ret;
 		if (fifo > 0) {
 			// commandes connectÃ©es
 			if (!strcmp(cmd,"bmovl") || !strcmp(cmd,"next") ||
 					!strcmp(cmd,"prev")) {
-				info(fifo,argc,myargv);
+				ret = info(fifo,argc,myargv);
 				server = NULL;
 				continue;
 			} else if (!strcmp(cmd,"list")) {
-				list(fifo,argc,myargv);
+				ret = list(fifo,argc,myargv);
 				server = NULL;
 				continue;
 			} else if (!strcmp(cmd,"CLEAR"))
-				clear(fifo,argc,myargv);
+				ret = clear(fifo,argc,myargv);
 			else if (!strcmp(cmd,"ALPHA"))
-				alpha(fifo,argc,myargv);
+				ret = alpha(fifo,argc,myargv);
+			if (ret) {
+			    printf("bmovl: command returned %d\n",ret);
+			    disconnect(0);
+			    connect(0);
+			}
 		} else {
 			printf("server: commande ignorÃ©e : %s\n",cmd);
 		}
