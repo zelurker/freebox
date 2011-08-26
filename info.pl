@@ -18,6 +18,7 @@ use Time::Local;
 use IO::Handle;
 use Encode;
 use Fcntl;
+use Socket;
 
 require HTTP::Cookies;
 require "output.pl";
@@ -503,7 +504,26 @@ if (!$reread || !$channel) {
 						if ($$_[6] =~ /freebox/) {
 							my $pid = fork();
 							if ($pid == 0) {
-								exec("mplayer", "-dumpfile",$name,"-really-quiet", "-dumpstream","rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour");
+								# Ce crétin de mplayer a un port par défaut
+								# pour le rtsp et ne vérifie rien.
+								# Ou plutôt si, mais seulement une fois que l'
+								# ouverture a foiré, du coup dumpstream ne
+								# marche pas sans -rtsp-port
+								# Donc faut trouver le 1er port libre, on
+								# commence à 9000.
+								my $proto = getprotobyname('tcp');
+								socket(Server, PF_INET, SOCK_STREAM, $proto) || die "socket $!";
+								setsockopt(Server, SOL_SOCKET, SO_REUSEADDR,pack("l", 1));
+								my $port = 9000;
+								while (!bind(Server, sockaddr_in($port, INADDR_ANY))) {
+									print "port $port in use\n";
+									$port++;
+								}
+								print "port $port libre\n";
+								close(Server);
+								# close(STDOUT);
+								# open(STDOUT,">record.log");
+								exec("mplayer", "-rtsp-port",$port,"-dumpfile",$name,"-really-quiet", "-dumpstream","rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour");
 							} else {
 								push @$_,$pid;
 								print "pid to kill $$_[8]\n";
