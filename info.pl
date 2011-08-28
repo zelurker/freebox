@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl 
 
 # Commandes supportées 
 # prog "nom de la chaine"
@@ -13,7 +13,7 @@ use warnings;
 use LWP::Simple;
 use LWP 5.64;
 use POSIX qw(strftime);
-use Time::Local;
+use Time::Local "timelocal_nocheck","timegm_nocheck";
 # use Time::HiRes qw(gettimeofday tv_interval);
 use IO::Handle;
 use Encode;
@@ -181,7 +181,7 @@ sub get_nolife {
 		my ($a,$mois,$j,$h,$m,$s) = $date =~ /^(....).(..).(..) (..).(..).(..)/;
 		$a -= 1900;
 		$mois--;
-		timegm($s,$m,$h,$j,$mois,$a);
+		timegm_nocheck($s,$m,$h,$j,$mois,$a);
 	}
 
 	sub get_date {
@@ -324,7 +324,7 @@ foreach (@fields) {
 		($mday,$mon,$year) = split(/\//,$sub[12]);
 		$mon--;
 		$year -= 1900;
-		$date_offset = timelocal(0,0,0,$mday,$mon,$year);
+		$date_offset = timelocal_nocheck(0,0,0,$mday,$mon,$year);
 	}
 	($hour,$min,$sec) = split(/\:/,$sub[3]);
 	my $start = $date_offset + $sec + 60*$min + 3600*$hour;
@@ -353,11 +353,6 @@ foreach (@fields) {
 	}
 }
 $chaines{"nolife"} = get_nolife($chaines{"nolife"});
-# my $rtab = $chaines{"nolife"};
-# for (my $n=0; $n<=$#$rtab; $n++) {
-# 	print dateheure($$rtab[$n][3])," - ",dateheure($$rtab[$n][4]),
-# 	" : $$rtab[$n][2]\n";
-# }
 
 my $last_hour = 0;
 
@@ -433,6 +428,70 @@ sub save_recordings {
 	close(F);
 }
 
+sub handle_records {
+	my $time = shift;
+	my $finished = 0;
+	foreach (@records) {
+		if ($time >= $$_[0] && !$$_[8]) {
+			# Début d'un enregistrement
+			my $audio2 = $$_[4];
+			my $name = $$_[7];
+			if ($audio2) {
+				open(G,">$name.audio");
+				print G $audio2;
+				close(G);
+			}
+			my $service = $$_[2];
+			my $flavour = $$_[3];
+			if ($$_[6] =~ /(freebox|dvb)/) {
+				my $pid = fork();
+				if ($pid == 0) {
+					# Ce crétin de mplayer a un port par défaut pour le rtsp et
+					# ne vérifie rien.  Ou plutôt si, mais seulement une fois
+					# que l' ouverture a foiré, du coup dumpstream ne marche
+					# pas sans -rtsp-port quand on a une autre cxion rtsp
+					# active. Donc faut trouver le 1er port libre,
+					# on commence à 9000.
+					if ($$_[6] =~ /freebox/) {
+						my $proto = getprotobyname('tcp');
+						socket(Server, PF_INET, SOCK_STREAM, $proto) || die "socket $!";
+						setsockopt(Server, SOL_SOCKET, SO_REUSEADDR,pack("l", 1));
+						my $port = 9000;
+						while (!bind(Server, sockaddr_in($port, INADDR_ANY))) {
+							print "port $port in use\n";
+							$port++;
+						}
+						print "port $port libre\n";
+						close(Server);
+						exec("mplayer", "-rtsp-port",$port,"-dumpfile",$name,"-really-quiet", "-dumpstream","rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour");
+					} else {
+						# if ($$_[6] eq "dvb") {
+						exec("mplayer", "-dumpfile",$name,"-really-quiet", "-dumpstream","dvb://$service");
+					}
+				} else {
+					push @$_,$pid;
+					print "pid to kill $$_[8]\n";
+				}
+			}
+		} elsif ($time >= $$_[1] && $$_[8]) {
+			print "kill pid $$_[8]\n";
+			kill 15,$$_[8];
+			$$_[8] = $$_[0] = $$_[1] = 0;
+			$finished = 1;
+		}
+	}
+	if ($finished) {
+		for (my $n=0; $n<=$#records; $n++) {
+			if ($records[$n][0] == 0 && $records[$n][8] == 0) {
+				splice @records,$n,1;
+				last if ($n > $#records);
+				redo;
+			}
+		}
+		save_recordings();
+	}
+}
+
 if (!$reread || !$channel) {
 	if (!$reread) {
 		$cmd = "";
@@ -487,65 +546,7 @@ if (!$reread || !$channel) {
 						disp_prog($chaines{$last_chan}[$last_prog],$last_long);
 					}
 				}
-				my $finished = 0;
-				foreach (@records) {
-					if ($time >= $$_[0] && $time - $$_[0] <= 10) {
-						# Début d'un enregistrement
-						$$_[0] = 0; # invalider
-						my $audio2 = $$_[4];
-						my $name = $$_[7];
-						if ($audio2) {
-							open(G,">$name.audio");
-							print G $audio2;
-							close(G);
-						}
-						my $service = $$_[2];
-						my $flavour = $$_[3];
-						if ($$_[6] =~ /freebox/) {
-							my $pid = fork();
-							if ($pid == 0) {
-								# Ce crétin de mplayer a un port par défaut
-								# pour le rtsp et ne vérifie rien.
-								# Ou plutôt si, mais seulement une fois que l'
-								# ouverture a foiré, du coup dumpstream ne
-								# marche pas sans -rtsp-port
-								# Donc faut trouver le 1er port libre, on
-								# commence à 9000.
-								my $proto = getprotobyname('tcp');
-								socket(Server, PF_INET, SOCK_STREAM, $proto) || die "socket $!";
-								setsockopt(Server, SOL_SOCKET, SO_REUSEADDR,pack("l", 1));
-								my $port = 9000;
-								while (!bind(Server, sockaddr_in($port, INADDR_ANY))) {
-									print "port $port in use\n";
-									$port++;
-								}
-								print "port $port libre\n";
-								close(Server);
-								# close(STDOUT);
-								# open(STDOUT,">record.log");
-								exec("mplayer", "-rtsp-port",$port,"-dumpfile",$name,"-really-quiet", "-dumpstream","rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour");
-							} else {
-								push @$_,$pid;
-								print "pid to kill $$_[8]\n";
-							}
-						}
-					} elsif ($time >= $$_[1] && $time - $$_[1] <= 10 && $$_[8]) {
-						print "kill pid $$_[8]\n";
-						kill 15,$$_[8];
-						$$_[8] = 0;
-						$finished = 1;
-					}
-				}
-				if ($finished) {
-					for (my $n=0; $n<=$#records; $n++) {
-						if ($records[$n][0] == 0 && $records[$n][8] == 0) {
-							splice @records,$n,1;
-							last if ($n > $#records);
-							redo;
-						}
-					}
-					save_recordings();
-				}
+				handle_records($time);
 				if ($nfound) {
 					($cmd) = <F>;
 					if ($cmd) {
@@ -581,24 +582,25 @@ if (!$reread || !$channel) {
 			if ($n > $#$rtab) {
 				if ($last_chan eq "nolife") {
 					print "info: tentative update nolife (right) ",$chaines{"nolife"},"\n";
-					my $start = $$rtab[3];
-					my $end = $$rtab[4];
+					my $start = $$rtab[$last_prog][3];
+					my $end = $$rtab[$last_prog][4];
 					update_noair();
 					$rtab = $chaines{"nolife"} = get_nolife($chaines{"nolife"});
 					# Les programmes de nolife changent vraiment beaucoup
 					# d'un jour à l'autre surtout sur la fin de journée
 					# il faut tout réindicer du coup !
+					print "recherche ",dateheure($start)," ou ",dateheure($end),"\n";
 					for ($n=0; $n<=$#$rtab; $n++) {
-						last if ($$rtab[3] >= $start || $$rtab[4] >= $end);
+						last if ($$rtab[$n][3] >= $start || $$rtab[$n][4] >= $end);
 					}
 				} else {
 					my $date = $$rtab[$#$rtab][12];
 					my ($j,$m,$a) = split(/\//,$date);
 					$a -= 1900;
 					$m--;
-					$date = timegm(0,0,0,$j,$m,$a)+24*3600;
+					$date = timegm_nocheck(0,0,0,$j,$m,$a)+24*3600;
 					my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
-					my $d2 = timegm(0,0,0,$mday,$mon,$year);
+					my $d2 = timegm_nocheck(0,0,0,$mday,$mon,$year);
 					my $offset = ($date-$d2)/(24*3600);
 					print "A récupérer offset $offset\n";
 					$program_text .= getListeProgrammes($offset);
@@ -750,7 +752,7 @@ sub getListeProgrammes {
   my $offset = shift;
   # date YYYY-MM-DD
   print "utilisation date $mday/",$mon+1,"/",$year+1900,"\n";
-  my $d0 = timegm(0,0,0,$mday,$mon,$year);
+  my $d0 = timegm_nocheck(0,0,0,$mday,$mon,$year);
   my $found = undef;
   while (<day*>) {
 	  my $name = $_;
@@ -766,7 +768,7 @@ sub getListeProgrammes {
 	  $a -= 1900;
 	  $m--;
 	  print "comparaison à $sub[12] $mday et $j $mon et $m $year et $a\n";
-	  my $d = timegm(0,0,0,$j,$m,$a);
+	  my $d = timegm_nocheck(0,0,0,$j,$m,$a);
 	  my $off = ($d-$d0)/(24*3600);
 	  print "$name -> $off\n";
 	  my $new = "day$off";
