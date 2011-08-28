@@ -67,10 +67,11 @@ while [ "$ok" == "0" ]; do
 	echo $pid > player1.pid
 	tries=0
 	# Laisse au moins 3s au flux pour commencer à arriver
-	while [ $tries -lt 3 ] && ! [ -f "$name" ] && ps -p `cat player1.pid` >& /dev/null; do
+	while [ $tries -lt 10 ] && ! [ -f "$name" ] && ps -p `cat player1.pid` >& /dev/null; do
 		sleep 1
 		tries=$(( $tries+1 ))
 	done
+	echo run_mp1: fin attente fichier tries=$tries
 	if ! ps -p `cat player1.pid` >& /dev/null
 	then
 		if [ "$tried" == "" ] && [ "$flavour" != "" ]; then
@@ -108,19 +109,19 @@ while [ "$ok" == "0" ]; do
 			[ $(( `date +%s`-$start )) -lt 5 ]; do
 			size=`stat --printf=%s "$name"`
 		done
-		if ps -p `cat player1.pid`; then
+		if ps -p `cat player1.pid` >& /dev/null && [ -f "$name" ]; then
 			ok=1 # fini !
 		fi
-		if ! [ $(( `date +%s`-$start )) -lt 5 ]; then
+		if ! [ $(( `date +%s`-$start )) -lt 10 ]; then
 			# timeout
 			echo run_mp1: timeout, falling back to default freebox src
 			kill `cat player1.pid`
 			service=201
 			flavour=sd
 			src=freeboxtv
+			chaine="France 2"
 			ok=0
 		fi
-
 	fi
 done
 # echo run_mp1: fin
@@ -139,5 +140,5 @@ echo $flavour >> current
 echo $audio >> current
 echo $video >> current
 echo $name >> current
-echo run_mp1 ok
+echo run_mp1 ok name=$name size=`stat --printf=%s "$name"`
 exit 0
