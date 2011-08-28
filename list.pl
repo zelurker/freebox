@@ -127,10 +127,16 @@ sub read_list {
 			}
 		}
 		close(F);
-	} elsif ($source eq "livetv") {
+	} elsif ($source =~ /^(livetv|Enregistrements)$/) {
 		@list = ();
 		my $num = 1;
-		while (<livetv/*.ts>) {
+		my $pat;
+		if ($source eq "livetv") {
+			$pat = "livetv/*.ts";
+		} else {
+			$pat = "records/*.ts";
+		}
+		while (glob($pat)) {
 			my $service = $_;
 			my $name = $service;
 			$name =~ s/.ts$//;
@@ -235,6 +241,9 @@ sub switch {
 	} elsif ($source eq "livetv") {
 		my @tab = <livetv/*.ts>;
 		return 0 if (!@tab);
+	} elsif ($source eq "Enregistrements") {
+		my @tab = <records/*.ts>;
+		return 0 if (!@tab);
 	} elsif ($source eq "flux") {
 		my @tab = <flux/*>;
 		return 0 if (!@tab);
@@ -298,7 +307,11 @@ while (1) {
 	} elsif ($cmd eq "end") {
 		$found = $#list;
 	} elsif ($cmd eq "reject") {
-		if (open(F,">>rejets/$source")) {
+		if ($source =~ /^(Enregistrements|livetv)/) {
+			my $file = $list[$found][0][2];
+			print "fichier à effacer $file\n";
+			unlink $file;
+		} elsif (open(F,">>rejets/$source")) {
 			foreach (@{$list[$found]}) {
 				my ($num,$name,$service,$flavour,$audio,$video) = @{$_};
 				print F "$service:$flavour:$audio:$video\n";
@@ -313,7 +326,7 @@ while (1) {
 			($found) = find_name($cmd);
 		}
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-		if ($source eq "livetv") {
+		if ($source =~ /^(livetv|Enregistrements)$/) {
 			if (open(F,">fifo_cmd")) {
 				print F "pause\n";
 				my $pid = `cat player1.pid`;
@@ -471,7 +484,7 @@ END
 	} elsif ($cmd =~ /^switch_mode/) {
 		my @arg = split(/ /,$cmd);
 		my @src = (
-			"freeboxtv", "radios freebox", "dvb", "livetv", "flux");
+			"freeboxtv",  "dvb", "Enregistrements", "livetv", "flux","radios freebox");
 		my $found = 0;
 		if ($#arg == 1) {
 			for (my $n=0; $n<=$#src; $n++) {
