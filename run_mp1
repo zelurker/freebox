@@ -51,6 +51,11 @@ while [ "$ok" == "0" ]; do
 			mplayer -quiet -dumpfile "$name" -dumpstream dvb://"$service" >& log &
 			;;
 		freebox|freeboxtv|"radios freebox")
+			while ! ping -c 1 mafreebox.freebox.fr; do
+				zenity --warning --text "Attente disponibilité réseau"
+			done
+				
+			echo lancement mplayer $audio2 -dumpfile "$name" -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour"
 			mplayer $audio2 -dumpfile "$name" -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" >& log &
 			;;
 		flux)
@@ -58,6 +63,7 @@ while [ "$ok" == "0" ]; do
 			;;
 	esac
 	pid=$!
+	start=`date +%s`
 	echo $pid > player1.pid
 	tries=0
 	# Laisse au moins 3s au flux pour commencer à arriver
@@ -65,9 +71,8 @@ while [ "$ok" == "0" ]; do
 		sleep 1
 		tries=$(( $tries+1 ))
 	done
-	if ! ps -p `cat player1.pid` >& /dev/null && grep -q "Server returned 403" log
+	if ! ps -p `cat player1.pid` >& /dev/null
 	then
-		ps -p $pid
 		if [ "$tried" == "" ] && [ "$flavour" != "" ]; then
 			tried=flavour
 			if [ "$flavour" == "sd" ]; then
@@ -98,10 +103,24 @@ while [ "$ok" == "0" ]; do
 	else
 		size=0
 		# Et attend que la taille sur disque soit au moins d'1 Mo
-		while [ -f "$name" ] && [ $size -lt 1024000 ]; do
+		while [ -f "$name" ] && [ $size -lt 1024000 ] && \
+			ps -p `cat player1.pid` >& /dev/null && \
+			[ $(( `date +%s`-$start )) -lt 5 ]; do
 			size=`stat --printf=%s "$name"`
 		done
-		ok=1 # fini !
+		if ps -p `cat player1.pid`; then
+			ok=1 # fini !
+		fi
+		if ! [ $(( `date +%s`-$start )) -lt 5 ]; then
+			# timeout
+			echo run_mp1: timeout, falling back to default freebox src
+			kill `cat player1.pid`
+			service=201
+			flavour=sd
+			src=freeboxtv
+			ok=0
+		fi
+
 	fi
 done
 # echo run_mp1: fin
