@@ -65,15 +65,16 @@ sub conv_channel {
 		"Télénantes Nantes 7" => "Nantes 7",
 		"NRJ12" => "NRJ 12",
 		"LCP" => "La chaîne parlementaire",
+		"Onzeo" => "Onzéo",
 	);
+	$channel =~ s/\(bas débit\)//;
+	$channel =~ s/hd$//i;
+	$channel =~ s/ *$//;
 	foreach (keys %corresp) {
 		if (lc($_) eq $channel) {
 			return  lc($corresp{$_});
 		}
 	}
-	$channel =~ s/\(bas débit\)//;
-	$channel =~ s/hd$//i;
-	$channel =~ s/ *$//;
 	return lc($channel);
 }
 
