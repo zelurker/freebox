@@ -30,6 +30,7 @@ sub REAPER {
 	$SIG{CHLD} = \&REAPER;
 }
 $SIG{CHLD} = \&REAPER;
+$SIG{TERM} = sub { unlink "info_pl.pid"; };
 
 #
 # Constants
