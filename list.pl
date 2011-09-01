@@ -446,7 +446,7 @@ END
 		if (!$cmd) {
 			print F "syntax: next|prev <nom de la chaine>\n";
 		} else {
-			reset_current();
+			reset_current() if (!-f "list_coords");
 			my ($n,$x) = find_name($cmd);
 			if (!defined($n)) {
 				print F "not found $cmd\n";
@@ -471,11 +471,14 @@ END
 		if (!$cmd) {
 			print F "syntax: info <nom de la chaine>\n";
 		} else {
-			reset_current();
+			# si la commande est envoyée par le bandeau d'info tout seul
+			# revenir à la source utilisée par la chaine courante
+			reset_current() if (! -f "list_coords");
 			my ($n,$x) = find_name($cmd);
 			if (!defined($n)) {
 				print F "not found $cmd\n";
 			} else {
+				print "cmd info: $source,",join(",",@{$list[$n][$x]}),"\n";
 				print F "$source,",join(",",@{$list[$n][$x]}),"\n";
 			}
 		}
