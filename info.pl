@@ -12,7 +12,7 @@ use strict;
 use warnings;
 use LWP::Simple;
 use LWP 5.64;
-use POSIX qw(strftime);
+use POSIX qw(strftime :sys_wait_h);
 use Time::Local "timelocal_nocheck","timegm_nocheck";
 # use Time::HiRes qw(gettimeofday tv_interval);
 use IO::Handle;
@@ -23,14 +23,49 @@ use Socket;
 require HTTP::Cookies;
 require "output.pl";
 
+our @cache_pic;
+our ($last_prog, $last_chan,$last_long);
+our %chaines = ();
+
 sub REAPER {
-	my $waitedpid = wait;
+	my $child;
+	print "info: in REAPER\n";
 	# loathe SysV: it makes us not only reinstate
 	# the handler, but place it after the wait
 	$SIG{CHLD} = \&REAPER;
+	while (($child = waitpid(-1,WNOHANG)) > 0) {
+		print "info: child $child terminated\n";
+# 		if (! -f "info_coords") {
+# 			print "plus d'info_coords, bye\n";
+# 			return;
+# 		}
+		print "cache_pic : $#cache_pic\n";
+		for (my $n=0; $n<=$#cache_pic; $n++) {
+			while (!$cache_pic[$n][0]) {
+				print "pas encore de pid pour cache_pic $n\n";
+				sleep(1);
+			}
+			if ($child == $cache_pic[$n][0] && $last_chan eq $cache_pic[$n][1]
+				&& $last_prog == $cache_pic[$n][2] &&
+			   	$last_long eq $cache_pic[$n][3] &&
+			   	-f "cache/$cache_pic[$n][4]") {
+				# L'image est arrivée, réaffiche le bandeau d'info alors
+				print "repaer found prog\n";
+				disp_prog($chaines{$last_chan}[$last_prog],$last_long);
+				splice @cache_pic,$n,1;
+				last if ($n > $#cache_pic);
+				redo;
+			} else {
+				print "n=$n cache_pic $#cache_pic $child == $cache_pic[$n][0] && $last_chan eq $cache_pic[$n][1]
+				&& $last_prog == $cache_pic[$n][2] &&
+				$last_long eq $cache_pic[$n][3] &&
+				-f cache/$cache_pic[$n][4]\n";
+			}
+		}
+	}
 }
 $SIG{CHLD} = \&REAPER;
-$SIG{TERM} = sub { unlink "info_pl.pid"; };
+$SIG{TERM} = sub { unlink "info_pl.pid";  exit(0); };
 
 #
 # Constants
@@ -38,11 +73,19 @@ $SIG{TERM} = sub { unlink "info_pl.pid"; };
 
 my $read_before = undef;
 my @records = ();
+if (open(F,"<recordings")) {
+	while (<F>) {
+		chomp;
+		push @records,[split(/\,/)];
+	}
+	close(F);
+}
+
 my @def_chan = ("France 2", "France 3", "France 4", "Arte", "TV5MONDE",
 "RTL 9", "AB1", "Direct 8", "TMC", "NT1", "NRJ 12", "La Chaîne Parlementaire",
 "BFM TV", "France 5", "Direct Star", "NRJ Paris", "Vivolta", "NRJ Hits",
 "Game One", "TF1", "M6", "W9", "Canal+", "Equidia", "AB Moteurs",
-"France Ô", "Onzéo", "Liberty tv"
+"France Ô", "Onzéo", "Liberty tv", "Gulli",
 );
 
 open(F,">info_pl.pid");
@@ -134,13 +177,20 @@ sub myget {
 		close(F);
 		print "info: used cache for $name\n";
 	} else {
-		$raw = get $url || print STDERR "can't get image $name\n";
-		if ($raw) {
-			mkdir "cache" if (! -d "cache");
-			if (open(F,">cache/$name")) {
-				syswrite(F,$raw,length($raw));
-				close(F);
+		print "cache: geting $url\n";
+		my $pid = fork();
+		if ($pid) {
+			push @cache_pic,[$pid,$last_chan,$last_prog,$last_long,$name];
+		} else {
+			$raw = get $url || print STDERR "can't get image $name\n";
+			if ($raw) {
+				mkdir "cache" if (! -d "cache");
+				if (open(F,">cache/$name")) {
+					syswrite(F,$raw,length($raw));
+					close(F);
+				}
 			}
+			exit(0);
 		}
 	}
 	$raw;
@@ -246,6 +296,9 @@ sub get_nolife {
 		$sub = get_field($_,"sub-title");
 		$title = $sub if (!$title);
 		$shot = get_field($_,"screenshot");
+		if ($title eq $old_title && !$shot) {
+			$shot = $old_shot; # On garde l'image si le titre ne change pas
+		}
 		$cat = get_field($_,"type");
 		if ($start && $old_title && $old_title ne $title) {
 			my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
@@ -314,7 +367,6 @@ my $nb_days = 1;
 my $cmd;
 debut: $program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
 my @fields = split(/\:\$\$\$\:/,$program_text);
-my %chaines = ();
 
 my $date_offset = 0;
 foreach (@fields) {
@@ -363,7 +415,6 @@ read_fifo:
 ($channel,$long) = () if (!$reread);
 # my $timer_start;
 my $time;
-my ($last_prog, $last_chan,$last_long);
 
 sub disp_prog {
 	my ($sub,$long) = @_;
@@ -371,9 +422,9 @@ sub disp_prog {
 	my $end = $$sub[4];
 	$start = get_time($start);
 	$end = get_time($end);
+	my $raw = 0;
 	if ($$sub[9]) {
 		# Prsence d'une image...
-		my $raw;
 		if ($$sub[9] !~ /^http/) {
 			my @date = split('/', $$sub[12]);
 			my @time = split(':', $start);
@@ -389,18 +440,17 @@ sub disp_prog {
 			open(F,">picture.jpg") || die "can't create picture.jpg\n";
 			print F $raw;
 			close(F);
-		} else {
-			$$sub[9] = 0;
+			$raw = 1;
 		}
 	}
 	# Check channel logo
 	my $url = $icons{$$sub[0]};
 	my $name = setup_image($browser,$url);
 
-	my $out = setup_output("bmovl-src/bmovl",$$sub[9],$long);
+	my $out = setup_output("bmovl-src/bmovl",$raw,$long);
 
 	print $out "$name\n";
-	print $out "picture.jpg" if ($$sub[9]);
+	print $out "picture.jpg" if ($raw);
 
 	print $out "\n$$sub[1] : $start - $end\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
@@ -444,6 +494,7 @@ sub handle_records {
 			}
 			my $service = $$_[2];
 			my $flavour = $$_[3];
+			print "début enregistrement ",dateheure($$_[0])," à ",dateheure($$_[1])," src $$_[6]\n";
 			if ($$_[6] =~ /(freebox|dvb)/) {
 				my $pid = fork();
 				if ($pid == 0) {
@@ -464,13 +515,16 @@ sub handle_records {
 						}
 						print "port $port libre\n";
 						close(Server);
+						print "enregistrement freebox: exec('mplayer', '-rtsp-port',$port,'-dumpfile',$name,'-really-quiet', '-dumpstream','rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour')\n";
 						exec("mplayer", "-rtsp-port",$port,"-dumpfile",$name,"-really-quiet", "-dumpstream","rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour");
 					} else {
 						# if ($$_[6] eq "dvb") {
+						print "Enregistrement dvb: exec('mplayer', '-dumpfile',$name,'-really-quiet', '-dumpstream','dvb://$service')\n";
 						exec("mplayer", "-dumpfile",$name,"-really-quiet", "-dumpstream","dvb://$service");
 					}
 				} else {
 					push @$_,$pid;
+					save_recordings();
 					print "pid to kill $$_[8]\n";
 				}
 			}
@@ -611,8 +665,8 @@ if (!$reread || !$channel) {
 				}
 				$n-- if ($n > $#$rtab);
 			}
-			disp_prog($$rtab[$n],$last_long);
 			$last_prog = $n;
+			disp_prog($$rtab[$n],$last_long);
 		}
 		$start_timer = 0;
 		goto read_fifo;
@@ -638,6 +692,7 @@ if (!$reread || !$channel) {
 	} elsif ($cmd =~ /^(up|down)$/) {
 		$cmd = send_list(($cmd eq "up" ? "next" : "prev")." $last_chan\n");
 		$channel = lc($cmd);
+		print "got channel :$channel.\n";
 		$long = $last_long;
 		$start_timer = time+5 if (!$long);
 	} elsif ($cmd eq "zap1") {
@@ -654,6 +709,7 @@ if (!$reread || !$channel) {
 		my $rtab = $chaines{$last_chan}[$last_prog];
 		$cmd = send_list("info ".lc($$rtab[1])."\n");
 		my ($src,$num,$name,$service,$flavour,$audio,$video) = split(/\,/,$cmd);
+		print "enreg: info returned $src,$num,$name,$service,$flavour,$audio,$video\n";
 		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($$rtab[3]);
 		my $file = "records/".sprintf("%d%02d%02d %02d%02d%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec)." $$rtab[1].ts";
 		my @cur = ($$rtab[3],$$rtab[4],$service,$flavour,$audio,$video,$src,$file);
@@ -684,11 +740,11 @@ if ($date2 ne $date) { # changement de date
 }
 chomp $channel;
 chomp $long if ($long);
-$channel = conv_channel($channel);
+my $channel0 = conv_channel($channel);
 # print "lecture from fifo channel $channel long ".($long ? $long : "")." fields $#fields\n";
 
 # print "recherche channel $channel\n";
-my $rtab = $chaines{$channel};
+my $rtab = $chaines{$channel0};
 if (!$rtab) {
 	# Pas trouvé la chaine
 	my $out = setup_output("bmovl-src/bmovl","",0);
@@ -696,7 +752,7 @@ if (!$rtab) {
 	print $out "\n\n";
 	($sec,$min,$hour) = localtime($time);
 
-	print $out "$cmd ($channel) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
+	print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
 	close($out);
 	$last_chan = $channel;
 	goto read_fifo;
@@ -709,10 +765,10 @@ for (my $n=0; $n<=$#$rtab; $n++) {
 	my $end = $$sub[4];
 
 	if ($start <= $time && $time <= $end) {
-		disp_prog($sub,$long);
 		$last_chan = $channel;
 		$last_prog = $n;
 		$last_long = $long;
+		disp_prog($sub,$long);
 #			  system("feh picture.jpg &") if ($$sub[9]);
 		goto read_fifo;
 	}
