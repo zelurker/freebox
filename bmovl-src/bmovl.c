@@ -4,9 +4,12 @@
 #include <SDL/SDL_image.h>
 #include "lib.h"
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h> // unix domain socket
 #include <sys/stat.h>
 #include <unistd.h>
 #include <signal.h>
+#include <errno.h>
 
 /* Serveur bmovl : apparemment si on laisse 2 processes se partager la fifo
  * bmovl, les donnÃ©es se mélangent ! En fait ils en parlent très vaguement
@@ -20,20 +23,6 @@ static int fifo;
 static char *fifo_str;
 static int server;
 
-static void open_server() {
-    server = open("fifo_bmovl", O_RDONLY|O_NONBLOCK);
-    if (!server) {
-	printf("can't open fifo_bmovl ???\n");
-	exit(1);
-    }
-    stdin = fdopen(server,"r");
-}
-
-static void close_and_reopen() {
-    fclose(stdin);
-    open_server();
-}
-
 /* Les commandes de connexion/déconnexion au fifo mplayer doivent être passés
  * par signaux et pas par le fifo de commande parce que malheureusement un
  * mplayer peut quitter pendant qu'une commande est en cours, dans ce cas là
@@ -44,7 +33,7 @@ static void disconnect(int signal) {
 	fifo = 0;
 }
 
-static void connect(int signal) {
+static void myconnect(int signal) {
     fifo = open( fifo_str, O_RDWR);
     if (fifo <= 0) {
 	printf("server: could not open fifo !\n");
@@ -52,6 +41,11 @@ static void connect(int signal) {
 	SDL_QuitSubSystem(SDL_INIT_VIDEO);
 	sdl_screen = NULL;
     }
+}
+
+static void myexit(int signal) {
+    unlink("sock_bmovl");
+    exit(0);
 }
 
 static int info(int fifo, int argc, char **argv)
@@ -77,8 +71,6 @@ static int info(int fifo, int argc, char **argv)
 		if(argc<4) {
 			printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
 			printf("width and height are w/h of MPlayer's screen!\n");
-			while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
-			close_and_reopen();
 			return -1;
 		}
 		char *heure, *title;
@@ -98,8 +90,6 @@ static int info(int fifo, int argc, char **argv)
 		if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
 		if (!font) {
 			printf("Could not load Vera.ttf, come back with it !\n");
-			while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
-			close_and_reopen();
 			return -1;
 		}
 		myfgets(buff,8192,stdin);
@@ -138,8 +128,6 @@ static int info(int fifo, int argc, char **argv)
 		}
 		while (len > 0 && buff[len-1] < 32) buff[--len] = 0; // remove the last one though
 		desc = strdup(buff);
-		while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
-		close_and_reopen();
 
 		TTF_SetFontStyle(font,TTF_STYLE_BOLD);
 		get_size(font,heure,&w,&h,width-32); // 1st string : all the width (top)
@@ -271,8 +259,6 @@ static int list(int fifo, int argc, char **argv)
     if(argc<4) {
 	printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
 	printf("width and height are w/h of MPlayer's screen!\n");
-	while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
-	close_and_reopen();
 	return -1;
     }
 
@@ -313,8 +299,6 @@ static int list(int fifo, int argc, char **argv)
 	if (w > wlist) wlist = w;
 	hlist += h;
     }
-    while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
-    close_and_reopen();
     get_size(font,">",&w,&h,maxw);
     int indicw = w;
 
@@ -464,8 +448,9 @@ static void handle_event(SDL_Event *event) {
 
 int main(int argc, char **argv) {
 
-	signal(SIGUSR1, &connect);
+	signal(SIGUSR1, &myconnect);
 	signal(SIGUSR2, &disconnect);
+	signal(SIGTERM, &myexit);
 	unlink("fifo_bmovl");
 	mkfifo("fifo_bmovl",0700);
 	TTF_Init();
@@ -474,7 +459,7 @@ int main(int argc, char **argv) {
 		return -1;
 	}
 	fifo_str = argv[1];
-	connect(0);
+	myconnect(0);
 	if (!fifo) return -1;
 	FILE *f = fopen("info.pid","w");
 	fprintf(f,"%d\n",getpid());
@@ -488,26 +473,52 @@ int main(int argc, char **argv) {
 	char *myargv[10];
 	server = 0;
 
+	/* Préparation de la socket */
+#define LISTEN_BACKLOG 50
+	int sfd;
+	struct sockaddr_un my_addr, peer_addr;
+	socklen_t peer_addr_size;
+
+	sfd = socket(AF_UNIX, SOCK_STREAM, 0);
+	if (sfd == -1) {
+	    printf("bmovl: socket error\n");
+	    return(-1);
+	}
+	memset(&my_addr, 0, sizeof(struct sockaddr_un));
+	my_addr.sun_family = AF_UNIX;
+	strncpy(my_addr.sun_path, "sock_bmovl", sizeof(my_addr.sun_path) - 1);
+	if (bind(sfd, (struct sockaddr *) &my_addr,
+		    sizeof(struct sockaddr_un)) == -1) {
+	    printf("bind error errno %d\n",errno);
+	    return(-1);
+	}
+	if (listen(sfd, LISTEN_BACKLOG) == -1) {
+	    printf("listen error %d\n",errno);
+	    return(-1);
+	}
+	peer_addr_size = sizeof(struct sockaddr_un);
+
 	while (1) {
 	    int len = 0;
 	    while (len <= 0) {
-		if (!server) {
-		    open_server();
-		}
 		fd_set set;
 		FD_ZERO(&set);
-		FD_SET(server,&set);
+		FD_SET(sfd,&set);
 		struct timeval tv;
 		tv.tv_sec = 0;
 		tv.tv_usec = 100000; // 0.1s
-		int ret = select(server+1,&set,NULL,NULL,&tv);
+		int ret = select(sfd+1,&set,NULL,NULL,&tv);
 		if (ret > 0) {
+		    server = accept(sfd, (struct sockaddr *) &peer_addr,
+			    &peer_addr_size);
+		    if (server == -1) {
+			printf("error accept %d\n",errno);
+			return(-1);
+		    }
+		    stdin = fdopen(server,"r");
 		    len = myfgets(buff,2048,stdin);
-		}
-		if (len <= 0) {
-		    close_and_reopen(); // force close of server
+		} else 
 		    server = 0;
-		}
 		if (sdl_screen) {
 		    SDL_Event event;
 		    if (SDL_PollEvent(&event))
@@ -536,19 +547,19 @@ int main(int argc, char **argv) {
 		    ret = list(fifo,argc,myargv);
 		} else if (!strcmp(cmd,"CLEAR")) {
 		    ret = clear(fifo,argc,myargv);
-		    close_and_reopen();
 		} else if (!strcmp(cmd,"ALPHA")) {
 		    ret = alpha(fifo,argc,myargv);
-		    close_and_reopen();
 		} 
 		if (ret) {
 		    printf("bmovl: command returned %d\n",ret);
 		    disconnect(0);
-		    connect(0);
+		    myconnect(0);
 		}
 	    } else {
 		printf("server: commande ignorÃ©e : %s\n",cmd);
 	    }
+	    close(server);
+	    server = 0;
 	}
 	// never reach this point
 	// TTF_Quit();
