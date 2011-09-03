@@ -1,10 +1,8 @@
 
-void
-blit(int fifo, unsigned char *bitmap, int width, int height,
-     int xpos, int ypos, int alpha, int clear);
-void
-set_alpha(int fifo, int width, int height, int xpos, int ypos, int alpha);
+extern SDL_Surface *sdl_screen;
 
+void
+blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear);
 void send_command(int fifo,char *cmd);
 
 void get_size(TTF_Font *font, char *text, int *w, int *h, int maxw);

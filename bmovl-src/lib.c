@@ -54,12 +54,41 @@ static int write_select(int fifo, void *buff, int len)
 	return ret;
 }
 
+SDL_Surface *sdl_screen;
+static int desktop_w,desktop_h,desktop_bpp;
+
+static void get_video_info() {
+  const SDL_VideoInfo *inf = SDL_GetVideoInfo();
+  desktop_w = inf->current_w;
+  desktop_h = inf->current_h;
+  desktop_bpp = inf->vfmt->BitsPerPixel;
+}
+
+static void init_video() {
+    if ( SDL_Init( SDL_INIT_VIDEO) < 0 ) {
+	fprintf(stderr, "Couldn't initialize SDL: %s\n",SDL_GetError());
+	exit(2);
+    }
+    get_video_info();
+    sdl_screen = SDL_SetVideoMode(desktop_w,desktop_h,desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT |SDL_FULLSCREEN);
+}
+
 void
-blit(int fifo, unsigned char *bitmap, int width, int height,
-     int xpos, int ypos, int alpha, int clear)
+blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear)
 {
+    if (!fifo) {
+	if (!sdl_screen) {
+	    init_video();
+	}
+	SDL_Rect r;
+	r.x = xpos; r.y = ypos;
+	SDL_BlitSurface(bmp,NULL,sdl_screen,&r);
+    } else {
 	char str[100];
 	int  nbytes;
+	unsigned char *bitmap = bmp->pixels;
+	int width = bmp->w;
+	int height = bmp->h;
 	
 	sprintf(str, "RGBA32 %d %d %d %d %d %d\n",
 	        width, height, xpos, ypos, alpha, clear);
@@ -70,22 +99,14 @@ blit(int fifo, unsigned char *bitmap, int width, int height,
 	nbytes = write_select(fifo, bitmap, width*height*4);
 
 	if(DEBUG) printf("Sent %d bytes of bitmap data...\n", nbytes);
-}
-
-void
-set_alpha(int fifo, int width, int height, int xpos, int ypos, int alpha) {
-	char str[100];
-
-	sprintf(str, "ALPHA %d %d %d %d %d\n",
-	        width, height, xpos, ypos, alpha);
-	
-	if(DEBUG) printf("Sending %s", str);
-
-	write_select(fifo, str, strlen(str));
+    }
 }
 
 void send_command(int fifo,char *cmd) {
+    if (fifo)
 	write_select(fifo,cmd,strlen(cmd));
+    else
+	printf("commande ignorée (fifo=0) : %s\n",cmd);
 }
 
 void get_size(TTF_Font *font, char *text, int *w, int *h, int maxw) {

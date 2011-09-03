@@ -1,5 +1,3 @@
-/* Small program to test the features of vf_bmovl */
-
 #include <fcntl.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
@@ -11,16 +9,30 @@
 #include <signal.h>
 
 /* Serveur bmovl : apparemment si on laisse 2 processes se partager la fifo
- * bmovl, les donnÃ©es se mÃ©langent ! Normalement Ã§a ne devrait pas arriver,
- * une fifo n'est pas sensÃ©e accepter 2 opens en mÃªme temps, mais lÃ  si.
- * Donc seule solution : utiliser un serveur qui est le seul Ã  avoir le droit
- * d'utiliser cette fifo.
- * Il reÃ§oit la ligne de commande d'abord, par la fifo suivie d'un retour
- * charriot, ensuite stdin et redirigÃ© sur la fifo et le tout transmis Ã  une
- * fonction dÃ©diÃ©e en fonction de la ligne de commande, puis on boucle. */
+ * bmovl, les donnÃ©es se mélangent ! En fait ils en parlent très vaguement
+ * dans perlipc, on est sensé laisser un délai entre le moment où on ferme
+ * une fifo et le moment où on la réouvre sous peine de voir les 2 flux se
+ * mélanger.
+ * Résultat : on va être obligé d'utiliser une socket pour communiquer avec
+ * ce prog, ce genre de truc n'arrive pas avec les sockets */
 
 static int fifo;
 static char *fifo_str;
+static int server;
+
+static void open_server() {
+    server = open("fifo_bmovl", O_RDONLY|O_NONBLOCK);
+    if (!server) {
+	printf("can't open fifo_bmovl ???\n");
+	exit(1);
+    }
+    stdin = fdopen(server,"r");
+}
+
+static void close_and_reopen() {
+    fclose(stdin);
+    open_server();
+}
 
 /* Les commandes de connexion/déconnexion au fifo mplayer doivent être passés
  * par signaux et pas par le fifo de commande parce que malheureusement un
@@ -33,10 +45,13 @@ static void disconnect(int signal) {
 }
 
 static void connect(int signal) {
-	fifo = open( fifo_str, O_RDWR);
-	if (fifo <= 0) {
-		printf("server: could not open fifo !\n");
-	}
+    fifo = open( fifo_str, O_RDWR);
+    if (fifo <= 0) {
+	printf("server: could not open fifo !\n");
+    } else if (sdl_screen) {
+	SDL_QuitSubSystem(SDL_INIT_VIDEO);
+	sdl_screen = NULL;
+    }
 }
 
 static int info(int fifo, int argc, char **argv)
@@ -63,7 +78,7 @@ static int info(int fifo, int argc, char **argv)
 			printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
 			printf("width and height are w/h of MPlayer's screen!\n");
 			while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
-			fclose(stdin);
+			close_and_reopen();
 			return -1;
 		}
 		char *heure, *title;
@@ -84,7 +99,7 @@ static int info(int fifo, int argc, char **argv)
 		if (!font) {
 			printf("Could not load Vera.ttf, come back with it !\n");
 			while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
-			fclose(stdin);
+			close_and_reopen();
 			return -1;
 		}
 		myfgets(buff,8192,stdin);
@@ -124,7 +139,7 @@ static int info(int fifo, int argc, char **argv)
 		while (len > 0 && buff[len-1] < 32) buff[--len] = 0; // remove the last one though
 		desc = strdup(buff);
 		while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
-		fclose(stdin);
+		close_and_reopen();
 
 		TTF_SetFontStyle(font,TTF_STYLE_BOLD);
 		get_size(font,heure,&w,&h,width-32); // 1st string : all the width (top)
@@ -235,41 +250,11 @@ static int info(int fifo, int argc, char **argv)
 			write(fifo, buff, strlen(buff));
 		}
 	}
-#if 0
-	f = fopen("list_coords","r");
-	if (f) {
-		/* Ca, c'est un énorme bug mplayer apparemment.
-		 * Si on affiche la liste dans un blit séparé, le bandeau d'info fait
-		 * apparaitre des "déchets" sur la gauche de la liste.
-		 * Supprimer le blit fait disparaitre les déchets, mais il n'est pas
-		 * sensé toucher à cette zone.
-		 * Le + étrange c'est qu'un clear efface les déchets ! */
-		int oldx,oldy,oldw,oldh;
-		fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
-		fclose(f);
-		oldx += oldw;
-		char buff[2048];
-		sprintf(buff,"CLEAR %d %d %d %d\n",width-oldx,oldh,oldx,oldy);
-		write(fifo, buff, strlen(buff));
-		// A gauche aussi !!!
-		oldx -= oldw;
-		sprintf(buff,"CLEAR %d %d %d %d\n",oldx,oldh,0,oldy);
-		write(fifo, buff, strlen(buff));
-	}
-#endif
 	/* printf("bmovl: blit %d %d %d %d avec width %d height %d\n",
 			sf->w,sf->h,x,y,width,height); */
-	blit(fifo, sf->pixels, sf->w, sf->h, x, y, -40, 0);
+	blit(fifo, sf, x, y, -40, 0);
 	send_command(fifo,"SHOW\n");
 	// printf("bmovl: show done\n");
-#if 0
-	sleep(10);
-
-	// Fade in sf
-	for(i=0; i >= -255; i-=5)
-		set_alpha(fifo, sf->w, sf->h,
-				x, y, i);
-#endif
 	f = fopen("info_coords","w");
 	fprintf(f,"%d %d %d %d ",sf->w, sf->h,
 			x, y);
@@ -282,63 +267,63 @@ static int list(int fifo, int argc, char **argv)
 {
     int width,height;
 
-	char *source,buff[4096],*list[20];
+    char *source,buff[4096],*list[20];
     if(argc<4) {
-		printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
-		printf("width and height are w/h of MPlayer's screen!\n");
-		while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
-		fclose(stdin);
-		return -1;
+	printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
+	printf("width and height are w/h of MPlayer's screen!\n");
+	while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
+	close_and_reopen();
+	return -1;
     }
 
     // int maxh;
     width = atoi(argv[2]);
-	height = atoi(argv[3]);
-	// if (argc == 5) maxh = atoi(argv[4]);
-	// else maxh = height - 8;
-	int fsize = height/35;
-	TTF_Font *font = TTF_OpenFont("Vera.ttf",fsize);
-	if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
-	int num[20];
-	int current;
-	myfgets(buff,4096,stdin);
-	source = strdup(buff);
-	int nb=0,w,h;
-	int margew = width/36, margeh=height/36;
-	int maxw=width/2-margew;
-	int numw = 0;
-	// Lecture des chaines, 20 maxi.
-	int wlist,hlist;
-	get_size(font,source,&wlist,&hlist,maxw);
-	while (!feof(stdin) && nb<20) {
-		if (!myfgets(buff,4096,stdin)) break;
-		if (buff[0] == '*') current = nb;
-		char *end_nb = &buff[4];
-		while (*end_nb >= '0' && *end_nb <= '9')
-			end_nb++;
-		*end_nb++ = 0;
-		get_size(font,&buff[1],&w,&h,maxw);
-		if (w > numw) numw = w;
-		num[nb] = atoi(&buff[1]);
-		list[nb++] = strdup(end_nb);
-		int l = strlen(end_nb);
-		if (end_nb[l-1] == '>')
-			end_nb[l-1] = 0;
-		get_size(font,end_nb,&w,&h,maxw-numw); 
-		if (w > wlist) wlist = w;
-		hlist += h;
-	}
-	while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
-	fclose(stdin);
+    height = atoi(argv[3]);
+    // if (argc == 5) maxh = atoi(argv[4]);
+    // else maxh = height - 8;
+    int fsize = height/35;
+    TTF_Font *font = TTF_OpenFont("Vera.ttf",fsize);
+    if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
+    int num[20];
+    int current = -1;
+    myfgets(buff,4096,stdin);
+    source = strdup(buff);
+    int nb=0,w,h;
+    int margew = width/36, margeh=height/36;
+    int maxw=width/2-margew;
+    int numw = 0;
+    // Lecture des chaines, 20 maxi.
+    int wlist,hlist;
+    get_size(font,source,&wlist,&hlist,maxw);
+    while (!feof(stdin) && nb<20) {
+	if (!myfgets(buff,4096,stdin)) break;
+	if (buff[0] == '*') current = nb;
+	char *end_nb = &buff[4];
+	while (*end_nb >= '0' && *end_nb <= '9')
+	    end_nb++;
+	*end_nb++ = 0;
+	get_size(font,&buff[1],&w,&h,maxw);
+	if (w > numw) numw = w;
+	num[nb] = atoi(&buff[1]);
+	list[nb++] = strdup(end_nb);
+	int l = strlen(end_nb);
+	if (end_nb[l-1] == '>')
+	    end_nb[l-1] = 0;
+	get_size(font,end_nb,&w,&h,maxw-numw); 
+	if (w > wlist) wlist = w;
+	hlist += h;
+    }
+    while (!feof(stdin)) fgets(buff,8192,stdin); // empty the pipe
+    close_and_reopen();
     get_size(font,">",&w,&h,maxw);
     int indicw = w;
 
     int n;
     int x=8,y=8;
     wlist += numw+8; // le numÃ©ro sur la gauche (3 chiffres + sÃ©parateur)
-	if (wlist > width/2-indicw) {
-		wlist = width/2-indicw;
-	}
+    if (wlist > width/2-indicw) {
+	wlist = width/2-indicw;
+    }
     int xright = x+wlist;
     wlist += indicw; // place pour le > Ã  la fin
     /*	if (hlist > maxh)
@@ -353,63 +338,63 @@ static int list(int fifo, int argc, char **argv)
     int fg = get_fg(sf);
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
     int bg = get_bg(sf);
-	for (n=0; n<nb; n++) {
-		int hidden = 0;
-		int l = strlen(list[n]);
-		if (list[n][l-1] == '>') {
-			list[n][l-1] = 0;
-			hidden = 1;
-		}
-		int y0 = y;
-		char buff[5];
-		sprintf(buff,"%d",num[n]);
-		if (current == n) {
-			SDL_Rect r;
-			r.x = 8; r.y = y; r.w = wlist; r.h = fsize;
-			SDL_FillRect(sf,&r,fg);
-			put_string(sf,font,8,y,buff,bg,height); // NumÃ©ro
-			int dy = put_string(sf,font,x,y,list[n],bg,height);
-			if (dy != fsize) { // bad guess, 2nd try...
-				r.h = dy;
-				SDL_FillRect(sf,&r,fg);
-				put_string(sf,font,8,y,buff,bg,height); // NumÃ©ro
-				dy = put_string(sf,font,x,y,list[n],bg,height);
-			}
-			y += dy;
-		} else {
-			put_string(sf,font,8,y,buff,fg,height); // NumÃ©ro
-			y += put_string(sf,font,x,y,list[n],fg,height);
-		}
-		if (hidden) {
-			put_string(sf,font,xright,y0,">",(current == n ? bg : fg),height);
-		}
+    for (n=0; n<nb; n++) {
+	int hidden = 0;
+	int l = strlen(list[n]);
+	if (list[n][l-1] == '>') {
+	    list[n][l-1] = 0;
+	    hidden = 1;
 	}
+	int y0 = y;
+	char buff[5];
+	sprintf(buff,"%d",num[n]);
+	if (current == n) {
+	    SDL_Rect r;
+	    r.x = 8; r.y = y; r.w = wlist; r.h = fsize;
+	    SDL_FillRect(sf,&r,fg);
+	    put_string(sf,font,8,y,buff,bg,height); // NumÃ©ro
+	    int dy = put_string(sf,font,x,y,list[n],bg,height);
+	    if (dy != fsize) { // bad guess, 2nd try...
+		r.h = dy;
+		SDL_FillRect(sf,&r,fg);
+		put_string(sf,font,8,y,buff,bg,height); // NumÃ©ro
+		dy = put_string(sf,font,x,y,list[n],bg,height);
+	    }
+	    y += dy;
+	} else {
+	    put_string(sf,font,8,y,buff,fg,height); // NumÃ©ro
+	    y += put_string(sf,font,x,y,list[n],fg,height);
+	}
+	if (hidden) {
+	    put_string(sf,font,xright,y0,">",(current == n ? bg : fg),height);
+	}
+    }
 
-	FILE *f = fopen("list_coords","r");
-	if (f) {
-		int oldx,oldy,oldw,oldh;
-		fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
-		fclose(f);
-		if (oldh > sf->h) {
-			char buff[2048];
-			sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy+sf->h);
-			write(fifo, buff, strlen(buff));
-		}
-		if (oldw > sf->w) {
-			char buff[2048];
-			sprintf(buff,"CLEAR %d %d %d %d\n",oldw-sf->w,oldh,oldx+sf->w,oldy);
-			printf("list: %s",buff);
-			write(fifo, buff, strlen(buff));
-		}
+    FILE *f = fopen("list_coords","r");
+    if (f) {
+	int oldx,oldy,oldw,oldh;
+	fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	fclose(f);
+	if (oldh > sf->h) {
+	    char buff[2048];
+	    sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy+sf->h);
+	    write(fifo, buff, strlen(buff));
 	}
+	if (oldw > sf->w) {
+	    char buff[2048];
+	    sprintf(buff,"CLEAR %d %d %d %d\n",oldw-sf->w,oldh,oldx+sf->w,oldy);
+	    printf("list: %s",buff);
+	    write(fifo, buff, strlen(buff));
+	}
+    }
 
     // Display
     x = margew;
     y = margeh;
-	// Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
-	// apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
-	// Pour l'instant le meilleur contournement c'est ça.
-    blit(fifo, sf->pixels, sf->w, sf->h, x, y, -40, 1);
+    // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
+    // apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
+    // Pour l'instant le meilleur contournement c'est ça.
+    blit(fifo, sf, x, y, -40, 1);
     send_command(fifo,"SHOW\n");
     f = fopen("list_coords","w");
     fprintf(f,"%d %d %d %d ",sf->w, sf->h,
@@ -417,8 +402,9 @@ static int list(int fifo, int argc, char **argv)
     fclose(f);
     // Clean up
     SDL_FreeSurface(sf);
+    if (current > -1) {
 	int info=0;
-   	int tries = 0;
+	int tries = 0;
 	/* On communique dans l'autre sens avec info.pl par une fifo.
 	 * C'est un endroit hyper dangereux parce que si info.pl n'est pas en
 	 * écoute au moment de l'ouverture, ça bloque indéfiniment !
@@ -428,35 +414,28 @@ static int list(int fifo, int argc, char **argv)
 	 * J'ai quand même autorisé 4 tentatives après quelques essais.
 	 * Si ça dépasse 4, le message pour info est juste abandonné, généralement
 	 * ça veut dire qu'on parcourt les chaines trop vite dans la liste */
-	while (tries++ < 40 && info <= 0) {
-		info = open("fifo_info",O_WRONLY|O_NONBLOCK);
-		if (info <= 0) {
-			struct timeval tv;
-			tv.tv_sec = 0;
-			tv.tv_usec = 100000;
-			select(0,NULL, NULL, NULL, &tv);
-		}
+	while (tries++ < 4 && info <= 0) {
+	    info = open("fifo_info",O_WRONLY|O_NONBLOCK);
+	    if (info <= 0) {
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = 100000;
+		select(0,NULL, NULL, NULL, &tv);
+	    }
 	}
 
 	if (info > 0) {
-		sprintf(buff,"prog %s\n%d\n",list[current],y+sf->h);
-		write(info,buff,strlen(buff));
-		close(info);
+	    sprintf(buff,"prog:%d %s\n",y+sf->h,list[current]);
+	    write(info,buff,strlen(buff));
+	    close(info);
 	} else
-		printf("on abandonne fifo_info !\n");
-#if 0
-	sleep(10);
-
-	// Fade in sf
-	for(i=0; i >= -255; i-=5)
-		set_alpha(fifo, sf->w, sf->h,
-				x, y, i);
-#endif
-	free(source);
-	for (n=0; n<nb; n++)
-		free(list[n]);
-	TTF_CloseFont(font);
-	return 0;
+	    printf("on abandonne fifo_info !\n");
+    }
+    free(source);
+    for (n=0; n<nb; n++)
+	free(list[n]);
+    TTF_CloseFont(font);
+    return 0;
 }
 
 int clear(int fifo, int argc, char **argv)
@@ -474,6 +453,13 @@ int alpha(int fifo, int argc, char **argv)
 			argv[5]);
 	int len = strlen(buff);
 	return write(fifo, buff, len) != len;
+}
+
+static void handle_event(SDL_Event *event) {
+    if (event->type == SDL_KEYDOWN) {
+	int input = event->key.keysym.sym;
+	printf("reçu touche %d (%c)\n",input,input);
+    }
 }
 
 int main(int argc, char **argv) {
@@ -500,63 +486,69 @@ int main(int argc, char **argv) {
 	}
 	char buff[2048];
 	char *myargv[10];
-	FILE *server = NULL;
+	server = 0;
 
-    while (1) {
+	while (1) {
+	    int len = 0;
+	    while (len <= 0) {
 		if (!server) {
-			server = fopen("fifo_bmovl","r");
-			if (!server) {
-				printf("can't open fifo_bmovl ???\n");
-				return -1;
-			}
+		    open_server();
 		}
-		int len = myfgets(buff,2048,server);
-		if (!len) {
-			fclose(server);
-			server = NULL;
-			continue;
+		fd_set set;
+		FD_ZERO(&set);
+		FD_SET(server,&set);
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = 100000; // 0.1s
+		int ret = select(server+1,&set,NULL,NULL,&tv);
+		if (ret > 0) {
+		    len = myfgets(buff,2048,stdin);
 		}
-		argc = 1;
-		char *s = buff;
-		myargv[0] = buff;
-		while ((s = strchr(s,' '))) {
-			*s = 0; s++;
-			while (*s == ' ') s++;
-			if (*s)
-				myargv[argc++] = s;
+		if (len <= 0) {
+		    close_and_reopen(); // force close of server
+		    server = 0;
 		}
-		stdin = server;
-		char *cmd = myargv[0];
-		s = strrchr(cmd,'/');
-		if (s) cmd =s+1;
-		int ret;
-		if (fifo > 0) {
-			// commandes connectÃ©es
-			if (!strcmp(cmd,"bmovl") || !strcmp(cmd,"next") ||
-					!strcmp(cmd,"prev")) {
-				ret = info(fifo,argc,myargv);
-				server = NULL;
-				continue;
-			} else if (!strcmp(cmd,"list")) {
-				ret = list(fifo,argc,myargv);
-				server = NULL;
-				continue;
-			} else if (!strcmp(cmd,"CLEAR"))
-				ret = clear(fifo,argc,myargv);
-			else if (!strcmp(cmd,"ALPHA"))
-				ret = alpha(fifo,argc,myargv);
-			if (ret) {
-			    printf("bmovl: command returned %d\n",ret);
-			    disconnect(0);
-			    connect(0);
-			}
-		} else {
-			printf("server: commande ignorÃ©e : %s\n",cmd);
+		if (sdl_screen) {
+		    SDL_Event event;
+		    if (SDL_PollEvent(&event))
+			handle_event(&event);
 		}
-		if (feof(server)) {
-				fclose(server);
-				server = NULL;
+	    }
+	    argc = 1;
+	    char *s = buff;
+	    myargv[0] = buff;
+	    while ((s = strchr(s,' '))) {
+		*s = 0; s++;
+		while (*s == ' ') s++;
+		if (*s)
+		    myargv[argc++] = s;
+	    }
+	    char *cmd = myargv[0];
+	    s = strrchr(cmd,'/');
+	    if (s) cmd =s+1;
+	    int ret;
+	    if (fifo > 0) {
+		// commandes connectÃ©es
+		if (!strcmp(cmd,"bmovl") || !strcmp(cmd,"next") ||
+			!strcmp(cmd,"prev")) {
+		    ret = info(fifo,argc,myargv);
+		} else if (!strcmp(cmd,"list")) {
+		    ret = list(fifo,argc,myargv);
+		} else if (!strcmp(cmd,"CLEAR")) {
+		    ret = clear(fifo,argc,myargv);
+		    close_and_reopen();
+		} else if (!strcmp(cmd,"ALPHA")) {
+		    ret = alpha(fifo,argc,myargv);
+		    close_and_reopen();
+		} 
+		if (ret) {
+		    printf("bmovl: command returned %d\n",ret);
+		    disconnect(0);
+		    connect(0);
 		}
+	    } else {
+		printf("server: commande ignorÃ©e : %s\n",cmd);
+	    }
 	}
 	// never reach this point
 	// TTF_Quit();
