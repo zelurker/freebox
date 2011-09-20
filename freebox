@@ -126,7 +126,6 @@ while [ "$exit" != "1" ]; do
 			launch
 			pid=$!
 			if ! [ -f info.pid ]; then
-				rm -f fifo_bmovl
 				./bmovl-src/bmovl fifo &
 			else
 				kill -USR1 `cat info.pid`
@@ -170,6 +169,9 @@ while [ "$exit" != "1" ]; do
 			# echo end of while loop length $length again $again
 			audio=`head -n 5 current|tail -n 1`
 			if [ "$src" == "flux" ] && ! grep -q ID_EXIT=QUIT id; then
+				again=1
+			fi
+			if grep -q 'ID_SIGNAL=15' id; then
 				again=1
 			fi
 		done
