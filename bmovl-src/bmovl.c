@@ -489,8 +489,19 @@ int main(int argc, char **argv) {
 	strncpy(my_addr.sun_path, "sock_bmovl", sizeof(my_addr.sun_path) - 1);
 	if (bind(sfd, (struct sockaddr *) &my_addr,
 		    sizeof(struct sockaddr_un)) == -1) {
-	    printf("bind error errno %d\n",errno);
-	    return(-1);
+	    if (errno == 98) {
+		// address already in use - need to delete the old socket file
+		// it never happens in normal conditions, need a sudden reboot
+		// or something like that for that
+		unlink("sock_bmovl");
+		errno = 0;
+		bind(sfd, (struct sockaddr *) &my_addr,
+			sizeof(struct sockaddr_un));
+	    }
+	    if (errno) {
+		printf("bind error errno %d\n",errno);
+		return(-1);
+	    }
 	}
 	if (listen(sfd, LISTEN_BACKLOG) == -1) {
 	    printf("listen error %d\n",errno);
