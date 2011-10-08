@@ -6,20 +6,18 @@
 use strict;
 use Fcntl;
 use Time::HiRes qw(usleep);
+use Socket;
 
 sub open_bmovl {
-	my $tries = 0;
-	my $ret;
-	my $out = undef;
-	while ($tries++ < 10 && 
-		!($ret = sysopen($out,"fifo_bmovl",O_WRONLY|O_NONBLOCK))) {
-		select(undef,undef,undef,0.1);
-	}
-	if (!$ret) {
-		print "open_bmovl: open failed, using stderr\n";
-		return *STDERR;
-	}
+	my $out;
+	socket($out, PF_UNIX, SOCK_STREAM, 0)       || die "socket: $!";
+	connect($out, sockaddr_un("sock_bmovl"))     || die "connect: $!";
 	$out;
+}
+
+sub close_fifo {
+	my $out = shift;
+	close($out);
 }
 
 sub clear($) {
@@ -41,10 +39,14 @@ sub alpha {
 		my $coords = <F>;
 		chomp $coords;
 		close(F);
-		my $f = open_bmovl();
 		for(my $i=$start; $i != $stop; $i+=$step) {
+			my $f = open_bmovl();
 			print $f "ALPHA $coords $i\n";
+			close($f);
+
 		}
+		my $f = open_bmovl();
+		print $f "ALPHA $coords $stop\n";
 		close($f);
 	}
 }

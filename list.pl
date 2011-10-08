@@ -28,6 +28,7 @@ if (open(F,"<current")) {
 my ($chan,$source,$serv,$flav) = @_;
 chomp ($chan,$source,$serv,$flav);
 $chan = lc($chan);
+$source = "freeboxtv" if (!$source);
 # print "list: obtenu chan $chan source $source serv $serv flav $flav\n";
 
 my (@list);
@@ -151,7 +152,7 @@ sub read_list {
 				$found = $#list;
 			}
 		}
-		print "lecture livetv: $#list\n";
+		@list = reverse @list;
 	} elsif ($source eq "flux") {
 		@list = ();
 		my $num = 1;
@@ -230,6 +231,18 @@ sub find_name {
 			}
 		}
 	}
+	# Si on est là, on a pas trouvé, on va essayer avec conv_channel Si c'est
+	# le cas, généralement on reçoit le nom par info.pl et le nom a déjà été
+	# converti, il vaut mieux éviter de le convertir 2 fois pour des chaines
+	# comme game one music hd hd $name = conv_channel($name);
+	for (my $n=0; $n<=$#list; $n++) {
+		for (my $x=0; $x<=$#{$list[$n]}; $x++) {
+			if (conv_channel($list[$n][$x][1]) eq $name) {
+				return ($n,$x);
+			}
+		}
+	}
+	print "find_name: rien trouvé pour $name\n";
 	return undef;
 }
 
@@ -238,15 +251,6 @@ sub switch {
 		if (! -f "$ENV{HOME}/.mplayer/channels.conf" || ! -d "/dev/dvb") {
 			return 0;
 		}
-	} elsif ($source eq "livetv") {
-		my @tab = <livetv/*.ts>;
-		return 0 if (!@tab);
-	} elsif ($source eq "Enregistrements") {
-		my @tab = <records/*.ts>;
-		return 0 if (!@tab);
-	} elsif ($source eq "flux") {
-		my @tab = <flux/*>;
-		return 0 if (!@tab);
 	}
 	return 1;
 }
@@ -276,8 +280,11 @@ sub reset_current {
 		close(A);
 		chomp $src;
 		if ($src ne $source) {
+			print "reset_current: reseting to $src\n";
 			$source = $src;
 			read_list();
+		} else {
+			print "reset_current: rien à faire\n";
 		}
 	}
 }
@@ -439,50 +446,51 @@ END
 		close(F);
 		next;
 	} elsif ($cmd =~ /^(next|prev) /) {
-		open(F,">fifo_list") || die "can't write to fifo_list\n";
+		open(R,">fifo_list") || die "can't write to fifo_list\n";
 		my $next;
 		$next = $cmd =~ s/^next //;
 		$cmd =~ s/^prev //;
 		if (!$cmd) {
-			print F "syntax: next|prev <nom de la chaine>\n";
+			print R "syntax: next|prev <nom de la chaine>\n";
 		} else {
 			reset_current() if (!-f "list_coords");
 			my ($n,$x) = find_name($cmd);
 			if (!defined($n)) {
-				print F "not found $cmd\n";
+				print R "not found $cmd\n";
 			} else {
 				my $name;
 				if ($next) {
 					my $next = $n+1;
 					$next = 0 if ($next > $#list);
 					($name) =get_name($list[$next]); 
+					print "next: got $name from $next\n";
 				} else {
 					my $prev = $n-1;
 					$prev = $#list if ($prev < 0);
 					($name) =get_name($list[$prev]); 
 				}
-				print F "$name\n";
+				print R "$name\n";
 			}
 		}
-		close(F);
+		close(R);
 		next;
 	} elsif ($cmd =~ s/^info //) {
-		open(F,">fifo_list") || die "can't write to fifo_list\n";
+		open(R,">fifo_list") || die "can't write to fifo_list\n";
 		if (!$cmd) {
-			print F "syntax: info <nom de la chaine>\n";
+			print R "syntax: info <nom de la chaine>\n";
 		} else {
 			# si la commande est envoyée par le bandeau d'info tout seul
 			# revenir à la source utilisée par la chaine courante
 			reset_current() if (! -f "list_coords");
 			my ($n,$x) = find_name($cmd);
 			if (!defined($n)) {
-				print F "not found $cmd\n";
+				print R "not found $cmd\n";
 			} else {
 				print "cmd info: $source,",join(",",@{$list[$n][$x]}),"\n";
-				print F "$source,",join(",",@{$list[$n][$x]}),"\n";
+				print R "$source,",join(",",@{$list[$n][$x]}),"\n";
 			}
 		}
-		close(F);
+		close(R);
 		next;
 	} elsif ($cmd =~ /^switch_mode/) {
 		my @arg = split(/ /,$cmd);
@@ -518,8 +526,10 @@ END
 	$nb_elem = 16;
 	$nb_elem = $#list+1 if ($nb_elem > $#list);
 
-	$found -= $#list+1 while ($found > $#list);
-	$found += $#list+1 while ($found < 0);
+	if ($#list >= 0) {
+		$found -= $#list+1 while ($found > $#list);
+		$found += $#list+1 while ($found < 0);
+	}
 
 	my $beg = $found - 9;
 	$beg = 0 if ($beg < 0);
@@ -527,7 +537,7 @@ END
 	print $out "$source\n";
 	my $n = $beg-1;
 	for (my $nb=1; $nb<=$nb_elem; $nb++) {
-		$n = 0 if (++$n > $#list);
+		last if (++$n > $#list);
 		if ($n == $found) {
 			print $out "*";
 		} else {

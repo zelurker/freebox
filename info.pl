@@ -27,6 +27,9 @@ our @cache_pic;
 our ($last_prog, $last_chan,$last_long);
 our %chaines = ();
 
+mkdir "cache" if (! -d "cache");
+mkdir "chaines" if (! -d "chaines");
+
 sub REAPER {
 	my $child;
 	print "info: in REAPER\n";
@@ -50,7 +53,7 @@ sub REAPER {
 			   	$last_long eq $cache_pic[$n][3] &&
 			   	-f "cache/$cache_pic[$n][4]") {
 				# L'image est arrivée, réaffiche le bandeau d'info alors
-				print "repaer found prog\n";
+				print "repaer found prog $n / $#cache_pic\n";
 				disp_prog($chaines{$last_chan}[$last_prog],$last_long);
 				splice @cache_pic,$n,1;
 				last if ($n > $#cache_pic);
@@ -184,7 +187,6 @@ sub myget {
 		} else {
 			$raw = get $url || print STDERR "can't get image $name\n";
 			if ($raw) {
-				mkdir "cache" if (! -d "cache");
 				if (open(F,">cache/$name")) {
 					syswrite(F,$raw,length($raw));
 					close(F);
@@ -455,7 +457,7 @@ sub disp_prog {
 	print $out "\n$$sub[1] : $start - $end\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
 	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
-	close($out);
+	close_fifo($out);
 }
 
 sub send_list {
@@ -464,10 +466,13 @@ sub send_list {
 	open(F,">fifo_list");
 	print F $cmd;
 	close(F);
+	$cmd = undef;
 	open(F,"<fifo_list") || die "can't read from fifo_list\n";
-	$cmd = <F>;
+	while (<F>) {
+		chomp;
+		$cmd = $_;
+	}
 	close(F);
-	chomp $cmd;
 	$cmd;
 }
 
@@ -667,6 +672,8 @@ if (!$reread || !$channel) {
 			}
 			$last_prog = $n;
 			disp_prog($$rtab[$n],$last_long);
+		} else {
+			print "nextprog: did not find last_chan $last_chan\n";
 		}
 		$start_timer = 0;
 		goto read_fifo;
@@ -684,9 +691,9 @@ if (!$reread || !$channel) {
 	    # Ces commandes sont juste passées à bmovl sans rien changer
 	    # mais en passant par ici ça permet de réinitialiser le timeout
 	    # de fondu, plutôt pratique...
-	    open(F,">fifo_bmovl") || die "can't open fifo bmovl\n";
-	    print F "$cmd\n";
-	    close(F);
+	    my $f = open_bmovl();
+	    print $f "$cmd\n";
+	    close($f);
 		$start_timer = 0;
 	    goto read_fifo;
 	} elsif ($cmd =~ /^(up|down)$/) {
@@ -740,11 +747,11 @@ if ($date2 ne $date) { # changement de date
 }
 chomp $channel;
 chomp $long if ($long);
-my $channel0 = conv_channel($channel);
+$channel = conv_channel($channel);
 # print "lecture from fifo channel $channel long ".($long ? $long : "")." fields $#fields\n";
 
 # print "recherche channel $channel\n";
-my $rtab = $chaines{$channel0};
+my $rtab = $chaines{$channel};
 if (!$rtab) {
 	# Pas trouvé la chaine
 	my $out = setup_output("bmovl-src/bmovl","",0);
@@ -753,7 +760,7 @@ if (!$rtab) {
 	($sec,$min,$hour) = localtime($time);
 
 	print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
-	close($out);
+	close_fifo($out);
 	$last_chan = $channel;
 	goto read_fifo;
 }
@@ -796,7 +803,7 @@ print $out "\n\n";
 ($sec,$min,$hour) = localtime($time);
 
 print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nPas encore l'info à cette heure\n";
-close($out);
+close_fifo($out);
 $last_chan = $channel;
 goto read_fifo;
 
