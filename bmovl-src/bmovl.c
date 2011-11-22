@@ -251,7 +251,7 @@ static int info(int fifo, int argc, char **argv)
 	return 0;
 }
 
-static int list(int fifo, int argc, char **argv)
+static int list(int fifo, int argc, char **argv, int noinfo)
 {
     int width,height;
 
@@ -378,7 +378,7 @@ static int list(int fifo, int argc, char **argv)
     // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
     // apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
     // Pour l'instant le meilleur contournement c'est ça.
-    blit(fifo, sf, x, y, -40, 1);
+    blit(fifo, sf, x, y, -40, (noinfo ? 0 : 1));
     send_command(fifo,"SHOW\n");
     f = fopen("list_coords","w");
     fprintf(f,"%d %d %d %d ",sf->w, sf->h,
@@ -386,18 +386,9 @@ static int list(int fifo, int argc, char **argv)
     fclose(f);
     // Clean up
     SDL_FreeSurface(sf);
-    if (current > -1) {
+    if (current > -1 && !noinfo) {
 	int info=0;
 	int tries = 0;
-	/* On communique dans l'autre sens avec info.pl par une fifo.
-	 * C'est un endroit hyper dangereux parce que si info.pl n'est pas en
-	 * écoute au moment de l'ouverture, ça bloque indéfiniment !
-	 * La solution est d'utiliser une ouverture non bloquante (voir fifo(7))
-	 * et ça ne sert à rien de faire plein de tentatives, apparemment c'est
-	 * une histoire de synchro, si ça foire au début, ça foire toujours.
-	 * J'ai quand même autorisé 4 tentatives après quelques essais.
-	 * Si ça dépasse 4, le message pour info est juste abandonné, généralement
-	 * ça veut dire qu'on parcourt les chaines trop vite dans la liste */
 	while (tries++ < 4 && info <= 0) {
 	    info = open("fifo_info",O_WRONLY|O_NONBLOCK);
 	    if (info <= 0) {
@@ -545,7 +536,9 @@ int main(int argc, char **argv) {
 			!strcmp(cmd,"prev")) {
 		    ret = info(fifo,argc,myargv);
 		} else if (!strcmp(cmd,"list")) {
-		    ret = list(fifo,argc,myargv);
+		    ret = list(fifo,argc,myargv,0);
+		} else if (!strcmp(cmd,"list-noinfo")) {
+		    ret = list(fifo,argc,myargv,1);
 		} else if (!strcmp(cmd,"CLEAR")) {
 		    ret = clear(fifo,argc,myargv);
 		} else if (!strcmp(cmd,"ALPHA")) {

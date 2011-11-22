@@ -301,6 +301,8 @@ while (1) {
 		clear("list_coords");
 		clear("info_coords");
 		next;
+	} elsif ($cmd eq "refresh" && $source eq "Enregistrements") {
+		read_list();
 	} elsif ($cmd eq "down") {
 		$found++;
 	} elsif ($cmd eq "up") {
@@ -533,7 +535,7 @@ END
 
 	my $beg = $found - 9;
 	$beg = 0 if ($beg < 0);
-	my $out = setup_output("bmovl-src/list");
+	my $out = setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
 	print $out "$source\n";
 	my $n = $beg-1;
 	for (my $nb=1; $nb<=$nb_elem; $nb++) {

@@ -582,6 +582,9 @@ if (!$reread || !$channel) {
 					$delay = $start_timer;
 					print "delay start_timer : ",get_time($delay),"\n";
 				}
+				if (-f "list_coords") {
+					$delay = $time+3;
+				}
 				foreach (@records) {
 					if ($$_[0] > $time && (!$delay || $$_[0] < $delay)) {
 						$delay = $$_[0];
@@ -607,6 +610,12 @@ if (!$reread || !$channel) {
 					}
 				}
 				handle_records($time);
+				if (-f "list_coords") {
+					open(G,">fifo_list") || die "can't talk to fifo_list\n";
+					print G "refresh\n";
+					close(G);
+				}
+
 				if ($nfound) {
 					($cmd) = <F>;
 					if ($cmd) {
