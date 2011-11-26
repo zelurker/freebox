@@ -171,7 +171,9 @@ while [ "$exit" != "1" ]; do
 			# echo end of while loop length $length again $again
 			audio=`head -n 5 current|tail -n 1`
 			again=1
-			if grep -q ID_EXIT=QUIT id && ! grep -q ID_SIGNAL=15 id; then
+			if grep -q ID_EXIT=QUIT id && ! grep -q ID_SIGNAL=15 id && \
+				! grep -q "End of file" id; then
+				echo sortie sur ID_EXIT=QUIT
 				again=0
 			fi
 		done
