@@ -70,7 +70,8 @@ static void init_video() {
 	exit(2);
     }
     get_video_info();
-    sdl_screen = SDL_SetVideoMode(desktop_w,desktop_h,desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT |SDL_FULLSCREEN);
+    sdl_screen = SDL_SetVideoMode(640,480, /* desktop_w,desktop_h, */
+	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT /* |SDL_FULLSCREEN */);
 }
 
 void
@@ -82,7 +83,17 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear)
 	}
 	SDL_Rect r;
 	r.x = xpos; r.y = ypos;
+	if (xpos + bmp->w > sdl_screen->w)
+	    r.x = sdl_screen->w - bmp->w;
+	if (ypos + bmp->h > sdl_screen->h)
+	    r.y = sdl_screen->h - bmp->h;
+	if (bmp->w > sdl_screen->w || bmp->h > sdl_screen->h) {
+	    printf("blit too big for the screen !\n");
+	    return;
+	}
+	printf("blit to %d,%d size %d %d\n",xpos,ypos,bmp->w,bmp->h);
 	SDL_BlitSurface(bmp,NULL,sdl_screen,&r);
+	SDL_UpdateRect(sdl_screen,r.x,r.y,bmp->w,bmp->h);
     } else {
 	char str[100];
 	int  nbytes;

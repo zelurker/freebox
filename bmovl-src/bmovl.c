@@ -34,7 +34,10 @@ static void disconnect(int signal) {
 }
 
 static void myconnect(int signal) {
-    fifo = open( fifo_str, O_RDWR);
+    if (fifo_str)
+	fifo = open( fifo_str, O_RDWR);
+    else
+	fifo = 0;
     if (fifo <= 0) {
 	printf("server: could not open fifo !\n");
     } else if (sdl_screen) {
@@ -430,10 +433,92 @@ int alpha(int fifo, int argc, char **argv)
 	return write(fifo, buff, len) != len;
 }
 
+static int nb_keys,*keys;
+static char **command;
+
+static void read_inputs() {
+    FILE *f = fopen("input.conf","r");
+    if (!f) {
+	printf("can't read inputs from input.conf\n");
+	return;
+    }
+    char buff[80];
+    int nb_alloc = 0;
+    while (!feof(f)) {
+	fgets(buff,80,f);
+	if (buff[0] == '#' || !buff[0])
+	    continue;
+	int l = strlen(buff)-1;
+	while (buff[l] < 32 && buff[l] > 0)
+	    l--;
+	buff[l+1] = 0;
+	char *c = strstr(buff," run ");
+	if (c) {
+	    *c = 0;
+	    if (nb_keys == nb_alloc) {
+		nb_alloc += 10;
+		keys = realloc(keys,sizeof(int)*nb_alloc);
+		command = realloc(command,sizeof(char*)*nb_alloc);
+	    }
+	    if (buff[1] == 0)
+		keys[nb_keys] = buff[0]; // touche alphanumérique (1 caractère)
+	    else if (!strcasecmp(buff,"UP")) 
+		keys[nb_keys] = SDLK_UP;
+	    else if (!strcasecmp(buff,"DOWN")) 
+		keys[nb_keys] = SDLK_DOWN;
+	    else if (!strcasecmp(buff,"LEFT")) 
+		keys[nb_keys] = SDLK_LEFT;
+	    else if (!strcasecmp(buff,"RIGHT")) 
+		keys[nb_keys] = SDLK_RIGHT;
+	    else if (!strcasecmp(buff,"TAB")) 
+		keys[nb_keys] = SDLK_TAB;
+	    else if (!strcasecmp(buff,"F1")) 
+		keys[nb_keys] = SDLK_F1;
+	    else if (!strcasecmp(buff,"F2")) 
+		keys[nb_keys] = SDLK_F2;
+	    else if (!strcasecmp(buff,"F3")) 
+		keys[nb_keys] = SDLK_F3;
+	    else if (!strcasecmp(buff,"F4")) 
+		keys[nb_keys] = SDLK_F4;
+	    else if (!strcasecmp(buff,"HOME")) 
+		keys[nb_keys] = SDLK_HOME;
+	    else if (!strcasecmp(buff,"END")) 
+		keys[nb_keys] = SDLK_END;
+	    else if (!strcasecmp(buff,"ENTER")) 
+		keys[nb_keys] = SDLK_RETURN;
+	    else if (!strcasecmp(buff,"PGUP")) 
+		keys[nb_keys] = SDLK_PAGEUP;
+	    else if (!strcasecmp(buff,"PGDWN")) 
+		keys[nb_keys] = SDLK_PAGEDOWN;
+	    else if (!strcasecmp(buff,"DEL")) 
+		keys[nb_keys] = SDLK_DELETE;
+	    else if (!strcasecmp(buff,"KP1")) 
+		keys[nb_keys] = SDLK_KP1;
+	    else if (!strcasecmp(buff,"KP3")) 
+		keys[nb_keys] = SDLK_KP3;
+	    else {
+		printf("touche inconnue %s commande %s\n",buff,c+5);
+		continue;
+	    }
+	    command[nb_keys++] = strdup(c+5);
+	}
+    }
+    fclose(f);
+}
+
 static void handle_event(SDL_Event *event) {
+    if (!nb_keys) read_inputs();
     if (event->type == SDL_KEYDOWN) {
 	int input = event->key.keysym.sym;
 	printf("reçu touche %d (%c)\n",input,input);
+	int n;
+	for (n=0; n<nb_keys; n++) {
+	    if (input == keys[n]) {
+		printf("touche trouvée, commande %s\n",command[n]);
+		system(command[n]);
+		break;
+	    }
+	}
     }
 }
 
@@ -447,19 +532,12 @@ int main(int argc, char **argv) {
 	TTF_Init();
 	if (argc != 2) {
 		printf("pass fifo as unique argument\n");
-		return -1;
 	}
 	fifo_str = argv[1];
 	myconnect(0);
-	if (!fifo) return -1;
 	FILE *f = fopen("info.pid","w");
 	fprintf(f,"%d\n",getpid());
 	fclose(f);
-	if(!fifo) {
-		fprintf(stderr, "Error opening FIFO %s!\n", argv[1]);
-		unlink("info.pid");
-		exit(10);
-	}
 	char buff[2048];
 	char *myargv[10];
 	server = 0;
@@ -530,7 +608,7 @@ int main(int argc, char **argv) {
 	    s = strrchr(cmd,'/');
 	    if (s) cmd =s+1;
 	    int ret;
-	    if (fifo > 0) {
+	    if (1) {
 		// commandes connectÃ©es
 		if (!strcmp(cmd,"bmovl") || !strcmp(cmd,"next") ||
 			!strcmp(cmd,"prev")) {
