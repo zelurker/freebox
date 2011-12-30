@@ -301,8 +301,8 @@ while (1) {
 		clear("list_coords");
 		clear("info_coords");
 		next;
-	} elsif ($cmd eq "refresh" && $source eq "Enregistrements") {
-		read_list();
+	} elsif ($cmd eq "refresh") {
+		read_list() if ($source eq "Enregistrements");
 	} elsif ($cmd eq "down") {
 		$found++;
 	} elsif ($cmd eq "up") {
