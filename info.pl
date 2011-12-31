@@ -32,7 +32,6 @@ mkdir "chaines" if (! -d "chaines");
 
 sub REAPER {
 	my $child;
-	print "info: in REAPER\n";
 	# loathe SysV: it makes us not only reinstate
 	# the handler, but place it after the wait
 	$SIG{CHLD} = \&REAPER;
@@ -50,7 +49,7 @@ sub REAPER {
 			}
 			if ($child == $cache_pic[$n][0] && $last_chan eq $cache_pic[$n][1]
 				&& $last_prog == $cache_pic[$n][2] &&
-			   	$last_long eq $cache_pic[$n][3] &&
+			   	(!$last_long || $last_long eq $cache_pic[$n][3]) &&
 			   	-f "cache/$cache_pic[$n][4]") {
 				# L'image est arrivée, réaffiche le bandeau d'info alors
 				print "repaer found prog $n / $#cache_pic\n";
@@ -371,6 +370,14 @@ debut: $program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur 
 my @fields = split(/\:\$\$\$\:/,$program_text);
 
 my $date_offset = 0;
+# Les collisions : je laisse ce code qui fait des stats sur leur nombre et
+# le temps que ça prend à traiter. En fait on obtient de l'ordre de 1200
+# collisions pour une seule journée, mais ça prend moins de 2s à récupérer, et
+# moins d'1s à convertir dans un format utilisable en interne. Résultat ça
+# serait probablement + long de faire 1 requète par chaine pour éviter les
+# collisions. Tant pis pour eux, peut-être qu'un jour ils corrigeront leur
+# code qui fait toutes ces collisions !
+my $nb_collision = 0;
 foreach (@fields) {
 	my @sub = split(/\$\$\$/);
 	my $chan = lc($sub[1]);
@@ -400,6 +407,7 @@ foreach (@fields) {
 			# Le nombre de colisions est hallucinant !
 			# un vrai gaspillage de bande passante leur truc !
 			# print "colision chaine $$colision[1] titre $$colision[2]\n";
+			$nb_collision++;
 		} else {
 			push @$rtab,\@sub;
 		}
@@ -407,7 +415,9 @@ foreach (@fields) {
 		$chaines{$chan} = [\@sub];
 	}
 }
+print scalar localtime," fin traitement fichier, $nb_collision collisions\n";
 $chaines{"nolife"} = get_nolife($chaines{"nolife"});
+print scalar localtime," fin traitement nolife\n";
 
 my $last_hour = 0;
 
@@ -601,7 +611,6 @@ if (!$reread || !$channel) {
 				vec($rin,fileno(F),1) = 1;
 				my ($nfound) = select($rin, undef, undef, $delay);
 				$time = time;
-				print "sortie de select time ",get_time($time)," found $nfound\n";
 				if ($last_chan && defined($last_prog) && $chaines{$last_chan} && $time >= $chaines{$last_chan}[$last_prog][4] && $time < $chaines{$last_chan}[$last_prog+1][4]) {
 					if (-f "info_coords" && $time - $chaines{$last_chan}[$last_prog+1][3] < 5) {
 						print "programme suivant affiché last $last_prog < ",$#{$chaines{$last_chan}},"\n";
@@ -616,7 +625,7 @@ if (!$reread || !$channel) {
 					close(G);
 				}
 
-				if ($nfound) {
+				if ($nfound > 0) {
 					($cmd) = <F>;
 					if ($cmd) {
 						chomp ($cmd);
@@ -866,6 +875,7 @@ sub getListeProgrammes {
       $url = $url.",";
     }
   }
+  print scalar localtime," récupération $url\n";
 
   my $response = $browser->get($url);
 
@@ -875,6 +885,7 @@ sub getListeProgrammes {
   open(F,">day".($offset));
   print F $response->content;
   close(F);
+  print scalar localtime," fichier écrit\n";
   return $response->content;
 }
 
