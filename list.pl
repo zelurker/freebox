@@ -387,21 +387,19 @@ while (1) {
 								next;
 							}
 						}
-						open(G,">current");
-						print G "$name\n$source\n$serv\n$flav\n$audio\n$video\n$serv\n";
-						close(G);
-						print F "quit\n";
-						close(F);
-						unlink "id";
 					} else {
 						$serv = get_mms($serv) if ($serv =~ /^http/);
 						print "flux: loadfile $serv\n";
-						print F "loadfile '$serv'\n";
-						close(F);
-						open(F,">live");
-						close(F);
-						unlink( "list_coords","info_coords");
+						open(G,">live");
+						close(G);
 					}
+					unlink( "list_coords","info_coords");
+					open(G,">current");
+					print G "$name\n$source\n$serv\n$flav\n$audio\n$video\n$serv\n";
+					close(G);
+					print F "quit\n";
+					close(F);
+					unlink "id";
 				}
 			}
 		} else {
@@ -417,10 +415,10 @@ while (1) {
 				$flav = 0 if (!$flav);
 				$video = 0 if (!$video);
 				$audio = 0 if (!$audio);
-				print "lancement ./run_mp1 \"$serv\" $flav $audio $video \"$source\"\n";
+				print "lancement ./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"\n";
 				system(<<END);
 (echo pause > fifo_cmd
- ./run_mp1 \"$serv\" $flav $audio $video "$source"
+ ./run_mp1 \"$serv\" $flav $audio $video "$source" "$name"
  kill `cat player2.pid`
  echo 'End of file' > id) &
 END
