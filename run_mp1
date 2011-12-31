@@ -14,6 +14,7 @@ flavour=$2
 audio=$3
 video=$4
 src=$5
+chaine=$6
 if [ "$src" == "0" ] || [ "$src" == "" ]; then
 	src=freeboxtv
 fi
@@ -23,7 +24,7 @@ fi
 if [ "$video" == "0" ]; then
 	video=""
 fi
-echo run_mp1: src=$src video=$video audio=$audio flavour=$flavour service=$service
+echo run_mp1: src=$src video=$video audio=$audio flavour=$flavour service=$service chaine=$chaine
 if [ "$src" == "flux" ]; then
 	exit 0
 fi
@@ -36,22 +37,24 @@ while [ "$ok" == "0" ]; do
 		audio2="-aid $audio"
 	fi
     # echo run_mp1: service $service flavour $flavour
-	while ! [ -p fifo_list ]; do
-		echo attente >& /dev/null
-	done
-	if [ "$src" == "dvb" ]; then
-		echo name $service > fifo_list
-	else
-		echo name "$service" $flavour $audio > fifo_list
+	if [ "$chaine" == "" ]; then
+		while ! [ -p fifo_list ]; do
+			echo attente >& /dev/null
+		done
+		if [ "$src" == "dvb" ]; then
+			echo name $service > fifo_list
+		else
+			echo name "$service" $flavour $audio > fifo_list
+		fi
+		chaine=`cat fifo_list`
 	fi
-	chaine=`cat fifo_list`
 	name=livetv/`date +"%Y%m%d %H%M%S $chaine.ts"`
 	case $src in
 		dvb)
 			mplayer -quiet -dumpfile "$name" -dumpstream dvb://"$service" >& log &
 			;;
 		freebox|freeboxtv|"radios freebox")
-			while ! ping -c 1 mafreebox.freebox.fr; do
+			while ! ping -q -c 1 mafreebox.freebox.fr > /dev/null; do
 				zenity --warning --text "Attente disponibilité réseau"
 			done
 				
