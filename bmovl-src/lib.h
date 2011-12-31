@@ -17,3 +17,4 @@ SDL_Surface *create_surface(int w, int h);
 int get_fg(SDL_Surface *sf);
 int get_bg(SDL_Surface *sf);
 char *get_next_string();
+void init_video();

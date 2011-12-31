@@ -34,20 +34,27 @@ static void disconnect(int signal) {
 }
 
 static void myconnect(int signal) {
+    /* Finalement on fait totalement confiance au script freebox pour la
+     * fiabilité de la pipe ici et on l'ouvre en blocante. Il y a un SIGPIPE
+     * intercepté parce qu'une écriture dedans pendant un zapping est toujours
+     * possible, c'est tout */
+    /* C'est plus pratique qu'une ouverture non blocante qui nécessite des
+     * pauses pendant l'écriture parce qu'on est pas toujours synchronisé avec
+     * le process mplayer, et après on ne sait plus si on attend à cause d'une
+     * déconnexion ou d'un timeout, nettement + simple comme ça */
     if (fifo_str)
-	fifo = open( fifo_str, O_RDWR);
+	fifo = open( fifo_str, O_WRONLY /* |O_NONBLOCK */ );
     else
 	fifo = 0;
     if (fifo <= 0) {
 	printf("server: could not open fifo !\n");
-    } else if (sdl_screen) {
-	SDL_QuitSubSystem(SDL_INIT_VIDEO);
-	sdl_screen = NULL;
+	fifo = 0;
     }
 }
 
 static void myexit(int signal) {
     unlink("sock_bmovl");
+    unlink("info.pid");
     exit(0);
 }
 
@@ -526,18 +533,18 @@ int main(int argc, char **argv) {
 
 	signal(SIGUSR1, &myconnect);
 	signal(SIGUSR2, &disconnect);
+	signal(SIGPIPE, &disconnect);
 	signal(SIGTERM, &myexit);
+	FILE *f = fopen("info.pid","w");
+	fprintf(f,"%d\n",getpid());
+	fclose(f);
 	unlink("fifo_bmovl");
 	mkfifo("fifo_bmovl",0700);
-	TTF_Init();
 	if (argc != 2) {
 		printf("pass fifo as unique argument\n");
 	}
 	fifo_str = argv[1];
-	myconnect(0);
-	FILE *f = fopen("info.pid","w");
-	fprintf(f,"%d\n",getpid());
-	fclose(f);
+	// myconnect(0);
 	char buff[2048];
 	char *myargv[10];
 	server = 0;
@@ -567,6 +574,10 @@ int main(int argc, char **argv) {
 	    return(-1);
 	}
 	peer_addr_size = sizeof(struct sockaddr_un);
+	/* On ouvre une fenêtre quoi qu'il arrive. Ca sert de filtre de
+	 * commandes pour mplayer pour les cas où c'est un flux sans video */
+	init_video();
+	TTF_Init();
 
 	while (1) {
 	    int len = 0;
@@ -608,6 +619,8 @@ int main(int argc, char **argv) {
 	    s = strrchr(cmd,'/');
 	    if (s) cmd =s+1;
 	    int ret;
+	    // On retente une cxion quand y en a plus, ça mange pas de pain
+	    // if (!fifo) myconnect(1);
 	    if (1) {
 		// commandes connectÃ©es
 		if (!strcmp(cmd,"bmovl") || !strcmp(cmd,"next") ||
@@ -624,8 +637,8 @@ int main(int argc, char **argv) {
 		} 
 		if (ret) {
 		    printf("bmovl: command returned %d\n",ret);
-		    disconnect(0);
-		    myconnect(0);
+		    /* disconnect(0);
+		    myconnect(0); */
 		}
 	    } else {
 		printf("server: commande ignorÃ©e : %s\n",cmd);

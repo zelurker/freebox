@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include "lib.h"
 
 #define DEBUG 0
 
@@ -39,16 +40,27 @@ SDL_Surface *create_surface(int w, int h)
 
 static int write_select(int fifo, void *buff, int len)
 {
+    if (!fifo) return 0;
 	int ret = 0;
+	int tries = 3;
 	while (len > 0) {
 		int bout = write(fifo,buff,len);
-		len -= bout;
-		ret += bout;
-		buff += bout;
-		if (len)
-			printf("write_select: bout = %d fifo %d\n",bout,fifo);
-		if (bout < 0)
-		    break; // fifo closed probably
+		if (bout > 0) {
+		    len -= bout;
+		    ret += bout;
+		    buff += bout;
+		}
+		if (bout < 0) {
+		    if (tries--) {
+			struct timeval tv;
+			tv.tv_sec = 0;
+			tv.tv_usec = 100000;
+			select(0,NULL,NULL,NULL,&tv);
+		    } else {
+			printf("write_select: toujours bloqué après 3 tentatives\n");
+			break;
+		    }
+		}
 	}
 
 	return ret;
@@ -64,7 +76,7 @@ static void get_video_info() {
   desktop_bpp = inf->vfmt->BitsPerPixel;
 }
 
-static void init_video() {
+void init_video() {
     if ( SDL_Init( SDL_INIT_VIDEO) < 0 ) {
 	fprintf(stderr, "Couldn't initialize SDL: %s\n",SDL_GetError());
 	exit(2);
@@ -114,10 +126,7 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear)
 }
 
 void send_command(int fifo,char *cmd) {
-    if (fifo)
-	write_select(fifo,cmd,strlen(cmd));
-    else
-	printf("commande ignorée (fifo=0) : %s\n",cmd);
+    write_select(fifo,cmd,strlen(cmd));
 }
 
 void get_size(TTF_Font *font, char *text, int *w, int *h, int maxw) {
