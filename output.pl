@@ -11,6 +11,19 @@ use Socket;
 sub open_bmovl {
 	my $out;
 	socket($out, PF_UNIX, SOCK_STREAM, 0)       || die "socket: $!";
+	my $tries = 20;
+	while (! -S "sock_bmovl" && $tries) {
+		$tries--;
+		sleep(1);
+		print "sleep $tries\n";
+	}
+	if (! -S "sock_bmovl") {
+		print "open_bmovl: toujours pas de socket, on sort !\n";
+		return undef;
+	} elsif ($tries < 20) {
+		print "trouvé la socket à $tries essais\n";
+	}
+
 	connect($out, sockaddr_un("sock_bmovl"))     || die "connect: $!";
 	$out;
 }
@@ -27,8 +40,10 @@ sub clear($) {
 		chomp $coords;
 		close(F);
 		my $f = open_bmovl();
-		print $f "CLEAR $coords\n";
-		close($f);
+		if ($f) {
+			print $f "CLEAR $coords\n";
+			close($f);
+		}
 		unlink("$name");
 	}
 }
@@ -41,13 +56,16 @@ sub alpha {
 		close(F);
 		for(my $i=$start; $i != $stop; $i+=$step) {
 			my $f = open_bmovl();
-			print $f "ALPHA $coords $i\n";
-			close($f);
-
+			if ($f) {
+				print $f "ALPHA $coords $i\n";
+				close($f);
+			}
 		}
 		my $f = open_bmovl();
-		print $f "ALPHA $coords $stop\n";
-		close($f);
+		if ($f) {
+			print $f "ALPHA $coords $stop\n";
+			close($f);
+		}
 	}
 }
 
@@ -82,9 +100,18 @@ sub conv_channel {
 
 sub setup_output {
 	my ($prog,$pic,$long) = @_;
+	@_ = ();
+	if (open(F,"<current")) {
+		@_ = <F>;
+		close(F);
+	}
+	my ($chan,$source,$serv,$flav) = @_;
+	chomp $source;
 	my ($width,$height);
 	my $out;
-	if (-p "fifo") {
+	if ($source eq "flux") {
+		$width = 640; $height = 480;
+	} elsif (-p "fifo") {
 		my $tries = 0;
 		open(F,"<id") || die "no id file\n";
 		do {
@@ -105,42 +132,40 @@ sub setup_output {
 		} while ((!$width || $width < 320) && ++$tries < 3000);
 		# print "obtenu $width et $height au bout de $tries\n";
 		close(F);
-		if ($pic) { #  && $width < 720) {
-			open(F,"identify picture.jpg|");
-			while (<F>) {
-				if (/ (\d+)x(\d+) /) {
-					my ($w,$h) = ($1,$2);
-					my $div = 0;
-					if ($w/2 < $width/2) {
-						$div = 2;
-					} elsif ($w/3 < $width/2) {
-						$div = 3;
-					}
-					$div = 2 if ($div == 0);
-					if ($div > 0) {
-						system("convert picture.jpg -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg picture.jpg");
-					}
+	}
+	if ($pic) { #  && $width < 720) {
+		open(F,"identify picture.jpg|");
+		while (<F>) {
+			if (/ (\d+)x(\d+) /) {
+				my ($w,$h) = ($1,$2);
+				my $div = 0;
+				if ($w/2 < $width/2) {
+					$div = 2;
+				} elsif ($w/3 < $width/2) {
+					$div = 3;
+				}
+				$div = 2 if ($div == 0);
+				if ($div > 0) {
+					print "on lance convert picture.jpg -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg picture.jpg\n";
+					system("convert picture.jpg -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg picture.jpg");
 				}
 			}
-			close(F);
 		}
+		close(F);
+	}
 
-		# print STDERR "output on pipe width $width height $height\n";
-		if (!$long) {
-			$long = $height*2/3;
-		} elsif ($long =~ /^[a-z]/i) {
-			$long = "";
-		} # else pass long as is...
-		# print "calling $prog fifo $width $height $long\n";
-		if ($width > 100 && $height > 100) {
-			$out = open_bmovl();
-			print $out "$prog fifo $width $height $long\n"
-		} else {
-			print "*** width $width height $height, on annule bmovl\n";
-			$out = *STDERR;
-		}
+	# print STDERR "output on pipe width $width height $height\n";
+	if (!$long) {
+		$long = $height*2/3;
+	} elsif ($long =~ /^[a-z]/i) {
+		$long = "";
+	} # else pass long as is...
+	# print "calling $prog fifo $width $height $long\n";
+	if ($width > 100 && $height > 100) {
+		$out = open_bmovl();
+		print $out "$prog fifo $width $height $long\n" if ($out);
 	} else {
-		print STDERR "no fifo, output on STDERR\n";
+		print "*** width $width height $height, on annule bmovl\n";
 		$out = *STDERR;
 	}
 	$out;
