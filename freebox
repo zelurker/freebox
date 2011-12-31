@@ -9,6 +9,7 @@ flavour=$2
 audio=$3
 video=$4
 src=""
+chaine=`head -n 1 current`
 if [ "$service" == "" ] || [ "$flavour" == "" ]; then
 	service=`head -n 3 current|tail -n 1`
 	flavour=`head -n 4 current|tail -n 1`
@@ -35,10 +36,11 @@ if [ "$service" == "" ]; then
 fi
 echo service $service flavour $flavour source $src
 cmd=""
+# append initialilsé par les appels à append
 append $flavour
 append $audio
 append $video
-./run_mp1 "$service" $cmd "$src"
+./run_mp1 "$service" $cmd "$src" "$chaine"
 }
 
 function append {
@@ -56,10 +58,19 @@ function launch() {
 	name=`head -n 7 current|tail -n 1`
 	if [ "$src" == "flux" ]; then
 		echo "lancement flux name=$name"
-		echo mplayer -quiet mf://musique.jpg -audiofile "$name" \
+		if echo $name|grep mms; then
+			# Très approximatif comme détection mais en tous cas les flux
+			# vidéo mms, particulièrement france 2, nécessitent du cache.
+			cache=2000
+		else
+			# 100 c'est bien, ça fait un démarrage super rapide des flux audios
+			# et c'est suffisant dans la plupart des cas
+			cache=100
+		fi
+		echo mplayer "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
-			conf=$PWD/input.conf:file=fifo_cmd 
-		mplayer -quiet mf://musique.jpg -audiofile "$name" -vf bmovl=1:0:fifo \
+			conf=$PWD/input.conf:file=fifo_cmd
+		mplayer "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd \
 			>& id &
@@ -80,7 +91,7 @@ exit=0
 while [ "$exit" != "1" ]; do
 	rm -f id fifo_list
 	# 1st kill all the old eventual processes
-	for n in player1.pid info.pid; do
+	for n in player1.pid; do
 		if [ -f $n ]; then
 			kill `cat $n` >& /dev/null
 			rm -f $n
@@ -128,29 +139,31 @@ while [ "$exit" != "1" ]; do
 			name=`head -n 7 current|tail -n 1`
 			# Le -frames 0 ici est totalement obligatoire sinon ça peut être
 			# très long sur certains fichiers h264 !
-			mplayer -identify -vo null -ao null -frames 0 "$name" > id
-			echo *** test lavf
-			if grep -q "no video" id || grep -q "NO AUDIO" id || \
-				grep -q "H264" id; then
-				demuxer="-demuxer lavf -framedrop -vo xv"
-				echo lavf activé
-			else
-				demuxer=""
-				echo no lavf
-				cat id > id0
+			if [ "$src" != "flux" ]; then
+				mplayer -identify -vo null -ao null -frames 0 "$name" > id
+				if grep -q "no video" id || grep -q "NO AUDIO" id || \
+					grep -q "H264" id; then
+					demuxer="-demuxer lavf -framedrop -vo xv"
+					echo lavf activé
+				else
+					demuxer=""
+					cat id > id0
+				fi
 			fi
-			# echo launch length $length
 			launch
 			pid=$!
 			if ! [ -f info.pid ]; then
 				./bmovl-src/bmovl fifo &
-			else
+			fi
+			if [ "$src" != "flux" ]; then
 				kill -USR1 `cat info.pid`
 			fi
 			echo "prog $chaine" > fifo_info
 			wait $pid
 			kill -USR2 `cat info.pid`
+			src=`head -n 2 current|tail -n 1`
 			if [ "$src" != "flux" ]; then
+				rm -f list_coords info_coords
 				length=`perl eval_end.pl`
 			fi
 			if [ "$length" != "0" ] && [ "$length" != "" ]; then
