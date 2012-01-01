@@ -82,8 +82,13 @@ void init_video() {
 	exit(2);
     }
     get_video_info();
-    sdl_screen = SDL_SetVideoMode(640,480, /* desktop_w,desktop_h, */
-	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT /* |SDL_FULLSCREEN */);
+    sdl_screen = SDL_SetVideoMode( desktop_w,desktop_h, 
+	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT |SDL_FULLSCREEN );
+    FILE *f = fopen("desktop","w");
+    if (f) {
+	fprintf(f,"%d\n%d\n",desktop_w,desktop_h);
+	fclose(f);
+    }
 }
 
 void

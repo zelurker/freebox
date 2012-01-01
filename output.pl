@@ -111,6 +111,11 @@ sub setup_output {
 	my $out;
 	if ($source eq "flux") {
 		$width = 640; $height = 480;
+		if (open(F,"<desktop")) {
+			($width,$height) = <F>;
+			chomp $width,$height;
+			close(F);
+		}
 	} elsif (-p "fifo") {
 		my $tries = 0;
 		open(F,"<id") || die "no id file\n";
