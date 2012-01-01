@@ -264,10 +264,16 @@ sub get_mms {
 		print "mms url : $1 from $url\n";
 		return $1;
 	} else {
-		print "did not find mms from $url\n";
 		open(F,">dump");
 		print F $page;
 		close(F);
+		while ($page =~ s/iframe src\="(.+?)"//m) {
+			print "trying iframe $1\n";
+			my $r = get_mms($1);
+			return $r if ($r);
+		}
+		print "did not find mms from $url\n";
+		return undef;
 	}
 	return $url;
 }
@@ -310,7 +316,12 @@ while (1) {
 	} elsif ($cmd eq "right") {
 		$found += $nb_elem;
 	} elsif ($cmd eq "left") {
-		$found -= $nb_elem;
+		if ($source eq "flux" && $base_flux) {
+			$base_flux = "";
+			read_list();
+		} else {
+			$found -= $nb_elem;
+		}
 	} elsif ($cmd eq "home") {
 		$found = 0;
 	} elsif ($cmd eq "end") {
@@ -534,7 +545,11 @@ END
 	my $beg = $found - 9;
 	$beg = 0 if ($beg < 0);
 	my $out = setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
-	print $out "$source\n";
+	if ($source eq "flux" && $base_flux) {
+		print $out "$source > $base_flux\n";
+	} else {
+		print $out "$source\n";
+	}
 	my $n = $beg-1;
 	for (my $nb=1; $nb<=$nb_elem; $nb++) {
 		last if (++$n > $#list);
