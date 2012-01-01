@@ -460,71 +460,74 @@ static void read_inputs() {
 	    l--;
 	buff[l+1] = 0;
 	char *c = strstr(buff," run ");
-	if (c) {
-	    *c = 0;
-	    if (nb_keys == nb_alloc) {
-		nb_alloc += 10;
-		keys = realloc(keys,sizeof(int)*nb_alloc);
-		command = realloc(command,sizeof(char*)*nb_alloc);
-	    }
-	    if (buff[1] == 0)
-		keys[nb_keys] = buff[0]; // touche alphanumérique (1 caractère)
-	    else if (!strcasecmp(buff,"UP")) 
-		keys[nb_keys] = SDLK_UP;
-	    else if (!strcasecmp(buff,"DOWN")) 
-		keys[nb_keys] = SDLK_DOWN;
-	    else if (!strcasecmp(buff,"LEFT")) 
-		keys[nb_keys] = SDLK_LEFT;
-	    else if (!strcasecmp(buff,"RIGHT")) 
-		keys[nb_keys] = SDLK_RIGHT;
-	    else if (!strcasecmp(buff,"TAB")) 
-		keys[nb_keys] = SDLK_TAB;
-	    else if (!strcasecmp(buff,"F1")) 
-		keys[nb_keys] = SDLK_F1;
-	    else if (!strcasecmp(buff,"F2")) 
-		keys[nb_keys] = SDLK_F2;
-	    else if (!strcasecmp(buff,"F3")) 
-		keys[nb_keys] = SDLK_F3;
-	    else if (!strcasecmp(buff,"F4")) 
-		keys[nb_keys] = SDLK_F4;
-	    else if (!strcasecmp(buff,"HOME")) 
-		keys[nb_keys] = SDLK_HOME;
-	    else if (!strcasecmp(buff,"END")) 
-		keys[nb_keys] = SDLK_END;
-	    else if (!strcasecmp(buff,"ENTER")) 
-		keys[nb_keys] = SDLK_RETURN;
-	    else if (!strcasecmp(buff,"PGUP")) 
-		keys[nb_keys] = SDLK_PAGEUP;
-	    else if (!strcasecmp(buff,"PGDWN")) 
-		keys[nb_keys] = SDLK_PAGEDOWN;
-	    else if (!strcasecmp(buff,"DEL")) 
-		keys[nb_keys] = SDLK_DELETE;
-	    else if (!strcasecmp(buff,"KP1")) 
-		keys[nb_keys] = SDLK_KP1;
-	    else if (!strcasecmp(buff,"KP3")) 
-		keys[nb_keys] = SDLK_KP3;
-	    else {
-		printf("touche inconnue %s commande %s\n",buff,c+5);
-		continue;
-	    }
-	    command[nb_keys++] = strdup(c+5);
+	if (!c) continue;
+	*c = 0;
+	if (nb_keys == nb_alloc) {
+	    nb_alloc += 10;
+	    keys = realloc(keys,sizeof(int)*nb_alloc);
+	    command = realloc(command,sizeof(char*)*nb_alloc);
 	}
+	if (buff[1] == 0)
+	    keys[nb_keys] = buff[0]; // touche alphanumérique (1 caractère)
+	else if (!strcasecmp(buff,"UP")) 
+	    keys[nb_keys] = SDLK_UP;
+	else if (!strcasecmp(buff,"DOWN")) 
+	    keys[nb_keys] = SDLK_DOWN;
+	else if (!strcasecmp(buff,"LEFT")) 
+	    keys[nb_keys] = SDLK_LEFT;
+	else if (!strcasecmp(buff,"RIGHT")) 
+	    keys[nb_keys] = SDLK_RIGHT;
+	else if (!strcasecmp(buff,"TAB")) 
+	    keys[nb_keys] = SDLK_TAB;
+	else if (!strcasecmp(buff,"F1")) 
+	    keys[nb_keys] = SDLK_F1;
+	else if (!strcasecmp(buff,"F2")) 
+	    keys[nb_keys] = SDLK_F2;
+	else if (!strcasecmp(buff,"F3")) 
+	    keys[nb_keys] = SDLK_F3;
+	else if (!strcasecmp(buff,"F4")) 
+	    keys[nb_keys] = SDLK_F4;
+	else if (!strcasecmp(buff,"HOME")) 
+	    keys[nb_keys] = SDLK_HOME;
+	else if (!strcasecmp(buff,"END")) 
+	    keys[nb_keys] = SDLK_END;
+	else if (!strcasecmp(buff,"ENTER")) 
+	    keys[nb_keys] = SDLK_RETURN;
+	else if (!strcasecmp(buff,"PGUP")) 
+	    keys[nb_keys] = SDLK_PAGEUP;
+	else if (!strcasecmp(buff,"PGDWN")) 
+	    keys[nb_keys] = SDLK_PAGEDOWN;
+	else if (!strcasecmp(buff,"DEL")) 
+	    keys[nb_keys] = SDLK_DELETE;
+	else if (!strcasecmp(buff,"KP1")) 
+	    keys[nb_keys] = SDLK_KP1;
+	else if (!strcasecmp(buff,"KP3")) 
+	    keys[nb_keys] = SDLK_KP3;
+	else {
+	    printf("touche inconnue %s commande %s\n",buff,c+5);
+	    continue;
+	}
+	command[nb_keys++] = strdup(c+5);
     }
     fclose(f);
 }
 
 static void handle_event(SDL_Event *event) {
     if (!nb_keys) read_inputs();
-    if (event->type == SDL_KEYDOWN) {
-	int input = event->key.keysym.sym;
-	printf("reçu touche %d (%c)\n",input,input);
-	int n;
-	for (n=0; n<nb_keys; n++) {
-	    if (input == keys[n]) {
-		printf("touche trouvée, commande %s\n",command[n]);
-		system(command[n]);
-		break;
-	    }
+    if (event->type != SDL_KEYDOWN) return;
+    int input = event->key.keysym.sym;
+    printf("reçu touche %d (%c)\n",input,input);
+    int n;
+    if (input == 'q' || input == SDLK_ESCAPE) {
+	// quitte le mplayer actif en fait
+	system("kill `cat player2.pid`");
+	return;
+    }
+    for (n=0; n<nb_keys; n++) {
+	if (input == keys[n]) {
+	    printf("touche trouvée, commande %s\n",command[n]);
+	    system(command[n]);
+	    break;
 	}
     }
 }
