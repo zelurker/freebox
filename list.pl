@@ -313,6 +313,7 @@ while (1) {
 	my $cmd = <F>;
 	chomp $cmd;
 	close(F);
+	again:
 	if (-f "list_coords" && $cmd eq "clear") {
 		clear("list_coords");
 		clear("info_coords");
@@ -324,9 +325,14 @@ while (1) {
 	} elsif ($cmd eq "up") {
 		$found--;
 	} elsif ($cmd eq "right") {
-		$found += $nb_elem;
+		if ($source eq "flux" && $found > $#list-$nb_elem) {
+			$cmd = "zap1";
+			goto again;
+		} else {
+			$found += $nb_elem;
+		}
 	} elsif ($cmd eq "left") {
-		if ($source eq "flux" && $base_flux) {
+		if ($source eq "flux" && $base_flux && $found < $nb_elem) {
 			$base_flux = "";
 			read_list();
 		} else {
