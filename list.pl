@@ -15,6 +15,7 @@
 use strict;
 use LWP::Simple;
 use Encode;
+use Fcntl;
 require "output.pl";
 
 open(F,">info_list.pid") || die "info_list.pid\n";
@@ -278,6 +279,15 @@ sub get_mms {
 	return $url;
 }
 
+sub send_command {
+	my $cmd = shift;
+	if (sysopen(F,"fifo_cmd",O_WRONLY|O_NONBLOCK)) {
+		print "send_command : $cmd\n";
+		print F $cmd;
+		close(F);
+	}
+}
+
 sub reset_current {
 	# replace le mode sur le mode courant
 	if (open(A,"<current")) {
@@ -352,7 +362,7 @@ while (1) {
 				my $pid = `cat player1.pid`;
 				chomp $pid;
 				print "pid à tuer $pid.\n";
-				kill 1,$pid;
+				kill "TERM",$pid;
 			   	unlink "player1.pid";
 				print F "loadfile '$serv'\n";
 				close(F);
@@ -366,18 +376,15 @@ while (1) {
 				$base_flux = $name;
 				print "base_flux = $name\n";
 				read_list();
-				print "après read_list $#list élém\n";
-				for (my $n=0; $n<=$#list; $n++) {
-					print "$n: $list[$n][0][0] $list[$n][0][1] $list[$n][0][2]\n";
-				}
 			} else {
 				if (open(F,">fifo_cmd")) {
+					print "sending pause\n";
 					print F "pause\n";
 					if (-f "player1.pid") {
 						my $pid = `cat player1.pid`;
 						chomp $pid;
-						print "pid à tuer $pid.\n";
-						kill 1,$pid;
+						print "pid2 à tuer $pid.\n";
+						kill "TERM",$pid;
 						unlink "player1.pid";
 					}
 					if ($serv =~ /(mp3|ogg|flac|mpc|wav|m3u|pls)$/i) {
@@ -405,12 +412,15 @@ while (1) {
 						close(G);
 					}
 					unlink( "list_coords","info_coords");
+					system("kill -USR2 `cat info.pid`");
 					open(G,">current");
 					print G "$name\n$source\n$serv\n$flav\n$audio\n$video\n$serv\n";
 					close(G);
+					print "sending quit\n";
+					unlink "id";
 					print F "quit\n";
 					close(F);
-					unlink "id";
+					system("kill `cat player2.pid`");
 				}
 			}
 		} else {
@@ -427,12 +437,27 @@ while (1) {
 				$video = 0 if (!$video);
 				$audio = 0 if (!$audio);
 				print "lancement ./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"\n";
-				system(<<END);
-(echo pause > fifo_cmd
- ./run_mp1 \"$serv\" $flav $audio $video "$source" "$name"
- kill `cat player2.pid`
- echo 'End of file' > id) &
-END
+				# Si player2 ne démarre pas correctement freebox peut se
+				# retrouver à boucler dessus et la pipe de commande n'est
+				# jamais ouverte dans ce cas là. Il vaut mieux passer par
+				# send_command...
+				send_command("pause\n");
+				system("./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"");
+				send_command("quit\n");
+				unlink "fifo_cmd";
+				# La séquence suivante est un hack pas beau mais jusqu'ici
+				# je n'ai pas trouvé mieux : on quitte mplayer en lui envoyant
+				# quit, mais du coup ça provoque le message id_exit=quit avant
+				# de sortir, du coup il n'y a aucun moyen de le différencier
+				# d'une commande quit envoyée par l'utilisateur. Et là en l'
+				# occurence vu qu'on vient de relancer run_mp1, il faut que
+				# freebox boucle. Donc je kille carrément le filtre dont le pid
+				# est maintenant dans player2.pid avant qu'il ait pu recopier
+				# le message de fin et je vire id pour être sûr !
+				# Pas terrible tout ça, vraiment ! Mais bon ça a l'air de
+				# marcher...
+				system("kill `cat player2.pid`");
+				unlink "id";
 			}
 			next;
 		}

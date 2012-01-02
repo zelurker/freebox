@@ -73,7 +73,7 @@ function launch() {
 		mplayer "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd \
-			>& id &
+			| perl filter_mplayer.pl &
 	else
 		if [ "$audio" != "" ]; then
 			audio2="-aid $audio"
@@ -81,7 +81,7 @@ function launch() {
 		mplayer $audio2 -quiet $length -vf bmovl=1:0:fifo,screenshot,kerndeint \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd $demuxer \
-			"$name" >& id &
+			"$name" | perl filter_mplayer.pl &
 	fi
 	echo $! > player2.pid
 	audio2=""
@@ -89,7 +89,7 @@ function launch() {
 
 exit=0
 while [ "$exit" != "1" ]; do
-	rm -f id fifo_list
+	rm -f id fifo_list video_size
 	# 1st kill all the old eventual processes
 	for n in player1.pid; do
 		if [ -f $n ]; then
@@ -128,7 +128,7 @@ while [ "$exit" != "1" ]; do
 			if [ -f player2.pid ] && ps -p `cat player2.pid` >& /dev/null; then
 				# kill le 2ème process le + tard possible pour minimiser la
 				# disparition de la fenêtre pendant le zapping
-				kill `cat player2.pid`
+				echo quit > fifo_cmd
 				rm -f player2.pid
 			fi
 			if [ -f info.pid ]; then
@@ -143,11 +143,10 @@ while [ "$exit" != "1" ]; do
 				mplayer -identify -vo null -ao null -frames 0 "$name" > id
 				if grep -q "no video" id || grep -q "NO AUDIO" id || \
 					grep -q "H264" id; then
-					demuxer="-demuxer lavf -framedrop -vo xv"
+					demuxer="-demuxer lavf -framedrop "
 					echo lavf activé
 				else
 					demuxer=""
-					cat id > id0
 				fi
 			fi
 			launch
@@ -155,12 +154,8 @@ while [ "$exit" != "1" ]; do
 			if ! [ -f info.pid ]; then
 				./bmovl-src/bmovl fifo &
 			fi
-			if [ "$src" != "flux" ]; then
-				kill -USR1 `cat info.pid`
-			fi
 			echo "prog $chaine" > fifo_info
 			wait $pid
-			kill -USR2 `cat info.pid`
 			src=`head -n 2 current|tail -n 1`
 			if [ "$src" != "flux" ]; then
 				rm -f list_coords info_coords
@@ -184,14 +179,14 @@ while [ "$exit" != "1" ]; do
 			# echo end of while loop length $length again $again
 			audio=`head -n 5 current|tail -n 1`
 			again=1
-			if grep -q ID_EXIT=QUIT id && ! grep -q ID_SIGNAL=15 id && \
-				! grep -q "End of file" id; then
+			if grep -q ID_EXIT=QUIT id &&
+			   	! grep -q ID_SIGNAL=15 id && ! grep -q "End of file" id; then
 				echo sortie sur ID_EXIT=QUIT
 				again=0
 			fi
 		done
 		echo sortie de boucle again=$again
-		for n in player1.pid info.pid info_list.pid; do
+		for n in player1.pid info_list.pid; do
 			if [ -f $n ]; then
 				kill `cat $n` >& /dev/null
 				rm -f $n
@@ -200,7 +195,7 @@ while [ "$exit" != "1" ]; do
 		rm -f player2.pid
 	fi
 	rm -f info_coords list_coords
-	if [ "$src" != "flux" ]; then
+	if [ "$src" != "flux" ] || cmp current current0 > /dev/null; then
 		exit=1
 	else
 		cp -f current0 current

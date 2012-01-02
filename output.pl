@@ -15,7 +15,6 @@ sub open_bmovl {
 	while (! -S "sock_bmovl" && $tries) {
 		$tries--;
 		sleep(1);
-		print "sleep $tries\n";
 	}
 	if (! -S "sock_bmovl") {
 		print "open_bmovl: toujours pas de socket, on sort !\n";
@@ -113,30 +112,20 @@ sub setup_output {
 		$width = 640; $height = 480;
 		if (open(F,"<desktop")) {
 			($width,$height) = <F>;
-			chomp $width,$height;
+			chomp($width,$height);
 			close(F);
 		}
-	} elsif (-p "fifo") {
-		my $tries = 0;
-		open(F,"<id") || die "no id file\n";
-		do {
-			while (<F>) {
-				chomp;
-				if (/ID_VIDEO_WIDTH=(.+)/) {
-					$width = $1;
-				} elsif (/ID_VIDEO_HEIGHT=(.+)/) {
-					$height = $1;
-				} elsif (/(\d+) x (\d+)/ && $width < 300) {
-					$width = $1; $height = $2; # fallback here if it fails
-				} elsif (/(\d+)x(\d+) =/ && $width < 300) {
-					$width = $1; $height = $2; # fallback here if it fails
-				}
-			}
-			usleep(1000) if (!$width || $width < 300);
-			seek(F,0,1);
-		} while ((!$width || $width < 320) && ++$tries < 3000);
-		# print "obtenu $width et $height au bout de $tries\n";
-		close(F);
+	} else {
+		my $tries = 3;
+		while (!-f "video_size" && $tries-- > 0) {
+			sleep(1);
+		}
+		if (open(F,"<video_size")) {
+			($width,$height) = <F>;
+			chomp $width;
+			chomp $height;
+			close(F);
+		}
 	}
 	if ($pic) { #  && $width < 720) {
 		open(F,"identify picture.jpg|");
