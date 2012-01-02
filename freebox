@@ -61,7 +61,7 @@ function launch() {
 		if echo $name|grep mms; then
 			# Très approximatif comme détection mais en tous cas les flux
 			# vidéo mms, particulièrement france 2, nécessitent du cache.
-			cache=2000
+			cache=1000
 		else
 			# 100 c'est bien, ça fait un démarrage super rapide des flux audios
 			# et c'est suffisant dans la plupart des cas
@@ -201,4 +201,6 @@ while [ "$exit" != "1" ]; do
 		cp -f current0 current
 	fi
 done
+kill `cat info.pid`
+
 
