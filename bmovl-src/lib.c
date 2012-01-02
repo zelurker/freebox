@@ -41,29 +41,31 @@ SDL_Surface *create_surface(int w, int h)
 static int write_select(int fifo, void *buff, int len)
 {
     if (!fifo) return 0;
-	int ret = 0;
-	int tries = 3;
-	while (len > 0) {
-		int bout = write(fifo,buff,len);
-		if (bout > 0) {
-		    len -= bout;
-		    ret += bout;
-		    buff += bout;
-		}
-		if (bout < 0) {
-		    if (tries--) {
-			struct timeval tv;
-			tv.tv_sec = 0;
-			tv.tv_usec = 100000;
-			select(0,NULL,NULL,NULL,&tv);
-		    } else {
-			printf("write_select: toujours bloqué après 3 tentatives\n");
-			break;
-		    }
-		}
+    int ret = 0;
+    int tries = 3;
+    while (len > 0) {
+	int bout = write(fifo,buff,len);
+	if (bout > 0) {
+	    len -= bout;
+	    ret += bout;
+	    buff += bout;
 	}
+	if (bout < 0) {
+	    /* Ca n'arrive qu'en ouverture non blocante, ce qui n'est plus
+	     * le cas maintenant */
+	    if (tries--) {
+		struct timeval tv;
+		tv.tv_sec = 0;
+		tv.tv_usec = 100000;
+		select(0,NULL,NULL,NULL,&tv);
+	    } else {
+		printf("write_select: toujours bloqué après 3 tentatives\n");
+		break;
+	    }
+	}
+    }
 
-	return ret;
+    return ret;
 }
 
 SDL_Surface *sdl_screen;
@@ -108,7 +110,8 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear)
 	    printf("blit too big for the screen !\n");
 	    return;
 	}
-	printf("blit to %d,%d size %d %d\n",xpos,ypos,bmp->w,bmp->h);
+	if (clear) memset(sdl_screen->pixels,0,sdl_screen->w*sdl_screen->h*
+		sdl_screen->format->BytesPerPixel);
 	SDL_BlitSurface(bmp,NULL,sdl_screen,&r);
 	SDL_UpdateRect(sdl_screen,r.x,r.y,bmp->w,bmp->h);
     } else {
@@ -130,8 +133,17 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear)
     }
 }
 
-void send_command(int fifo,char *cmd) {
-    write_select(fifo,cmd,strlen(cmd));
+int send_command(int fifo,char *cmd) {
+    if (!fifo) {
+	if (!strncmp(cmd,"CLEAR",5)) {
+	    SDL_Rect r;
+	    sscanf(cmd+6,"%hd %hd %hd %hd",&r.w,&r.h,&r.x,&r.y);
+	    SDL_FillRect(sdl_screen,&r,0);
+	    SDL_UpdateRect(sdl_screen,r.x,r.y,r.w,r.h);
+	}
+	return strlen(cmd);
+    }
+    return write_select(fifo,cmd,strlen(cmd));
 }
 
 void get_size(TTF_Font *font, char *text, int *w, int *h, int maxw) {

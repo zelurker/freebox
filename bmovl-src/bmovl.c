@@ -28,8 +28,14 @@ static int server;
  * mplayer peut quitter pendant qu'une commande est en cours, dans ce cas là
  * pour ne pas rester bloqué en lecture rien de mieux que le signal */
 static void disconnect(int signal) {
-	if (fifo)
-		close(fifo);
+	if (!fifo) return;
+	close(fifo);
+	if (sdl_screen) {
+	    memset(sdl_screen->pixels,0,sdl_screen->w*sdl_screen->h*
+		    sdl_screen->format->BytesPerPixel);
+	    SDL_UpdateRect(sdl_screen,0,0,sdl_screen->w,sdl_screen->h);
+	}
+
 	fifo = 0;
 }
 
@@ -42,6 +48,8 @@ static void myconnect(int signal) {
      * pauses pendant l'écriture parce qu'on est pas toujours synchronisé avec
      * le process mplayer, et après on ne sait plus si on attend à cause d'une
      * déconnexion ou d'un timeout, nettement + simple comme ça */
+    if (fifo)
+	close(fifo);
     if (fifo_str)
 	fifo = open( fifo_str, O_WRONLY /* |O_NONBLOCK */ );
     else
@@ -245,7 +253,7 @@ static int info(int fifo, int argc, char **argv)
 		if (oldh > sf->h) {
 			char buff[2048];
 			sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy);
-			write(fifo, buff, strlen(buff));
+			send_command(fifo, buff);
 		}
 	}
 	/* printf("bmovl: blit %d %d %d %d avec width %d height %d\n",
@@ -372,13 +380,13 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	if (oldh > sf->h) {
 	    char buff[2048];
 	    sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy+sf->h);
-	    write(fifo, buff, strlen(buff));
+	    send_command(fifo, buff);
 	}
 	if (oldw > sf->w) {
 	    char buff[2048];
 	    sprintf(buff,"CLEAR %d %d %d %d\n",oldw-sf->w,oldh,oldx+sf->w,oldy);
 	    printf("list: %s",buff);
-	    write(fifo, buff, strlen(buff));
+	    send_command(fifo, buff);
 	}
     }
 
@@ -427,8 +435,7 @@ int clear(int fifo, int argc, char **argv)
 {
 	char buff[2048];
 	sprintf(buff,"CLEAR %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4]);
-	int len = strlen(buff);
-	return write(fifo, buff, len) != len;
+	return send_command(fifo, buff) != strlen(buff);
 }
 
 int alpha(int fifo, int argc, char **argv)
@@ -436,8 +443,7 @@ int alpha(int fifo, int argc, char **argv)
 	char buff[2048];
 	sprintf(buff,"ALPHA %s %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4],
 			argv[5]);
-	int len = strlen(buff);
-	return write(fifo, buff, len) != len;
+	return send_command(fifo, buff) != strlen(buff);
 }
 
 static int nb_keys,*keys;
@@ -520,7 +526,11 @@ static void handle_event(SDL_Event *event) {
     int n;
     if (input == 'q' || input == SDLK_ESCAPE) {
 	// quitte le mplayer actif en fait
-	system("kill `cat player2.pid`");
+	int cmd = open("fifo_cmd",O_WRONLY|O_NONBLOCK);
+	if (cmd > 0) {
+	    write(cmd,"quit\n",5);
+	    close(cmd);
+	}
 	return;
     }
     for (n=0; n<nb_keys; n++) {
@@ -593,6 +603,10 @@ int main(int argc, char **argv) {
 		tv.tv_usec = 100000; // 0.1s
 		int ret = select(sfd+1,&set,NULL,NULL,&tv);
 		if (ret > 0) {
+		    if (server) {
+			printf("server collision on accept, should not happen\n");
+			exit(1);
+		    }
 		    server = accept(sfd, (struct sockaddr *) &peer_addr,
 			    &peer_addr_size);
 		    if (server == -1) {
@@ -600,7 +614,7 @@ int main(int argc, char **argv) {
 			return(-1);
 		    }
 		    stdin = fdopen(server,"r");
-		    len = myfgets(buff,2048,stdin);
+		    len = myfgets(buff,2048,stdin); // commande
 		} else 
 		    server = 0;
 		if (sdl_screen) {

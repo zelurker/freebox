@@ -3,7 +3,7 @@ extern SDL_Surface *sdl_screen;
 
 void
 blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear);
-void send_command(int fifo,char *cmd);
+int send_command(int fifo,char *cmd);
 
 void get_size(TTF_Font *font, char *text, int *w, int *h, int maxw);
 
