@@ -177,7 +177,6 @@ sub myget {
 		open(F,"<cache/$name");
 		sysread F,$raw,$size;
 		close(F);
-		print "info: used cache for $name\n";
 	} else {
 		print "cache: geting $url\n";
 		my $pid = fork();
@@ -773,6 +772,41 @@ my $rtab = $chaines{$channel};
 if (!$rtab && $channel =~ /^france 3 /) {
 	# On a le cas particulier des chaines régionales fr3 & co...
 	$rtab = $chaines{"france 3"};
+}
+if (!$rtab) {
+	if (open(F,"<current")) {
+		my $name = <F>;
+		chomp $name;
+		close(F);
+		$name = lc($name);
+		if ($name eq $channel && -f "stream_info") {
+			# Là il peut y avoir un problème si une autre source a le même nom
+			# de chaine, genre une radio et une chaine de télé qui ont le même
+			# nom... Pour l'instant pas d'idée sur comment éviter ça...
+			my ($last,$cur);
+			if (open(F,"<stream_info")) {
+				while (<F>) {
+					chomp;
+					$last = $cur;
+					$cur = $_;
+				}
+				close(F);
+				my $out = setup_output("bmovl-src/bmovl","",0);
+				if ($out) {
+					print $out "\n\n";
+					($sec,$min,$hour) = localtime($time);
+
+					print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
+					print $out "Dernier morceau : $last\n" if ($last);
+					close_fifo($out);
+				}
+				$last_chan = $channel;
+				goto read_fifo;
+			}
+		} else {
+			print "stream_info not valid $name et $channel.\n";
+		}
+	}
 }
 if (!$rtab) {
 	# Pas trouvé la chaine
