@@ -770,6 +770,10 @@ $channel = conv_channel($channel);
 
 # print "recherche channel $channel\n";
 my $rtab = $chaines{$channel};
+if (!$rtab && $channel =~ /^france 3 /) {
+	# On a le cas particulier des chaines régionales fr3 & co...
+	$rtab = $chaines{"france 3"};
+}
 if (!$rtab) {
 	# Pas trouvé la chaine
 	my $out = setup_output("bmovl-src/bmovl","",0);
