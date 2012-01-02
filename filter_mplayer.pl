@@ -26,13 +26,14 @@ while (<>) {
 	} elsif (/End of file/i) {
 		$exit .= $_;
 	} elsif (/ICY Info/) {
+		print "filter debug : $_\n";
 		my $info = "";
-		while (s/([a-z_]+)\='(.+?)'//i) {
+		while (s/([a-z_]+)\=\'(.*?)\'\;//i) {
 			my ($name,$val) = ($1,$2);
 			if ($name eq "StreamTitle") {
 				$info .= "$val ";
 			} elsif ($val) {
-				$info .= "$name=\'$val\' ";
+				$info .= " + $name=\'$val\' ";
 			}
 		}
 		$info =~ s/ *$//;
@@ -56,5 +57,5 @@ open(F,">id") || die "can't write to id\n";
 print F "$exit\n";
 close(F);
 print "filter: exit message : $exit\n";
-unlink "video_size";
+unlink("video_size","stream_info");
 
