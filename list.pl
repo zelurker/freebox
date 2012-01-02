@@ -393,25 +393,9 @@ while (1) {
 						kill "TERM",$pid;
 						unlink "player1.pid";
 					}
-					if ($serv =~ /(mp3|ogg|flac|mpc|wav|m3u|pls)$/i) {
-						if ($serv =~ /pls$/) {
-							my $xml = get $serv;
-							my @lines = split(/\n/,$xml);
-							foreach (@lines) {
-								if (/^file\d*\= *(.+)/i) {
-									print "pls trouvé url $1\n";
-									$serv = $1;
-									last;
-								}
-							}
-							if ($serv =~ /pls$/) {
-								print "pls: could not find url in $xml\n";
-								print F "pause\n";
-								close(F);
-								next;
-							}
-						}
-					} else {
+					if ($serv !~ /(mp3|ogg|flac|mpc|wav|m3u|pls)$/i) {
+						# Gestion des pls supprimée, mplayer semble les gérer
+						# très bien lui même.
 						$serv = get_mms($serv) if ($serv =~ /^http/);
 						print "flux: loadfile $serv\n";
 						open(G,">live");
@@ -423,7 +407,7 @@ while (1) {
 					print G "$name\n$source\n$serv\n$flav\n$audio\n$video\n$serv\n";
 					close(G);
 					print "sending quit\n";
-					unlink "id";
+					unlink("id","stream_info");
 					print F "quit\n";
 					close(F);
 					system("kill `cat player2.pid`");
@@ -438,7 +422,7 @@ while (1) {
 			close(F);
 			chomp($s,$f,$a,$v,$src);
 			if ($s ne $serv || $flav ne $f || $audio ne $a || $v ne $video || $src ne $source) {
-				unlink( "list_coords","info_coords");
+				unlink( "list_coords","info_coords","stream_info");
 				$flav = 0 if (!$flav);
 				$video = 0 if (!$video);
 				$audio = 0 if (!$audio);
