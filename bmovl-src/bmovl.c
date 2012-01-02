@@ -63,6 +63,7 @@ static void myconnect(int signal) {
 static void myexit(int signal) {
     unlink("sock_bmovl");
     unlink("info.pid");
+    unlink("desktop");
     exit(0);
 }
 
