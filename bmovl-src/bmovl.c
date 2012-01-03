@@ -85,7 +85,7 @@ static int info(int fifo, int argc, char **argv)
 	int x,y;
 	SDL_Surface *chan = NULL,*pic = NULL; 
 
-	int margew,margeh;
+	static int margew,margeh;
 	if (!strcmp(argv[0],"bmovl")) {
 		char *channel,*picture,buff[8192];
 		if(argc<4) {
