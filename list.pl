@@ -64,7 +64,7 @@ sub cd_menu {
 	my $error;
 	do {
 		$error = 0;
-		open(F,"mplayer cddb:// -nocache -identify -frames 0|");
+		open(F,"mplayer -cdrom-device $cd cddb:// -nocache -identify -frames 0|");
 		my $track;
 		@list = @list_cdda = ();
 		while (<F>) {

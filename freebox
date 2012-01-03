@@ -67,10 +67,12 @@ function launch() {
 			# et c'est suffisant dans la plupart des cas
 			cache=100
 		fi
-		echo mplayer "$name" -quiet -cache $cache \
+		cd=`grep "drive name" /proc/sys/dev/cdrom/info|
+		sed 's/drive name:[ \t]*//'`
+		echo mplayer -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd
-		mplayer "$name" -quiet -cache $cache \
+		mplayer -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd \
 			| perl filter_mplayer.pl &
