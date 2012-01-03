@@ -100,7 +100,6 @@ static int info(int fifo, int argc, char **argv)
 		margew = width/36;
 		margeh = height/36;
 		width -= 2*margew;
-		height -= 2*margeh;
 		int deby = height/2;
 		if (argc == 5) deby = atoi(argv[4]);
 		int maxh = height - deby - 8;
@@ -480,6 +479,7 @@ static void read_inputs() {
 	    l--;
 	buff[l+1] = 0;
 	char *c = strstr(buff," run ");
+	int n;
 	if (!c) continue;
 	*c = 0;
 	if (nb_keys == nb_alloc) {
@@ -499,14 +499,9 @@ static void read_inputs() {
 	    keys[nb_keys] = SDLK_RIGHT;
 	else if (!strcasecmp(buff,"TAB")) 
 	    keys[nb_keys] = SDLK_TAB;
-	else if (!strcasecmp(buff,"F1")) 
-	    keys[nb_keys] = SDLK_F1;
-	else if (!strcasecmp(buff,"F2")) 
-	    keys[nb_keys] = SDLK_F2;
-	else if (!strcasecmp(buff,"F3")) 
-	    keys[nb_keys] = SDLK_F3;
-	else if (!strcasecmp(buff,"F4")) 
-	    keys[nb_keys] = SDLK_F4;
+	else if ((buff[0] == 'F' || buff[0] == 'f') &&
+	       	(n = atoi(&buff[1])) > 0)
+	    keys[nb_keys] = SDLK_F1+n-1;
 	else if (!strcasecmp(buff,"HOME")) 
 	    keys[nb_keys] = SDLK_HOME;
 	else if (!strcasecmp(buff,"END")) 
