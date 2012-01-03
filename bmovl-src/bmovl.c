@@ -474,11 +474,7 @@ static void read_inputs() {
 	fgets(buff,80,f);
 	if (buff[0] == '#' || !buff[0])
 	    continue;
-	int l = strlen(buff)-1;
-	while (buff[l] < 32 && buff[l] > 0)
-	    l--;
-	buff[l+1] = 0;
-	char *c = strstr(buff," run ");
+	char *c = strchr(buff,' ');
 	int n;
 	if (!c) continue;
 	*c = 0;
@@ -514,15 +510,19 @@ static void read_inputs() {
 	    keys[nb_keys] = SDLK_PAGEDOWN;
 	else if (!strcasecmp(buff,"DEL")) 
 	    keys[nb_keys] = SDLK_DELETE;
-	else if (!strcasecmp(buff,"KP1")) 
-	    keys[nb_keys] = SDLK_KP1;
-	else if (!strcasecmp(buff,"KP3")) 
-	    keys[nb_keys] = SDLK_KP3;
+	else if (!strcasecmp(buff,"INS"))
+	    keys[nb_keys] = SDLK_INSERT;
+	else if (!strcasecmp(buff,"ESC"))
+	    keys[nb_keys] = SDLK_ESCAPE;
+	else if (!strcasecmp(buff,"SPACE"))
+	    keys[nb_keys] = SDLK_SPACE;
+	else if (!strncasecmp(buff,"KP",2)) 
+	    keys[nb_keys] = SDLK_KP0 + atoi(&buff[2]);
 	else {
-	    printf("touche inconnue %s commande %s\n",buff,c+5);
+	    printf("touche inconnue %s commande %s\n",buff,c+1);
 	    continue;
 	}
-	command[nb_keys++] = strdup(c+5);
+	command[nb_keys++] = strdup(c+1);
     }
     fclose(f);
 }
@@ -533,19 +533,19 @@ static void handle_event(SDL_Event *event) {
     int input = event->key.keysym.sym;
     printf("reçu touche %d (%c)\n",input,input);
     int n;
-    if (input == 'q' || input == SDLK_ESCAPE) {
-	// quitte le mplayer actif en fait
-	int cmd = open("fifo_cmd",O_WRONLY|O_NONBLOCK);
-	if (cmd > 0) {
-	    write(cmd,"quit\n",5);
-	    close(cmd);
-	}
-	return;
-    }
     for (n=0; n<nb_keys; n++) {
 	if (input == keys[n]) {
 	    printf("touche trouvée, commande %s\n",command[n]);
-	    system(command[n]);
+	    if (!strncmp(command[n],"run",3)) 
+		system(&command[n][4]);
+	    else {
+		int cmd = open("fifo_cmd",O_WRONLY|O_NONBLOCK);
+		if (cmd > 0) {
+		    write(cmd,command[n],strlen(command[n]));
+		    close(cmd);
+		} else
+		    printf("could not send command\n");
+	    }
 	    break;
 	}
     }
