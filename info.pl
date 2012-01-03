@@ -561,6 +561,17 @@ sub handle_records {
 	}
 }
 
+sub req_prog($$) {
+	my ($offset,$url) = @_;
+	my $date = strftime("%Y-%m-%d", localtime(time()+(24*3600*$offset)) );
+	$url = $site_prefix.'LitProgrammes1JourneeDetail.php?date='.$date.'&chaines='.$url;
+	print "req_prog: url $url\n";
+	my $response = $browser->get($url);
+	die "$url error: ", $response->status_line
+	unless $response->is_success;
+	$response;
+}
+
 if (!$reread || !$channel) {
 	if (!$reread) {
 		$cmd = "";
@@ -779,32 +790,63 @@ if (!$rtab) {
 		chomp $name;
 		close(F);
 		$name = lc($name);
-		if ($name eq $channel && -f "stream_info") {
-			# Là il peut y avoir un problème si une autre source a le même nom
-			# de chaine, genre une radio et une chaine de télé qui ont le même
-			# nom... Pour l'instant pas d'idée sur comment éviter ça...
-			my ($last,$cur);
-			if (open(F,"<stream_info")) {
-				while (<F>) {
-					chomp;
-					$last = $cur;
-					$cur = $_;
-				}
-				close(F);
-				my $out = setup_output("bmovl-src/bmovl","",0);
-				if ($out) {
-					print $out "\n\n";
-					($sec,$min,$hour) = localtime($time);
+		if ($name eq $channel) {
+			if (-f "stream_info") {
+				# Là il peut y avoir un problème si une autre source a le même nom
+				# de chaine, genre une radio et une chaine de télé qui ont le même
+				# nom... Pour l'instant pas d'idée sur comment éviter ça...
+				my ($last,$cur);
+				if (open(F,"<stream_info")) {
+					while (<F>) {
+						chomp;
+						$last = $cur;
+						$cur = $_;
+					}
+					close(F);
+					my $out = setup_output("bmovl-src/bmovl","",0);
+					if ($out) {
+						print $out "\n\n";
+						($sec,$min,$hour) = localtime($time);
 
-					print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
-					print $out "Dernier morceau : $last\n" if ($last);
-					close_fifo($out);
+						print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
+						print $out "Dernier morceau : $last\n" if ($last);
+						close_fifo($out);
+					}
+					$last_chan = $channel;
+					goto read_fifo;
 				}
-				$last_chan = $channel;
-				goto read_fifo;
+			} else {
+				print "stream_info not valid $name et $channel.\n";
 			}
-		} else {
-			print "stream_info not valid $name et $channel.\n";
+		} # $name eq $channel
+	} # lecture current
+}
+if (!$rtab) {
+	for (my $n=0; $n<=$#chan; $n++) {
+		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
+		if ($channel eq $name && $num != 254) {
+			my $response = req_prog(0,$num);
+			my $res = $response->content;
+			if ($res && index($program_text,$res) < 0 && $res =~ /$num/) {
+				$program_text .= $res;
+				$reread = 1; # On récupère l'ancienne commande...
+				print "programme lu à la volée $name ",length($program_text),"\n";
+				goto debut;
+			} else {
+				print "rien pu lire pour $channel $num\n";
+				if ($res !~ $num) {
+					print "renvoi résultat nul\n";
+				} else {
+					open(F,">debug");
+					print F "$res\n";
+					close(F);
+					open(F,">debug2");
+					print F "$program_text\n";
+					close(F);
+					print "fichier debug créé, on quitte\n";
+					exit(1);
+				}
+			}
 		}
 	}
 }
@@ -904,9 +946,8 @@ sub getListeProgrammes {
 	  }
   }
   return $found if ($found);
-  my $date = strftime("%Y-%m-%d", localtime(time()+(24*3600*$offset)) );
-  my $url = $site_prefix.'LitProgrammes1JourneeDetail.php?date='.$date.'&chaines=';
 
+  my $url = "";
   for (my $i =0 ; $i < @selected_channels ; $i++ ) {
     $url = $url.$selected_channels[$i];
     if ($i < (@selected_channels - 1)) {
@@ -915,10 +956,7 @@ sub getListeProgrammes {
   }
   print scalar localtime," récupération $url\n";
 
-  my $response = $browser->get($url);
-
-  die "$url error: ", $response->status_line
-  unless $response->is_success;
+  my $response = req_prog($offset,$url);
 
   open(F,">day".($offset));
   print F $response->content;
@@ -957,6 +995,6 @@ sub getListeChaines {
 		}
 		close(F);
 	}
-	return $r;
+	return lc($r);
 }
 
