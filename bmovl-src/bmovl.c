@@ -274,7 +274,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 {
     int width,height;
 
-    char *source,buff[4096],*list[20];
+    char *source,buff[4096],*list[20],status[20];
     if(argc<4) {
 	printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
 	printf("width and height are w/h of MPlayer's screen!\n");
@@ -303,6 +303,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     while (!feof(stdin) && nb<20) {
 	if (!myfgets(buff,4096,stdin)) break;
 	if (buff[0] == '*') current = nb;
+	status[nb] = buff[0];
 	char *end_nb = &buff[4];
 	while (*end_nb >= '0' && *end_nb <= '9')
 	    end_nb++;
@@ -339,6 +340,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    height);
     x += numw+8; // aligné après les numéros
     int fg = get_fg(sf);
+    int red = SDL_MapRGB(sf->format,0xff,0x50,0x50);
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
     int bg = get_bg(sf);
     for (n=0; n<nb; n++) {
@@ -365,8 +367,14 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    }
 	    y += dy;
 	} else {
+	    char oldfg;
+	    if (status[n] == 'R') {
+		oldfg = fg;
+		fg = red;
+	    }
 	    put_string(sf,font,8,y,buff,fg,height); // Numéro
 	    y += put_string(sf,font,x,y,list[n],fg,height);
+	    if (status[n] == 'R') fg = oldfg;
 	}
 	if (hidden) {
 	    put_string(sf,font,xright,y0,">",(current == n ? bg : fg),height);

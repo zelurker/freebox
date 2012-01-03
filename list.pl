@@ -56,8 +56,8 @@ sub read_list {
 		if (open(F,"<rejets/$source")) {
 			while (<F>) {
 				chomp;
-				my ($serv,$flav,$audio,$video) = split(/:/);
-				push @rejets,[$serv,$flav,$audio,$video];
+				my ($serv,$flav,$audio,$video,$name) = split(/:/);
+				push @rejets,[$serv,$flav,$audio,$video,$name];
 			}
 			close(F);
 		}
@@ -84,10 +84,18 @@ sub read_list {
 				}
 				die "pas de numéro pour $_\n" if (!$num);
 				my $reject = 0;
+				my $red = 0;
 				foreach (@rejets) {
-					if ($$_[0] == $service && $_[1] == $flavour &&
-						$$_[3] eq $audio && $$_[4] eq $video) {
-						$reject = 1;
+					if ($$_[0] eq $service && $$_[1] eq $flavour &&
+						$$_[2] eq $audio && $$_[3] eq $video) {
+						if ($$_[4] ne $name) {
+							$red = 1;
+							if ($$_[0] == 430) {
+								print "red sur $$_[4]/$name $flavour\n";
+							}
+						} else {
+							$reject = 1;
+						}
 						last;
 					}
 				}
@@ -97,7 +105,7 @@ sub read_list {
 
 				$num -= 10000 if (!$tv);
 
-				my @cur = ($num,$name,$service,$flavour,$audio,$video);
+				my @cur = ($num,$name,$service,$flavour,$audio,$video,$red);
 				if ($last_num != $num) {
 					$last_num = $num;
 					push @list,[\@cur];
@@ -342,17 +350,67 @@ while (1) {
 		$found = 0;
 	} elsif ($cmd eq "end") {
 		$found = $#list;
+	} elsif ($cmd eq "insert") {
+		print "commande insert found $found\n";
+		if (open(F,">rejets/$source.0")) {
+			if (open(G,"<rejets/$source")) {
+				while (<G>) {
+					chomp;
+					my ($serv,$flav,$aud,$vid,$n) = split(/:/);
+					my $trouve = 0;
+					foreach (@{$list[$found]}) {
+						my ($num,$name,$service,$flavour,$audio,$video,$red) = @{$_};
+						if ($red) {
+							$$_[6] = 0;
+						}
+						if ($service eq $serv && $flavour eq $flav &&
+							$aud eq $audio && $video eq $vid) {
+							print "insert found $name for $service/$serv $flavour/$flav $aud/$audio $vid/$video\n";
+							$trouve = 1;
+						} elsif ($name =~ /Teva/i) {
+							print "insert not found $name for $service/$serv $flavour/$flav $aud/$audio $vid/$video.\n";
+						} else {
+							print "insert: paumé name=$name.\n";
+						}
+					}
+					print F "$_\n" if (!$trouve);
+				}
+				close(G);
+			}
+
+			close(F);
+			unlink "rejets/$source" && rename("rejets/$source.0","rejets/$source");
+		}
 	} elsif ($cmd eq "reject") {
 		if ($source =~ /^(Enregistrements|livetv)/) {
 			my $file = $list[$found][0][2];
 			print "fichier à effacer $file\n";
 			unlink $file;
-		} elsif (open(F,">>rejets/$source")) {
+		} elsif (open(F,">rejets/$source.0")) {
+			if (open(G,"<rejets/$source")) {
+				while (<G>) {
+					chomp;
+					my ($serv,$flav,$aud,$vid,$n) = split(/:/);
+					my $trouve = 0;
+					foreach (@{$list[$found]}) {
+						my ($num,$name,$service,$flavour,$audio,$video,$red) = @{$_};
+						if ($service eq $serv && $flavour eq $flav &&
+							$aud eq $audio && $video eq $vid) {
+							$trouve = 1;
+							last;
+						}
+					}
+					print F "$_\n" if (!$trouve);
+				}
+				close(G);
+			}
+					
 			foreach (@{$list[$found]}) {
 				my ($num,$name,$service,$flavour,$audio,$video) = @{$_};
-				print F "$service:$flavour:$audio:$video\n";
+				print F "$service:$flavour:$audio:$video:$name\n";
 			}
 			close(F);
+			unlink "rejets/$source" && rename("rejets/$source.0","rejets/$source");
 		} else {
 			print "list: Can't open rejects\n";
 		}
@@ -410,7 +468,7 @@ while (1) {
 					unlink("id","stream_info");
 					print F "quit\n";
 					close(F);
-					system("kill `cat player2.pid`");
+					system("kill `cat player2.pid`; kill -USR2 `cat info.pid`");
 				}
 			}
 		} else {
@@ -446,7 +504,7 @@ while (1) {
 				# le message de fin et je vire id pour être sûr !
 				# Pas terrible tout ça, vraiment ! Mais bon ça a l'air de
 				# marcher...
-				system("kill `cat player2.pid`");
+				system("kill `cat player2.pid`; kill -USR2 `cat info.pid`");
 				unlink "id";
 			}
 			next;
@@ -568,13 +626,15 @@ while (1) {
 	my $n = $beg-1;
 	for (my $nb=1; $nb<=$nb_elem; $nb++) {
 		last if (++$n > $#list);
+		my $rtab = $list[$n];
+		my ($num,$name,$service,$flavour,$audio,$video,$red) = @{$$rtab[0]};
 		if ($n == $found) {
 			print $out "*";
+		} elsif ($red) {
+			print $out "R";
 		} else {
 			print $out " ";
 		}
-		my $rtab = $list[$n];
-		my ($num,$name,$service,$flavour,$audio,$video) = @{$$rtab[0]};
 		foreach (@$rtab) {
 			my ($temp,$name2) = @$_;
 			$name = $name2 if (length($name2) < length($name));

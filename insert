@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ -f list_coords ]; then
+	echo insert > fifo_list
+else
+	echo alt_src_step 1 > fifo_cmd
+fi
+
