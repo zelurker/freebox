@@ -22,6 +22,9 @@ open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
 close(F);
 
+my @modes = (
+	"freeboxtv",  "dvb", "Enregistrements", "livetv", "flux","radios freebox",
+	"cd");
 if (open(F,"<current")) {
 	@_ = <F>;
 	close(F);
@@ -36,8 +39,73 @@ my (@list);
 my $found = undef;
 my $base_flux = "";
 
+sub cd_menu {
+	@list = ();
+	# 1 - séléectionner le cd
+	# pour l'instant on prend le 1er listé dans /proc/sys/dev/cdrom/info
+	my $cd = "";
+	if (open(F,"</proc/sys/dev/cdrom/info")) {
+		while (<F>) {
+			chomp;
+			if (/drive name:[ \t]*(.+)/) {
+				$cd = "/dev/$1";
+				last;
+			}
+		}
+		close(F);
+	}
+	if (!$cd) {
+		$base_flux = "problème dans /proc/sys/dev/cdrom/info";
+		return;
+	}
+
+	my $tries = 1;
+	my @list_cdda = ();
+	my $error;
+	do {
+		$error = 0;
+		open(F,"mplayer cddb:// -nocache -identify -frames 0|");
+		my $track;
+		@list = @list_cdda = ();
+		while (<F>) {
+			chomp;
+			if (/(ID.+?)\=(.+)/) {
+				my ($name,$val) = ($1,$2);
+				print "scanning $name = $val\n";
+				if ($name eq "ID_CDDB_INFO_ARTIST") {
+					$base_flux = "$val - ";
+				} elsif (/500 Internal Server Error/) {
+					$error = 1;
+				} elsif ($name eq "ID_CDDB_INFO_ALBUM") {
+					$base_flux .= $val;
+				} elsif ($name =~ /ID_CDDB_INFO_TRACK_\d+_NAME/) {
+					$track = $val;
+					print "track = $track\n";
+				} elsif ($name =~ /ID_CDDB_INFO_TRACK_(\d+)_MSF/) {
+					push @list,[[$1,"$track ($val)","cddb://$1-99"]];
+				} elsif ($name =~ /ID_CDDA_TRACK_(\d+)_MSF/) {
+					push @list_cdda,[[$1,"pas d'info cddb ($val)","cdda://$1-99"]];
+				}
+			}
+		}
+		close(F);
+	} while ($error && ++$tries <= 3);
+	$found = 0;
+	@list = @list_cdda if (!@list);
+}
+
 sub read_list {
-	if ($source =~ /freebox/) {
+	if ($source eq "menu") {
+		@list = ();
+		my $nb = 1;
+		foreach (@modes) {
+			if (switch($_)) {
+				push @list,[[$nb++,$_]];
+			}
+		}
+	} elsif ($source eq "cd") {
+		cd_menu();	
+	} elsif ($source =~ /freebox/) {
 		my $list;
 		if (!-f "freebox.m3u" || -M "freebox.m3u" >= 1) {
 			$list = get "http://mafreebox.freebox.fr/freeboxtv/playlist.m3u";
@@ -163,6 +231,14 @@ sub read_list {
 		}
 		@list = reverse @list;
 	} elsif ($source eq "flux") {
+		if (open(F,"<current")) {
+			@_ = <F>;
+			close(F);
+			if ($_[2] =~ /^cd/) {
+				# c'est un flux provoqué par le cd -> ne rien faire
+				return;
+			}
+		}
 		@list = ();
 		my $num = 1;
 		if (!$base_flux) {
@@ -256,6 +332,7 @@ sub find_name {
 }
 
 sub switch {
+	my $source = shift;
 	if ($source eq "dvb") {
 		if (! -f "$ENV{HOME}/.mplayer/channels.conf" || ! -d "/dev/dvb") {
 			return 0;
@@ -420,7 +497,14 @@ while (1) {
 			($found) = find_name($cmd);
 		}
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-		if ($source =~ /^(livetv|Enregistrements)$/) {
+		if ($source eq "menu") {
+			$source = $name;
+			read_list();
+			if ($source eq "cd") {
+				# le cd est en "autostart" !
+				goto again;
+			}
+		} elsif ($source =~ /^(livetv|Enregistrements)$/) {
 			if (open(F,">fifo_cmd")) {
 				print F "pause\n";
 				my $pid = `cat player1.pid`;
@@ -435,14 +519,13 @@ while (1) {
 				unlink( "list_coords","info_coords");
 			}
 			next;
-		} elsif ($source eq "flux") {
+		} elsif ($source eq "flux" || $source eq "cd") {
 			if (!$base_flux) {
 				$base_flux = $name;
 				print "base_flux = $name\n";
 				read_list();
 			} else {
 				if (open(F,">fifo_cmd")) {
-					print "sending pause\n";
 					print F "pause\n";
 					if (-f "player1.pid") {
 						my $pid = `cat player1.pid`;
@@ -462,7 +545,8 @@ while (1) {
 					unlink( "list_coords","info_coords");
 					system("kill -USR2 `cat info.pid`");
 					open(G,">current");
-					print G "$name\n$source\n$serv\n$flav\n$audio\n$video\n$serv\n";
+					my $src = ($source eq "cd" ? "flux" : $source);
+					print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
 					close(G);
 					print "sending quit\n";
 					unlink("id","stream_info");
@@ -472,6 +556,7 @@ while (1) {
 				}
 			}
 		} else {
+			# cas freeboxtv/dvb/radios freebox
 			# On a pas trop le choix pour le else à rallonge ici
 			# on a besoin que le flux relise sa liste et sans goto c'est la
 			# seule façon d'y arriver. Ca va, ça reste lisible quand même...
@@ -578,20 +663,18 @@ while (1) {
 		next;
 	} elsif ($cmd =~ /^switch_mode/) {
 		my @arg = split(/ /,$cmd);
-		my @src = (
-			"freeboxtv",  "dvb", "Enregistrements", "livetv", "flux","radios freebox");
 		my $found = 0;
 		if ($#arg == 1) {
-			for (my $n=0; $n<=$#src; $n++) {
-				if ($src[$n] eq $arg[1]) {
+			for (my $n=0; $n<=$#modes; $n++) {
+				if ($modes[$n] eq $arg[1]) {
 					$found = $n;
 					last;
 				}
 			}
 			$found--;
 		} else {
-			for (my $n=0; $n<=$#src; $n++) {
-				if ($source eq $src[$n]) {
+			for (my $n=0; $n<=$#modes; $n++) {
+				if ($source eq $modes[$n]) {
 					$found = $n;
 					last;
 				}
@@ -599,9 +682,12 @@ while (1) {
 		}
 		do {
 			$found++;
-			$found = 0 if ($found > $#src);
-			$source = $src[$found];
-		} while (!switch());
+			$found = 0 if ($found > $#modes);
+			$source = $modes[$found];
+		} while (!switch($source));
+		read_list();
+	} elsif ($cmd eq "menu") {
+		$source = "menu";
 		read_list();
 	} elsif ($cmd ne "list") {
 		print "list: unknown command :$cmd!\n";
@@ -618,7 +704,7 @@ while (1) {
 	my $beg = $found - 9;
 	$beg = 0 if ($beg < 0);
 	my $out = setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
-	if ($source eq "flux" && $base_flux) {
+	if (($source eq "flux" || $source eq "cd") && $base_flux) {
 		print $out "$source > $base_flux\n";
 	} else {
 		print $out "$source\n";

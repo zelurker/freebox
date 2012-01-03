@@ -5,7 +5,6 @@
 
 use strict;
 use Fcntl;
-use Time::HiRes qw(usleep);
 use Socket;
 
 sub open_bmovl {
