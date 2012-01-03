@@ -303,7 +303,9 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int numw = 0;
     // Lecture des chaines, 20 maxi.
     int wlist,hlist;
+    TTF_SetFontStyle(font,TTF_STYLE_BOLD);
     get_size(font,source,&wlist,&hlist,maxw);
+    TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
     while (!feof(stdin) && nb<20) {
 	if (!myfgets(buff,4096,stdin)) break;
 	if (buff[0] == '*') current = nb;
@@ -329,8 +331,8 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int n;
     int x=8,y=8;
     wlist += numw+8; // le numéro sur la gauche (3 chiffres + séparateur)
-    if (wlist > width/2-indicw) {
-	wlist = width/2-indicw;
+    if (wlist > maxw) {
+	wlist = maxw;
     }
     int xright = x+wlist;
     wlist += indicw; // place pour le > à la fin

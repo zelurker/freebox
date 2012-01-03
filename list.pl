@@ -74,8 +74,6 @@ sub cd_menu {
 				print "scanning $name = $val\n";
 				if ($name eq "ID_CDDB_INFO_ARTIST") {
 					$base_flux = "$val - ";
-				} elsif (/500 Internal Server Error/) {
-					$error = 1;
 				} elsif ($name eq "ID_CDDB_INFO_ALBUM") {
 					$base_flux .= $val;
 				} elsif ($name =~ /ID_CDDB_INFO_TRACK_\d+_NAME/) {
@@ -86,6 +84,8 @@ sub cd_menu {
 				} elsif ($name =~ /ID_CDDA_TRACK_(\d+)_MSF/) {
 					push @list_cdda,[[$1,"pas d'info cddb ($val)","cdda://$1-99"]];
 				}
+			} elsif (/500 Internal Server Error/) {
+				$error = 1;
 			}
 		}
 		close(F);
@@ -236,6 +236,7 @@ sub read_list {
 			close(F);
 			if ($_[2] =~ /^cd/) {
 				# c'est un flux provoqué par le cd -> ne rien faire
+				$source = "cd";
 				return;
 			}
 		}
