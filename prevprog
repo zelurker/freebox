@@ -1,0 +1,8 @@
+#!/bin/sh
+
+if [ -f info_coords ]; then
+  echo prevprog > fifo_info
+else
+  echo pause > fifo_cmd
+fi
+

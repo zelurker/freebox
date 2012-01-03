@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ -f list_coords ]; then
+	echo clear > fifo_list
+else
+	echo list > fifo_list
+fi
