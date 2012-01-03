@@ -154,7 +154,6 @@ while [ "$exit" != "1" ]; do
 			if ! [ -f info.pid ]; then
 				./bmovl-src/bmovl fifo &
 			fi
-			echo "prog $chaine" > fifo_info
 			wait $pid
 			src=`head -n 2 current|tail -n 1`
 			if [ "$src" != "flux" ]; then

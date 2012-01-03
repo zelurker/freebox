@@ -1,12 +1,19 @@
 #!/usr/bin/perl
 
 use strict;
+use Fcntl;
 
 my $pid;
 open(F,"<info.pid") || die "can't open info.pid !\n";
 $pid = <F>;
 chomp $pid;
 close(F);
+if (open(F,"<current")) {
+	@_ = <F>;
+	close(F);
+}
+my ($chan,$source,$serv,$flav) = @_;
+chomp ($chan,$source,$serv,$flav);
 unlink "stream_info";
 my ($width,$height) = ();
 my $exit = "";
@@ -50,6 +57,10 @@ while (<>) {
 		close(F);
 		kill "USR1",$pid;
 		$init = 1;
+		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
+			print F "prog $chan\n";
+			close(F);
+		}
 	}
 }
 kill "USR2",$pid;
