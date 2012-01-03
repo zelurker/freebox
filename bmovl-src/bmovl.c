@@ -85,6 +85,7 @@ static int info(int fifo, int argc, char **argv)
 	int x,y;
 	SDL_Surface *chan = NULL,*pic = NULL; 
 
+	int margew,margeh;
 	if (!strcmp(argv[0],"bmovl")) {
 		char *channel,*picture,buff[8192];
 		if(argc<4) {
@@ -96,6 +97,10 @@ static int info(int fifo, int argc, char **argv)
 		nb_prev = 0;
 		width = atoi(argv[2]);
 		height = atoi(argv[3]);
+		margew = width/36;
+		margeh = height/36;
+		width -= 2*margew;
+		height -= 2*margeh;
 		int deby = height/2;
 		if (argc == 5) deby = atoi(argv[4]);
 		int maxh = height - deby - 8;
@@ -244,8 +249,8 @@ static int info(int fifo, int argc, char **argv)
 	next = get_next_string();
 
 	// Display
-	x = (width-sf->w) / 2;
-	y = height - sf->h - 8;
+	x = margew;
+	y = height - sf->h - margeh;
 	FILE *f = fopen("info_coords","r");
 	if (f) {
 		int oldx,oldy,oldw,oldh;
