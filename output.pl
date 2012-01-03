@@ -85,6 +85,7 @@ sub conv_channel {
 		"NRJ12" => "NRJ 12",
 		"LCP" => "La chaîne parlementaire",
 		"Onzeo" => "Onzéo",
+		"TEVA" => "Téva",
 	);
 	$channel =~ s/\(bas débit\)//;
 	$channel =~ s/hd$//i;
