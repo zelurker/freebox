@@ -74,7 +74,7 @@ while (<>) {
 			my ($name,$val) = ($1,$2);
 			if ($name eq "StreamTitle") {
 				$info .= "$val ";
-			} elsif ($val) {
+			} elsif ($val && $name ne "StreamUrl") {
 				$info .= " + $name=\'$val\' ";
 			}
 		}
