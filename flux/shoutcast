@@ -36,6 +36,7 @@ my $arg = shift @ARGV;
 if (!$arg) {
 	my $page = get_url("http://www.shoutcast.com/");
 	print "list\n";
+	print "Recherche\nRecherche\n";
 	while ($page =~ s/class="arrowup".+?href="(.+?)">(.+?)<//) {
 		my ($link,$name) = ($1,$2);
 		$link =~ s/\/radio\///;
@@ -53,13 +54,26 @@ if (!$arg) {
 # Par contre on va utiliser leur script ajax pour avoir les stations c'est +
 # souple que la page html de base qui ne les donne que par 10.
 
-my $page = get_url("http://www.shoutcast.com/genre-ajax/$arg",{
-	count => 50,
-	ajax => "true",
-	mode => "listeners",
-	order => "desc",});
+my $page;
+if ($arg eq "Recherche") {
+    my $str = `zenity --entry --text="A chercher"`;
+    $str =~ s/ /%20/g;
+    $page = get_url("http://www.shoutcast.com/Internet-Radio/$str");
+} else {
+    $page = get_url("http://www.shoutcast.com/genre-ajax/$arg",{
+	    count => 50,
+	    ajax => "true",
+	    mode => "listeners",
+	    order => "desc",});
+}
 print "direct\n";
+
 while ($page =~ s/<a href="(.+?)".+?name="(.+?)"//) {
-	print "$2\n$1\n";
+    my ($url,$name) = ($1,$2);
+    if ($url =~ /pls/) {
+	# A priori les liens shoutcast sont tous en pls
+	# la regex pour identifier les liens est trop large
+	print "$name\n$url\n";
+    }
 }
 
