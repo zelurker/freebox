@@ -100,6 +100,7 @@ sub read_list {
 #	print "list: read_list source $source base_flux $base_flux mode_flux $mode_flux\n";
 	if ($source eq "menu") {
 		@list = ();
+		$base_flux = "";
 		my $nb = 1;
 		foreach (@modes) {
 			if (switch($_)) {
@@ -413,7 +414,8 @@ while (1) {
 			$found += $nb_elem;
 		}
 	} elsif ($cmd eq "left") {
-		if ($source eq "flux" && $base_flux && $found < $nb_elem) {
+		if ($source eq "flux" && $base_flux && 
+		    ($found < $nb_elem || $nb_elem == 0)) {
 			if ($base_flux =~ /\//) {
 				$base_flux =~ s/(.+)\/.+/$1/;
 				if ($base_flux =~ /\//) {
