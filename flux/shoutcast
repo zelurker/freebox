@@ -1,0 +1,65 @@
+#!/usr/bin/perl
+
+# Navigation du site www.shoutcast.com
+
+use strict;
+use LWP::UserAgent;
+
+sub get_url {
+	my $url = shift;
+	my $post = shift;
+	my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
+	my $browser = LWP::UserAgent->new(keep_alive => 0,
+		agent =>$useragt);
+	$browser->timeout(10);
+	$browser->default_header(
+		[ 'Accept-Language' => "fr-fr"
+			#                          'Accept-Encoding' => "gzip,deflate",
+			# 'Accept-Charset' => "ISO-8859-15,utf-8"
+		]
+	);
+
+	$browser->max_size(65000);
+	my $response;
+    if (!$post) {
+		$response = $browser->get($url);
+	} else {
+		$response = $browser->post($url,$post);
+	}
+
+	return undef if (!$response->is_success);
+	return undef if ($response->header("Content-type") !~ /text/);
+	$response->content;
+}
+
+my $arg = shift @ARGV;
+if (!$arg) {
+	my $page = get_url("http://www.shoutcast.com/");
+	print "list\n";
+	while ($page =~ s/class="arrowup".+?href="(.+?)">(.+?)<//) {
+		my ($link,$name) = ($1,$2);
+		$link =~ s/\/radio\///;
+		print "$name\n";
+		print "$link\n";
+	}
+	exit 0;
+}
+
+# Ici on a un argument de genre. On pourrait aller chercher les sous genres
+# mais ça m'obligerait à faire un affichage à 2 colonnes, ça deviendrait
+# compliqué à programmer et à utiliser. On va se contenter des genres de base
+# de toutes façons on a tendance à retrouver des stations dans pas mal de genres
+# déjà.
+# Par contre on va utiliser leur script ajax pour avoir les stations c'est +
+# souple que la page html de base qui ne les donne que par 10.
+
+my $page = get_url("http://www.shoutcast.com/genre-ajax/$arg",{
+	count => 50,
+	ajax => "true",
+	mode => "listeners",
+	order => "desc",});
+print "direct\n";
+while ($page =~ s/<a href="(.+?)".+?name="(.+?)"//) {
+	print "$2\n$1\n";
+}
+

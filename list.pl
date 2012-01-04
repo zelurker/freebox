@@ -39,6 +39,7 @@ $source = "freeboxtv" if (!$source);
 my (@list);
 my $found = undef;
 my $base_flux = "";
+my $mode_flux;
 
 sub cd_menu {
 	@list = ();
@@ -96,6 +97,7 @@ sub cd_menu {
 }
 
 sub read_list {
+#	print "list: read_list source $source base_flux $base_flux mode_flux $mode_flux\n";
 	if ($source eq "menu") {
 		@list = ();
 		my $nb = 1;
@@ -241,9 +243,9 @@ sub read_list {
 				return;
 			}
 		}
-		@list = ();
 		my $num = 1;
 		if (!$base_flux) {
+			@list = ();
 			while (<flux/*>) {
 				my $service = $_;
 				my $name = $service;
@@ -254,17 +256,32 @@ sub read_list {
 				}
 			}
 		} else {
-			if (open(F,"<flux/$base_flux")) {
-				while (<F>) {
-					my $name = $_;
-					my $service = <F>;
-					chomp ($name,$service);
-					push @list,[[$num++,$name,$service]];
-				}
-				print "list: ".($#list+1)." flux\n";
-				$found = 0 if ($found > $#list);
-				close(F);
+			my $b = $base_flux;
+			return if ($mode_flux eq "direct");
+			if ($b =~ /\//) {
+				$b =~ s/(.+?)\/.+/$1/;
 			}
+			if (-x "flux/$b") {
+				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+				$serv = "" if (!$mode_flux);
+				open(F,"flux/$b $serv|");
+				$mode_flux = <F>;
+				chomp $mode_flux;
+			} else {
+			   	if (!open(F,"<flux/$base_flux")) {
+					return;
+				}
+			}
+			@list = ();
+			while (<F>) {
+				my $name = $_;
+				my $service = <F>;
+				chomp ($name,$service);
+				push @list,[[$num++,$name,$service]];
+			}
+			print "list: ".($#list+1)." flux\n";
+			$found = 0 if ($found > $#list);
+			close(F);
 		}
 	} else {
 		print "read_list: source inconnue $source\n";
@@ -397,7 +414,16 @@ while (1) {
 		}
 	} elsif ($cmd eq "left") {
 		if ($source eq "flux" && $base_flux && $found < $nb_elem) {
-			$base_flux = "";
+			if ($base_flux =~ /\//) {
+				$base_flux =~ s/(.+)\/.+/$1/;
+				if ($base_flux =~ /\//) {
+					$mode_flux = "list";
+				} else {
+					$mode_flux = "";
+				}
+			} else {
+				$base_flux = "";
+			}
 			read_list();
 		} else {
 			$found -= $nb_elem;
@@ -501,7 +527,11 @@ while (1) {
 		} elsif ($source eq "flux" || $source eq "cd") {
 			if (!$base_flux) {
 				$base_flux = $name;
+				$mode_flux = "";
 				print "base_flux = $name\n";
+				read_list();
+			} elsif ($mode_flux eq "list") {
+				$base_flux .= "/$name";
 				read_list();
 			} else {
 				if (open(F,">fifo_cmd")) {
@@ -513,7 +543,7 @@ while (1) {
 						kill "TERM",$pid;
 						unlink "player1.pid";
 					}
-					if ($serv !~ /(mp3|ogg|flac|mpc|wav|m3u|pls)$/i) {
+					if ($serv !~ /(mp3|ogg|flac|mpc|wav|m3u)$/i) {
 						# Gestion des pls supprimée, mplayer semble les gérer
 						# très bien lui même.
 						$serv = get_mms($serv) if ($serv =~ /^http/);
@@ -533,6 +563,7 @@ while (1) {
 					close(F);
 					system("kill `cat player2.pid`; kill -USR2 `cat info.pid`");
 				}
+				print "list: à la fin @list\n";
 			}
 		} else {
 			# cas freeboxtv/dvb/radios freebox
