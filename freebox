@@ -69,10 +69,15 @@ function launch() {
 		fi
 		cd=`grep "drive name" /proc/sys/dev/cdrom/info|
 		sed 's/drive name:[ \t]*//'`
-		echo mplayer -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
+		if echo $name|grep pls; then
+			prefix="-playlist "
+		else
+			prefix=""
+		fi
+		echo mplayer -cdrom-device "/dev/$cd" $prefix "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd
-		mplayer -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
+		mplayer -cdrom-device "/dev/$cd" $prefix "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd \
 			| perl filter_mplayer.pl &
@@ -159,11 +164,11 @@ while [ "$exit" != "1" ]; do
 			wait $pid
 			src=`head -n 2 current|tail -n 1`
 			if [ "$src" != "flux" ]; then
-				rm -f list_coords info_coords
 				length=`perl eval_end.pl`
 			fi
 			if [ "$length" != "0" ] && [ "$length" != "" ]; then
 				length="-ss $length"
+				rm -f list_coords info_coords
 			else
 				length=""
 			fi
@@ -196,11 +201,13 @@ while [ "$exit" != "1" ]; do
 		rm -f player2.pid
 	fi
 	rm -f info_coords list_coords
-	if [ "$src" != "flux" ] || cmp current current0 > /dev/null; then
+#	if [ "$src" != "flux" ] || cmp current current0 > /dev/null; then
+# Sortie sans test des flux, je veux pouvoir garder un flux comme chaine par
+# défaut pour rester sur une radio quand on revient
 		exit=1
-	else
-		cp -f current0 current
-	fi
+#	else
+#		cp -f current0 current
+#	fi
 done
 kill `cat info.pid`
 
