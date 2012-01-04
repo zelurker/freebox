@@ -17,6 +17,7 @@ use LWP::Simple;
 use Encode;
 use Fcntl;
 require "output.pl";
+require "mms.pl";
 
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
@@ -82,7 +83,7 @@ sub cd_menu {
 				} elsif ($name =~ /ID_CDDB_INFO_TRACK_(\d+)_MSF/) {
 					push @list,[[$1,"$track ($val)","cddb://$1-99"]];
 				} elsif ($name =~ /ID_CDDA_TRACK_(\d+)_MSF/) {
-					push @list_cdda,[[$1,"pas d'info cddb ($val)","cdda://$1-99"]];
+					push @list_cdda,[[$1,"pas d'info cddb ($val)","cdda://$1-99"]] if ($val ne "00:00:00");
 				}
 			} elsif (/500 Internal Server Error/) {
 				$error = 1;
@@ -340,29 +341,6 @@ sub switch {
 		}
 	}
 	return 1;
-}
-
-sub get_mms {
-	my $url = shift;
-	my $page = get $url;
-	if (!$page) {
-		print STDERR "could not get $url\n";
-	} elsif ($page =~ /"(mms.+?)"/) {
-		print "mms url : $1 from $url\n";
-		return $1;
-	} else {
-		open(F,">dump");
-		print F $page;
-		close(F);
-		while ($page =~ s/iframe src\="(.+?)"//m) {
-			print "trying iframe $1\n";
-			my $r = get_mms($1);
-			return $r if ($r);
-		}
-		print "did not find mms from $url\n";
-		return undef;
-	}
-	return $url;
 }
 
 sub send_command {
