@@ -54,10 +54,12 @@ while (<>) {
 		$codec = $1;
 		$codec =~ s/mpg123/mp3/;
 		update_codec_info();
-	} elsif (/ID_AUDIO_BITRATE=(.+)/) {
-		$bitrate = $1;
-		$bitrate =~ s/000$/k/;
-		update_codec_info();
+	} elsif (/ID_AUDIO_BITRATE=(.+)/ || /^Bitrate\: (.+)/) {
+		if ($1) {
+			$bitrate = $1;
+			$bitrate =~ s/000$/k/;
+			update_codec_info();
+		}
 	} elsif (/(\d+) x (\d+)/ && $width < 300) {
 		$width = $1; $height = $2; # fallback here if it fails
 	} elsif (/(\d+)x(\d+) =/ && $width < 300) {
