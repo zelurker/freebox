@@ -797,6 +797,8 @@ if (!$rtab) {
 				# nom... Pour l'instant pas d'idée sur comment éviter ça...
 				my ($last,$cur);
 				if (open(F,"<stream_info")) {
+					my $info = <F>;
+					chomp $info;
 					while (<F>) {
 						chomp;
 						$last = $cur;
@@ -808,7 +810,7 @@ if (!$rtab) {
 						print $out "\n\n";
 						($sec,$min,$hour) = localtime($time);
 
-						print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
+						print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
 						print $out "Dernier morceau : $last\n" if ($last);
 						close_fifo($out);
 					}

@@ -12,18 +12,52 @@ if (open(F,"<current")) {
 	@_ = <F>;
 	close(F);
 }
-my ($chan,$source,$serv,$flav) = @_;
+our ($chan,$source,$serv,$flav) = @_;
 chomp ($chan,$source,$serv,$flav);
 unlink "stream_info";
 my ($width,$height) = ();
 my $exit = "";
-my $init;
+my ($codec,$bitrate);
+
+sub send_cmd_prog {
+	if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
+		print F "prog $chan\n";
+		close(F);
+	}
+}
+
+sub update_codec_info() {
+	if ($codec && $bitrate) {
+		my $info = "";
+		if (open(F,"<stream_info")) {
+			while (<F>) {
+				$info .= $_;
+			}
+		}
+		close(F);
+		if (open(F,">stream_info")) {
+			print F "$codec $bitrate\n";
+			print F $info if ($info);
+			close(F);
+		}
+		send_cmd_prog();
+	}
+}
+
 while (<>) {
 	chomp;
 	if (/ID_VIDEO_WIDTH=(.+)/) {
 		$width = $1;
 	} elsif (/ID_VIDEO_HEIGHT=(.+)/) {
 		$height = $1;
+	} elsif (/ID_AUDIO_CODEC=(.+)/) {
+		$codec = $1;
+		$codec =~ s/mpg123/mp3/;
+		update_codec_info();
+	} elsif (/ID_AUDIO_BITRATE=(.+)/) {
+		$bitrate = $1;
+		$bitrate =~ s/000$/k/;
+		update_codec_info();
 	} elsif (/(\d+) x (\d+)/ && $width < 300) {
 		$width = $1; $height = $2; # fallback here if it fails
 	} elsif (/(\d+)x(\d+) =/ && $width < 300) {
@@ -33,7 +67,6 @@ while (<>) {
 	} elsif (/End of file/i) {
 		$exit .= $_;
 	} elsif (/ICY Info/) {
-		print "filter debug : $_\n";
 		my $info = "";
 		while (s/([a-z_]+)\=\'(.*?)\'\;//i) {
 			my ($name,$val) = ($1,$2);
@@ -50,17 +83,14 @@ while (<>) {
 		}
 		unlink "info_coords";
 		system("./info &");
-	}
-	if ($width && $height && !$init) {
-		open(F,">video_size") || die "can't write to video_size\n";
-		print F "$width\n$height\n";
-		close(F);
-		kill "USR1",$pid;
-		$init = 1;
-		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
-			print F "prog $chan\n";
+	} elsif (/Starting playback/) {
+	    if ($width && $height) {
+			open(F,">video_size") || die "can't write to video_size\n";
+			print F "$width\n$height\n";
 			close(F);
+			kill "USR1",$pid;
 		}
+		send_cmd_prog();
 	}
 }
 kill "USR2",$pid;
