@@ -116,11 +116,8 @@ sub setup_output {
 			close(F);
 		}
 	} else {
-		my $tries = 3;
-		while (!-f "video_size" && $tries-- > 0) {
-			sleep(1);
-		}
-		if (open(F,"<video_size")) {
+		# On attend plus video_size
+		if (open(F,"<video_size") || open(F,"<desktop")) {
 			($width,$height) = <F>;
 			chomp $width;
 			chomp $height;
