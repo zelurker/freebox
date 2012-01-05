@@ -22,15 +22,6 @@ use Socket;
 
 require HTTP::Cookies;
 require "output.pl";
-eval {
-	require WWW::Google::Images;
-	WWW::Google::Images->import();
-};
-my $images = 0;
-my @cur_images;
-if (!$@) {
-	$images = 1;
-}
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
@@ -57,87 +48,6 @@ sub get_stream_info {
 		return ($cur,$last,$info);
 	}
 	undef;
-}
-
-sub handle_result($) {
-	my $result = shift;
-	my $image;
-	if ($image = $result->next()) {
-		open(F,"<desktop");
-		my $w = <F>;
-		my $h = <F>;
-		close(F);
-		chomp($w,$h);
-		my ($x,$y) = (0,0);
-		if (open(F,"<list_coords")) {
-			my $coords = <F>;
-			my ($aw,$ah,$ax,$ay) = split(/ /,$coords);
-			$x = $ax+$aw;
-			$y = $ay;
-			$w -= $x;
-			close(F);
-		}
-		if (open(F,"<info_coords")) {
-			my $coords = <F>;
-			my ($aw,$ah,$ax,$ay) = split(/ /,$coords);
-			$h = $ay-$y;
-			print "info: correction h = $ay - $y = $h\n";
-		} else {
-			print "info: pas de info_coords pour image\n";
-		}
-
-		my $pic = $image->save_content(base => 'image');
-		print "handle_result : $pic\n";
-		if (`file $pic` =~ /gzip/) {
-			print "gzip detected\n";
-			rename($pic,"$pic.gz");
-			system("gunzip $pic.gz");
-			print "gunzipped\n";
-		}
-		my $out = open_bmovl();
-		print "info: sending image $x $y $w $h\n";
-		print $out "image $pic $x $y $w $h\n";
-		close($out);
-	} else {
-		print "handle_result: plus d'images !\n";
-	}
-}
-
-sub handle_images {
-	my ($name,$cur) = @_;
-	print "handle_image $name,$cur\n";
-	if (!$name || !$cur) {
-		$name = get_cur_name();
-		($cur) = get_stream_info();
-	}
-	print "handle_image au final $name,$cur\n";
-	if (!$cur || !-f "desktop") {
-		@cur_images = ();
-		return;
-	}
-	if (!@cur_images || $cur_images[0] ne $cur) {
-		# Reset de la recherche précédente si pas finie !
-		if ($cur_images[1]) {
-			print "handle_image: reset vieille recherche\n";
-			my $result = $cur_images[1];
-			while ($result->next()) {}
-		}
-
-		@cur_images = ($cur);
-		my $agent = WWW::Google::Images->new(
-			server => 'images.google.com',
-		);
-
-		print "images: recherche sur $cur\n";
-		my $result = $agent->search($cur, limit => 10);
-		handle_result($result);
-		push @cur_images,$result;
-	} else {
-		my $result = $cur_images[1];
-		handle_result($result);
-	}
-	$cur_images[2] = time()+25;
-	print "handle_images: en fin cur_images a $#cur_images indices\n";
 }
 
 our @cache_pic;
@@ -731,9 +641,6 @@ if (!$reread || !$channel) {
 					print "delay fin enreg : ",get_time($delay),"\n";
 				}
 			}
-			print "delay cur_images $cur_images[2]\n" if (@cur_images);
-			$delay = $cur_images[2] if (@cur_images &&
-				$cur_images[2] < $delay);
 			$delay -= $time if ($delay);
 
 			print "delay = $delay\n";
@@ -748,11 +655,6 @@ if (!$reread || !$channel) {
 			$nfound = 0 if ($@);
 
 			$time = time;
-			if (@cur_images && $time >= $cur_images[2]) {
-				handle_images();
-			} elsif (@cur_images) {
-				print "time $time cur_images : $cur_images[2]\n";
-			}
 			if ($last_chan && defined($last_prog) && $chaines{$last_chan} && $time >= $chaines{$last_chan}[$last_prog][4] && $time < $chaines{$last_chan}[$last_prog+1][4]) {
 				if (-f "info_coords" && $time - $chaines{$last_chan}[$last_prog+1][3] < 5) {
 					print "programme suivant affiché last $last_prog < ",$#{$chaines{$last_chan}},"\n";
@@ -925,10 +827,6 @@ if (!$rtab) {
 			# nom... Pour l'instant pas d'idée sur comment éviter ça...
 			my ($cur,$last,$info) = get_stream_info();
 			if ($info) {
-				if ($images && $cur) {
-					handle_images($name,$cur);
-				}
-
 				my $out = setup_output("bmovl-src/bmovl","",0);
 				if ($out) {
 					print $out "\n\n";
@@ -936,7 +834,6 @@ if (!$rtab) {
 
 					print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
 					print $out "Dernier morceau : $last\n" if ($last);
-					print $out "WWW::Google::Images non disponible\n" if (!$images);
 					close_fifo($out);
 				}
 				$last_chan = $channel;

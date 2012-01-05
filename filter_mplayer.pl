@@ -2,6 +2,95 @@
 
 use strict;
 use Fcntl;
+require "output.pl";
+eval {
+	require WWW::Google::Images;
+	WWW::Google::Images->import();
+};
+my $images = 0;
+my @cur_images;
+if (!$@) {
+	# google images dispo si pas d'erreur
+	$images = 1;
+}
+my $titre;
+my $last_image;
+
+sub handle_result($) {
+	my $result = shift;
+	my $image;
+	if ($image = $result->next()) {
+		open(F,"<desktop");
+		my $w = <F>;
+		my $h = <F>;
+		close(F);
+		chomp($w,$h);
+		my ($x,$y) = (0,0);
+		if (open(F,"<list_coords")) {
+			my $coords = <F>;
+			my ($aw,$ah,$ax,$ay) = split(/ /,$coords);
+			$x = $ax+$aw;
+			$y = $ay;
+			$w -= $x;
+			close(F);
+		}
+		if (open(F,"<info_coords")) {
+			my $coords = <F>;
+			my ($aw,$ah,$ax,$ay) = split(/ /,$coords);
+			$h = $ay-$y;
+			print "info: correction h = $ay - $y = $h\n";
+		} else {
+			print "info: pas de info_coords pour image\n";
+		}
+
+		my $pic = $image->save_content(base => 'image');
+		if ($last_image && $pic ne $last_image) {
+			unlink $last_image;
+		}
+		$last_image = $pic;
+		print "handle_result : $pic\n";
+		if (`file $pic` =~ /gzip/) {
+			print "gzip detected\n";
+			rename($pic,"$pic.gz");
+			system("gunzip $pic.gz");
+			print "gunzipped\n";
+		}
+		my $out = open_bmovl();
+		print "info: sending image $x $y $w $h\n";
+		print $out "image $pic $x $y $w $h\n";
+		close($out);
+	} else {
+		print "handle_result: plus d'images !\n";
+	}
+}
+
+sub handle_images($) {
+	my $cur = shift;
+	if (!@cur_images || $cur_images[0] ne $cur) {
+		# Reset de la recherche précédente si pas finie !
+		if ($cur_images[1]) {
+			print "handle_image: reset vieille recherche\n";
+			my $result = $cur_images[1];
+			while ($result->next()) {}
+		}
+
+		@cur_images = ($cur);
+		my $agent = WWW::Google::Images->new(
+			server => 'images.google.com',
+		);
+
+		print "images: recherche sur $cur\n";
+		my $result = $agent->search($cur, limit => 10);
+		handle_result($result);
+		push @cur_images,$result;
+	} else {
+		my $result = $cur_images[1];
+		handle_result($result);
+	}
+	alarm(25);
+}
+
+$SIG{ALRM} = sub { handle_images($titre); };
 
 my $pid;
 open(F,"<info.pid") || die "can't open info.pid !\n";
@@ -88,6 +177,7 @@ while (<>) {
 			my ($name,$val) = ($1,$2);
 			if ($name eq "StreamTitle") {
 				$info .= "$val ";
+				$titre = $val;
 			} elsif ($val && $name ne "StreamUrl") {
 				$info .= " + $name=\'$val\' ";
 			}
@@ -98,6 +188,7 @@ while (<>) {
 			close(F);
 		}
 		system("./info 1 &");
+		handle_images($titre);
 	} elsif (/Starting playback/) {
 	    if ($width && $height) {
 			open(F,">video_size") || die "can't write to video_size\n";
