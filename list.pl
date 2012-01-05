@@ -565,7 +565,6 @@ while (1) {
 					close(F);
 					system("kill `cat player2.pid`; kill -USR2 `cat info.pid`");
 				}
-				print "list: à la fin @list\n";
 			}
 		} else {
 			# cas freeboxtv/dvb/radios freebox

@@ -81,6 +81,9 @@ sub handle_result($) {
 			my $coords = <F>;
 			my ($aw,$ah,$ax,$ay) = split(/ /,$coords);
 			$h = $ay-$y;
+			print "info: correction h = $ay - $y = $h\n";
+		} else {
+			print "info: pas de info_coords pour image\n";
 		}
 
 		my $pic = $image->save_content(base => 'image');
@@ -92,6 +95,7 @@ sub handle_result($) {
 			print "gunzipped\n";
 		}
 		my $out = open_bmovl();
+		print "info: sending image $x $y $w $h\n";
 		print $out "image $pic $x $y $w $h\n";
 		close($out);
 	} else {
@@ -691,88 +695,94 @@ if (!$reread || !$channel) {
 		do {
 			# Celui là sert à vérifier les déclenchements externes (noair.pl)
 			$time = time;
-			if (sysopen(F,"fifo_info",O_RDONLY|O_NONBLOCK)) {
-				my $delay = $time + 30;
-				if (-f "list_coords") {
-					$delay = $time+3;
-				}
-				if ($last_chan && defined($last_prog) && $chaines{$last_chan}) {
-					$delay = $chaines{$last_chan}[$last_prog][4];
-					$delay = 0 if ($delay == $time);
-					print "delay nextprog : ",get_time($delay),"\n";
-					if ($delay < $time) {
-						# on obtient un delay négatif ici quand nolife n'a pas
-						# encore les programmes actuels
-						$delay = undef;
-					}
-				}
-				if ($start_timer && $start_timer <= $time) {
-					# start_timer peut se retrouver en anomalie comme ici
-					# si l'un des cadres change de status avant qu'il soit à 0
-					# dans ce cas on le remet à 0 ici.
-					$start_timer = 0;
-				}
-
-				if ($start_timer && # $start_timer > $time && 
-					(!$delay || $start_timer < $delay)) {
-					$delay = $start_timer;
-					print "delay start_timer : ",get_time($delay),"\n";
-				}
-				foreach (@records) {
-					if ($$_[0] > $time && (!$delay || $$_[0] < $delay)) {
-						$delay = $$_[0];
-						print "delay début enreg : ",get_time($delay),"\n";
-					}
-					if ($$_[1] > $time && (!$delay || $$_[1] < $delay)) {
-						$delay = $$_[1];
-						print "delay fin enreg : ",get_time($delay),"\n";
-					}
-				}
-				print "delay cur_images $cur_images[2]\n" if (@cur_images);
-				$delay = $cur_images[2] if (@cur_images &&
-					$cur_images[2] < $delay);
-				$delay -= $time if ($delay);
-
-				my $rin = "";
-				vec($rin,fileno(F),1) = 1;
-				print "delay = $delay\n";
-				my ($nfound) = select($rin, undef, undef, $delay);
-				$time = time;
-				if (@cur_images && $time >= $cur_images[2]) {
-					handle_images();
-				} elsif (@cur_images) {
-					print "time $time cur_images : $cur_images[2]\n";
-				}
-				if ($last_chan && defined($last_prog) && $chaines{$last_chan} && $time >= $chaines{$last_chan}[$last_prog][4] && $time < $chaines{$last_chan}[$last_prog+1][4]) {
-					if (-f "info_coords" && $time - $chaines{$last_chan}[$last_prog+1][3] < 5) {
-						print "programme suivant affiché last $last_prog < ",$#{$chaines{$last_chan}},"\n";
-						$last_prog++;
-						disp_prog($chaines{$last_chan}[$last_prog],$last_long);
-					}
-				}
-				handle_records($time);
-				if (-f "list_coords") {
-					open(G,">fifo_list") || die "can't talk to fifo_list\n";
-					print G "refresh\n";
-					close(G);
-				}
-
-				if ($nfound > 0) {
-					($cmd) = <F>;
-					if ($cmd) {
-						chomp ($cmd);
-						my @tab = split(/ /,$cmd);
-						($tab[0],$long) = split(/\:/,$tab[0]);
-						$cmd = join(" ",@tab);
-					}
-				}
-				close(F);
+			my $delay = $time + 30;
+			if (-f "list_coords") {
+				$delay = $time+3;
 			}
+			if ($last_chan && defined($last_prog) && $chaines{$last_chan}) {
+				$delay = $chaines{$last_chan}[$last_prog][4];
+				$delay = 0 if ($delay == $time);
+				print "delay nextprog : ",get_time($delay),"\n";
+				if ($delay < $time) {
+					# on obtient un delay négatif ici quand nolife n'a pas
+					# encore les programmes actuels
+					$delay = undef;
+				}
+			}
+			if ($start_timer && $start_timer <= $time) {
+				# start_timer peut se retrouver en anomalie comme ici
+				# si l'un des cadres change de status avant qu'il soit à 0
+				# dans ce cas on le remet à 0 ici.
+				$start_timer = 0;
+			}
+
+			if ($start_timer && # $start_timer > $time && 
+				(!$delay || $start_timer < $delay)) {
+				$delay = $start_timer;
+				print "delay start_timer : ",get_time($delay),"\n";
+			}
+			foreach (@records) {
+				if ($$_[0] > $time && (!$delay || $$_[0] < $delay)) {
+					$delay = $$_[0];
+					print "delay début enreg : ",get_time($delay),"\n";
+				}
+				if ($$_[1] > $time && (!$delay || $$_[1] < $delay)) {
+					$delay = $$_[1];
+					print "delay fin enreg : ",get_time($delay),"\n";
+				}
+			}
+			print "delay cur_images $cur_images[2]\n" if (@cur_images);
+			$delay = $cur_images[2] if (@cur_images &&
+				$cur_images[2] < $delay);
+			$delay -= $time if ($delay);
+
+			print "delay = $delay\n";
+			my $nfound;
+			eval {
+				local $SIG{ALRM} = sub { die "alarm\n"; };
+				alarm($delay);
+				open(F,"<fifo_info") || die "ouverture fifo_info !\n";
+				alarm(0);
+				$nfound = 1;
+			};
+			$nfound = 0 if ($@);
+
+			$time = time;
+			if (@cur_images && $time >= $cur_images[2]) {
+				handle_images();
+			} elsif (@cur_images) {
+				print "time $time cur_images : $cur_images[2]\n";
+			}
+			if ($last_chan && defined($last_prog) && $chaines{$last_chan} && $time >= $chaines{$last_chan}[$last_prog][4] && $time < $chaines{$last_chan}[$last_prog+1][4]) {
+				if (-f "info_coords" && $time - $chaines{$last_chan}[$last_prog+1][3] < 5) {
+					print "programme suivant affiché last $last_prog < ",$#{$chaines{$last_chan}},"\n";
+					$last_prog++;
+					disp_prog($chaines{$last_chan}[$last_prog],$last_long);
+				}
+			}
+			handle_records($time);
+			if (-f "list_coords") {
+				open(G,">fifo_list") || die "can't talk to fifo_list\n";
+				print G "refresh\n";
+				close(G);
+			}
+
+			if ($nfound > 0) {
+				($cmd) = <F>;
+				if ($cmd) {
+					chomp ($cmd);
+					my @tab = split(/ /,$cmd);
+					($tab[0],$long) = split(/\:/,$tab[0]);
+					$cmd = join(" ",@tab);
+				}
+			}
+			close(F);
 			if ($start_timer && $time - $start_timer >= 0 && -f "info_coords" &&
 				! -f "list_coords") {
 				print "alpha sur start_timer\n";
 				alpha("info_coords",-40,-255,-5);
 				unlink "info_coords";
+				print "suppression info_coords sur alpha (timer)\n";
 				$start_timer = 0;
 			}
 		} while (!$cmd);
@@ -914,7 +924,7 @@ if (!$rtab) {
 			# de chaine, genre une radio et une chaine de télé qui ont le même
 			# nom... Pour l'instant pas d'idée sur comment éviter ça...
 			my ($cur,$last,$info) = get_stream_info();
-			if ($cur) {
+			if ($info) {
 				if ($images && $cur) {
 					handle_images($name,$cur);
 				}
@@ -932,8 +942,6 @@ if (!$rtab) {
 				$last_chan = $channel;
 				goto read_fifo;
 			}
-		} else {
-			print "stream_info not valid $name et $channel.\n";
 		}
 	} # $name eq $channel
 }

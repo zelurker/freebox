@@ -2,7 +2,7 @@
 
 # Gère l'appui sur la touche i
 
-if [ -f info_coords ]; then
+if [ -f info_coords ] && [ "$1" == "" ]; then
 	# un bandeau d'info est actif -> on le kille
 	echo clear > fifo_info
 else

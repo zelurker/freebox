@@ -54,17 +54,21 @@ sub alpha {
 		chomp $coords;
 		close(F);
 		for(my $i=$start; $i != $stop; $i+=$step) {
-			print "alpha $coords $i\n";
 			my $f = open_bmovl();
 			if ($f) {
 				print $f "ALPHA $coords $i\n";
 				close($f);
 			}
 		}
-		print "et final alpha $coords $stop\n";
 		my $f = open_bmovl();
 		if ($f) {
 			print $f "ALPHA $coords $stop\n";
+			close($f);
+		}
+		my $f = open_bmovl();
+		# le clear est pour l'affichage direct quand pas de mplayer
+		if ($f) {
+			print $f "CLEAR $coords\n";
 			close($f);
 		}
 	}
@@ -112,12 +116,23 @@ sub setup_output {
 	my ($width,$height);
 	my $out;
 	if ($source eq "flux") {
-		$width = 640; $height = 480;
-		if (open(F,"<desktop")) {
-			($width,$height) = <F>;
-			chomp($width,$height);
-			close(F);
-		}
+		my $tries = 3;
+		my $error;
+		$width = 0;
+		do {
+			# Purée c'est vraiment la course quand on lance tout, on arrive à
+			# se retrouver ici avant que la fenetre graphique ne soit créée,
+			# top rapide, vraiment !!!
+			if (open(F,"<desktop")) {
+				($width,$height) = <F>;
+				chomp($width,$height);
+				close(F);
+				$error = 0;
+			} else {
+				select(undef,undef,undef,0.5);
+				$error = 1;
+			}
+		} while ($error && $tries--);
 	} else {
 		# On attend plus video_size
 		if (open(F,"<video_size") || open(F,"<desktop")) {

@@ -20,12 +20,22 @@ my $exit = "";
 my ($codec,$bitrate);
 
 sub send_cmd_prog {
-	if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
-		print F "prog $chan\n";
-		close(F);
-	} else {
-		print "envoi commande prog from filter impossible !\n";
-	}
+	my $tries = 1;
+	my $error;
+	do {
+
+		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
+			$error = 0;
+			print F "prog $chan\n";
+			close(F);
+			print "filter: commande prog envoyée\n";
+		} else {
+			print "filter: envoi commande prog from filter impossible tries=$tries !\n";
+			$error = 1;
+			sleep(1);
+		}
+
+	} while ($error && $tries++ < 3);
 }
 
 sub update_codec_info() {
@@ -41,6 +51,8 @@ sub update_codec_info() {
 			print F "$codec $bitrate\n";
 			print F $info if ($info);
 			close(F);
+		} else {
+			print "impossible de créer stream_info !\n";
 		}
 		send_cmd_prog();
 	}
@@ -85,8 +97,7 @@ while (<>) {
 			print F "$info\n";
 			close(F);
 		}
-		unlink "info_coords";
-		system("./info &");
+		system("./info 1 &");
 	} elsif (/Starting playback/) {
 	    if ($width && $height) {
 			open(F,">video_size") || die "can't write to video_size\n";

@@ -22,6 +22,7 @@
 static int fifo;
 static char *fifo_str;
 static int server;
+static SDL_Rect r;
 
 /* Les commandes de connexion/déconnexion au fifo mplayer doivent être passés
  * par signaux et pas par le fifo de commande parce que malheureusement un
@@ -279,6 +280,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int width,height;
 
     char *source,buff[4096],*list[20],status[20];
+
     if(argc<4) {
 	printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
 	printf("width and height are w/h of MPlayer's screen!\n");
@@ -299,6 +301,12 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     source = strdup(buff);
     int nb=0,w,h;
     int margew = width/36, margeh=height/36;
+    if (sdl_screen && r.w && r.x < margew ) {
+	printf("list: effacement image %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
+	SDL_FillRect(sdl_screen,&r,0);
+	SDL_UpdateRect(sdl_screen,r.x,r.y,r.w,r.h);
+	r.x = r.y = r.w = r.h = 0;
+    }
     int maxw=width/2-margew;
     int numw = 0;
     // Lecture des chaines, 20 maxi.
@@ -572,16 +580,18 @@ static int image(int argc, char **argv) {
     int y = atoi(argv[3]);
     int w = atoi(argv[4]);
     int h = atoi(argv[5]);
-    SDL_Rect r; r.x = x; r.y = y; r.w = w; r.h = h;
+    r.x = x; r.y = y; r.w = w; r.h = h;
     SDL_FillRect(sdl_screen,&r,0);
     r.x = 0; r.y = 0; r.w = pic->w; r.h = pic->h;
     if (pic->w > w) r.w = w;
     if (pic->h > h) r.h = h;
     SDL_Rect dst;
     dst.x = x; dst.y = y; 
+    printf("image: %d,%d,%d,%d\n",x,y,r.w,r.h);
     SDL_BlitSurface(pic,&r,sdl_screen,&dst);
     SDL_UpdateRect(sdl_screen,x,y,w,h);
     SDL_FreeSurface(pic);
+    r.x = x; r.y = y; r.w = w; r.h = h; // pour l'affichage de la liste...
     return(0);
 }
 
