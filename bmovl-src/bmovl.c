@@ -436,6 +436,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    sprintf(buff,"prog:%d %s\n",y+sf->h,list[current]);
 	    write(info,buff,strlen(buff));
 	    close(info);
+	    if (tries > 1) printf("bmovl: %d tries for fifo_info\n",tries);
 	} else
 	    printf("on abandonne fifo_info !\n");
     }
@@ -553,6 +554,37 @@ static void handle_event(SDL_Event *event) {
     }
 }
 
+static int image(int argc, char **argv) {
+    if (argc != 6) {
+	printf("image: argc = %d\n",argc);
+	return(1);
+    }
+    if (!sdl_screen) {
+	printf("image appelé sans sdl_screen !\n");
+	return(1);
+    }
+    SDL_Surface *pic = IMG_Load(argv[1]);
+    if (!pic) {
+	printf("image: peut pas charger %s\n",argv[0]);
+	return(1);
+    }
+    int x = atoi(argv[2]);
+    int y = atoi(argv[3]);
+    int w = atoi(argv[4]);
+    int h = atoi(argv[5]);
+    SDL_Rect r; r.x = x; r.y = y; r.w = w; r.h = h;
+    SDL_FillRect(sdl_screen,&r,0);
+    r.x = 0; r.y = 0; r.w = pic->w; r.h = pic->h;
+    if (pic->w > w) r.w = w;
+    if (pic->h > h) r.h = h;
+    SDL_Rect dst;
+    dst.x = x; dst.y = y; 
+    SDL_BlitSurface(pic,&r,sdl_screen,&dst);
+    SDL_UpdateRect(sdl_screen,x,y,w,h);
+    SDL_FreeSurface(pic);
+    return(0);
+}
+
 int main(int argc, char **argv) {
 
 	signal(SIGUSR1, &myconnect);
@@ -605,6 +637,7 @@ int main(int argc, char **argv) {
 
 	while (1) {
 	    int len = 0;
+	    *buff = 0;
 	    while (len <= 0) {
 		fd_set set;
 		FD_ZERO(&set);
@@ -662,6 +695,8 @@ int main(int argc, char **argv) {
 		    ret = clear(fifo,argc,myargv);
 		} else if (!strcmp(cmd,"ALPHA")) {
 		    ret = alpha(fifo,argc,myargv);
+		} else if (!strcmp(cmd,"image")) {
+		    ret = image(argc,myargv);
 		} 
 		if (ret) {
 		    printf("bmovl: command returned %d\n",ret);

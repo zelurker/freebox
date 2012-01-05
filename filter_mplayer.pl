@@ -23,6 +23,8 @@ sub send_cmd_prog {
 	if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
 		print F "prog $chan\n";
 		close(F);
+	} else {
+		print "envoi commande prog from filter impossible !\n";
 	}
 }
 

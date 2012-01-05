@@ -85,7 +85,7 @@ void init_video() {
     }
     get_video_info();
     sdl_screen = SDL_SetVideoMode( desktop_w,desktop_h, 
-	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT |SDL_FULLSCREEN );
+	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT /* |SDL_FULLSCREEN */ );
     SDL_ShowCursor(SDL_DISABLE);
     FILE *f = fopen("desktop","w");
     if (f) {
