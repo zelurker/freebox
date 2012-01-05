@@ -6,6 +6,7 @@
 use strict;
 use Fcntl;
 use Socket;
+use Image::Info qw(image_info dim);
 
 sub open_bmovl {
 	my $out;
@@ -53,12 +54,14 @@ sub alpha {
 		chomp $coords;
 		close(F);
 		for(my $i=$start; $i != $stop; $i+=$step) {
+			print "alpha $coords $i\n";
 			my $f = open_bmovl();
 			if ($f) {
 				print $f "ALPHA $coords $i\n";
 				close($f);
 			}
 		}
+		print "et final alpha $coords $stop\n";
 		my $f = open_bmovl();
 		if ($f) {
 			print $f "ALPHA $coords $stop\n";
@@ -125,24 +128,19 @@ sub setup_output {
 		}
 	}
 	if ($pic) { #  && $width < 720) {
-		open(F,"identify picture.jpg|");
-		while (<F>) {
-			if (/ (\d+)x(\d+) /) {
-				my ($w,$h) = ($1,$2);
-				my $div = 0;
-				if ($w/2 < $width/2) {
-					$div = 2;
-				} elsif ($w/3 < $width/2) {
-					$div = 3;
-				}
-				$div = 2 if ($div == 0);
-				if ($div > 0) {
-					print "on lance convert picture.jpg -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg picture.jpg\n";
-					system("convert picture.jpg -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg picture.jpg");
-				}
-			}
+        my $info = image_info("picture.jpg");
+        my($w, $h) = dim($info);
+		my $div = 0;
+		if ($w/2 < $width/2) {
+			$div = 2;
+		} elsif ($w/3 < $width/2) {
+			$div = 3;
 		}
-		close(F);
+		$div = 2 if ($div == 0);
+		if ($div > 0) {
+			print "on lance convert picture.jpg -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg picture.jpg\n";
+			system("convert picture.jpg -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg picture.jpg");
+		}
 	}
 
 	# print STDERR "output on pipe width $width height $height\n";
