@@ -514,12 +514,18 @@ while (1) {
 		} elsif ($source =~ /^(livetv|Enregistrements)$/) {
 			if (open(F,">fifo_cmd")) {
 				print F "pause\n";
-				my $pid = `cat player1.pid`;
-				chomp $pid;
-				print "pid à tuer $pid.\n";
-				kill "TERM",$pid;
-			   	unlink "player1.pid";
+				my $p1 = undef;
+				if (-f "player1.pid") {
+					$p1 = 1;
+					my $pid = `cat player1.pid`;
+					chomp $pid;
+					print "pid à tuer $pid.\n";
+					kill "TERM",$pid;
+					unlink "player1.pid";
+				}
 				print F "loadfile '$serv'\n";
+				print "loadfile envoyée\n";
+				print "pause\n" if (!$p1);
 				close(F);
 				open(F,">live");
 				close(F);
