@@ -182,6 +182,7 @@ while (1) {
 	}
 	if ($nfound > 0) {
 		my $ret = sysread(STDIN,$buff,256,length($buff));
+		$buff =~ s/\x00+//;
 
 		if (defined($ret) && $ret == 0) {
 			last;
@@ -189,7 +190,7 @@ while (1) {
 	} else {
 		next;
 	}
-	while ($buff =~ s/(.+?)\n//) {
+	while ($buff =~ s/(.+?)[\n\r]//) {
 		$_ = $1;
 		if (/ID_VIDEO_WIDTH=(.+)/) {
 			$width = $1;
