@@ -178,6 +178,7 @@ while (<>) {
 			if ($name eq "StreamTitle") {
 				$info .= "$val ";
 				$titre = $val;
+				$titre .= " (pas de WWW::Google::Images)" if (!$images);
 			} elsif ($val && $name ne "StreamUrl") {
 				$info .= " + $name=\'$val\' ";
 			}
@@ -188,7 +189,8 @@ while (<>) {
 			close(F);
 		}
 		system("./info 1 &");
-		handle_images($titre);
+		
+		handle_images($titre) if ($images && $titre =~ /\-/);
 	} elsif (/Starting playback/) {
 	    if ($width && $height) {
 			open(F,">video_size") || die "can't write to video_size\n";
