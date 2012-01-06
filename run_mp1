@@ -64,6 +64,9 @@ while [ "$ok" == "0" ]; do
 		flux)
 			mplayer -quiet -dumpfile "$name" -dumpstream "$service" >& log &
 			;;
+		*)
+			echo source $src pas prévue pour run_mp1, on sort
+			exit 0
 	esac
 	pid=$!
 	start=`date +%s`

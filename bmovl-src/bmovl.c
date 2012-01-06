@@ -293,6 +293,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     // if (argc == 5) maxh = atoi(argv[4]);
     // else maxh = height - 8;
     int fsize = height/35;
+    int fsel = !strcmp(argv[0],"fsel");
     TTF_Font *font = TTF_OpenFont("Vera.ttf",fsize);
     if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
     int num[20];
@@ -302,12 +303,11 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int nb=0,w,h;
     int margew = width/36, margeh=height/36;
     if (sdl_screen && r.w && r.x < margew ) {
-	printf("list: effacement image %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
 	SDL_FillRect(sdl_screen,&r,0);
 	SDL_UpdateRect(sdl_screen,r.x,r.y,r.w,r.h);
 	r.x = r.y = r.w = r.h = 0;
     }
-    int maxw=width/2-margew;
+    int maxw=(fsel ? width : width/2)-margew;
     int numw = 0;
     // Lecture des chaines, 20 maxi.
     int wlist,hlist;
@@ -322,9 +322,11 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	while (*end_nb >= '0' && *end_nb <= '9')
 	    end_nb++;
 	*end_nb++ = 0;
-	get_size(font,&buff[1],&w,&h,maxw);
-	if (w > numw) numw = w;
-	num[nb] = atoi(&buff[1]);
+	if (!fsel) {
+	    get_size(font,&buff[1],&w,&h,maxw);
+	    if (w > numw) numw = w;
+	    num[nb] = atoi(&buff[1]);
+	}
 	list[nb++] = strdup(end_nb);
 	int l = strlen(end_nb);
 	if (end_nb[l-1] == '>')
@@ -355,6 +357,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     x += numw+8; // aligné après les numéros
     int fg = get_fg(sf);
     int red = SDL_MapRGB(sf->format,0xff,0x50,0x50);
+    int cyan = SDL_MapRGB(sf->format, 0x50,0xff,0xff);
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
     int bg = get_bg(sf);
     for (n=0; n<nb; n++) {
@@ -371,12 +374,14 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    SDL_Rect r;
 	    r.x = 8; r.y = y; r.w = wlist; r.h = fsize;
 	    SDL_FillRect(sf,&r,fg);
-	    put_string(sf,font,8,y,buff,bg,height); // Numéro
+	    if (!fsel)
+		put_string(sf,font,8,y,buff,bg,height); // Numéro
 	    int dy = put_string(sf,font,x,y,list[n],bg,height);
 	    if (dy != fsize) { // bad guess, 2nd try...
 		r.h = dy;
 		SDL_FillRect(sf,&r,fg);
-		put_string(sf,font,8,y,buff,bg,height); // Numéro
+		if (!fsel)
+		    put_string(sf,font,8,y,buff,bg,height); // Numéro
 		dy = put_string(sf,font,x,y,list[n],bg,height);
 	    }
 	    y += dy;
@@ -385,10 +390,14 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    if (status[n] == 'R') {
 		oldfg = fg;
 		fg = red;
+	    } else if (status[n] == 'D') {
+		oldfg = fg;
+		fg = cyan;
 	    }
-	    put_string(sf,font,8,y,buff,fg,height); // Numéro
+	    if (!fsel)
+		put_string(sf,font,8,y,buff,fg,height); // Numéro
 	    y += put_string(sf,font,x,y,list[n],fg,height);
-	    if (status[n] == 'R') fg = oldfg;
+	    if (status[n] == 'R' || status[n] == 'D') fg = oldfg;
 	}
 	if (hidden) {
 	    put_string(sf,font,xright,y0,">",(current == n ? bg : fg),height);
@@ -408,7 +417,6 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	if (oldw > sf->w) {
 	    char buff[2048];
 	    sprintf(buff,"CLEAR %d %d %d %d\n",oldw-sf->w,oldh,oldx+sf->w,oldy);
-	    printf("list: %s",buff);
 	    send_command(fifo, buff);
 	}
     }
@@ -427,7 +435,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     fclose(f);
     // Clean up
     SDL_FreeSurface(sf);
-    if (current > -1 && !noinfo) {
+    if (current > -1 && !noinfo && !fsel) {
 	int info=0;
 	int tries = 0;
 	while (tries++ < 4 && info <= 0) {
@@ -697,7 +705,7 @@ int main(int argc, char **argv) {
 		if (!strcmp(cmd,"bmovl") || !strcmp(cmd,"next") ||
 			!strcmp(cmd,"prev")) {
 		    ret = info(fifo,argc,myargv);
-		} else if (!strcmp(cmd,"list")) {
+		} else if (!strcmp(cmd,"list") || !strcmp(cmd,"fsel")) {
 		    ret = list(fifo,argc,myargv,0);
 		} else if (!strcmp(cmd,"list-noinfo")) {
 		    ret = list(fifo,argc,myargv,1);

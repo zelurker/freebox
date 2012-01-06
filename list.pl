@@ -24,7 +24,7 @@ print F "$$\n";
 close(F);
 
 my @modes = (
-	"freeboxtv",  "dvb", "Enregistrements", "livetv", "flux","radios freebox",
+	"freeboxtv",  "dvb", "Enregistrements", "Fichiers vidéo", "livetv", "flux","radios freebox",
 	"cd");
 if (open(F,"<current")) {
 	@_ = <F>;
@@ -40,6 +40,28 @@ my (@list);
 my $found = undef;
 my $base_flux = "";
 my $mode_flux;
+our %conf;
+
+sub read_conf {
+	if (open(F,"<$ENV{HOME}/.freebox")) {
+		while (<F>) {
+			chomp;
+			if (/(.+) = (.+)/) {
+				$conf{$1} = $2;
+			}
+		}
+		close(F);
+	}
+}
+
+sub save_conf {
+	if (open(F,">$ENV{HOME}/.freebox")) {
+		foreach (keys %conf) {
+			print F "$_ = $conf{$_}\n";
+		}
+		close(F);
+	}
+}
 
 sub cd_menu {
 	@list = ();
@@ -234,6 +256,40 @@ sub read_list {
 			}
 		}
 		@list = reverse @list;
+	} elsif ($source =~ /^Fichiers/) {
+		@list = ();
+		print "read_list pour $source\n";
+		my $num = 1;
+		my $pat;
+		if (!$conf{video_path}) {
+			$conf{video_path} = `pwd`;
+			chomp $conf{video_path};
+		}
+		if ($conf{video_path} eq "/") {
+			$pat = "/*";
+		} else {
+			$pat = "$conf{video_path}/*";
+			$pat =~ s/ /\\ /g;
+		}
+		if ($conf{video_path} ne "/") {
+			push @list,[[1,"../",".."]];
+			$num = 2;
+		}
+		print "Fichiers: $pat\n";
+		while (glob($pat)) {
+			my $service = $_;
+			my $name = $service;
+			$name =~ s/.+\///; # Supprime le path du nom
+			if (-d $service) {
+				$name .= "/";
+			}
+			push @list,[[$num++,$name,$service]];
+			if ($serv eq $service) {
+				$found = $#list;
+			}
+		}
+		unlink "info_coords";
+#		@list = reverse @list;
 	} elsif ($source eq "flux") {
 		if (open(F,"<current")) {
 			@_ = <F>;
@@ -387,6 +443,70 @@ sub reset_current {
 	}
 }
 
+sub load_file($) {
+	my $serv = shift;
+	# charge le fichier pointé dans la liste (contenu dans $serv)
+	if (open(F,">fifo_cmd")) {
+		print F "pause\n";
+		my $p1 = undef;
+		if (-f "player1.pid") {
+			$p1 = 1;
+			my $pid = `cat player1.pid`;
+			chomp $pid;
+			print "pid à tuer $pid.\n";
+			kill "TERM",$pid;
+			unlink "player1.pid";
+		}
+		print F "loadfile '$serv'\n";
+		print "loadfile envoyée ($serv)\n";
+		print "pause\n" if (!$p1);
+		close(F);
+		open(F,">live");
+		close(F);
+		unlink( "list_coords","info_coords");
+	}
+}
+
+sub load_file2($$$$$) {
+	# Même chose que load_file mais en + radical, ce coup là on kille le player
+	# pour redémarrer à froid sur le nouveau fichier. Obligatoire quand on vient
+	# d'une source non vidéo vers une source vidéo par exemple.
+	my ($name,$serv,$flav,$audio,$video) = @_;
+	if (open(F,">fifo_cmd")) {
+		print F "pause\n";
+		if (-f "player1.pid") {
+			my $pid = `cat player1.pid`;
+			chomp $pid;
+			print "pid2 à tuer $pid.\n";
+			kill "TERM",$pid;
+			unlink "player1.pid";
+		}
+		if ($serv !~ /(mp3|ogg|flac|mpc|wav|m3u)$/i) {
+			# Gestion des pls supprimée, mplayer semble les gérer
+			# très bien lui même.
+			$serv = get_mms($serv) if ($serv =~ /^http/);
+			print "flux: loadfile $serv\n";
+			open(G,">live");
+			close(G);
+		}
+		unlink( "list_coords","info_coords");
+		system("kill -USR2 `cat info.pid`");
+		open(G,">current");
+		my $src = ($source eq "cd" ? "flux" : $source);
+		# $serv est en double en 7ème ligne, c'est voulu
+		# oui je sais, c'est un bordel
+		# A nettoyer un de ces jours dans run_mp1/freebox
+		print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
+		close(G);
+		print "sending quit\n";
+		unlink("id","stream_info");
+		print F "quit\n";
+		close(F);
+		system("kill `cat player2.pid`");
+	}
+}
+
+read_conf();
 read_list();
 system("rm -f fifo_list && mkfifo fifo_list");
 my $nb_elem = 16;
@@ -512,26 +632,23 @@ while (1) {
 				goto again;
 			}
 		} elsif ($source =~ /^(livetv|Enregistrements)$/) {
-			if (open(F,">fifo_cmd")) {
-				print F "pause\n";
-				my $p1 = undef;
-				if (-f "player1.pid") {
-					$p1 = 1;
-					my $pid = `cat player1.pid`;
-					chomp $pid;
-					print "pid à tuer $pid.\n";
-					kill "TERM",$pid;
-					unlink "player1.pid";
-				}
-				print F "loadfile '$serv'\n";
-				print "loadfile envoyée\n";
-				print "pause\n" if (!$p1);
-				close(F);
-				open(F,">live");
-				close(F);
-				unlink( "list_coords","info_coords");
-			}
+			load_file($serv);
 			next;
+		} elsif ($source =~ /^Fichiers/) {
+			print "zap $source : $serv\n";
+			if ($name =~ /\/$/) { # Répertoire
+				if ($serv eq "..") {
+					$conf{video_path} =~ s/^(.*)\/.+/$1/;
+					$conf{video_path} = "/" if (!$conf{video_path});
+				} else {
+					$conf{video_path} = $serv;
+				}
+				save_conf();
+				read_list();
+			} else {
+				load_file2($name,$serv,$flav,$audio,$video);
+				next;
+			}
 		} elsif ($source eq "flux" || $source eq "cd") {
 			if (!$base_flux) {
 				$base_flux = $name;
@@ -542,35 +659,7 @@ while (1) {
 				$base_flux .= "/$name";
 				read_list();
 			} else {
-				if (open(F,">fifo_cmd")) {
-					print F "pause\n";
-					if (-f "player1.pid") {
-						my $pid = `cat player1.pid`;
-						chomp $pid;
-						print "pid2 à tuer $pid.\n";
-						kill "TERM",$pid;
-						unlink "player1.pid";
-					}
-					if ($serv !~ /(mp3|ogg|flac|mpc|wav|m3u)$/i) {
-						# Gestion des pls supprimée, mplayer semble les gérer
-						# très bien lui même.
-						$serv = get_mms($serv) if ($serv =~ /^http/);
-						print "flux: loadfile $serv\n";
-						open(G,">live");
-						close(G);
-					}
-					unlink( "list_coords","info_coords");
-					system("kill -USR2 `cat info.pid`");
-					open(G,">current");
-					my $src = ($source eq "cd" ? "flux" : $source);
-					print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
-					close(G);
-					print "sending quit\n";
-					unlink("id","stream_info");
-					print F "quit\n";
-					close(F);
-					system("kill `cat player2.pid`; kill -USR2 `cat info.pid`");
-				}
+				load_file2($name,$serv,$flav,$audio,$video);
 			}
 		} else {
 			# cas freeboxtv/dvb/radios freebox
@@ -720,9 +809,17 @@ while (1) {
 
 	my $beg = $found - 9;
 	$beg = 0 if ($beg < 0);
-	my $out = setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
+	my $out;
+
+	if ($source =~ /Fichiers/) {
+		$out = setup_output("fsel");
+	} else {
+		$out = setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
+	}
 	if (($source eq "flux" || $source eq "cd") && $base_flux) {
 		print $out "$source > $base_flux\n";
+	} elsif ($source eq "Fichiers vidéo") {
+		print $out "Fichiers vidéo : $conf{video_path}\n";
 	} else {
 		print $out "$source\n";
 	}
@@ -735,6 +832,8 @@ while (1) {
 			print $out "*";
 		} elsif ($red) {
 			print $out "R";
+		} elsif ($name =~ /\/$/ && $source =~ /Fichiers/) {
+			print $out "D"; # Directory (répertoire)
 		} else {
 			print $out " ";
 		}

@@ -85,10 +85,23 @@ function launch() {
 		if [ "$audio" != "" ]; then
 			audio2="-aid $audio"
 		fi
-		mplayer $audio2 -quiet $length -vf bmovl=1:0:fifo,screenshot,kerndeint \
+		bmovl=bmovl=1:0:fifo,
+		mplayer=mplayer
+		if echo $src|grep -q Fichiers; then
+			# Bug sur la version de dév de mplayer relative à bmovl sur les
+			# fichiers. C'est lié au fps, mais dur à délimiter. Contournement:
+			# utiliser une vieille version !
+			mplayer=/usr/bin/mplayer
+		fi
+		echo $mplayer $audio2 -quiet $length -vf $bmovl"screenshot,kerndeint" \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd $demuxer \
-			"$name" | perl filter_mplayer.pl &
+			"$name" avec filtre en pipe
+
+			$mplayer $audio2 -quiet $length -vf $bmovl"screenshot,kerndeint" \
+				-stop-xscreensaver -identify -input \
+				conf=$PWD/input.conf:file=fifo_cmd $demuxer \
+				"$name" | perl filter_mplayer.pl &
 	fi
 	echo $! > player2.pid
 	audio2=""
@@ -128,7 +141,7 @@ while [ "$exit" != "1" ]; do
 		while [ "$again" == "1" ]; do
 			# En cas de zapping, on se retrouve ici, faut remettre à jour chaine
 			chaine=`head -n 1 current`
-			if [ "$src" != "flux" ]; then
+			if [ "$src" != "flux" ] && ! echo $src|grep -q Fichiers; then
 				cp -f current current0
 			fi
 
@@ -155,6 +168,12 @@ while [ "$exit" != "1" ]; do
 				else
 					demuxer=""
 				fi
+#				fps=`grep ID_VIDEO_FPS id|cut -d = -f 2|sed 's/\..*//'`
+#				if [ "$fps" -gt 30 ]; then
+#					no_bmovl=1
+#				else
+#					no_bmovl=0
+#				fi
 			fi
 			launch
 			pid=$!
@@ -163,7 +182,7 @@ while [ "$exit" != "1" ]; do
 			fi
 			wait $pid
 			src=`head -n 2 current|tail -n 1`
-			if [ "$src" != "flux" ]; then
+			if [ "$src" != "flux" ] && ! echo $src|grep -q Fichiers; then
 				length=`perl eval_end.pl`
 			fi
 			if [ "$length" != "0" ] && [ "$length" != "" ]; then
@@ -208,6 +227,11 @@ while [ "$exit" != "1" ]; do
 #	else
 #		cp -f current0 current
 #	fi
+if echo $src|grep -q Fichiers; then
+	cp -f current0 current
+	exit=0
+fi
+
 done
 kill `cat info.pid`
 
