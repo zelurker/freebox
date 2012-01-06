@@ -278,7 +278,10 @@ sub get_nolife {
 
 	if (!open(F,"<air.xml")) {
 		update_noair();
-		die "can't get noair listing\n" if (!open(F,"<air.xml"));
+		if (!open(F,"<air.xml")) {
+		   print "can't get noair listing\n";
+		   return undef;
+	   }
 	}
 
 	my $xml = "";
@@ -475,10 +478,13 @@ sub disp_prog {
 			$raw = myget $$sub[9]; 
 		}
 		if ($raw) {
-			open(F,">picture.jpg") || die "can't create picture.jpg\n";
-			print F $raw;
-			close(F);
-			$raw = 1;
+			if (open(F,">picture.jpg")) {
+				print F $raw;
+				close(F);
+				$raw = 1;
+			} else {
+				print "can't create picture.jpg\n";
+			}
 		}
 	}
 	# Check channel logo
@@ -503,12 +509,15 @@ sub send_list {
 	print F $cmd;
 	close(F);
 	$cmd = undef;
-	open(F,"<fifo_list") || die "can't read from fifo_list\n";
-	while (<F>) {
-		chomp;
-		$cmd = $_;
+	if (open(F,"<fifo_list")) {
+		while (<F>) {
+			chomp;
+			$cmd = $_;
+		}
+		close(F);
+	} else {
+		print "can't read from fifo_list\n";
 	}
-	close(F);
 	$cmd;
 }
 
@@ -594,8 +603,10 @@ sub req_prog($$) {
 	$url = $site_prefix.'LitProgrammes1JourneeDetail.php?date='.$date.'&chaines='.$url;
 	print "req_prog: url $url\n";
 	my $response = $browser->get($url);
-	die "$url error: ", $response->status_line
-	unless $response->is_success;
+	if (! $response->is_success) {
+	    print "$url error: $response->status_line\n";
+	    return undef;
+	}
 	$response;
 }
 
@@ -663,9 +674,12 @@ if (!$reread || !$channel) {
 			}
 			handle_records($time);
 			if (-f "list_coords") {
-				open(G,">fifo_list") || die "can't talk to fifo_list\n";
-				print G "refresh\n";
-				close(G);
+				if (open(G,">fifo_list")) {
+					print G "refresh\n";
+					close(G);
+				} else {
+					print "can't talk to fifo_list\n";
+				}
 			}
 
 			if ($nfound > 0) {
@@ -764,9 +778,12 @@ if (!$reread || !$channel) {
 		$long = $last_long;
 		$start_timer = time+5 if (!$long);
 	} elsif ($cmd eq "zap1") {
-		open(F,">fifo_list") || die "can't talk to fifo_list\n";
-		print F "zap2 $last_chan\n";
-		close(F);
+		if (open(F,">fifo_list")) {
+			print F "zap2 $last_chan\n";
+			close(F);
+		} else {
+			print "can't talk to fifo_list\n";
+		}
 		goto read_fifo;
 	} elsif ($cmd =~ s/^prog //) {
 		# Note : $long est passé collé à la commande par un :
@@ -989,8 +1006,9 @@ sub request {
     my $url = shift;
 	my $response = $browser->get($url);
 
-	die "$url error: ", $response->status_line
-	unless $response->is_success;
+	if (!$response->is_success) {
+		print "$url error: $response->status_line\n";
+	}
 
 	return $response->content;
 }
@@ -1003,17 +1021,23 @@ sub getListeChaines {
 
 		$r = request($url);
 		if ($r) {
-			open(F,">liste_chaines") || die "can't create liste_chaines\n";
-			print F $r;
-			close(F);
+			if (open(F,">liste_chaines")) {
+				print F $r;
+				close(F);
+			} else {
+				print "can't create liste_chaines\n";
+			}
 		}
 	} else {
 		print "using cache for liste_chaines\n";
-		open(F,"<liste_chaines") || die "can't read liste_chaines\n";
-		while (<F>) {
-			$r .= $_;
+		if (open(F,"<liste_chaines")) {
+			while (<F>) {
+				$r .= $_;
+			}
+			close(F);
+		} else {
+			print "can't read liste_chaines\n";
 		}
-		close(F);
 	}
 	return lc($r);
 }
