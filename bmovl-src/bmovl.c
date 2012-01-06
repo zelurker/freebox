@@ -595,7 +595,6 @@ static int image(int argc, char **argv) {
     if (pic->h > h) r.h = h;
     SDL_Rect dst;
     dst.x = x; dst.y = y; 
-    printf("image: %d,%d,%d,%d\n",x,y,r.w,r.h);
     SDL_BlitSurface(pic,&r,sdl_screen,&dst);
     SDL_UpdateRect(sdl_screen,x,y,w,h);
     SDL_FreeSurface(pic);
@@ -681,7 +680,7 @@ int main(int argc, char **argv) {
 		    server = 0;
 		if (sdl_screen) {
 		    SDL_Event event;
-		    if (SDL_PollEvent(&event))
+		    while (SDL_PollEvent(&event))
 			handle_event(&event);
 		}
 	    }
