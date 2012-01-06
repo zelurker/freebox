@@ -643,7 +643,6 @@ if (!$reread || !$channel) {
 			}
 			$delay -= $time if ($delay);
 
-			print "delay = $delay\n";
 			my $nfound;
 			eval {
 				local $SIG{ALRM} = sub { die "alarm\n"; };

@@ -1,5 +1,16 @@
 #!/usr/bin/perl
 
+# Au départ c'était sensé être un script simple...
+# juste de quoi récupérer en temps réel la sortie de mplayer pour réagir
+# aussitôt.
+# Mais après j'ai voulu ajouter les recherches de google images
+# Et là s'est posé un problème à priori simple : comment interrompre une
+# lecture à intervalles réguliers pour aller faire autre chose ? Normalement
+# ça se fait en 1 seule ligne : alarm. Sauf que là c'est une fifo, et si le
+# signal d'alarm arrive pendant la lecture de la fifo, ça provoque une
+# fermeture de la fifo et un SIGPIPE à l'autre bout ! Du coup il a fallu se
+# rabattre sur select/sysread, et ça alourdit considérablement l'écriture...
+
 use strict;
 use Fcntl;
 require "output.pl";
@@ -9,12 +20,20 @@ eval {
 };
 my $images = 0;
 my @cur_images;
+our $agent;
+our $init = 0;
 if (!$@) {
 	# google images dispo si pas d'erreur
 	$images = 1;
+	$agent = WWW::Google::Images->new(
+		server => 'images.google.com',
+	);
 }
-my $titre;
-my $last_image;
+our $titre;
+our $old_titre = "";
+our $time;
+our $last_image;
+my $buff = "";
 
 sub handle_result($) {
 	my $result = shift;
@@ -25,7 +44,8 @@ sub handle_result($) {
 		my $h = <F>;
 		close(F);
 		chomp($w,$h);
-		my ($x,$y) = (0,0);
+		my ($x,$y) = ($w/36,$h/36);
+		$w -= $x; $h -= $y;
 		if (open(F,"<list_coords")) {
 			my $coords = <F>;
 			my ($aw,$ah,$ax,$ay) = split(/ /,$coords);
@@ -38,48 +58,48 @@ sub handle_result($) {
 			my $coords = <F>;
 			my ($aw,$ah,$ax,$ay) = split(/ /,$coords);
 			$h = $ay-$y;
-			print "info: correction h = $ay - $y = $h\n";
-		} else {
-			print "info: pas de info_coords pour image\n";
 		}
 
-		my $pic = $image->save_content(base => 'image');
-		if ($last_image && $pic ne $last_image) {
-			unlink $last_image;
-		}
-		$last_image = $pic;
-		print "handle_result : $pic\n";
-		if (`file $pic` =~ /gzip/) {
-			print "gzip detected\n";
+		my ($pic,$ftype);
+		do {
+			$pic = $image->save_content(base => 'image');
+			if ($last_image && $pic ne $last_image) {
+				unlink $last_image;
+			}
+			$last_image = $pic;
+			$ftype = `file $pic`;
+			chomp $ftype;
+			if ($ftype =~ /error/i) {
+				$image = $result->next;
+				if (!$image) {
+					return if (!$image);
+				}
+			}
+		} while ($ftype =~ /error/i);
+
+		if ($ftype =~ /gzip/) {
 			rename($pic,"$pic.gz");
 			system("gunzip $pic.gz");
-			print "gunzipped\n";
 		}
 		my $out = open_bmovl();
-		print "info: sending image $x $y $w $h\n";
 		print $out "image $pic $x $y $w $h\n";
 		close($out);
-	} else {
-		print "handle_result: plus d'images !\n";
 	}
 }
 
 sub handle_images($) {
 	my $cur = shift;
+	$old_titre = $cur;
 	if (!@cur_images || $cur_images[0] ne $cur) {
 		# Reset de la recherche précédente si pas finie !
 		if ($cur_images[1]) {
-			print "handle_image: reset vieille recherche\n";
 			my $result = $cur_images[1];
 			while ($result->next()) {}
+			unlink $last_image if ($last_image);
 		}
 
 		@cur_images = ($cur);
-		my $agent = WWW::Google::Images->new(
-			server => 'images.google.com',
-		);
 
-		print "images: recherche sur $cur\n";
 		my $result = $agent->search($cur, limit => 10);
 		handle_result($result);
 		push @cur_images,$result;
@@ -87,10 +107,8 @@ sub handle_images($) {
 		my $result = $cur_images[1];
 		handle_result($result);
 	}
-	alarm(25);
+	$time = time()+25;
 }
-
-$SIG{ALRM} = sub { handle_images($titre); };
 
 my $pid;
 open(F,"<info.pid") || die "can't open info.pid !\n";
@@ -117,7 +135,6 @@ sub send_cmd_prog {
 			$error = 0;
 			print F "prog $chan\n";
 			close(F);
-			print "filter: commande prog envoyée\n";
 		} else {
 			print "filter: envoi commande prog from filter impossible tries=$tries !\n";
 			$error = 1;
@@ -128,7 +145,7 @@ sub send_cmd_prog {
 }
 
 sub update_codec_info() {
-	if ($codec && $bitrate) {
+	if ($codec && $bitrate && $init) {
 		my $info = "";
 		if (open(F,"<stream_info")) {
 			while (<F>) {
@@ -147,58 +164,91 @@ sub update_codec_info() {
 	}
 }
 
-while (<>) {
+my $rin = "";
+vec($rin,fileno(STDIN),1) = 1;
+while (1) {
+
 	chomp;
-	if (/ID_VIDEO_WIDTH=(.+)/) {
-		$width = $1;
-	} elsif (/ID_VIDEO_HEIGHT=(.+)/) {
-		$height = $1;
-	} elsif (/ID_AUDIO_CODEC=(.+)/) {
-		$codec = $1;
-		$codec =~ s/mpg123/mp3/;
-		update_codec_info();
-	} elsif (/ID_AUDIO_BITRATE=(.+)/ || /^Bitrate\: (.+)/) {
-		if ($1) {
-			$bitrate = $1;
-			$bitrate =~ s/000$/k/;
+	my $t = undef;
+	$t = $time - time() if ($time);
+	if ($t < 0) {
+		handle_images($titre);
+		next;
+	}
+	my $rout = $rin;
+	my $nfound = select($rout,undef,undef,$t);
+	if ($time && $time <= time()) {
+		handle_images($titre);
+	}
+	if ($nfound > 0) {
+		my $ret = sysread(STDIN,$buff,256,length($buff));
+
+		if (defined($ret) && $ret == 0) {
+			last;
+		}
+	} else {
+		next;
+	}
+	while ($buff =~ s/(.+?)\n//) {
+		$_ = $1;
+		if (/ID_VIDEO_WIDTH=(.+)/) {
+			$width = $1;
+		} elsif (/ID_VIDEO_HEIGHT=(.+)/) {
+			$height = $1;
+		} elsif (/ID_AUDIO_CODEC=(.+)/) {
+			$codec = $1;
+			$codec =~ s/mpg123/mp3/;
 			update_codec_info();
-		}
-	} elsif (/(\d+) x (\d+)/ && $width < 300) {
-		$width = $1; $height = $2; # fallback here if it fails
-	} elsif (/(\d+)x(\d+) =/ && $width < 300) {
-		$width = $1; $height = $2; # fallback here if it fails
-	} elsif (/ID_(EXIT|SIGNAL)/) {
-		$exit .= $_;
-	} elsif (/End of file/i) {
-		$exit .= $_;
-	} elsif (/ICY Info/) {
-		my $info = "";
-		while (s/([a-z_]+)\=\'(.*?)\'\;//i) {
-			my ($name,$val) = ($1,$2);
-			if ($name eq "StreamTitle") {
-				$info .= "$val ";
-				$titre = $val;
-				$titre .= " (pas de WWW::Google::Images)" if (!$images);
-			} elsif ($val && $name ne "StreamUrl") {
-				$info .= " + $name=\'$val\' ";
+		} elsif (/ID_AUDIO_BITRATE=(.+)/ || /^Bitrate\: (.+)/) {
+			if ($1) {
+				$bitrate = $1;
+				$bitrate =~ s/000$/k/;
+				update_codec_info();
 			}
+		} elsif (/Audio only/) {
+			$init = 1;
+			update_codec_info() if ($bitrate && $codec);
+		} elsif (/(\d+) x (\d+)/ && $width < 300) {
+			$width = $1; $height = $2; # fallback here if it fails
+		} elsif (/(\d+)x(\d+) =/ && $width < 300) {
+			$width = $1; $height = $2; # fallback here if it fails
+		} elsif (/ID_(EXIT|SIGNAL)/) {
+			$exit .= $_;
+		} elsif (/End of file/i) {
+			$exit .= $_;
+		} elsif (/ICY Info/) {
+			my $info = "";
+			while (s/([a-z_]+)\=\'(.*?)\'\;//i) {
+				my ($name,$val) = ($1,$2);
+				if ($name eq "StreamTitle") {
+					$info .= "$val ";
+					$titre = $val;
+					$info .= " (pas de WWW::Google::Images)" if (!$images);
+				} elsif ($val && $name ne "StreamUrl") {
+					$info .= " + $name=\'$val\' ";
+				}
+			}
+			$info =~ s/ *$//;
+			if ($info && open(F,">>stream_info")) {
+				print F "$info\n";
+				close(F);
+			}
+			system("./info 1 &");
+
+			if ($images && $titre =~ /\-/ && $titre ne $old_titre) {
+				handle_images($titre) ;
+			} else {
+				$titre = $old_titre;
+			}
+		} elsif (/Starting playback/) {
+			if ($width && $height) {
+				open(F,">video_size") || die "can't write to video_size\n";
+				print F "$width\n$height\n";
+				close(F);
+				kill "USR1",$pid;
+			}
+			send_cmd_prog();
 		}
-		$info =~ s/ *$//;
-		if ($info && open(F,">>stream_info")) {
-			print F "$info\n";
-			close(F);
-		}
-		system("./info 1 &");
-		
-		handle_images($titre) if ($images && $titre =~ /\-/);
-	} elsif (/Starting playback/) {
-	    if ($width && $height) {
-			open(F,">video_size") || die "can't write to video_size\n";
-			print F "$width\n$height\n";
-			close(F);
-			kill "USR1",$pid;
-		}
-		send_cmd_prog();
 	}
 }
 kill "USR2",$pid;
@@ -206,5 +256,5 @@ open(F,">id") || die "can't write to id\n";
 print F "$exit\n";
 close(F);
 print "filter: exit message : $exit\n";
-unlink("video_size","stream_info");
+unlink("video_size","stream_info",$last_image);
 
