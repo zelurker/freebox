@@ -1,0 +1,7 @@
+#!/bin/sh
+
+if [ -f numero_coords ]; then
+	echo backspace > fifo_list
+else
+	echo speed_set 1.0 > fifo_cmd
+fi
