@@ -26,6 +26,8 @@ close(F);
 my @modes = (
 	"freeboxtv",  "dvb", "Enregistrements", "Fichiers vidéo", "livetv", "flux","radios freebox",
 	"cd");
+my ($mode_opened,$mode_sel);
+
 if (open(F,"<current")) {
 	@_ = <F>;
 	close(F);
@@ -133,6 +135,7 @@ sub read_list {
 		cd_menu();	
 	} elsif ($source =~ /freebox/) {
 		my $list;
+		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 		if (!-f "freebox.m3u" || -M "freebox.m3u" >= 1) {
 			$list = get "http://mafreebox.freebox.fr/freeboxtv/playlist.m3u";
 			die "can't get freebox playlist\n" if (!$list);
@@ -349,14 +352,15 @@ sub get_name {
 	my $rtab = shift;
 	my $name = $$rtab[0][1];
 	my $sel = $$rtab[0];
-	# print "list: looking for $name\n";
-	foreach (@$rtab) {
-		if (length($$_[1]) < length($name)) {
-			$sel = $_;
+	if ($mode_opened && $rtab == $list[$found]) {
+		$sel = $$rtab[$mode_sel];
+	} else {
+		foreach (@$rtab) {
+			if (length($$_[1]) < length($name)) {
+				$sel = $_;
+			}
 		}
 	}
-	# retourne nom, service, flavour, audio, video
-	# print  "*** get_name: $$sel[1],$$sel[2],$$sel[3]\n";
 	return ($$sel[1],$$sel[2],$$sel[3],$$sel[4],$$sel[5]);
 }
 
@@ -506,6 +510,54 @@ sub load_file2($$$$$) {
 	}
 }
 
+sub get_cur_mode {
+	# Détermine si on est sur la chaine qui passe, un bazar
+	if (open(F,"<current")) {
+		<F>; # nom
+		my $src = <F>;
+		chomp $src;
+		if ($src ne "freeboxtv") {
+			close(F);
+			return 0; # Toujours le 1er mode sur une chaine différente
+		}
+		my $serv = <F>;
+		my $flav = <F>;
+		chomp ($serv,$flav);
+		close(F);
+		for (my $n=0; $n<=$#{$list[$found]}; $n++) {
+			my ($num,$name,$service,$flavour,$audio,$video,$red) = @{$list[$found][$n]};
+			if ($service == $serv && $flavour eq $flav) {
+				return $n;
+			}
+		}
+	}
+	return 0;
+}
+
+sub disp_modes {
+	# Affiche la boite de modes sur la droite
+	# $mode_sel doit déjà être initialisé (éventuellement par get_cur_mode)
+	my $out = setup_output("mode_list");
+	$mode_opened = 1;
+	my $n=0;
+	print $out "modes\n";
+	foreach (@{$list[$found]}) {
+		my ($num,$name,$serv,$flav) = @{$_};
+		if ($mode_sel == $n++) {
+			print $out "*";
+		} else {
+			print $out " ";
+		}
+		print $out sprintf("%3d:%s",$num,$name),"\n";
+	}
+	close($out);
+}
+
+sub close_mode {
+	clear("mode_coords");
+	$mode_opened = 0;
+}
+
 read_conf();
 read_list();
 system("rm -f fifo_list && mkfifo fifo_list");
@@ -519,21 +571,45 @@ while (1) {
 	if (-f "list_coords" && $cmd eq "clear") {
 		clear("list_coords");
 		clear("info_coords");
+		close_mode() if ($mode_opened);
 		next;
 	} elsif ($cmd eq "refresh") {
 		read_list() if ($source eq "Enregistrements");
 	} elsif ($cmd eq "down") {
+		if ($mode_opened) {
+			$mode_sel++;
+			$mode_sel = 0 if ($mode_sel > $#{$list[$found]});
+			disp_modes();
+			next;
+		}
 		$found++;
 	} elsif ($cmd eq "up") {
+		if ($mode_opened) {
+			$mode_sel--;
+			$mode_sel = $#{$list[$found]} if ($mode_sel < 0);
+			disp_modes();
+			next;
+		}
 		$found--;
 	} elsif ($cmd eq "right") {
 		if ($source eq "flux" && $found > $#list-$nb_elem) {
 			$cmd = "zap1";
 			goto again;
 		} else {
+			my $rtab = $list[$found];
+			if ($#$rtab > 0 && !$mode_opened) {
+				$mode_sel = get_cur_mode();
+				disp_modes();
+				next;
+			}
+			close_mode if ($mode_opened);
 			$found += $nb_elem;
 		}
 	} elsif ($cmd eq "left") {
+		if ($mode_opened) {
+			close_mode();
+			next;
+		}
 		if ($source eq "flux" && $base_flux && 
 		    ($found < $nb_elem || $nb_elem == 0)) {
 			if ($base_flux =~ /\//) {
@@ -551,6 +627,11 @@ while (1) {
 			$found -= $nb_elem;
 		}
 	} elsif ($cmd eq "home") {
+		if ($mode_opened) {
+			$mode_sel = 0;
+			disp_modes();
+			next;
+		}
 		$found = 0;
 	} elsif ($cmd eq "end") {
 		$found = $#list;
@@ -571,10 +652,6 @@ while (1) {
 							$aud eq $audio && $video eq $vid) {
 							print "insert found $name for $service/$serv $flavour/$flav $aud/$audio $vid/$video\n";
 							$trouve = 1;
-						} elsif ($name =~ /Teva/i) {
-							print "insert not found $name for $service/$serv $flavour/$flav $aud/$audio $vid/$video.\n";
-						} else {
-							print "insert: paumé name=$name.\n";
 						}
 					}
 					print F "$_\n" if (!$trouve);
@@ -609,21 +686,29 @@ while (1) {
 				close(G);
 			}
 					
-			foreach (@{$list[$found]}) {
-				my ($num,$name,$service,$flavour,$audio,$video) = @{$_};
-				print F "$service:$flavour:$audio:$video:$name\n";
+			if (!$mode_opened) {
+				foreach (@{$list[$found]}) {
+					my ($num,$name,$service,$flavour,$audio,$video) = @{$_};
+					print F "$service:$flavour:$audio:$video:$name\n";
+				}
+			} else {
+				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+				print F "$serv:$flav:$audio:$video:$name\n";
 			}
+
 			close(F);
 			unlink "rejets/$source" && rename("rejets/$source.0","rejets/$source");
 		} else {
 			print "list: Can't open rejects\n";
 		}
-		splice @list,$found,1;
+		read_list();
+		close_mode() if ($mode_opened);
 	} elsif ($cmd =~ /^zap(1|2)/) {
 		if ($cmd =~ s/^zap2 //) {
 			($found) = find_name($cmd);
 		}
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+		$mode_opened = 0 if ($mode_opened);
 		if ($source eq "menu") {
 			$source = $name;
 			read_list();

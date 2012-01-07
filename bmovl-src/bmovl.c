@@ -21,7 +21,7 @@
 
 static int fifo;
 static char *fifo_str;
-static int server;
+static int server,infoy,listy,listh;
 static SDL_Rect r;
 
 /* Les commandes de connexion/déconnexion au fifo mplayer doivent être passés
@@ -85,6 +85,12 @@ static int info(int fifo, int argc, char **argv)
 	static SDL_Rect r;
 	int x,y;
 	SDL_Surface *chan = NULL,*pic = NULL; 
+	int list_opened = 0;
+	FILE *f = fopen("list_coords","r");
+	if (f) {
+	    list_opened = 1;
+	    fclose(f);
+	}
 
 	static int margew,margeh;
 	if (!strcmp(argv[0],"bmovl")) {
@@ -251,7 +257,9 @@ static int info(int fifo, int argc, char **argv)
 	// Display
 	x = margew;
 	y = height - sf->h - margeh;
-	FILE *f = fopen("info_coords","r");
+	if (list_opened && y < listy+listh)
+	    y = listy+listh;
+	f = fopen("info_coords","r");
 	if (f) {
 		int oldx,oldy,oldw,oldh;
 		fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
@@ -265,6 +273,7 @@ static int info(int fifo, int argc, char **argv)
 	/* printf("bmovl: blit %d %d %d %d avec width %d height %d\n",
 			sf->w,sf->h,x,y,width,height); */
 	blit(fifo, sf, x, y, -40, 0);
+	infoy = y; // pour mode_list
 	send_command(fifo,"SHOW\n");
 	// printf("bmovl: show done\n");
 	f = fopen("info_coords","w");
@@ -290,10 +299,9 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     // int maxh;
     width = atoi(argv[2]);
     height = atoi(argv[3]);
-    // if (argc == 5) maxh = atoi(argv[4]);
-    // else maxh = height - 8;
     int fsize = height/35;
     int fsel = !strcmp(argv[0],"fsel");
+    int mode_list = !strcmp(argv[0],"mode_list");
     TTF_Font *font = TTF_OpenFont("Vera.ttf",fsize);
     if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
     int num[20];
@@ -322,7 +330,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	while (*end_nb >= '0' && *end_nb <= '9')
 	    end_nb++;
 	*end_nb++ = 0;
-	if (!fsel) {
+	if (!fsel && !mode_list) {
 	    get_size(font,&buff[1],&w,&h,maxw);
 	    if (w > numw) numw = w;
 	    num[nb] = atoi(&buff[1]);
@@ -340,6 +348,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 
     int n;
     int x=8,y=8;
+
     wlist += numw+8; // le numÃ©ro sur la gauche (3 chiffres + sÃ©parateur)
     if (wlist > maxw) {
 	wlist = maxw;
@@ -359,7 +368,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int red = SDL_MapRGB(sf->format,0xff,0x50,0x50);
     int cyan = SDL_MapRGB(sf->format, 0x50,0xff,0xff);
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
-    int bg = get_bg(sf);
+    int bg = get_bg(sf),sely;
     for (n=0; n<nb; n++) {
 	int hidden = 0;
 	int l = strlen(list[n]);
@@ -374,16 +383,17 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    SDL_Rect r;
 	    r.x = 8; r.y = y; r.w = wlist; r.h = fsize;
 	    SDL_FillRect(sf,&r,fg);
-	    if (!fsel)
+	    if (!fsel && !mode_list)
 		put_string(sf,font,8,y,buff,bg,height); // NumÃ©ro
 	    int dy = put_string(sf,font,x,y,list[n],bg,height);
 	    if (dy != fsize) { // bad guess, 2nd try...
 		r.h = dy;
 		SDL_FillRect(sf,&r,fg);
-		if (!fsel)
+		if (!fsel && !mode_list)
 		    put_string(sf,font,8,y,buff,bg,height); // NumÃ©ro
 		dy = put_string(sf,font,x,y,list[n],bg,height);
 	    }
+	    sely = y+dy/2;
 	    y += dy;
 	} else {
 	    char oldfg;
@@ -394,7 +404,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 		oldfg = fg;
 		fg = cyan;
 	    }
-	    if (!fsel)
+	    if (!fsel && !mode_list)
 		put_string(sf,font,8,y,buff,fg,height); // NumÃ©ro
 	    y += put_string(sf,font,x,y,list[n],fg,height);
 	    if (status[n] == 'R' || status[n] == 'D') fg = oldfg;
@@ -404,38 +414,55 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	}
     }
 
+    int oldx,oldy,oldw,oldh,oldsel;
+
     FILE *f = fopen("list_coords","r");
     if (f) {
-	int oldx,oldy,oldw,oldh;
-	fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
 	fclose(f);
-	if (oldh > sf->h) {
-	    char buff[2048];
-	    sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy+sf->h);
-	    send_command(fifo, buff);
-	}
-	if (oldw > sf->w) {
-	    char buff[2048];
-	    sprintf(buff,"CLEAR %d %d %d %d\n",oldw-sf->w,oldh,oldx+sf->w,oldy);
-	    send_command(fifo, buff);
+	if (!mode_list) {
+	    if (oldh > sf->h) {
+		char buff[2048];
+		sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy+sf->h);
+		send_command(fifo, buff);
+	    }
+	    if (oldw > sf->w) {
+		char buff[2048];
+		sprintf(buff,"CLEAR %d %d %d %d\n",oldw-sf->w,oldh,oldx+sf->w,oldy);
+		send_command(fifo, buff);
+	    }
 	}
     }
 
     // Display
-    x = margew;
-    y = margeh;
+    if (mode_list) {
+	x = oldx+oldw;
+	y = oldsel-sf->h/2;
+	if (y+sf->h > infoy)
+	    y = infoy-sf->h;
+	if (y < 0) y = 0;
+	f = fopen("mode_coords","w");
+	fprintf(f,"%d %d %d %d \n",sf->w, sf->h,
+		x, y);
+	fclose(f);
+    } else {
+	x = margew;
+	y = margeh;
+	f = fopen("list_coords","w");
+	fprintf(f,"%d %d %d %d %d\n",sf->w, sf->h,
+		x, y,sely);
+	fclose(f);
+    }
     // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
     // apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
     // Pour l'instant le meilleur contournement c'est ça.
     blit(fifo, sf, x, y, -40, (noinfo ? 0 : 1));
+    listy = y; listh = sf->h;
     send_command(fifo,"SHOW\n");
-    f = fopen("list_coords","w");
-    fprintf(f,"%d %d %d %d ",sf->w, sf->h,
-	    x, y);
-    fclose(f);
+
     // Clean up
     SDL_FreeSurface(sf);
-    if (current > -1 && !noinfo && !fsel) {
+    if (current > -1 && !noinfo) {
 	int info=0;
 	int tries = 0;
 	while (tries++ < 4 && info <= 0) {
@@ -704,9 +731,10 @@ int main(int argc, char **argv) {
 		if (!strcmp(cmd,"bmovl") || !strcmp(cmd,"next") ||
 			!strcmp(cmd,"prev")) {
 		    ret = info(fifo,argc,myargv);
-		} else if (!strcmp(cmd,"list") || !strcmp(cmd,"fsel")) {
+		} else if (!strcmp(cmd,"list")) {
 		    ret = list(fifo,argc,myargv,0);
-		} else if (!strcmp(cmd,"list-noinfo")) {
+		} else if (!strcmp(cmd,"list-noinfo") || !strcmp(cmd,"fsel") ||
+			!strcmp(cmd,"mode_list")) {
 		    ret = list(fifo,argc,myargv,1);
 		} else if (!strcmp(cmd,"CLEAR")) {
 		    ret = clear(fifo,argc,myargv);
