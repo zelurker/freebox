@@ -280,7 +280,6 @@ sub read_list {
 			push @list,[[1,"../",".."]];
 			$num = 2;
 		}
-		print "Fichiers: $pat\n";
 		while (glob($pat)) {
 			my $service = $_;
 			my $name = $service;
@@ -742,7 +741,6 @@ while (1) {
 			load_file($serv);
 			next;
 		} elsif ($source =~ /^Fichiers/) {
-			print "zap $source : $serv\n";
 			if ($name =~ /\/$/) { # Répertoire
 				if ($serv eq "..") {
 					$conf{video_path} =~ s/^(.*)\/.+/$1/;

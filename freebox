@@ -193,16 +193,7 @@ while [ "$exit" != "1" ]; do
 			fi
 
 			src=`head -n 2 current|tail -n 1`
-			if [ -f live ]; then
-				rm -f live
-				if ! grep -q ID_EXIT=QUIT id; then
-					echo switch_mode $src > fifo_list
-					init_mp1
-					again=1
-				fi
-			fi
 			# echo end of while loop length $length again $again
-			audio=`head -n 5 current|tail -n 1`
 			again=1
 			if grep -q ID_EXIT=QUIT id &&
 			   	! grep -q ID_SIGNAL=15 id && ! grep -q "End of file" id; then
