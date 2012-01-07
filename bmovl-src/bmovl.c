@@ -68,6 +68,12 @@ static void myexit(int signal) {
     exit(0);
 }
 
+static TTF_Font *open_font(int fsize) {
+    TTF_Font *font = TTF_OpenFont("Vera.ttf",fsize);
+    if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
+    return font;
+}
+
 static int info(int fifo, int argc, char **argv)
 {
 	char *s = strrchr(argv[0],'/');
@@ -84,7 +90,7 @@ static int info(int fifo, int argc, char **argv)
 	static SDL_Surface *sf;
 	static SDL_Rect r;
 	int x,y;
-	SDL_Surface *chan = NULL,*pic = NULL; 
+	SDL_Surface *chan = NULL,*pic = NULL;
 	int list_opened = 0;
 	FILE *f = fopen("list_coords","r");
 	if (f) {
@@ -116,8 +122,7 @@ static int info(int fifo, int argc, char **argv)
 			TTF_CloseFont(font);
 			SDL_FreeSurface(sf);
 		}
-		font = TTF_OpenFont("Vera.ttf",fsize);
-		if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
+		font = open_font(fsize);
 		if (!font) {
 			printf("Could not load Vera.ttf, come back with it !\n");
 			return -1;
@@ -208,7 +213,7 @@ static int info(int fifo, int argc, char **argv)
 			if (r.y + pic->h < sf->h) {
 				SDL_BlitSurface(pic,NULL,sf,&r);
 				r.y += pic->h+8;
-			} 
+			}
 			SDL_FreeSurface(pic);
 		}
 		y += put_string(sf,font,x,y,title,fg,r.y);
@@ -302,8 +307,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int fsize = height/35;
     int fsel = !strcmp(argv[0],"fsel");
     int mode_list = !strcmp(argv[0],"mode_list");
-    TTF_Font *font = TTF_OpenFont("Vera.ttf",fsize);
-    if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
+    TTF_Font *font = open_font(fsize);
     int num[20];
     int current = -1;
     myfgets(buff,4096,stdin);
@@ -339,7 +343,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	int l = strlen(end_nb);
 	if (end_nb[l-1] == '>')
 	    end_nb[l-1] = 0;
-	get_size(font,end_nb,&w,&h,maxw-numw); 
+	get_size(font,end_nb,&w,&h,maxw-numw);
 	if (w > wlist) wlist = w;
 	hlist += h;
     }
@@ -531,30 +535,30 @@ static void read_inputs() {
 	}
 	if (buff[1] == 0)
 	    keys[nb_keys] = buff[0]; // touche alphanumérique (1 caractère)
-	else if (!strcasecmp(buff,"UP")) 
+	else if (!strcasecmp(buff,"UP"))
 	    keys[nb_keys] = SDLK_UP;
-	else if (!strcasecmp(buff,"DOWN")) 
+	else if (!strcasecmp(buff,"DOWN"))
 	    keys[nb_keys] = SDLK_DOWN;
-	else if (!strcasecmp(buff,"LEFT")) 
+	else if (!strcasecmp(buff,"LEFT"))
 	    keys[nb_keys] = SDLK_LEFT;
-	else if (!strcasecmp(buff,"RIGHT")) 
+	else if (!strcasecmp(buff,"RIGHT"))
 	    keys[nb_keys] = SDLK_RIGHT;
-	else if (!strcasecmp(buff,"TAB")) 
+	else if (!strcasecmp(buff,"TAB"))
 	    keys[nb_keys] = SDLK_TAB;
 	else if ((buff[0] == 'F' || buff[0] == 'f') &&
 	       	(n = atoi(&buff[1])) > 0)
 	    keys[nb_keys] = SDLK_F1+n-1;
-	else if (!strcasecmp(buff,"HOME")) 
+	else if (!strcasecmp(buff,"HOME"))
 	    keys[nb_keys] = SDLK_HOME;
-	else if (!strcasecmp(buff,"END")) 
+	else if (!strcasecmp(buff,"END"))
 	    keys[nb_keys] = SDLK_END;
-	else if (!strcasecmp(buff,"ENTER")) 
+	else if (!strcasecmp(buff,"ENTER"))
 	    keys[nb_keys] = SDLK_RETURN;
-	else if (!strcasecmp(buff,"PGUP")) 
+	else if (!strcasecmp(buff,"PGUP"))
 	    keys[nb_keys] = SDLK_PAGEUP;
-	else if (!strcasecmp(buff,"PGDWN")) 
+	else if (!strcasecmp(buff,"PGDWN"))
 	    keys[nb_keys] = SDLK_PAGEDOWN;
-	else if (!strcasecmp(buff,"DEL")) 
+	else if (!strcasecmp(buff,"DEL"))
 	    keys[nb_keys] = SDLK_DELETE;
 	else if (!strcasecmp(buff,"INS"))
 	    keys[nb_keys] = SDLK_INSERT;
@@ -562,7 +566,7 @@ static void read_inputs() {
 	    keys[nb_keys] = SDLK_ESCAPE;
 	else if (!strcasecmp(buff,"SPACE"))
 	    keys[nb_keys] = SDLK_SPACE;
-	else if (!strncasecmp(buff,"KP",2)) 
+	else if (!strncasecmp(buff,"KP",2))
 	    keys[nb_keys] = SDLK_KP0 + atoi(&buff[2]);
 	else {
 	    printf("touche inconnue %s commande %s\n",buff,c+1);
@@ -571,6 +575,40 @@ static void read_inputs() {
 	command[nb_keys++] = strdup(c+1);
     }
     fclose(f);
+}
+
+static int numero(int fifo, int argc, char **argv) {
+    if (argc != 2) {
+	printf("numéro: mauvais nombre d'arguments\n");
+	return(1);
+    }
+    int width,height;
+    FILE *f = fopen("video_size","r");
+    if (f) {
+	fscanf(f,"%d\n",&width);
+	fscanf(f,"%d\n",&height);
+	fclose(f);
+    } else {
+	width = sdl_screen->w;
+	height = sdl_screen->h;
+    }
+    int margew = width/36;
+    int margeh = height/36;
+    TTF_Font *font = open_font(height/35);
+    int w = 0, h = 0;
+    get_size(font,argv[1],&w,&h,width-32);
+    SDL_Surface *sf = create_surface(w+16,h+16);
+    int fg = get_fg(sf);
+    put_string(sf,font,8,8,argv[1],fg,0);
+    int x = width-margew-sf->w, y = margeh*2;
+    blit(fifo, sf, x, y, -40, 0);
+    SDL_FreeSurface(sf);
+    f = fopen("numero_coords","w");
+    if (f) {
+	fprintf(f,"%d %d %d %d\n",sf->w,sf->h,x,y);
+	fclose(f);
+    }
+    return 0;
 }
 
 static void handle_event(SDL_Event *event) {
@@ -582,7 +620,7 @@ static void handle_event(SDL_Event *event) {
     for (n=0; n<nb_keys; n++) {
 	if (input == keys[n]) {
 	    printf("touche trouvée, commande %s\n",command[n]);
-	    if (!strncmp(command[n],"run",3)) 
+	    if (!strncmp(command[n],"run",3))
 		system(&command[n][4]);
 	    else {
 		int cmd = open("fifo_cmd",O_WRONLY|O_NONBLOCK);
@@ -621,7 +659,7 @@ static int image(int argc, char **argv) {
     if (pic->w > w) r.w = w;
     if (pic->h > h) r.h = h;
     SDL_Rect dst;
-    dst.x = x; dst.y = y; 
+    dst.x = x; dst.y = y;
     SDL_BlitSurface(pic,&r,sdl_screen,&dst);
     SDL_UpdateRect(sdl_screen,x,y,w,h);
     SDL_FreeSurface(pic);
@@ -703,7 +741,7 @@ int main(int argc, char **argv) {
 		    }
 		    stdin = fdopen(server,"r");
 		    len = myfgets(buff,2048,stdin); // commande
-		} else 
+		} else
 		    server = 0;
 		if (sdl_screen) {
 		    SDL_Event event;
@@ -736,13 +774,15 @@ int main(int argc, char **argv) {
 		} else if (!strcmp(cmd,"list-noinfo") || !strcmp(cmd,"fsel") ||
 			!strcmp(cmd,"mode_list")) {
 		    ret = list(fifo,argc,myargv,1);
-		} else if (!strcmp(cmd,"CLEAR")) {
+		} else if (!strcmp(cmd,"CLEAR"))
 		    ret = clear(fifo,argc,myargv);
-		} else if (!strcmp(cmd,"ALPHA")) {
+		else if (!strcmp(cmd,"ALPHA"))
 		    ret = alpha(fifo,argc,myargv);
-		} else if (!strcmp(cmd,"image")) {
+		else if (!strcmp(cmd,"image"))
 		    ret = image(argc,myargv);
-		} 
+		else if (!strcmp(cmd,"numero"))
+		    ret = numero(fifo,argc,myargv);
+
 		if (ret) {
 		    printf("bmovl: command returned %d\n",ret);
 		    /* disconnect(0);

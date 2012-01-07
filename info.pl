@@ -617,13 +617,16 @@ if (!$reread || !$channel) {
 			# Celui là sert à vérifier les déclenchements externes (noair.pl)
 			$time = time;
 			my $delay = $time + 30;
-			if (-f "list_coords") {
+			if (-f "list_coords" || -f "numero_coords") {
 				$delay = $time+3;
 			}
 			if ($last_chan && defined($last_prog) && $chaines{$last_chan}) {
-				$delay = $chaines{$last_chan}[$last_prog][4];
-				$delay = 0 if ($delay == $time);
-				print "delay nextprog : ",get_time($delay),"\n";
+				my $ndelay = $chaines{$last_chan}[$last_prog][4];
+				$ndelay = 0 if ($delay == $time);
+				print "delay nextprog : ",get_time($ndelay),"\n";
+				if (!$delay || $ndelay < $delay) {
+					$delay = $ndelay ;
+				}
 				if ($delay < $time) {
 					# on obtient un delay négatif ici quand nolife n'a pas
 					# encore les programmes actuels
@@ -673,7 +676,7 @@ if (!$reread || !$channel) {
 				}
 			}
 			handle_records($time);
-			if (-f "list_coords") {
+			if (-f "list_coords" || -f "numero_coords") {
 				if (open(G,">fifo_list")) {
 					print G "refresh\n";
 					close(G);

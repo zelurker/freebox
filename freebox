@@ -219,7 +219,7 @@ while [ "$exit" != "1" ]; do
 		done
 		rm -f player2.pid
 	fi
-	rm -f info_coords list_coords
+	rm -f info_coords list_coords numero_coords
 #	if [ "$src" != "flux" ] || cmp current current0 > /dev/null; then
 # Sortie sans test des flux, je veux pouvoir garder un flux comme chaine par
 # défaut pour rester sur une radio quand on revient

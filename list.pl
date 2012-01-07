@@ -22,6 +22,8 @@ require "mms.pl";
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
 close(F);
+my $numero = "";
+my $time_numero = undef;
 
 my @modes = (
 	"freeboxtv",  "dvb", "Enregistrements", "Fichiers vidéo", "livetv", "flux","radios freebox",
@@ -558,6 +560,14 @@ sub close_mode {
 	$mode_opened = 0;
 }
 
+sub close_numero {
+	$time_numero = undef;
+	if (defined($numero)) {
+		clear("numero_coords");
+		$numero = undef;
+	}
+}
+
 read_conf();
 read_list();
 system("rm -f fifo_list && mkfifo fifo_list");
@@ -583,6 +593,7 @@ while (1) {
 			next;
 		}
 		$found++;
+		close_numero();
 	} elsif ($cmd eq "up") {
 		if ($mode_opened) {
 			$mode_sel--;
@@ -591,6 +602,7 @@ while (1) {
 			next;
 		}
 		$found--;
+		close_numero();
 	} elsif ($cmd eq "right") {
 		if ($source eq "flux" && $found > $#list-$nb_elem) {
 			$cmd = "zap1";
@@ -605,6 +617,7 @@ while (1) {
 			close_mode if ($mode_opened);
 			$found += $nb_elem;
 		}
+		close_numero();
 	} elsif ($cmd eq "left") {
 		if ($mode_opened) {
 			close_mode();
@@ -626,6 +639,7 @@ while (1) {
 		} else {
 			$found -= $nb_elem;
 		}
+		close_numero();
 	} elsif ($cmd eq "home") {
 		if ($mode_opened) {
 			$mode_sel = 0;
@@ -633,8 +647,15 @@ while (1) {
 			next;
 		}
 		$found = 0;
+		close_numero();
 	} elsif ($cmd eq "end") {
+		if ($mode_opened) {
+			$mode_sel = $#{$list[$found]};
+			disp_modes();
+			next;
+		}
 		$found = $#list;
+		close_numero();
 	} elsif ($cmd eq "insert") {
 		print "commande insert found $found\n";
 		if (open(F,">rejets/$source.0")) {
@@ -707,6 +728,7 @@ while (1) {
 		if ($cmd =~ s/^zap2 //) {
 			($found) = find_name($cmd);
 		}
+		close_numero();
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 		$mode_opened = 0 if ($mode_opened);
 		if ($source eq "menu") {
@@ -756,7 +778,8 @@ while (1) {
 			close(F);
 			chomp($s,$f,$a,$v,$src);
 			if ($s ne $serv || $flav ne $f || $audio ne $a || $v ne $video || $src ne $source) {
-				unlink( "list_coords","info_coords","stream_info");
+				unlink( "list_coords","info_coords","stream_info",
+					"numero_coords");
 				$flav = 0 if (!$flav);
 				$video = 0 if (!$video);
 				$audio = 0 if (!$audio);
@@ -880,9 +903,60 @@ while (1) {
 	} elsif ($cmd eq "menu") {
 		$source = "menu";
 		read_list();
+	} elsif ($cmd =~ /^(\d)$/ || $cmd =~ /backspace/i) {
+		if (defined($1)) {
+			$numero .= $1;
+		} else {
+			$numero =~ s/\d$//;
+			if (!$numero) {
+				close_numero();
+				next;
+			} else {
+				clear("numero_coords");
+			}
+		}
+
+		print "list: reçu $cmd, numero=$numero\n";
+		open(F,">numero_coords");
+		close(F);
+		if (!-f "list_coords") {
+			# Si la liste est affichée faut envoyer cette commande à la fin
+			my $out = open_bmovl();
+			if ($out) {
+				print $out "numero $numero\n";
+				close($out);
+			}
+		}
+		for (my $n=0; $n<=$#list; $n++) {
+			my ($num,$name) = @{$list[$n][0]};
+			if ($num >= $numero) {
+				$found = $n;
+				last;
+			}
+		}
+		$time_numero = time()+3;
+		if (!-f "list_coords") {
+			# Si la liste est affichée de toutes façons ça va provoquer une
+			# commande à info, pas la peine de le réveiller
+			if (open(F,">fifo_info")) {
+				print F "refresh\n"; # pour réveiller info
+				close(F);
+			}
+			next;
+		}
 	} elsif ($cmd ne "list") {
-		print "list: unknown command :$cmd!\n";
+		print "list: commande inconnue :$cmd!\n";
 		next;
+	}
+	if ($cmd eq "refresh") {
+		if ($time_numero && time() >= $time_numero) {
+			if ($cmd !~ /^zap/ && $numero) {
+				$cmd = "zap1";
+				goto again;
+			}
+			close_numero();
+		}
+		next if (! -f "list_coords");
 	}
 	$nb_elem = 16;
 	$nb_elem = $#list+1 if ($nb_elem > $#list);
@@ -936,5 +1010,12 @@ while (1) {
 		print $out "\n";
 	}
 	close($out);
+	if ($cmd =~ /^(\d|backspace)$/i) {
+		my $out = open_bmovl();
+		if ($out) {
+			print $out "numero $numero\n";
+			close($out);
+		}
+	}
 }
 
