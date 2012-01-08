@@ -35,7 +35,7 @@ our $time;
 our $last_image;
 my $buff = "";
 
-sub handle_result($) {
+sub handle_result {
 	my $result = shift;
 	my $image;
 	if ($image = $result->next()) {
@@ -54,8 +54,13 @@ sub handle_result($) {
 			$w -= $x;
 			close(F);
 		}
+		if ($w <= 10) {
+			print "handle_result : on aurait w=$w, on annule\n";
+			return;
+		}
 		if (open(F,"<info_coords")) {
 			my $coords = <F>;
+			close(F);
 			my ($aw,$ah,$ax,$ay) = split(/ /,$coords);
 			$h = $ay-$y;
 		}
@@ -87,7 +92,7 @@ sub handle_result($) {
 	}
 }
 
-sub handle_images($) {
+sub handle_images {
 	my $cur = shift;
 	$old_titre = $cur;
 	if (!@cur_images || $cur_images[0] ne $cur) {
@@ -144,7 +149,7 @@ sub send_cmd_prog {
 	} while ($error && $tries++ < 3);
 }
 
-sub update_codec_info() {
+sub update_codec_info {
 	if ($codec && $bitrate && $init) {
 		my $info = "";
 		if (open(F,"<stream_info")) {

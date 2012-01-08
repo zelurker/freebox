@@ -319,7 +319,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	SDL_UpdateRect(sdl_screen,r.x,r.y,r.w,r.h);
 	r.x = r.y = r.w = r.h = 0;
     }
-    int maxw=(fsel ? width : width/2)-margew;
+    int maxw = (fsel ? width : width/2)-margew*2;
     int numw = 0;
     // Lecture des chaines, 20 maxi.
     int wlist,hlist;
@@ -354,11 +354,12 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int x=8,y=8;
 
     wlist += numw+8; // le numéro sur la gauche (3 chiffres + séparateur)
-    if (wlist > maxw) {
-	wlist = maxw;
-    }
     int xright = x+wlist;
     wlist += indicw; // place pour le > à la fin
+    if (wlist > maxw-16) {
+	wlist = maxw-16;
+	xright = x+wlist-indicw-16;
+    }
     /*	if (hlist > maxh)
 	hlist = maxh; */
 
