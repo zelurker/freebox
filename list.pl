@@ -24,6 +24,7 @@ print F "$$\n";
 close(F);
 my $numero = "";
 my $time_numero = undef;
+my $last_list = "";
 
 my @modes = (
 	"freeboxtv",  "dvb", "Enregistrements", "Fichiers vidéo", "livetv", "flux","radios freebox",
@@ -989,17 +990,13 @@ while (1) {
 	$beg = 0 if ($beg < 0);
 	my $out;
 
-	if ($source =~ /Fichiers/) {
-		$out = setup_output("fsel");
-	} else {
-		$out = setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
-	}
+	my $cur = "";
 	if (($source eq "flux" || $source eq "cd") && $base_flux) {
-		print $out "$source > $base_flux\n";
+		$cur .= "$source > $base_flux\n";
 	} elsif ($source eq "Fichiers vidéo") {
-		print $out "Fichiers vidéo : $conf{video_path}\n";
+		$cur .= "Fichiers vidéo : $conf{video_path}\n";
 	} else {
-		print $out "$source\n";
+		$cur .= "$source\n";
 	}
 	my $n = $beg-1;
 	for (my $nb=1; $nb<=$nb_elem; $nb++) {
@@ -1007,13 +1004,13 @@ while (1) {
 		my $rtab = $list[$n];
 		my ($num,$name,$service,$flavour,$audio,$video,$red) = @{$$rtab[0]};
 		if ($n == $found) {
-			print $out "*";
+			$cur .= "*";
 		} elsif ($red) {
-			print $out "R";
+			$cur .= "R";
 		} elsif ($name =~ /\/$/ && $source =~ /Fichiers/) {
-			print $out "D"; # Directory (répertoire)
+			$cur .= "D"; # Directory (répertoire)
 		} else {
-			print $out " ";
+			$cur .= " ";
 		}
 		foreach (@$rtab) {
 			my ($temp,$name2) = @$_;
@@ -1022,13 +1019,22 @@ while (1) {
 		if (!$num) {
 			die "list split failed\n";
 		}
-		print $out sprintf("%3d:%s",$num,$name);
+		$cur .= sprintf("%3d:%s",$num,$name);
 		if ($#$rtab > 0) {
-			print $out ">";
+			$cur .= ">";
 		}
-		print $out "\n";
+		$cur .= "\n";
 	}
-	close($out);
+	if ($cmd ne "refresh" || $cur ne $last_list) {
+		if ($source =~ /Fichiers/) {
+			$out = setup_output("fsel");
+		} else {
+			$out = setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
+		}
+		print $out $cur;
+		close($out);
+		$last_list = $cur;
+	}
 	if ($cmd =~ /^(\d|backspace)$/i) {
 		my $out = open_bmovl();
 		if ($out) {
