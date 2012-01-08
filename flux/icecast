@@ -1,0 +1,28 @@
+#!/usr/bin/perl
+
+use LWP::Simple;
+use strict;
+
+my $mode = shift @ARGV;
+my $str;
+if ($mode eq "Recherche") {
+    $str = `zenity --entry --text="A chercher (regex)"`;
+	chomp $str;
+}
+$_ = get "http://dir.xiph.org/yp.xml";
+print "direct\n";
+print "Recherche\nRecherche\n" if (!$mode);
+my ($name,$url);
+my %list = ();
+foreach (split /\n/) {
+	$name = $1 if (/<server_name>(.+)<\//);
+	$url = $1 if (/<listen_url>(.+)<\/listen_url>/);
+	if (/<genre>(.+)<\/genre/) {
+		$list{"$name ($1)"} = $url;
+	}
+}
+foreach (sort { lc($a) cmp lc($b) } keys %list) {
+	next if ($str && $_ !~ /$str/i);
+	print "$_\n$list{$_}\n";
+}
+
