@@ -320,13 +320,14 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	r.x = r.y = r.w = r.h = 0;
     }
     int maxw = (fsel ? width : width/2)-margew*2;
+    int maxh = height - margeh*2;
     int numw = 0;
     // Lecture des chaines, 20 maxi.
     int wlist,hlist;
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
     get_size(font,source,&wlist,&hlist,maxw);
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
-    while (!feof(stdin) && nb<20) {
+    while (!feof(stdin) && nb<20 && hlist+fsize < maxh) {
 	if (!myfgets(buff,4096,stdin)) break;
 	if (buff[0] == '*') current = nb;
 	status[nb] = buff[0];
