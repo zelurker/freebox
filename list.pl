@@ -432,18 +432,27 @@ sub send_command {
 }
 
 sub reset_current {
-	# replace le mode sur le mode courant
+	# replace tout sur current
 	if (open(A,"<current")) {
-		<A>;
+		my $name  = <A>;
 		my $src = <A>;
 		close(A);
-		chomp $src;
+		chomp($name, $src);
 		if ($src ne $source) {
 			print "reset_current: reseting to $src\n";
 			$source = $src;
 			read_list();
 		} else {
-			print "reset_current: rien à faire\n";
+			# On va quand meme chercher la chaine en cours...
+			for (my $n=0; $n<=$#list; $n++) {
+				for (my $x=0; $x<=$#{$list[$n]}; $x++) {
+					my ($num,$name2) = @{$list[$n][$x]};
+					if ($name eq $name2) {
+						$found = $n;
+						last;
+					}
+				}
+			}
 		}
 	}
 }
@@ -942,6 +951,18 @@ while (1) {
 			}
 			next;
 		}
+	} elsif ($cmd eq "nextchan") {
+		reset_current() if (! -f "list_coords");
+		$found++;
+		$found = 0 if ($found > $#list);
+		$cmd = "zap1";
+		goto again;
+	} elsif ($cmd eq "prevchan") {
+		reset_current() if (! -f "list_coords");
+		$found--;
+		$found = $#list if ($found < 0);
+		$cmd = "zap1";
+		goto again;
 	} elsif ($cmd ne "list") {
 		print "list: commande inconnue :$cmd!\n";
 		next;

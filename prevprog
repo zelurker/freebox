@@ -3,6 +3,6 @@
 if [ -f info_coords ]; then
   echo prevprog > fifo_info
 else
-  echo pause > fifo_cmd
+	echo vol -1 > fifo_cmd
 fi
 

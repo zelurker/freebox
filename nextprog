@@ -3,6 +3,6 @@
 if [ -f info_coords ]; then
   echo nextprog > fifo_info
 else
-  echo tv_step_norm > fifo_cmd
+  echo vol 1 > fifo_cmd
 fi
 
