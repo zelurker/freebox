@@ -319,7 +319,6 @@ sub read_list {
 			}
 		} else {
 			my $b = $base_flux;
-			return if ($mode_flux eq "direct");
 			if ($b =~ /\//) {
 				$b =~ s/(.+?)\/.+/$1/;
 			}
@@ -770,7 +769,7 @@ while (1) {
 				$mode_flux = "";
 				print "base_flux = $name\n";
 				read_list();
-			} elsif ($mode_flux eq "list") {
+			} elsif ($mode_flux eq "list" || $serv !~ /\/\//) {
 				$base_flux .= "/$name";
 				read_list();
 			} else {
