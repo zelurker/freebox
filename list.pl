@@ -48,7 +48,7 @@ my $mode_flux;
 our %conf;
 
 sub read_conf {
-	if (open(F,"<$ENV{HOME}/.freebox")) {
+	if (open(F,"<$ENV{HOME}/.freebox/conf")) {
 		while (<F>) {
 			chomp;
 			if (/(.+) = (.+)/) {
@@ -60,7 +60,7 @@ sub read_conf {
 }
 
 sub save_conf {
-	if (open(F,">$ENV{HOME}/.freebox")) {
+	if (open(F,">$ENV{HOME}/.freebox/conf")) {
 		foreach (keys %conf) {
 			print F "$_ = $conf{$_}\n";
 		}
@@ -125,6 +125,7 @@ sub cd_menu {
 
 sub read_list {
 #	print "list: read_list source $source base_flux $base_flux mode_flux $mode_flux\n";
+	$found = $conf{"sel_$source"};
 	if ($source eq "menu") {
 		@list = ();
 		$base_flux = "";
@@ -733,6 +734,7 @@ while (1) {
 		read_list();
 		close_mode() if ($mode_opened);
 	} elsif ($cmd =~ /^zap(1|2)/) {
+		save_conf();
 		if ($cmd =~ s/^zap2 //) {
 			($found) = find_name($cmd);
 		}
@@ -757,7 +759,6 @@ while (1) {
 				} else {
 					$conf{video_path} = $serv;
 				}
-				save_conf();
 				read_list();
 			} else {
 				load_file2($name,$serv,$flav,$audio,$video);
@@ -967,6 +968,7 @@ while (1) {
 		print "list: commande inconnue :$cmd!\n";
 		next;
 	}
+	$conf{"sel_$source"} = $found;
 	if ($cmd eq "refresh") {
 		if ($time_numero && time() >= $time_numero) {
 			if ($cmd !~ /^zap/ && $numero) {
