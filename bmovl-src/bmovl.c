@@ -535,7 +535,13 @@ static void read_inputs() {
 	    keys = realloc(keys,sizeof(int)*nb_alloc);
 	    command = realloc(command,sizeof(char*)*nb_alloc);
 	}
-	if (buff[1] == 0)
+	/* Ces 2 là (+ et -) doivent etre placées en 1er parce que c'est les
+	 * seules dont les codes ascii ne sont pas interpretés directement */
+	if (buff[0] == '-')
+	    keys[nb_keys] = SDLK_KP_MINUS;
+	else if (buff[0] == '+')
+	    keys[nb_keys] = SDLK_KP_PLUS;
+	else if (buff[1] == 0)
 	    keys[nb_keys] = buff[0]; // touche alphanumérique (1 caractère)
 	else if (!strcasecmp(buff,"UP"))
 	    keys[nb_keys] = SDLK_UP;
