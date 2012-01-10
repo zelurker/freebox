@@ -87,18 +87,21 @@ function launch() {
 		fi
 		bmovl=bmovl=1:0:fifo,
 		mplayer=mplayer
+		idle=""
 		if echo $src|grep -q Fichiers; then
 			# Bug sur la version de dév de mplayer relative à bmovl sur les
 			# fichiers. C'est lié au fps, mais dur à délimiter. Contournement:
 			# utiliser une vieille version !
 			mplayer=/usr/bin/mplayer
+			idle="-idle"
 		fi
-		echo $mplayer $audio2 -quiet $length -vf $bmovl"screenshot,kerndeint" \
+		echo $mplayer $idle $audio2 $length -vf $bmovl"screenshot,kerndeint" \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 			"$name" avec filtre en pipe
 
-			$mplayer $audio2 -quiet $length -vf $bmovl"screenshot,kerndeint" \
+			$mplayer $idle $audio2 -v $length \
+				-vf $bmovl"screenshot,kerndeint" \
 				-stop-xscreensaver -identify -input \
 				conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 				"$name" | perl filter_mplayer.pl &

@@ -256,6 +256,9 @@ while (1) {
 				kill "USR1",$pid;
 			}
 			send_cmd_prog();
+		} elsif (/Uninit video/) {
+			print "filter: end of video\n";
+			kill "USR2",$pid;
 		}
 	}
 }
