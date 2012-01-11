@@ -42,7 +42,7 @@ $source = "freeboxtv" if (!$source);
 # print "list: obtenu chan $chan source $source serv $serv flav $flav\n";
 
 my (@list);
-my $found = undef;
+our $found = undef;
 my $base_flux = "";
 my $mode_flux;
 our %conf;
@@ -60,6 +60,7 @@ sub read_conf {
 }
 
 sub save_conf {
+	$conf{"sel_$source"} = $found;
 	if (open(F,">$ENV{HOME}/.freebox/conf")) {
 		foreach (keys %conf) {
 			print F "$_ = $conf{$_}\n";
@@ -968,7 +969,6 @@ while (1) {
 		print "list: commande inconnue :$cmd!\n";
 		next;
 	}
-	$conf{"sel_$source"} = $found;
 	if ($cmd eq "refresh") {
 		if ($time_numero && time() >= $time_numero) {
 			if ($cmd !~ /^zap/ && $numero) {
