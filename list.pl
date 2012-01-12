@@ -16,6 +16,7 @@ use strict;
 use LWP::Simple;
 use Encode;
 use Fcntl;
+use File::Glob 'bsd_glob'; # le glob dans perl c'est n'importe quoi !
 require "output.pl";
 require "mms.pl";
 
@@ -286,9 +287,12 @@ sub read_list {
 		} else {
 			$pat = "$conf{$path}/*";
 			$pat =~ s/ /\\ /g;
+			$pat =~ s/\[/\\\[/g;
+			$pat =~ s/\]/\\\]/g;
 		}
 		$conf{"$tri"} = "nom" if (!$conf{"$tri"});
-		while (glob($pat)) {
+		my @paths = bsd_glob($pat);
+		while ($_ = shift @paths) {
 			my $service = $_;
 			next if (!-e $service); # lien symbolique mort
 			my $name = $service;
