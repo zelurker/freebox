@@ -26,6 +26,10 @@ fi
 if [ "$video" == "0" ]; then
 	video=""
 fi
+if echo $src|grep -q Fichiers && ! [ -f "$service" ]; then
+	# Fichier introuvable en mode Fichiers
+	service=""
+fi
 if [ "$service" == "" ]; then
 	# reset to 1st working channel then
 	service=201
@@ -33,6 +37,7 @@ if [ "$service" == "" ]; then
 	video=""
 	audio=""
 	src=freeboxtv
+	chaine="France 2"
 fi
 echo service $service flavour $flavour source $src
 cmd=""
@@ -111,119 +116,96 @@ function launch() {
 }
 
 exit=0
-while [ "$exit" != "1" ]; do
-	rm -f id fifo_list video_size
-	# 1st kill all the old eventual processes
-	for n in player1.pid; do
+rm -f id fifo_list video_size
+# 1st kill all the old eventual processes
+for n in player1.pid; do
+	if [ -f $n ]; then
+		kill `cat $n` >& /dev/null
+		rm -f $n
+	fi
+done
+if ! [ -f info.pid ]; then
+	./bmovl-src/bmovl fifo &
+fi	
+if ! ps -p `cat info_pl.pid`>&/dev/null; then
+	perl info.pl &
+fi
+if [ ! -f info_list.pid ]; then
+	perl list.pl &
+elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_list.pid` ); then
+	kill `cat info_list.pid` >& /dev/null && rm -f info_list.pid
+	perl list.pl &
+fi
+init_mp1 "$1" $2 $3 $4 $5
+name=`head -n 7 current|tail -n 1`
+if [ -f "$name" ] || [ "$src" == "flux" ]; then
+
+	again=1
+	# Cette boucle est pour récupérer la main quand on sort par erreur du
+	# fichier par la fin. On doit boucler sur l'identification du fichier parce
+	# que c'est réutiliser par eval_end.pl pour estimer où commencer la reprise
+	# inconvénient majeur : ça ralentit la reprise
+	while [ "$again" == "1" ]; do
+		# En cas de zapping, on se retrouve ici, faut remettre à jour chaine
+		chaine=`head -n 1 current`
+
+		if [ -f player2.pid ] && ps -p `cat player2.pid` >& /dev/null; then
+			# kill le 2ème process le + tard possible pour minimiser la
+			# disparition de la fenêtre pendant le zapping
+			echo quit > fifo_cmd
+			rm -f player2.pid
+		fi
+		if [ -f info.pid ]; then
+			if ! ps -p `cat info.pid` >& /dev/null; then
+				rm -f info.pid
+			fi
+		fi
+		name=`head -n 7 current|tail -n 1`
+		# Le -frames 0 ici est totalement obligatoire sinon ça peut être
+		# très long sur certains fichiers h264 !
+		if [ "$src" != "flux" ]; then
+			mplayer -identify -vo null -ao null -frames 0 "$name" > id
+			if grep -q "no video" id || grep -q "NO AUDIO" id || \
+				grep -q "H264" id; then
+				demuxer="-demuxer lavf -framedrop "
+				echo lavf activé
+			else
+				demuxer=""
+			fi
+		fi
+		launch
+		pid=$!
+		wait $pid
+		src=`head -n 2 current|tail -n 1`
+		if [ "$src" != "flux" ] && ! echo $src|grep -q Fichiers; then
+			length=`perl eval_end.pl`
+		fi
+		if [ "$length" != "0" ] && [ "$length" != "" ]; then
+			length="-ss $length"
+			rm -f list_coords info_coords mode_coords
+		else
+			length=""
+		fi
+
+		src=`head -n 2 current|tail -n 1`
+		# echo end of while loop length $length again $again
+		again=1
+		if grep -q ID_EXIT=QUIT id &&
+			! grep -q ID_SIGNAL=15 id && ! grep -q "End of file" id; then
+			echo sortie sur ID_EXIT=QUIT
+			again=0
+		fi
+	done
+	echo sortie de boucle again=$again
+	for n in player1.pid info_list.pid; do
 		if [ -f $n ]; then
 			kill `cat $n` >& /dev/null
 			rm -f $n
 		fi
 	done
-	if ! [ -f info.pid ]; then
-		./bmovl-src/bmovl fifo &
-	fi	
-	if ! ps -p `cat info_pl.pid`>&/dev/null; then
-		perl info.pl &
-	fi
-	if [ ! -f info_list.pid ]; then
-		perl list.pl &
-	elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_list.pid` ); then
-		kill `cat info_list.pid` >& /dev/null && rm -f info_list.pid
-		perl list.pl &
-	fi
-	init_mp1 "$1" $2 $3 $4 $5
-	name=`head -n 7 current|tail -n 1`
-	if [ -f "$name" ] || [ "$src" == "flux" ]; then
-
-		again=1
-		# Cette boucle est pour récupérer la main quand on sort par erreur du
-		# fichier par la fin. On doit boucler sur l'identification du fichier parce
-		# que c'est réutiliser par eval_end.pl pour estimer où commencer la reprise
-		# inconvénient majeur : ça ralentit la reprise
-		while [ "$again" == "1" ]; do
-			# En cas de zapping, on se retrouve ici, faut remettre à jour chaine
-			chaine=`head -n 1 current`
-			if [ "$src" != "flux" ] && ! echo $src|grep -q Fichiers; then
-				cp -f current current0
-			fi
-
-			if [ -f player2.pid ] && ps -p `cat player2.pid` >& /dev/null; then
-				# kill le 2ème process le + tard possible pour minimiser la
-				# disparition de la fenêtre pendant le zapping
-				echo quit > fifo_cmd
-				rm -f player2.pid
-			fi
-			if [ -f info.pid ]; then
-				if ! ps -p `cat info.pid` >& /dev/null; then
-					rm -f info.pid
-				fi
-			fi
-			name=`head -n 7 current|tail -n 1`
-			# Le -frames 0 ici est totalement obligatoire sinon ça peut être
-			# très long sur certains fichiers h264 !
-			if [ "$src" != "flux" ]; then
-				mplayer -identify -vo null -ao null -frames 0 "$name" > id
-				if grep -q "no video" id || grep -q "NO AUDIO" id || \
-					grep -q "H264" id; then
-					demuxer="-demuxer lavf -framedrop "
-					echo lavf activé
-				else
-					demuxer=""
-				fi
-#				fps=`grep ID_VIDEO_FPS id|cut -d = -f 2|sed 's/\..*//'`
-#				if [ "$fps" -gt 30 ]; then
-#					no_bmovl=1
-#				else
-#					no_bmovl=0
-#				fi
-			fi
-			launch
-			pid=$!
-			wait $pid
-			src=`head -n 2 current|tail -n 1`
-			if [ "$src" != "flux" ] && ! echo $src|grep -q Fichiers; then
-				length=`perl eval_end.pl`
-			fi
-			if [ "$length" != "0" ] && [ "$length" != "" ]; then
-				length="-ss $length"
-				rm -f list_coords info_coords
-			else
-				length=""
-			fi
-
-			src=`head -n 2 current|tail -n 1`
-			# echo end of while loop length $length again $again
-			again=1
-			if grep -q ID_EXIT=QUIT id &&
-			   	! grep -q ID_SIGNAL=15 id && ! grep -q "End of file" id; then
-				echo sortie sur ID_EXIT=QUIT
-				again=0
-			fi
-		done
-		echo sortie de boucle again=$again
-		for n in player1.pid info_list.pid; do
-			if [ -f $n ]; then
-				kill `cat $n` >& /dev/null
-				rm -f $n
-			fi
-		done
-		rm -f player2.pid
-	fi
-	rm -f info_coords list_coords numero_coords
-#	if [ "$src" != "flux" ] || cmp current current0 > /dev/null; then
-# Sortie sans test des flux, je veux pouvoir garder un flux comme chaine par
-# défaut pour rester sur une radio quand on revient
-		exit=1
-#	else
-#		cp -f current0 current
-#	fi
-if echo $src|grep -q Fichiers; then
-	cp -f current0 current
-	exit=0
+	rm -f player2.pid
 fi
-
-done
+rm -f info_coords list_coords numero_coords mode_coords
 kill `cat info.pid`
 
 
