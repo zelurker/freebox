@@ -27,7 +27,7 @@ my $time_numero = undef;
 my $last_list = "";
 
 my @modes = (
-	"freeboxtv",  "dvb", "Enregistrements", "Fichiers vidéo", "livetv", "flux","radios freebox",
+	"freeboxtv",  "dvb", "Enregistrements", "Fichiers vidéo", "Fichiers son", "livetv", "flux","radios freebox",
 	"cd");
 my ($mode_opened,$mode_sel);
 
@@ -266,24 +266,28 @@ sub read_list {
 		@list = reverse @list;
 	} elsif ($source =~ /^Fichiers/) {
 		@list = ();
+		my ($path,$tri);
+		if ($source eq "Fichiers vidéo") {
+			$path = "video_path";
+			$tri = "tri_video";
+		} else {
+			$path = "music_path";
+			$tri = "tri_music";
+		}
 		print "read_list pour $source\n";
 		my $num = 1;
 		my $pat;
-		if (!$conf{video_path}) {
-			$conf{video_path} = `pwd`;
-			chomp $conf{video_path};
+		if (!$conf{$path}) {
+			$conf{$path} = `pwd`;
+			chomp $conf{$path};
 		}
-		if ($conf{video_path} eq "/") {
+		if ($conf{$path} eq "/") {
 			$pat = "/*";
 		} else {
-			$pat = "$conf{video_path}/*";
+			$pat = "$conf{$path}/*";
 			$pat =~ s/ /\\ /g;
 		}
-		if ($conf{video_path} ne "/") {
-			push @list,[[$num++,"../",".."]];
-		}
-		$conf{"tri_video"} = "nom" if (!$conf{"tri_video"});
-		push @list,[[$num++,"Tri par $conf{tri_video}","tri par"]];
+		$conf{"$tri"} = "nom" if (!$conf{"$tri"});
 		while (glob($pat)) {
 			my $service = $_;
 			next if (!-e $service); # lien symbolique mort
@@ -298,9 +302,13 @@ sub read_list {
 			}
 		}
 		unlink "info_coords";
-		if ($conf{tri_video} eq "date") {
+		if ($conf{$tri} eq "date") {
 			@list = sort { $$a[0][3] <=> $$b[0][3] } @list;
 		}
+		if ($conf{$path} ne "/") {
+			unshift @list,[[$num++,"../",".."]];
+		}
+		unshift @list,[[$num++,"Tri par $conf{$tri}","tri par"]];
 #		@list = reverse @list;
 	} elsif ($source eq "flux") {
 		if (open(F,"<current")) {
@@ -758,15 +766,16 @@ while (1) {
 			load_file($serv);
 			next;
 		} elsif ($source =~ /^Fichiers/) {
+			my $path = ($source eq "Fichiers vidéo" ? "video_path" : "music_path");
 			if ($serv eq "tri par") {
 				$conf{tri_video} = ($conf{tri_video} eq "nom" ? "date" : "nom");
 				read_list();
 			} elsif ($name =~ /\/$/) { # Répertoire
 				if ($serv eq "..") {
-					$conf{video_path} =~ s/^(.*)\/.+/$1/;
-					$conf{video_path} = "/" if (!$conf{video_path});
+					$conf{$path} =~ s/^(.*)\/.+/$1/;
+					$conf{$path} = "/" if (!$conf{$path});
 				} else {
-					$conf{video_path} = $serv;
+					$conf{$path} = $serv;
 				}
 				read_list();
 			} else {
@@ -964,15 +973,21 @@ while (1) {
 	} elsif ($cmd eq "nextchan") {
 		reset_current() if (! -f "list_coords");
 		$found++;
-		$found = 0 if ($found > $#list);
-		$cmd = "zap1";
-		goto again;
+		if ($found <= $#list) {
+			$cmd = "zap1";
+			goto again;
+		} else {
+			$found = $#list;
+		}
 	} elsif ($cmd eq "prevchan") {
 		reset_current() if (! -f "list_coords");
 		$found--;
-		$found = $#list if ($found < 0);
-		$cmd = "zap1";
-		goto again;
+		if ($found >= 0) {
+			$cmd = "zap1";
+			goto again;
+		} else {
+			$found = 0;
+		}
 	} elsif ($cmd ne "list") {
 		print "list: commande inconnue :$cmd!\n";
 		next;
@@ -1002,8 +1017,9 @@ while (1) {
 	my $cur = "";
 	if (($source eq "flux" || $source eq "cd") && $base_flux) {
 		$cur .= "$source > $base_flux\n";
-	} elsif ($source eq "Fichiers vidéo") {
-		$cur .= "Fichiers vidéo : $conf{video_path}\n";
+	} elsif ($source =~ /Fichiers/) {
+		my $path = ($source eq "Fichiers vidéo" ? "video_path" : "music_path");
+		$cur .= "$source : $conf{$path}\n";
 	} else {
 		$cur .= "$source\n";
 	}

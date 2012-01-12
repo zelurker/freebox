@@ -21,6 +21,8 @@ eval {
 my $images = 0;
 my @cur_images;
 our $agent;
+my $last_t = 0;
+our $stream = 0;
 our $init = 0;
 if (!$@) {
 	# google images dispo si pas d'erreur
@@ -29,7 +31,9 @@ if (!$@) {
 		server => 'images.google.com',
 	);
 }
-our $titre;
+our $titre = "";
+our $artist;
+our $album;
 our $old_titre = "";
 our $time;
 our $last_image;
@@ -131,11 +135,27 @@ my ($width,$height) = ();
 my $exit = "";
 my ($codec,$bitrate);
 
+sub check_eof {
+	print "check_eof: $source\n";
+	unlink("video_size","stream_info",$last_image);
+	if (!$stream && -f "info_coords") {
+		open(F,">fifo_info");
+		print F "clear\n";
+		close(F);
+	}
+	if ($source eq "Fichiers son") {
+		print "filter: envoi nextchan\n";
+		if (open(F,">fifo_list")) {
+			print F "nextchan\n";
+			close(F);
+		}
+	}
+}
+
 sub send_cmd_prog {
 	my $tries = 1;
 	my $error;
 	do {
-
 		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
 			$error = 0;
 			print F "prog $chan\n";
@@ -186,8 +206,14 @@ while (1) {
 		handle_images($titre);
 	}
 	if ($nfound > 0) {
-		my $ret = sysread(STDIN,$buff,256,length($buff));
+		my $ret = sysread(STDIN,$buff,8192,length($buff));
 		$buff =~ s/\x00+//;
+		if (length($buff) > 40000) {
+			open(F,">buff");
+			print F $buff;
+			close(F);
+			exit(1);
+		}
 
 		if (defined($ret) && $ret == 0) {
 			last;
@@ -226,6 +252,7 @@ while (1) {
 			$exit .= $_;
 		} elsif (/ICY Info/) {
 			my $info = "";
+			$stream = 1;
 			while (s/([a-z_]+)\=\'(.*?)\'\;//i) {
 				my ($name,$val) = ($1,$2);
 				if ($name eq "StreamTitle") {
@@ -248,6 +275,23 @@ while (1) {
 			} else {
 				$titre = $old_titre;
 			}
+		} elsif (/Title: (.+)/i) {
+			$titre = $1;
+		} elsif (/Artist: (.+)/i) {
+			$artist = $1;
+		} elsif (/Album: (.+)/i) {
+			$album = $1;
+		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\) of (.+?) \((.+?)\)/) {
+			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
+			if ($t1 - $last_t >= 1) {
+				$last_t = $t1;
+				if (open(F,">stream_info")) {
+					print F "$codec $bitrate\n";
+					print F "$artist - $titre ($album) $t2 ".int($t1*100/$t3),"%\n";
+					close(F);
+					send_cmd_prog();
+				}
+			}
 		} elsif (/Starting playback/) {
 			if ($width && $height) {
 				open(F,">video_size") || die "can't write to video_size\n";
@@ -256,16 +300,18 @@ while (1) {
 				kill "USR1",$pid;
 			}
 			send_cmd_prog();
-		} elsif (/Uninit video/) {
+		} elsif (/End of file/ || /^EOF code/) {
 			print "filter: end of video\n";
 			kill "USR2",$pid;
+			check_eof();
 		}
 	}
 }
 kill "USR2",$pid;
-open(F,">id") || die "can't write to id\n";
-print F "$exit\n";
-close(F);
+if ($exit) {
+	open(F,">id") || die "can't write to id\n";
+	print F "$exit\n";
+	close(F);
+}
 print "filter: exit message : $exit\n";
-unlink("video_size","stream_info",$last_image);
-
+check_eof();
