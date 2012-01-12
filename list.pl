@@ -518,7 +518,7 @@ sub load_file2($$$$$) {
 			open(G,">live");
 			close(G);
 		}
-		unlink( "list_coords","info_coords");
+		unlink( "list_coords","info_coords","video_size");
 		system("kill -USR2 `cat info.pid`");
 		open(G,">current");
 		my $src = ($source eq "cd" ? "flux" : $source);

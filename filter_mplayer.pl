@@ -284,6 +284,7 @@ while (1) {
 		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\) of (.+?) \((.+?)\)/) {
 			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
 			if ($t1 - $last_t >= 1) {
+				handle_images("$artist - $titre ($album)") if ($last_t == 0);
 				$last_t = $t1;
 				if (open(F,">stream_info")) {
 					print F "$codec $bitrate\n";
