@@ -280,22 +280,27 @@ sub read_list {
 			$pat =~ s/ /\\ /g;
 		}
 		if ($conf{video_path} ne "/") {
-			push @list,[[1,"../",".."]];
-			$num = 2;
+			push @list,[[$num++,"../",".."]];
 		}
+		$conf{"tri_video"} = "nom" if (!$conf{"tri_video"});
+		push @list,[[$num++,"Tri par $conf{tri_video}","tri par"]];
 		while (glob($pat)) {
 			my $service = $_;
+			next if (!-e $service); # lien symbolique mort
 			my $name = $service;
 			$name =~ s/.+\///; # Supprime le path du nom
 			if (-d $service) {
 				$name .= "/";
 			}
-			push @list,[[$num++,$name,$service]];
+			push @list,[[$num++,$name,$service,-M $service]];
 			if ($serv eq $service) {
 				$found = $#list;
 			}
 		}
 		unlink "info_coords";
+		if ($conf{tri_video} eq "date") {
+			@list = sort { $$a[0][3] <=> $$b[0][3] } @list;
+		}
 #		@list = reverse @list;
 	} elsif ($source eq "flux") {
 		if (open(F,"<current")) {
@@ -753,7 +758,10 @@ while (1) {
 			load_file($serv);
 			next;
 		} elsif ($source =~ /^Fichiers/) {
-			if ($name =~ /\/$/) { # Répertoire
+			if ($serv eq "tri par") {
+				$conf{tri_video} = ($conf{tri_video} eq "nom" ? "date" : "nom");
+				read_list();
+			} elsif ($name =~ /\/$/) { # Répertoire
 				if ($serv eq "..") {
 					$conf{video_path} =~ s/^(.*)\/.+/$1/;
 					$conf{video_path} = "/" if (!$conf{video_path});
