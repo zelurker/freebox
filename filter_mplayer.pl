@@ -284,7 +284,12 @@ while (1) {
 		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\) of (.+?) \((.+?)\)/) {
 			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
 			if ($t1 - $last_t >= 1) {
-				handle_images("$artist - $titre ($album)") if ($last_t == 0);
+				if (!$artist && !$titre && $chan =~ /(.+) - (.+)\..../) {
+					# Déduction de l'artiste et du titre sur le nom de fichier
+					($artist,$titre) = ($1,$2);
+				}
+				handle_images("$artist - $titre ($album)")
+				if ($last_t == 0 && ($artist || $titre));
 				$last_t = $t1;
 				if (open(F,">stream_info")) {
 					print F "$codec $bitrate\n";
