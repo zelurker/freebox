@@ -623,7 +623,7 @@ if (!$reread || !$channel) {
 			if ($last_chan && defined($last_prog) && $chaines{$last_chan}) {
 				my $ndelay = $chaines{$last_chan}[$last_prog][4];
 				$ndelay = 0 if ($delay == $time);
-				print "delay nextprog : ",get_time($ndelay),"\n";
+				# print "delay nextprog : ",get_time($ndelay),"\n";
 				if (!$delay || $ndelay < $delay) {
 					$delay = $ndelay ;
 				}
@@ -643,16 +643,16 @@ if (!$reread || !$channel) {
 			if ($start_timer && # $start_timer > $time && 
 				(!$delay || $start_timer < $delay)) {
 				$delay = $start_timer;
-				print "delay start_timer : ",get_time($delay),"\n";
+				# print "delay start_timer : ",get_time($delay),"\n";
 			}
 			foreach (@records) {
 				if ($$_[0] > $time && (!$delay || $$_[0] < $delay)) {
 					$delay = $$_[0];
-					print "delay début enreg : ",get_time($delay),"\n";
+					# print "delay début enreg : ",get_time($delay),"\n";
 				}
 				if ($$_[1] > $time && (!$delay || $$_[1] < $delay)) {
 					$delay = $$_[1];
-					print "delay fin enreg : ",get_time($delay),"\n";
+					# print "delay fin enreg : ",get_time($delay),"\n";
 				}
 			}
 			$delay -= $time if ($delay);
