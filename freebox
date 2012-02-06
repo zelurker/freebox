@@ -97,7 +97,7 @@ function launch() {
 			# Bug sur la version de dév de mplayer relative à bmovl sur les
 			# fichiers. C'est lié au fps, mais dur à délimiter. Contournement:
 			# utiliser une vieille version !
-			mplayer=/usr/bin/mplayer
+			# mplayer=/usr/bin/mplayer
 			idle="-idle"
 		fi
 		echo $mplayer $idle $audio2 -v $length -vf $bmovl"screenshot,kerndeint" \
@@ -166,7 +166,11 @@ if [ -f "$name" ] || [ "$src" == "flux" ]; then
 		if [ "$src" != "flux" ]; then
 			mplayer -identify -vo null -ao null -frames 0 "$name" > id
 			if grep -q "no video" id || grep -q "NO AUDIO" id || \
-				grep -q "H264" id; then
+				grep -q "AUDIO_CODEC=ffaac" id; then
+			# En fait c'est pas toutes les vidéos hd qui ont un problème,
+			# seulement celles qui ont du aac dedans.
+			# Dommage parce que le demuxer lavf explose complètement l'index
+			# ce qui est très énervant...
 				demuxer="-demuxer lavf -framedrop "
 				echo lavf activé
 			else
