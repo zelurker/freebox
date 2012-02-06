@@ -479,25 +479,22 @@ sub reset_current {
 sub load_file($) {
 	my $serv = shift;
 	# charge le fichier pointé dans la liste (contenu dans $serv)
-	if (open(F,">fifo_cmd")) {
-		print F "pause\n";
-		my $p1 = undef;
-		if (-f "player1.pid") {
-			$p1 = 1;
-			my $pid = `cat player1.pid`;
-			chomp $pid;
-			print "pid à tuer $pid.\n";
-			kill "TERM",$pid;
-			unlink "player1.pid";
-		}
-		print F "loadfile '$serv'\n";
-		print "loadfile envoyée ($serv)\n";
-		print "pause\n" if (!$p1);
-		close(F);
-		open(F,">live");
-		close(F);
-		unlink( "list_coords","info_coords");
+	send_command("pause\n");
+	my $p1 = undef;
+	if (-f "player1.pid") {
+	    $p1 = 1;
+	    my $pid = `cat player1.pid`;
+	    chomp $pid;
+	    print "pid à tuer $pid.\n";
+	    kill "TERM",$pid;
+	    unlink "player1.pid";
 	}
+	send_command("loadfile '$serv'\n");
+	print "loadfile envoyée ($serv)\n";
+	send_command("pause\n") if (!$p1);
+	open(F,">live");
+	close(F);
+	unlink( "list_coords","info_coords");
 }
 
 sub load_file2($$$$$) {
@@ -505,38 +502,35 @@ sub load_file2($$$$$) {
 	# pour redémarrer à froid sur le nouveau fichier. Obligatoire quand on vient
 	# d'une source non vidéo vers une source vidéo par exemple.
 	my ($name,$serv,$flav,$audio,$video) = @_;
-	if (open(F,">fifo_cmd")) {
-		print F "pause\n";
-		if (-f "player1.pid") {
-			my $pid = `cat player1.pid`;
-			chomp $pid;
-			print "pid2 à tuer $pid.\n";
-			kill "TERM",$pid;
-			unlink "player1.pid";
-		}
-		if ($serv !~ /(mp3|ogg|flac|mpc|wav|m3u)$/i) {
-			# Gestion des pls supprimée, mplayer semble les gérer
-			# très bien lui même.
-			$serv = get_mms($serv) if ($serv =~ /^http/);
-			print "flux: loadfile $serv\n";
-			open(G,">live");
-			close(G);
-		}
-		unlink( "list_coords","info_coords","video_size");
-		system("kill -USR2 `cat info.pid`");
-		open(G,">current");
-		my $src = ($source eq "cd" ? "flux" : $source);
-		# $serv est en double en 7ème ligne, c'est voulu
-		# oui je sais, c'est un bordel
-		# A nettoyer un de ces jours dans run_mp1/freebox
-		print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
-		close(G);
-		print "sending quit\n";
-		unlink("id","stream_info");
-		print F "quit\n";
-		close(F);
-		system("kill `cat player2.pid`");
+	send_command("pause\n");
+	if (-f "player1.pid") {
+	    my $pid = `cat player1.pid`;
+	    chomp $pid;
+	    print "pid2 à tuer $pid.\n";
+	    kill "TERM",$pid;
+	    unlink "player1.pid";
 	}
+	if ($serv !~ /(mp3|ogg|flac|mpc|wav|m3u)$/i) {
+	    # Gestion des pls supprimée, mplayer semble les gérer
+	    # très bien lui même.
+	    $serv = get_mms($serv) if ($serv =~ /^http/);
+	    print "flux: loadfile $serv\n";
+	    open(G,">live");
+	    close(G);
+	}
+	unlink( "list_coords","info_coords","video_size");
+	system("kill -USR2 `cat info.pid`");
+	open(G,">current");
+	my $src = ($source eq "cd" ? "flux" : $source);
+	# $serv est en double en 7ème ligne, c'est voulu
+	# oui je sais, c'est un bordel
+	# A nettoyer un de ces jours dans run_mp1/freebox
+	print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
+	close(G);
+	print "sending quit\n";
+	unlink("id","stream_info");
+	send_command("quit\n");
+	system("kill `cat player2.pid`");
 }
 
 sub get_cur_mode {
@@ -605,6 +599,7 @@ while (1) {
 	chomp $cmd;
 	close(F);
 	again:
+	print "list: commande reçue après again : $cmd\n";
 	if (-f "list_coords" && $cmd eq "clear") {
 		clear("list_coords");
 		clear("info_coords");
