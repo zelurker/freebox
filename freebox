@@ -191,8 +191,6 @@ if [ -f "$name" ] || [ "$src" == "flux" ]; then
 			length=""
 		fi
 
-		src=`head -n 2 current|tail -n 1`
-		# echo end of while loop length $length again $again
 		again=1
 		if grep -q ID_EXIT=QUIT id &&
 			! grep -q ID_SIGNAL=15 id && ! grep -q "End of file" id; then
