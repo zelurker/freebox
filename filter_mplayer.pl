@@ -143,7 +143,7 @@ sub check_eof {
 		print F "clear\n";
 		close(F);
 	}
-	if ($source eq "Fichiers son") {
+	if ($source eq "Fichiers son" && $exit !~ /ID_EXIT=QUIT/) {
 		print "filter: envoi nextchan\n";
 		if (open(F,">fifo_list")) {
 			print F "nextchan\n";
@@ -318,6 +318,7 @@ if ($exit) {
 	open(F,">id") || die "can't write to id\n";
 	print F "$exit\n";
 	close(F);
+	print "filter: fichier id créé\n";
 }
 print "filter: exit message : $exit\n";
 check_eof();
