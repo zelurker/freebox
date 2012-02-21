@@ -48,7 +48,8 @@ while [ "$ok" == "0" ]; do
 		fi
 		chaine=`cat fifo_list`
 	fi
-	name=livetv/`date +"%Y%m%d %H%M%S $chaine.ts"`
+	chaine2=`echo $chaine|sed 's/\//_/g'`
+	name=livetv/`date +"%Y%m%d %H%M%S $chaine2.ts"`
 	case $src in
 		dvb)
 			mplayer -quiet -dumpfile "$name" -dumpstream dvb://"$service" >& log &
@@ -118,7 +119,7 @@ while [ "$ok" == "0" ]; do
 		if ps -p `cat player1.pid` >& /dev/null && [ -f "$name" ]; then
 			ok=1 # fini !
 		fi
-		if ! [ $(( `date +%s`-$start )) -lt 10 ]; then
+		if [ $(( `date +%s`-$start )) -gt 10 ]; then
 			# timeout
 			echo run_mp1: timeout, falling back to default freebox src
 			kill `cat player1.pid`
