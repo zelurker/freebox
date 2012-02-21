@@ -31,11 +31,15 @@ static SDL_Rect r;
 static void disconnect(int signal) {
 	if (!fifo) return;
 	close(fifo);
+	/* les updates dans sdl_screen peuvent rentrer en collision et provoquer
+	 * un lock, vaut mieux éviter !!! */
+#if 0
 	if (sdl_screen) {
 	    memset(sdl_screen->pixels,0,sdl_screen->w*sdl_screen->h*
 		    sdl_screen->format->BytesPerPixel);
 	    SDL_UpdateRect(sdl_screen,0,0,sdl_screen->w,sdl_screen->h);
 	}
+#endif
 
 	fifo = 0;
 }
