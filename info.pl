@@ -412,6 +412,16 @@ foreach (@fields) {
 	my $chan = lc($sub[1]);
 	if (!$date_offset || $sub[12] ne $date) {
 		$date = $sub[12];
+		if (!$date) {
+			print "format de fichier programmes incorrect, on va essayer de corriger\n";
+			if ($chan eq "nolife") {
+				unlink <air*>;
+			} else {
+				unlink <day*>;
+			}
+			$program_text = "";
+			goto read_prg;
+		}
 		($mday,$mon,$year) = split(/\//,$sub[12]);
 		$mon--;
 		$year -= 1900;
