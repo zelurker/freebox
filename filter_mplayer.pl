@@ -72,6 +72,7 @@ sub handle_result {
 		my ($pic,$ftype);
 		do {
 			$pic = $image->save_content(base => 'image');
+			print "handle_result: context ",$image->context_url()," name $pic\n";
 			if ($last_image && $pic ne $last_image) {
 				unlink $last_image;
 			}
@@ -98,7 +99,9 @@ sub handle_result {
 
 sub handle_images {
 	my $cur = shift;
+	$cur = $old_titre if (!$cur);
 	$old_titre = $cur;
+	print "handle_image: $cur.\n";
 	if (!@cur_images || $cur_images[0] ne $cur) {
 		# Reset de la recherche précédente si pas finie !
 		if ($cur_images[1]) {
@@ -197,13 +200,13 @@ while (1) {
 	my $t = undef;
 	$t = $time - time() if ($time);
 	if ($t < 0) {
-		handle_images($titre);
+		handle_images();
 		next;
 	}
 	my $rout = $rin;
 	my $nfound = select($rout,undef,undef,$t);
 	if ($time && $time <= time()) {
-		handle_images($titre);
+		handle_images();
 	}
 	if ($nfound > 0) {
 		my $ret = sysread(STDIN,$buff,8192,length($buff));
