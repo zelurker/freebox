@@ -14,12 +14,20 @@
 use strict;
 use Fcntl;
 require "output.pl";
-use Net::Ping;
-my $host = "194.2.0.20";
-my $p = Net::Ping->new();
-my $net = undef;
-$net = 1 if $p->ping($host);
-$p->close();
+use POSIX qw(SIGALRM);
+
+my $net = 1;
+eval {
+	POSIX::sigaction(SIGALRM,
+		POSIX::SigAction->new(sub { die "alarm" }))
+		or die "Error setting SIGALRM handler: $!\n";
+	alarm(3);
+	my @addresses = gethostbyname("www.google.fr")   or die "Can't resolve : $!\n";
+	alarm(0);
+};
+$net = 0 if ($@);
+$@ = 0;
+
 eval {
 	require WWW::Google::Images;
 	WWW::Google::Images->import();
