@@ -323,7 +323,7 @@ while (1) {
 					# Déduction de l'artiste et du titre sur le nom de fichier
 					($artist,$titre) = ($1,$2);
 				}
-				handle_images("$artist - $titre ($album)")
+				handle_images("$artist - $titre") # ($album)")
 				if ($last_t == 0 && ($artist || $titre));
 				$last_t = $t1;
 				if (open(F,">stream_info")) {
