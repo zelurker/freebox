@@ -372,7 +372,7 @@ foreach (@def_chan) {
 	}
 	if (!$found) {
 		print "didn't find default channel $_ in list $channels_text\n";
-		exit(0);
+		$channels_text = undef;
 	}
 }
 $sel =~ s/^\,//;
@@ -542,7 +542,22 @@ sub save_recordings {
 sub handle_records {
 	my $time = shift;
 	my $finished = 0;
+	return if (!@records);
+	for (my $n=0; $n<=$#records; $n++) {
+		if ($time > $records[$n][1]) {
+			print "enregistrement expiré\n";
+			splice @records,$n,1;
+			last if ($n > $#records);
+			redo;
+		}
+	}
+	if (!@records) {
+		save_recordings();
+		return;
+	}
+
 	foreach (@records) {
+
 		if ($time >= $$_[0] && !$$_[8]) {
 			# Début d'un enregistrement
 			my $audio2 = $$_[4];
@@ -1017,13 +1032,14 @@ sub getListeProgrammes {
 
 sub request {
     my $url = shift;
-	my $response = $browser->get($url);
+    my $response = $browser->get($url);
 
 	if (!$response->is_success) {
-		print "$url error: $response->status_line\n";
+		print "$url error: ",$response->status_line,"\n";
+		return undef;
 	}
 
-	return $response->content;
+    return $response->content;
 }
 
 sub getListeChaines {

@@ -14,6 +14,12 @@
 use strict;
 use Fcntl;
 require "output.pl";
+use Net::Ping;
+my $host = "194.2.0.20";
+my $p = Net::Ping->new();
+my $net = undef;
+$net = 1 if $p->ping($host);
+$p->close();
 eval {
 	require WWW::Google::Images;
 	WWW::Google::Images->import();
@@ -24,7 +30,7 @@ our $agent;
 my $last_t = 0;
 our $stream = 0;
 our $init = 0;
-if (!$@) {
+if (!$@ && $net) {
 	# google images dispo si pas d'erreur
 	$images = 1;
 	$agent = WWW::Google::Images->new(
@@ -74,9 +80,17 @@ sub handle_result {
 			$pic = $image->save_content(base => 'image');
 			print "handle_result: context ",$image->context_url()," name $pic\n";
 			if ($last_image && $pic ne $last_image) {
-				unlink $last_image;
+				if ($last_image eq "1") {
+					print "on évite d'effacer le fichier 1\n";
+				} else {
+					unlink $last_image;
+				}
 			}
 			$last_image = $pic;
+			if ($last_image eq "1") {
+				print "*** filter: last_image = 1\n";
+				$last_image = undef;
+			}
 			$ftype = `file $pic`;
 			chomp $ftype;
 			if ($ftype =~ /error/i) {
@@ -102,12 +116,17 @@ sub handle_images {
 	$cur = $old_titre if (!$cur);
 	$old_titre = $cur;
 	print "handle_image: $cur.\n";
+	return if (!$net);
 	if (!@cur_images || $cur_images[0] ne $cur) {
 		# Reset de la recherche précédente si pas finie !
 		if ($cur_images[1]) {
 			my $result = $cur_images[1];
 			while ($result->next()) {}
-			unlink $last_image if ($last_image);
+			if ($last_image eq "1") {
+				print "on évite d'effacer le fichier 1 (2)\n";
+			} else {
+				unlink $last_image if ($last_image);
+			}
 		}
 
 		@cur_images = ($cur);
@@ -140,7 +159,12 @@ my ($codec,$bitrate);
 
 sub check_eof {
 	print "check_eof: $source\n";
-	unlink("video_size","stream_info",$last_image);
+	unlink("video_size","stream_info");
+	if ($last_image eq "1") {
+	    print "on évite d'effacer le fichier 1\n";
+	} else {
+	    unlink $last_image if ($last_image);
+	}
 	if (!$stream && -f "info_coords") {
 		open(F,">fifo_info");
 		print F "clear\n";
