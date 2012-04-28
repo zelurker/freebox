@@ -101,12 +101,12 @@ function launch() {
 			idle="-idle"
 		fi
 		echo $mplayer $idle $audio2 -v $length -vf $bmovl"screenshot,kerndeint" \
-			-stop-xscreensaver -identify -input \
+			-cache 100 -stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 			"$name" avec filtre en pipe
 
 			$mplayer $idle $audio2 -v $length \
-				-vf $bmovl"screenshot,kerndeint" \
+				-vf $bmovl"screenshot,kerndeint" -cache 100 \
 				-stop-xscreensaver -identify -input \
 				conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 				"$name" | perl filter_mplayer.pl &
@@ -209,5 +209,7 @@ if [ -f "$name" ] || [ "$src" == "flux" ]; then
 fi
 rm -f info_coords list_coords numero_coords mode_coords
 kill `cat info.pid`
+echo fichier 1 :
+ls 1
 
 
