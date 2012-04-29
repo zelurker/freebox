@@ -7,6 +7,21 @@ use strict;
 use Fcntl;
 use Socket;
 use Image::Info qw(image_info dim);
+use POSIX qw(SIGALRM);
+
+sub have_net {
+	my $net = 1;
+	eval {
+		POSIX::sigaction(SIGALRM,
+			POSIX::SigAction->new(sub { die "alarm" }))
+			or die "Error setting SIGALRM handler: $!\n";
+		alarm(3);
+		my @addresses = gethostbyname("www.google.fr")   or die "Can't resolve : $!\n";
+		alarm(0);
+	};
+	$net = 0 if ($@);
+	$net;
+}
 
 sub open_bmovl {
 	my $out;
