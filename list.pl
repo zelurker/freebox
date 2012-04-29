@@ -125,6 +125,16 @@ sub cd_menu {
 	@list = @list_cdda if (!@list);
 }
 
+sub read_freebox {
+	my $list;
+	open(F,"<freebox.m3u") || die "can't read freebox playlist\n";
+	@list = <F>;
+	close(F);
+	$list = join("\n",@list);
+	@list = ();
+	$list;
+}
+
 sub read_list {
 #	print "list: read_list source $source base_flux $base_flux mode_flux $mode_flux\n";
 	$found = $conf{"sel_$source"};
@@ -144,16 +154,16 @@ sub read_list {
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 		if (!-f "freebox.m3u" || -M "freebox.m3u" >= 1) {
 			$list = get "http://mafreebox.freebox.fr/freeboxtv/playlist.m3u";
-			die "can't get freebox playlist\n" if (!$list);
-			open(F,">freebox.m3u") || die "can't create freebox.m3u\n";
-			print F $list;
-			close(F);
+			if (!$list) {
+				print "can't get freebox playlist\n";
+				$list = read_freebox();
+			} else {
+				open(F,">freebox.m3u") || die "can't create freebox.m3u\n";
+				print F $list;
+				close(F);
+			}
 		} else {
-			open(F,"<freebox.m3u") || die "can't read freebox playlist\n";
-			@list = <F>;
-			close(F);
-			$list = join("\n",@list);
-			@list = ();
+			$list = read_freebox();
 		}
 		my @rejets;
 		if (open(F,"<rejets/$source")) {
