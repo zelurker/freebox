@@ -23,6 +23,8 @@ use Socket;
 require HTTP::Cookies;
 require "output.pl";
 
+our $net = have_net();
+
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
 	if (open(F,"<current")) {
@@ -392,11 +394,17 @@ foreach (@selected_channels) {
 my $reread = 0;
 my $old_nolife = undef;
 my ($channel,$long);
-read_prg: $program_text = getListeProgrammes(0) if (!$program_text);
+read_prg: 
+print "appel getlisteprogrammes read_prg\n";
+$program_text = getListeProgrammes(0) if (!$program_text);
 my $nb_days = 1;
 my $cmd;
 debut: $program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
 my @fields = split(/\:\$\$\$\:/,$program_text);
+if (!@fields) {
+	print "gros problème requête programmes, aucun champ obtenu, on ignore le réseau\n";
+	$net = 0;
+}
 
 my $date_offset = 0;
 # Les collisions : je laisse ce code qui fait des stats sur leur nombre et
@@ -499,7 +507,7 @@ sub disp_prog {
 	}
 	# Check channel logo
 	my $url = $icons{$$sub[0]};
-	my $name = setup_image($browser,$url);
+	my $name = ($net ? setup_image($browser,$url) : "");
 
 	my $out = setup_output("bmovl-src/bmovl",$raw,$long);
 
@@ -630,7 +638,8 @@ sub req_prog($$) {
 	my $response = $browser->get($url);
 	if (! $response->is_success) {
 	    print "$url error: $response->status_line\n";
-	    return undef;
+	} else {
+		print "req_prog: is_success\n";
 	}
 	$response;
 }
@@ -766,6 +775,7 @@ if (!$reread || !$channel) {
 					my $d2 = timegm_nocheck(0,0,0,$mday,$mon,$year);
 					my $offset = ($date-$d2)/(24*3600);
 					print "A récupérer offset $offset\n";
+					print "appel getlisteprogrammes suite\n";
 					$program_text .= getListeProgrammes($offset);
 					$old_nolife = $chaines{"nolife"};
 					$reread = 1; # On récupère l'ancienne commande...
@@ -886,11 +896,13 @@ if (!$rtab) {
 		}
 	} # $name eq $channel
 }
-if (!$rtab) {
+if (!$rtab && $net) {
 	for (my $n=0; $n<=$#chan; $n++) {
 		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
 		if ($channel eq $name && $num != 254) {
+			print "*** req_prog loop request ***\n";
 			my $response = req_prog(0,$num);
+			last if (!$response->is_success);
 			my $res = $response->content;
 			if ($res && index($program_text,$res) < 0 && $res =~ /$num/) {
 				$program_text .= $res;
@@ -981,6 +993,7 @@ sub getListeProgrammes {
   print "utilisation date $mday/",$mon+1,"/",$year+1900,"\n";
   my $d0 = timegm_nocheck(0,0,0,$mday,$mon,$year);
   my $found = undef;
+  return undef if (!$net);
   while (<day*>) {
 	  my $name = $_;
 	  my $text = "";
@@ -1021,7 +1034,9 @@ sub getListeProgrammes {
   }
   print scalar localtime," récupération $url\n";
 
+  print "*** req_prog from getlisteprogrammes ***\n";
   my $response = req_prog($offset,$url);
+  return undef if (!$response->is_success);
 
   open(F,">day".($offset));
   print F $response->content;
@@ -1032,6 +1047,7 @@ sub getListeProgrammes {
 
 sub request {
     my $url = shift;
+	return undef if (!$net);
     my $response = $browser->get($url);
 
 	if (!$response->is_success) {
