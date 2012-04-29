@@ -14,20 +14,8 @@
 use strict;
 use Fcntl;
 require "output.pl";
-use POSIX qw(SIGALRM);
 
-my $net = 1;
-eval {
-	POSIX::sigaction(SIGALRM,
-		POSIX::SigAction->new(sub { die "alarm" }))
-		or die "Error setting SIGALRM handler: $!\n";
-	alarm(3);
-	my @addresses = gethostbyname("www.google.fr")   or die "Can't resolve : $!\n";
-	alarm(0);
-};
-$net = 0 if ($@);
-$@ = 0;
-
+my $net = have_net();
 eval {
 	require WWW::Google::Images;
 	WWW::Google::Images->import();
@@ -174,9 +162,10 @@ sub check_eof {
 	    unlink $last_image if ($last_image);
 	}
 	if (!$stream && -f "info_coords") {
-		open(F,">fifo_info");
-		print F "clear\n";
-		close(F);
+		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
+			print F "clear\n";
+			close(F);
+		}
 	}
 	if ($source eq "Fichiers son" && $exit !~ /ID_EXIT=QUIT/) {
 		print "filter: envoi nextchan\n";
@@ -201,7 +190,7 @@ sub send_cmd_prog {
 			sleep(1);
 		}
 
-	} while ($error && $tries++ < 3);
+	} while ($error && $tries++ < 2);
 }
 
 sub update_codec_info {
