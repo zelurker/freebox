@@ -17,8 +17,8 @@ sub have_net {
 			or die "Error setting SIGALRM handler: $!\n";
 		alarm(3);
 		my @addresses = gethostbyname("www.google.fr")   or die "Can't resolve : $!\n";
-		alarm(0);
 	};
+	alarm(0);
 	$net = 0 if ($@);
 	$net;
 }
