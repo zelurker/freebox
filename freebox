@@ -103,12 +103,12 @@ function launch() {
 		if [ "$src" != "Fichiers vidéo" ]; then
 			filter=",kerndeint"
 		fi
-		echo $mplayer $idle $audio2 -v $length -vf $bmovl"screenshot$filter" \
+		echo $mplayer $idle $audio2 $length -vf $bmovl"screenshot$filter" \
 			-cache 100 -stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 			"$name" avec filtre en pipe
 
-			$mplayer $idle $audio2 -v $length \
+			$mplayer $idle $audio2 $length \
 				-vf $bmovl"screenshot$filter" -cache 100 \
 				-stop-xscreensaver -identify -input \
 				conf=$PWD/input.conf:file=fifo_cmd $demuxer \
