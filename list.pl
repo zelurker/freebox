@@ -616,7 +616,9 @@ while (1) {
 		close_mode() if ($mode_opened);
 		next;
 	} elsif ($cmd eq "refresh") {
+		my $found0 = $found;
 		read_list() if ($source eq "Enregistrements");
+		$found = $found0;
 	} elsif ($cmd eq "down") {
 		if ($mode_opened) {
 			$mode_sel++;
@@ -757,11 +759,11 @@ while (1) {
 		read_list();
 		close_mode() if ($mode_opened);
 	} elsif ($cmd =~ /^zap(1|2)/) {
-		save_conf();
 		if ($cmd =~ s/^zap2 //) {
 			($found) = find_name($cmd);
 		}
 		close_numero();
+		save_conf();
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 		$mode_opened = 0 if ($mode_opened);
 		if ($source eq "menu") {
