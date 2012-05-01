@@ -100,13 +100,16 @@ function launch() {
 			# mplayer=/usr/bin/mplayer
 			idle="-idle"
 		fi
-		echo $mplayer $idle $audio2 -v $length -vf $bmovl"screenshot,kerndeint" \
+		if [ "$src" != "Fichiers vidéo" ]; then
+			filter=",kerndeint"
+		fi
+		echo $mplayer $idle $audio2 -v $length -vf $bmovl"screenshot$filter" \
 			-cache 100 -stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 			"$name" avec filtre en pipe
 
 			$mplayer $idle $audio2 -v $length \
-				-vf $bmovl"screenshot,kerndeint" -cache 100 \
+				-vf $bmovl"screenshot$filter" -cache 100 \
 				-stop-xscreensaver -identify -input \
 				conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 				"$name" | perl filter_mplayer.pl &
