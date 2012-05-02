@@ -226,9 +226,6 @@ sub read_list {
 					my $rtab = $list[$#list];
 					push @$rtab,\@cur;
 				}
-				if ($serv == $service && $flav eq $flavour) {
-					$found = $#list;
-				}
 			}
 		}
 		if (!$tv) {
@@ -245,9 +242,6 @@ sub read_list {
 			my $name = $service;
 			$name =~ s/\(.+\)//; # name sans le transpondeur
 			push @list,[[$num++,$name,$service]];
-			if ($serv eq $service) {
-				$found = $#list;
-			}
 		}
 		close(F);
 	} elsif ($source =~ /^(livetv|Enregistrements)$/) {
@@ -270,9 +264,6 @@ sub read_list {
 			$taille = sprintf("%d",$taille/1024/1024);
 			$name .= $taille."Mo";
 			push @list,[[$num++,$name,$service]];
-			if ($serv eq $service) {
-				$found = $#list;
-			}
 		}
 		@list = reverse @list;
 	} elsif ($source =~ /^Fichiers/) {
@@ -311,9 +302,6 @@ sub read_list {
 				$name .= "/";
 			}
 			push @list,[[$num++,$name,$service,-M $service]];
-			if ($serv eq $service) {
-				$found = $#list;
-			}
 		}
 		unlink "info_coords";
 		if ($conf{$tri} eq "date") {
@@ -342,9 +330,6 @@ sub read_list {
 				my $name = $service;
 				$name =~ s/^.+\///;
 				push @list,[[$num++,$name,$service]];
-				if ($serv eq $service) {
-					$found = $#list;
-				}
 			}
 		} else {
 			my $b = $base_flux;
