@@ -79,10 +79,10 @@ function launch() {
 		else
 			prefix=""
 		fi
-		echo mplayer -cdrom-device "/dev/$cd" $prefix "$name" -quiet -cache $cache \
+		echo mplayer2 -cdrom-device "/dev/$cd" $prefix "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd
-		mplayer -cdrom-device "/dev/$cd" $prefix "$name" -quiet -cache $cache \
+		mplayer2 -cdrom-device "/dev/$cd" $prefix "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd \
 			| perl filter_mplayer.pl &
@@ -91,15 +91,8 @@ function launch() {
 			audio2="-aid $audio"
 		fi
 		bmovl=bmovl=1:0:fifo,
-		mplayer=mplayer
+		mplayer=mplayer2
 		idle=""
-		if echo $src|grep -q Fichiers; then
-			# Bug sur la version de dév de mplayer relative à bmovl sur les
-			# fichiers. C'est lié au fps, mais dur à délimiter. Contournement:
-			# utiliser une vieille version !
-			# mplayer=/usr/bin/mplayer
-			idle="-idle"
-		fi
 		if [ "$src" != "Fichiers vidéo" ]; then
 			filter=",kerndeint"
 		fi
@@ -167,7 +160,7 @@ if [ -f "$name" ] || [ "$src" == "flux" ]; then
 		# Le -frames 0 ici est totalement obligatoire sinon ça peut être
 		# très long sur certains fichiers h264 !
 		if [ "$src" != "flux" ]; then
-			mplayer -identify -vo null -ao null -frames 0 "$name" > id
+			mplayer2 -identify -vo null -ao null -frames 0 "$name" > id
 			if grep -q "no video" id || grep -q "NO AUDIO" id || \
 				grep -q "AUDIO_CODEC=ffaac" id; then
 			# En fait c'est pas toutes les vidéos hd qui ont un problème,
@@ -184,6 +177,7 @@ if [ -f "$name" ] || [ "$src" == "flux" ]; then
 		pid=$!
 		wait $pid
 		src=`head -n 2 current|tail -n 1`
+		length=""
 		if [ "$src" != "flux" ] && ! echo $src|grep -q Fichiers; then
 			length=`perl eval_end.pl`
 		fi
