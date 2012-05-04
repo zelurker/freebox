@@ -38,8 +38,18 @@ sub get_cur_name {
 
 sub get_stream_info {
 	my ($cur,$last,$info);
+	my $tries = 3;
+	while ($tries-- > 0 && !(-s "stream_info")) {
+		select undef,undef,undef,0.1;
+	}
 	if (open(F,"<stream_info")) {
 		my $info = <F>;
+		if (!$info) {
+			print "info nulle, on recommence\n";
+			close(F);
+			open(F,"<stream_info");
+			$info = <F>;
+		}
 		chomp $info;
 		while (<F>) {
 			chomp;
@@ -743,7 +753,7 @@ if (!$reread || !$channel) {
 	}
 	#$timer_start = [gettimeofday];
 	$time = time();
-	print "info: reçu cmd $cmd\n";
+# 	print "info: reçu cmd $cmd\n";
 	if ($cmd eq "clear") {
 		clear("info_coords");
 		goto read_fifo;
