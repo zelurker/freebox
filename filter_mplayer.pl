@@ -185,7 +185,7 @@ sub send_cmd_prog {
 			print F "prog $chan\n";
 			close(F);
 		} else {
-			print "filter: envoi commande prog from filter impossible tries=$tries !\n";
+			print "filter: envoi commande prog from filter impossible tries=$tries !\n" if ($tries >= 2);
 			$error = 1;
 			sleep(1);
 		}
