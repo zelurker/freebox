@@ -174,6 +174,7 @@ sub check_eof {
 			close(F);
 		}
 	}
+	exit(0); # au cas où on est là par un signal
 }
 
 sub send_cmd_prog {
@@ -213,6 +214,7 @@ sub update_codec_info {
 	}
 }
 
+$SIG{TERM} = \&check_eof;
 my $rin = "";
 vec($rin,fileno(STDIN),1) = 1;
 while (1) {

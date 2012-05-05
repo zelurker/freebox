@@ -587,6 +587,7 @@ sub close_numero {
 read_conf();
 read_list();
 system("rm -f fifo_list && mkfifo fifo_list");
+$SIG{TERM} = sub { unlink "fifo_list"; };
 my $nb_elem = 16;
 while (1) {
 	open(F,"<fifo_list") || die "can't read fifo_list\n";

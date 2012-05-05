@@ -401,6 +401,8 @@ foreach (@selected_channels) {
 	$selected_channel{$_} = 1;
 }
 
+system("rm -f fifo_info && mkfifo fifo_info");
+$SIG{TERM} = sub { unlink "fifo_info"; };
 my $reread = 0;
 my $old_nolife = undef;
 my ($channel,$long);
@@ -409,76 +411,9 @@ print "appel getlisteprogrammes read_prg\n";
 $program_text = getListeProgrammes(0) if (!$program_text);
 my $nb_days = 1;
 my $cmd;
-debut: $program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
-my @fields = split(/\:\$\$\$\:/,$program_text);
-if (!@fields) {
-	print "gros problème requête programmes, aucun champ obtenu, on ignore le réseau\n";
-	$net = 0;
-}
-
-my $date_offset = 0;
-# Les collisions : je laisse ce code qui fait des stats sur leur nombre et
-# le temps que ça prend à traiter. En fait on obtient de l'ordre de 1200
-# collisions pour une seule journée, mais ça prend moins de 2s à récupérer, et
-# moins d'1s à convertir dans un format utilisable en interne. Résultat ça
-# serait probablement + long de faire 1 requète par chaine pour éviter les
-# collisions. Tant pis pour eux, peut-être qu'un jour ils corrigeront leur
-# code qui fait toutes ces collisions !
-my $nb_collision = 0;
-foreach (@fields) {
-	my @sub = split(/\$\$\$/);
-	my $chan = lc($sub[1]);
-	if (!$date_offset || $sub[12] ne $date) {
-		$date = $sub[12];
-		if (!$date) {
-			print "format de fichier programmes incorrect, on va essayer de corriger\n";
-			if ($chan eq "nolife") {
-				unlink <air*>;
-			} else {
-				unlink <day*>;
-			}
-			$program_text = "";
-			goto read_prg;
-		}
-		($mday,$mon,$year) = split(/\//,$sub[12]);
-		$mon--;
-		$year -= 1900;
-		$date_offset = timelocal_nocheck(0,0,0,$mday,$mon,$year);
-	}
-	($hour,$min,$sec) = split(/\:/,$sub[3]);
-	my $start = $date_offset + $sec + 60*$min + 3600*$hour;
-	($hour,$min,$sec) = split(/\:/,$sub[4]);
-	my $end = $date_offset + $sec + 60*$min + 3600*$hour;
-	$end += 3600*24 if ($end < $start); # stupid
-	$sub[3] = $start; $sub[4] = $end;
-	my $rtab = $chaines{$chan};
-	if ($rtab) {
-		my $colision = undef;
-		foreach (@$rtab) {
-			if ($$_[3] == $start && $$_[4] == $end) {
-				$colision = $_;
-				last;
-			}
-		}
-		if ($colision) {
-			# Le nombre de colisions est hallucinant !
-			# un vrai gaspillage de bande passante leur truc !
-			# print "colision chaine $$colision[1] titre $$colision[2]\n";
-			$nb_collision++;
-		} else {
-			push @$rtab,\@sub;
-		}
-	} else {
-		$chaines{$chan} = [\@sub];
-	}
-}
-print scalar localtime," fin traitement fichier, $nb_collision collisions\n";
-$chaines{"nolife"} = get_nolife($chaines{"nolife"});
-print scalar localtime," fin traitement nolife\n";
-
+debut: 
 my $last_hour = 0;
 
-system("rm -f fifo_info && mkfifo fifo_info");
 my $start_timer = 0;
 read_fifo:
 ($channel,$long) = () if (!$reread);
@@ -996,63 +931,140 @@ goto read_fifo;
 # Functions
 #
 
+sub parse_prg($) {
+	# Interprête le résultat de la requête de programmes...
+	my $program_text = shift;	
+	my @fields = split(/\:\$\$\$\:/,$program_text);
+	if (!@fields) {
+		print "gros problème requête programmes, aucun champ obtenu, on ignore le réseau\n";
+		$net = 0;
+	}
+
+	my $date_offset = 0;
+	# Les collisions : je laisse ce code qui fait des stats sur leur nombre et
+	# le temps que ça prend à traiter. En fait on obtient de l'ordre de 1200
+	# collisions pour une seule journée, mais ça prend moins de 2s à récupérer,
+	# et moins d'1s à convertir dans un format utilisable en interne. Résultat
+	# ça serait probablement + long de faire 1 requète par chaine pour éviter
+	# les collisions. Tant pis pour eux, peut-être qu'un jour ils corrigeront
+	# leur code qui fait toutes ces collisions !
+	my $nb_collision = 0;
+	my @fields2 = ();
+	foreach (@fields) {
+		my $old = $_;
+		my @sub = split(/\$\$\$/);
+		my $chan = lc($sub[1]);
+		if (!$date_offset || $sub[12] ne $date) {
+			$date = $sub[12];
+			if (!$date) {
+				print "format de fichier programmes incorrect, on va essayer de corriger\n";
+				if ($chan eq "nolife") {
+					unlink <air*>;
+				} else {
+					unlink <day*>;
+				}
+				$program_text = "";
+				return undef;
+			}
+			($mday,$mon,$year) = split(/\//,$sub[12]);
+			$mon--;
+			$year -= 1900;
+			$date_offset = timelocal_nocheck(0,0,0,$mday,$mon,$year);
+		}
+		($hour,$min,$sec) = split(/\:/,$sub[3]);
+		my $start = $date_offset + $sec + 60*$min + 3600*$hour;
+		($hour,$min,$sec) = split(/\:/,$sub[4]);
+		my $end = $date_offset + $sec + 60*$min + 3600*$hour;
+		$end += 3600*24 if ($end < $start); # stupid
+		$sub[3] = $start; $sub[4] = $end;
+		my $rtab = $chaines{$chan};
+		if ($rtab) {
+			my $colision = undef;
+			foreach (@$rtab) {
+				if ($$_[3] == $start && $$_[4] == $end) {
+					$colision = $_;
+					last;
+				}
+			}
+			if ($colision) {
+				# Le nombre de colisions est hallucinant !
+				# un vrai gaspillage de bande passante leur truc !
+				# print "colision chaine $$colision[1] titre $$colision[2]\n";
+				$nb_collision++;
+			} else {
+				push @$rtab,\@sub;
+				push @fields2,$old;
+			}
+		} else {
+			$chaines{$chan} = [\@sub];
+		}
+	}
+	print scalar localtime," fin traitement fichier, $nb_collision collisions\n";
+#	$chaines{"nolife"} = get_nolife($chaines{"nolife"});
+#	print scalar localtime," fin traitement nolife\n";
+	join(':$$$:',@fields2);
+}
+
 # Do http request for a program
 sub getListeProgrammes {
-  my $offset = shift;
-  # date YYYY-MM-DD
-  print "utilisation date $mday/",$mon+1,"/",$year+1900,"\n";
-  my $d0 = timegm_nocheck(0,0,0,$mday,$mon,$year);
-  my $found = undef;
-  return undef if (!$net);
-  while (<day*>) {
-	  my $name = $_;
-	  my $text = "";
-	  next if (!open(F,"<$_"));
-	  while (<F>) {
-		  $text .= $_;
-	  }
-	  close(F);
-	  my @fields = split(/\:\$\$\$\:/,$text);
-	  my @sub = split(/\$\$\$/,$fields[0]);
-	  my ($j,$m,$a) = split(/\//,$sub[12]);
-	  $a -= 1900;
-	  $m--;
-	  print "comparaison à $sub[12] $mday et $j $mon et $m $year et $a\n";
-	  my $d = timegm_nocheck(0,0,0,$j,$m,$a);
-	  my $off = ($d-$d0)/(24*3600);
-	  print "$name -> $off\n";
-	  my $new = "day$off";
-	  if ($name ne $new) {
-		  if ($off < -1 || -f $new) {
-			  unlink $name;
-		  } else {
-			  rename $name,$new;
-		  }
-	  }
-	  if ($off == $offset) {
-		  $found = $text;
-	  }
-  }
-  return $found if ($found);
+	my $offset = shift;
+	# date YYYY-MM-DD
+	print "utilisation date $mday/",$mon+1,"/",$year+1900,"\n";
+	my $d0 = timegm_nocheck(0,0,0,$mday,$mon,$year);
+	my $found = undef;
+	while (<day*>) {
+		my $name = $_;
+		my $text = "";
+		next if (!open(F,"<$_"));
+		while (<F>) {
+			$text .= $_;
+		}
+		close(F);
+		my @fields = split(/\:\$\$\$\:/,$text);
+		my @sub = split(/\$\$\$/,$fields[0]);
+		my ($j,$m,$a) = split(/\//,$sub[12]);
+		$a -= 1900;
+		$m--;
+		print "comparaison à $sub[12] $mday et $j $mon et $m $year et $a\n";
+		my $d = timegm_nocheck(0,0,0,$j,$m,$a);
+		my $off = ($d-$d0)/(24*3600);
+		print "$name -> $off\n";
+		my $new = "day$off";
+		if ($name ne $new) {
+			if ($off < -1 || -f $new) {
+				unlink $name;
+			} else {
+				rename $name,$new;
+			}
+		}
+		if ($off == $offset) {
+			$found = $text;
+		}
+	}
+	return parse_prg($found) if ($found);
 
-  my $url = "";
-  for (my $i =0 ; $i < @selected_channels ; $i++ ) {
-    $url = $url.$selected_channels[$i];
-    if ($i < (@selected_channels - 1)) {
-      $url = $url.",";
-    }
-  }
-  print scalar localtime," récupération $url\n";
+	my $url = "";
+	for (my $i =0 ; $i < @selected_channels ; $i++ ) {
+		$url = $url.$selected_channels[$i];
+		if ($i < (@selected_channels - 1)) {
+			$url = $url.",";
+		}
+	}
+	print scalar localtime," récupération $url\n";
 
-  print "*** req_prog from getlisteprogrammes ***\n";
-  my $response = req_prog($offset,$url);
-  return undef if (!$response->is_success);
+	print "*** req_prog from getlisteprogrammes ***\n";
+	my $response = req_prog($offset,$url);
+	return undef if (!$response->is_success);
 
-  open(F,">day".($offset));
-  print F $response->content;
-  close(F);
-  print scalar localtime," fichier écrit\n";
-  return $response->content;
+	my $program_text = $response->content;
+	$program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
+	$program_text = parse_prg($program_text);
+
+	open(F,">day".($offset));
+	print F $program_text;
+	close(F);
+	print scalar localtime," fichier écrit\n";
+	$program_text;
 }
 
 sub request {

@@ -688,8 +688,6 @@ int main(int argc, char **argv) {
 	FILE *f = fopen("info.pid","w");
 	fprintf(f,"%d\n",getpid());
 	fclose(f);
-	unlink("fifo_bmovl");
-	mkfifo("fifo_bmovl",0700);
 	if (argc != 2) {
 		printf("pass fifo as unique argument\n");
 	}
