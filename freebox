@@ -96,6 +96,12 @@ function launch() {
 		if [ "$src" != "Fichiers vidéo" ]; then
 			filter=",kerndeint"
 		fi
+		if [ "$src" == "freeboxtv" ] || [ "$src" == "dvb" ]; then
+			# L'index n'est pas dynamique pour les fichiers ts dans mplayer2
+			# ce qui veut dire qu'on ne peut seeker au delà de la fin détectée
+			# du fichier quand on commence la lecture, ça fait pas beaucoup !
+			mplayer=mplayer
+		fi
 		echo $mplayer $idle $audio2 $length -vf $bmovl"screenshot$filter" \
 			-cache 100 -stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd $demuxer \
@@ -204,7 +210,7 @@ if [ -f "$name" ] || [ "$src" == "flux" ]; then
 	done
 	rm -f player2.pid
 fi
-rm -f info_coords list_coords numero_coords mode_coords
+rm -f info_coords list_coords numero_coords mode_coords fifo fifo_cmd
 kill `cat info.pid`
 echo fichier 1 :
 ls 1
