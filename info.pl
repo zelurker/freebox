@@ -106,7 +106,7 @@ sub REAPER {
 	}
 }
 $SIG{CHLD} = \&REAPER;
-$SIG{TERM} = sub { unlink "info_pl.pid";  exit(0); };
+$SIG{TERM} = sub { unlink "info_pl.pid"; unlink "fifo_info"; exit(0); };
 
 #
 # Constants
@@ -369,7 +369,7 @@ sub get_nolife {
 #
 
 my $channels_text = getListeChaines();
-my @chan = split(/\:\$\$\$\:/,$channels_text);
+our @chan = split(/\:\$\$\$\:/,$channels_text);
 my $sel = "";
 foreach (@def_chan) {
 	s/\+/\\+/g;
@@ -402,9 +402,6 @@ foreach (@selected_channels) {
 }
 
 system("rm -f fifo_info && mkfifo fifo_info");
-$SIG{TERM} = sub { unlink "fifo_info"; };
-my $reread = 0;
-my $old_nolife = undef;
 my ($channel,$long);
 read_prg: 
 print "appel getlisteprogrammes read_prg\n";
@@ -416,7 +413,7 @@ my $last_hour = 0;
 
 my $start_timer = 0;
 read_fifo:
-($channel,$long) = () if (!$reread);
+($channel,$long) = ();
 # my $timer_start;
 my $time;
 
@@ -589,103 +586,127 @@ sub req_prog($$) {
 	$response;
 }
 
-if (!$reread || !$channel) {
-	if (!$reread) {
-		$cmd = "";
-		do {
-			# Celui là sert à vérifier les déclenchements externes (noair.pl)
-			$time = time;
-			my $delay = $time + 30;
-			if (-f "list_coords" || -f "numero_coords") {
-				$delay = $time+3;
-			}
-			if ($last_chan && defined($last_prog) && $chaines{$last_chan}) {
-				my $ndelay = $chaines{$last_chan}[$last_prog][4];
-				$ndelay = 0 if ($delay == $time);
-				# print "delay nextprog : ",get_time($ndelay),"\n";
-				if (!$delay || $ndelay < $delay) {
-					$delay = $ndelay ;
+sub update_channel($) {
+	my $channel = shift;
+	for (my $n=0; $n<=$#chan; $n++) {
+		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
+		if ($channel eq $name && $num != 254) {
+			print "*** req_prog loop request ***\n";
+			my $response = req_prog(0,$num);
+			last if (!$response->is_success);
+			my $res = $response->content;
+			if ($res && index($program_text,$res) < 0 && $res =~ /$num/) {
+				$res = parse_prg($res);
+				if (open(F,">>day0")) {
+					seek(F,0,2); # A la fin
+					print F ':$$$:',$res;
+					close(F);
 				}
-				if ($delay < $time) {
-					# on obtient un delay négatif ici quand nolife n'a pas
-					# encore les programmes actuels
-					$delay = undef;
-				}
-			}
-			if ($start_timer && $start_timer <= $time) {
-				# start_timer peut se retrouver en anomalie comme ici
-				# si l'un des cadres change de status avant qu'il soit à 0
-				# dans ce cas on le remet à 0 ici.
-				$start_timer = 0;
-			}
-
-			if ($start_timer && # $start_timer > $time && 
-				(!$delay || $start_timer < $delay)) {
-				$delay = $start_timer;
-				# print "delay start_timer : ",get_time($delay),"\n";
-			}
-			foreach (@records) {
-				if ($$_[0] > $time && (!$delay || $$_[0] < $delay)) {
-					$delay = $$_[0];
-					# print "delay début enreg : ",get_time($delay),"\n";
-				}
-				if ($$_[1] > $time && (!$delay || $$_[1] < $delay)) {
-					$delay = $$_[1];
-					# print "delay fin enreg : ",get_time($delay),"\n";
-				}
-			}
-			$delay -= $time if ($delay);
-
-			my $nfound;
-			eval {
-				local $SIG{ALRM} = sub { die "alarm\n"; };
-				alarm($delay);
-				open(F,"<fifo_info") || die "ouverture fifo_info !\n";
-				alarm(0);
-				$nfound = 1;
-			};
-			$nfound = 0 if ($@);
-
-			$time = time;
-			if ($last_chan && defined($last_prog) && $chaines{$last_chan} && $time >= $chaines{$last_chan}[$last_prog][4] && $time < $chaines{$last_chan}[$last_prog+1][4]) {
-				if (-f "info_coords" && $time - $chaines{$last_chan}[$last_prog+1][3] < 5) {
-					print "programme suivant affiché last $last_prog < ",$#{$chaines{$last_chan}},"\n";
-					$last_prog++;
-					disp_prog($chaines{$last_chan}[$last_prog],$last_long);
-				}
-			}
-			handle_records($time);
-			if (-f "list_coords" || -f "numero_coords") {
-				if (open(G,">fifo_list")) {
-					print G "refresh\n";
-					close(G);
+				print "programme lu à la volée $name ",length($program_text),"\n";
+			} else {
+				print "rien pu lire pour $channel $num\n";
+				if ($res !~ $num) {
+					print "renvoi résultat nul\n";
 				} else {
-					print "can't talk to fifo_list\n";
+					open(F,">debug");
+					print F "$res\n";
+					close(F);
+					open(F,">debug2");
+					print F "$program_text\n";
+					close(F);
+					print "fichier debug créé, on quitte\n";
+					exit(1);
 				}
 			}
-
-			if ($nfound > 0) {
-				($cmd) = <F>;
-				if ($cmd) {
-					chomp ($cmd);
-					my @tab = split(/ /,$cmd);
-					($tab[0],$long) = split(/\:/,$tab[0]);
-					$cmd = join(" ",@tab);
-				}
-			}
-			close(F);
-			if ($start_timer && $time - $start_timer >= 0 && -f "info_coords" &&
-				! -f "list_coords") {
-				print "alpha sur start_timer\n";
-				alpha("info_coords",-40,-255,-5);
-				unlink "info_coords";
-				print "suppression info_coords sur alpha (timer)\n";
-				$start_timer = 0;
-			}
-		} while (!$cmd);
-	} else {
-		$reread = 0;
+		}
 	}
+}
+
+if (!$channel) {
+	$cmd = "";
+	do {
+		# Celui là sert à vérifier les déclenchements externes (noair.pl)
+		$time = time;
+		my $delay = $time + 30;
+		if (-f "list_coords" || -f "numero_coords") {
+			$delay = $time+3;
+		}
+		if ($last_chan && defined($last_prog) && $chaines{$last_chan}) {
+			my $ndelay = $chaines{$last_chan}[$last_prog][4];
+			$ndelay = 0 if ($delay == $time);
+			# print "delay nextprog : ",get_time($ndelay),"\n";
+			if (!$delay || $ndelay < $delay) {
+				$delay = $ndelay ;
+			}
+			if ($delay < $time) {
+				# on obtient un delay négatif ici quand nolife n'a pas
+				# encore les programmes actuels
+				$delay = undef;
+			}
+		}
+		if ($start_timer && $start_timer <= $time) {
+			# start_timer peut se retrouver en anomalie comme ici
+			# si l'un des cadres change de status avant qu'il soit à 0
+			# dans ce cas on le remet à 0 ici.
+			$start_timer = 0;
+		}
+
+		if ($start_timer && # $start_timer > $time && 
+			(!$delay || $start_timer < $delay)) {
+			$delay = $start_timer;
+			# print "delay start_timer : ",get_time($delay),"\n";
+		}
+		foreach (@records) {
+			if ($$_[0] > $time && (!$delay || $$_[0] < $delay)) {
+				$delay = $$_[0];
+				# print "delay début enreg : ",get_time($delay),"\n";
+			}
+			if ($$_[1] > $time && (!$delay || $$_[1] < $delay)) {
+				$delay = $$_[1];
+				# print "delay fin enreg : ",get_time($delay),"\n";
+			}
+		}
+		$delay -= $time if ($delay);
+
+		my $nfound;
+		eval {
+			local $SIG{ALRM} = sub { die "alarm\n"; };
+			alarm($delay);
+			open(F,"<fifo_info") || die "ouverture fifo_info !\n";
+			alarm(0);
+			$nfound = 1;
+		};
+		$nfound = 0 if ($@);
+
+		$time = time;
+		if ($last_chan && defined($last_prog) && $chaines{$last_chan} && $time >= $chaines{$last_chan}[$last_prog][4] && $time < $chaines{$last_chan}[$last_prog+1][4]) {
+			if (-f "info_coords" && $time - $chaines{$last_chan}[$last_prog+1][3] < 5) {
+				print "programme suivant affiché last $last_prog < ",$#{$chaines{$last_chan}},"\n";
+				$last_prog++;
+				disp_prog($chaines{$last_chan}[$last_prog],$last_long);
+			}
+		}
+		handle_records($time);
+
+		if ($nfound > 0) {
+			($cmd) = <F>;
+			if ($cmd) {
+				chomp ($cmd);
+				my @tab = split(/ /,$cmd);
+				($tab[0],$long) = split(/\:/,$tab[0]);
+				$cmd = join(" ",@tab);
+			}
+		}
+		close(F);
+		if ($start_timer && $time - $start_timer >= 0 && -f "info_coords" &&
+			! -f "list_coords") {
+			print "alpha sur start_timer\n";
+			alpha("info_coords",-40,-255,-5);
+			unlink "info_coords";
+			print "suppression info_coords sur alpha (timer)\n";
+			$start_timer = 0;
+		}
+	} while (!$cmd);
 	#$timer_start = [gettimeofday];
 	$time = time();
 # 	print "info: reçu cmd $cmd\n";
@@ -721,10 +742,8 @@ if (!$reread || !$channel) {
 					my $offset = ($date-$d2)/(24*3600);
 					print "A récupérer offset $offset\n";
 					print "appel getlisteprogrammes suite\n";
-					$program_text .= getListeProgrammes($offset);
-					$old_nolife = $chaines{"nolife"};
-					$reread = 1; # On récupère l'ancienne commande...
-					goto debut;
+					getListeProgrammes($offset);
+					$rtab = $chaines{$last_chan};
 				}
 				$n-- if ($n > $#$rtab);
 			}
@@ -791,16 +810,12 @@ if (!$reread || !$channel) {
 		print "info: commande inconnue $cmd\n";
 		goto read_fifo;
 	}
-
-} else {
-	$reread = 0;
-}  
+}
 ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
 my $date2 = sprintf("%02d/%02d/%d",$mday,$mon+1,$year+1900);
 if ($date2 ne $date) { # changement de date
 	print "$date2 != $date -> reread\n";
 	$program_text = undef;
-	$reread = 1;
 	$date = $date2;
 	unlink "day-1";
 	rename "day0","day-1";
@@ -842,35 +857,8 @@ if (!$rtab) {
 	} # $name eq $channel
 }
 if (!$rtab && $net) {
-	for (my $n=0; $n<=$#chan; $n++) {
-		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
-		if ($channel eq $name && $num != 254) {
-			print "*** req_prog loop request ***\n";
-			my $response = req_prog(0,$num);
-			last if (!$response->is_success);
-			my $res = $response->content;
-			if ($res && index($program_text,$res) < 0 && $res =~ /$num/) {
-				$program_text .= $res;
-				$reread = 1; # On récupère l'ancienne commande...
-				print "programme lu à la volée $name ",length($program_text),"\n";
-				goto debut;
-			} else {
-				print "rien pu lire pour $channel $num\n";
-				if ($res !~ $num) {
-					print "renvoi résultat nul\n";
-				} else {
-					open(F,">debug");
-					print F "$res\n";
-					close(F);
-					open(F,">debug2");
-					print F "$program_text\n";
-					close(F);
-					print "fichier debug créé, on quitte\n";
-					exit(1);
-				}
-			}
-		}
-	}
+	update_channel($channel);
+	$rtab = $chaines{$channel};
 }
 if (!$rtab) {
 	# Pas trouvé la chaine
@@ -885,6 +873,7 @@ if (!$rtab) {
 	goto read_fifo;
 }
 
+my $read_after = undef;
 reprise_nolife:
 for (my $n=0; $n<=$#$rtab; $n++) {
 	my $sub = $$rtab[$n];
@@ -904,10 +893,15 @@ for (my $n=0; $n<=$#$rtab; $n++) {
 if ($time < $$rtab[0][3] && !$read_before) {
 	print "pas trouvé l'heure ",dateheure($time)," cmp ",dateheure($$rtab[0][3]),", mais on va récupérer le jour d'avant...\n";
 	$program_text = getListeProgrammes(-1).$program_text;
-	$old_nolife = $chaines{"nolife"};
-	$reread = 1; # On récupère l'ancienne commande...
 	$read_before = 1;
-	goto debut;
+	$rtab = $chaines{$channel};
+	goto reprise_nolife;
+}
+if ($time > $$rtab[$#$rtab][4] && !$read_after) {
+	update_channel($channel);
+	$rtab = $chaines{$channel};
+	$read_after = 1;
+	goto reprise_nolife;
 }
 if ($channel eq "nolife") {
 	update_noair();
@@ -934,11 +928,13 @@ goto read_fifo;
 sub parse_prg($) {
 	# Interprête le résultat de la requête de programmes...
 	my $program_text = shift;	
+	$program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
 	my @fields = split(/\:\$\$\$\:/,$program_text);
 	if (!@fields) {
 		print "gros problème requête programmes, aucun champ obtenu, on ignore le réseau\n";
 		$net = 0;
 	}
+	shift @fields if (!$fields[0]);
 
 	my $date_offset = 0;
 	# Les collisions : je laisse ce code qui fait des stats sur leur nombre et
@@ -950,6 +946,8 @@ sub parse_prg($) {
 	# leur code qui fait toutes ces collisions !
 	my $nb_collision = 0;
 	my @fields2 = ();
+	my $date0 = $date;
+
 	foreach (@fields) {
 		my $old = $_;
 		my @sub = split(/\$\$\$/);
@@ -957,12 +955,7 @@ sub parse_prg($) {
 		if (!$date_offset || $sub[12] ne $date) {
 			$date = $sub[12];
 			if (!$date) {
-				print "format de fichier programmes incorrect, on va essayer de corriger\n";
-				if ($chan eq "nolife") {
-					unlink <air*>;
-				} else {
-					unlink <day*>;
-				}
+				print "*** format de fichier programmes incorrect, on va essayer de corriger\n";
 				$program_text = "";
 				return undef;
 			}
@@ -1000,8 +993,12 @@ sub parse_prg($) {
 		}
 	}
 	print scalar localtime," fin traitement fichier, $nb_collision collisions\n";
-#	$chaines{"nolife"} = get_nolife($chaines{"nolife"});
-#	print scalar localtime," fin traitement nolife\n";
+	$chaines{"nolife"} = get_nolife($chaines{"nolife"}) if (!$chaines{nolife});
+	print scalar localtime," fin traitement nolife\n";
+	if ($date0 ne $date) {
+		($sec,$min,$hour,$mday,$mon,$year) = localtime();
+		$date = sprintf("%02d/%02d/%d",$mday,$mon+1,$year+1900);
+	}
 	join(':$$$:',@fields2);
 }
 
@@ -1057,7 +1054,6 @@ sub getListeProgrammes {
 	return undef if (!$response->is_success);
 
 	my $program_text = $response->content;
-	$program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
 	$program_text = parse_prg($program_text);
 
 	open(F,">day".($offset));
