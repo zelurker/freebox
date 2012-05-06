@@ -10,7 +10,7 @@ sub get_mms {
 	my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
 	my $browser = LWP::UserAgent->new(keep_alive => 0,
 		agent =>$useragt);
-	$browser->timeout(10);
+	$browser->timeout(3);
 	$browser->default_header(
 		[ 'Accept-Language' => "fr-fr"
 			#                          'Accept-Encoding' => "gzip,deflate",
@@ -20,11 +20,32 @@ sub get_mms {
 
 	$browser->max_size(65000);
 	my $response = $browser->get($url);
-	return $url if (!$response->is_success);
-	return $url if ($response->header("Content-type") !~ /text/);
+	return undef if (!$response->is_success);
+	# On ne peut pas interprêter content-type, certains serveurs renvoient
+	# mpegurl pour des m3u, genre : http://www.zeradio.net/ecouter/playlist.m3u
+# 	if ($response->header("Content-type") !~ /text/) {
+# 		print "url is not text : ",$response->header("Content-type"),"\n";
+# 		return $url;
+# 	}
 	my $page = $response->content;
 	if (!$page) {
 		print STDERR "could not get $url\n";
+	} elsif ($page =~ /^\#EXTM3U/) {
+		# m3u, on interprête d'après le contenu et pas l'extension
+		while ($page =~ s/(.+?)[\n\r]//) {
+			$_ = $1;
+			next if (/^\#/);
+			return $_ if (/^http/);
+		}
+		print "could not find url in m3u $page from $url\n";
+		exit(1);
+	} elsif ($page =~ /^\[playlist/) {
+		while ($page =~ s/(.+?)[\n\r]//) {
+			$_ = $1;
+			return $1 if (/^File\d*\=(http.+)/);
+		}
+		print "pls impossible à traiter $page from $url\n";
+		exit(1);
 	} elsif ($page =~ /"(mms.+?)"/) {
 		print "mms url : $1 from $url\n";
 		return $1;

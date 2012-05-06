@@ -505,27 +505,32 @@ sub load_file2($$$$$) {
 	    kill "TERM",$pid;
 	    unlink "player1.pid";
 	}
-	if ($serv !~ /(mp3|ogg|flac|mpc|wav|m3u)$/i) {
+	if ($serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac)$/i) {
 	    # Gestion des pls supprimée, mplayer semble les gérer
 	    # très bien lui même.
+		my $old = $serv;
 	    $serv = get_mms($serv) if ($serv =~ /^http/);
-	    print "flux: loadfile $serv\n";
-	    open(G,">live");
-	    close(G);
+		if ($serv) {
+			print "flux: loadfile $serv from $serv\n";
+			open(G,">live");
+			close(G);
+		}
 	}
-	unlink( "list_coords","info_coords","video_size");
-	system("kill -USR2 `cat info.pid`");
-	open(G,">current");
-	my $src = ($source eq "cd" ? "flux" : $source);
-	# $serv est en double en 7ème ligne, c'est voulu
-	# oui je sais, c'est un bordel
-	# A nettoyer un de ces jours dans run_mp1/freebox
-	print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
-	close(G);
-	print "sending quit\n";
-	unlink("id","stream_info");
-	send_command("quit\n");
-	system("kill `cat player2.pid`");
+	if ($serv) {
+		unlink( "list_coords","info_coords","video_size");
+		system("kill -USR2 `cat info.pid`");
+		open(G,">current");
+		my $src = ($source eq "cd" ? "flux" : $source);
+		# $serv est en double en 7ème ligne, c'est voulu
+		# oui je sais, c'est un bordel
+		# A nettoyer un de ces jours dans run_mp1/freebox
+		print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
+		close(G);
+		print "sending quit\n";
+		unlink("id","stream_info");
+		send_command("quit\n");
+		system("kill `cat player2.pid`");
+	}
 }
 
 sub get_cur_mode {

@@ -74,15 +74,10 @@ function launch() {
 		fi
 		cd=`grep "drive name" /proc/sys/dev/cdrom/info|
 		sed 's/drive name:[ \t]*//'`
-		if echo $name|grep pls; then
-			prefix="-playlist "
-		else
-			prefix=""
-		fi
-		echo mplayer2 -cdrom-device "/dev/$cd" $prefix "$name" -quiet -cache $cache \
+		echo mplayer2 -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd
-		mplayer2 -cdrom-device "/dev/$cd" $prefix "$name" -quiet -cache $cache \
+		mplayer2 -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
 			conf=$PWD/input.conf:file=fifo_cmd \
 			| perl filter_mplayer.pl &
