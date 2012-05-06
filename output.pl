@@ -98,6 +98,7 @@ sub conv_channel {
 		"AB 1" => "AB1",
 		"IDF 1" => "IDF1",
 		"i>TELE" => "iTélé",
+		"i> TELE" => "iTélé",
 		"TV5 Monde" => "TV5MONDE",
 		"France ô" => "France Ô",
 		"france o" => "France Ô",
@@ -108,8 +109,10 @@ sub conv_channel {
 		"Onzeo" => "Onzéo",
 		"TEVA" => "Téva",
 	);
-	$channel =~ s/\(bas débit\)//;
-	$channel =~ s/hd$//i;
+	$channel =~ s/ \(bas débit\)//;
+	$channel =~ s/ hd$//i;
+	$channel =~ s/ sat$//i;
+	$channel =~ s/^Télénantes //;
 	$channel =~ s/ *$//;
 	foreach (keys %corresp) {
 		if (lc($_) eq $channel) {
