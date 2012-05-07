@@ -1035,6 +1035,7 @@ sub getListeProgrammes {
 		}
 	}
 	return parse_prg($found) if ($found);
+    return undef if (!$net);
 
 	my $url = "";
 	for (my $i =0 ; $i < @selected_channels ; $i++ ) {
