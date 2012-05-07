@@ -172,14 +172,16 @@ NTI
 http://www.tv-radio.com/station/nti-mp3/nti-mp3-128k.m3u
 Oui FM
 http://ouifm.ice.infomaniak.ch/ouifm-high.mp3 http://rock.ouifm.fr/dynamic-menu.json
-Oui FM 2
-http://ouifm2.ice.infomaniak.ch/ouifm2.mp3
-Oui FM 3
-http://ouifm3.ice.infomaniak.ch/ouifm3.mp3
-Oui FM 4
-http://ouifm4.ice.infomaniak.ch/ouifm4.aac
-Oui FM 5
-http://ouifm5.ice.infomaniak.ch/ouifm5.aac
+Oui FM Alternatif
+http://ouifm2.ice.infomaniak.ch/ouifm2.mp3 http://rock.ouifm.fr/dynamic-menu.json _alternatif
+Oui FM Collector
+http://ouifm3.ice.infomaniak.ch/ouifm3.mp3 http://rock.ouifm.fr/dynamic-menu.json _collector
+Oui FM Blues
+http://ouifm4.ice.infomaniak.ch/ouifm4.aac http://rock.ouifm.fr/dynamic-menu.json _blues
+Oui FM Indé
+http://ouifm5.ice.infomaniak.ch/ouifm5.aac http://rock.ouifm.fr/dynamic-menu.json _inde
+Oui FM DJ Zebra
+http://ouifm5.ice.infomaniak.ch/ouifm6-128.mp3 http://rock.ouifm.fr/dynamic-menu.json _djzebra
 Oxyradio
 http://www.oxyradio.net/listen/oxyradio.pls
 Pacifique FM

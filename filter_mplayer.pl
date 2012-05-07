@@ -14,7 +14,7 @@
 use strict;
 use Fcntl;
 require "output.pl";
-use LWP 5.64;
+require "playlist.pl";
 
 my $net = have_net();
 eval {
@@ -44,13 +44,6 @@ our $time;
 our $time_prog;
 our $last_image;
 my $buff = "";
-
-our $browser = LWP::UserAgent->new(keep_alive => 0);
-$browser->timeout(5);
-$browser->default_header(
-	[ 'Accept-Language' => "fr-fr"
-	]
-);
 
 sub handle_result {
 	my $result = shift;
@@ -148,54 +141,6 @@ sub handle_images {
 	$time = time()+25;
 }
 
-sub handle_prog {
-	return if (!$net);
-	my $response = $browser->get($prog);
-	if (! $response->is_success) {
-		print "filter: pas pu récupérer le prog en $prog\n";
-		return;
-	}
-	my $res = $response->content;
-	if ($res =~ /^\{"last":\[(.+?)\]/) {
-		# Format oui fm
-		my $c = $1;
-		$c =~ s/^{//;
-		$c =~ s/}$//;
-		my @tab = split /\},\{/,$c;
-		my @tracks;
-		foreach (@tab) {
-			my %hash = ();
-			my @tab2 = split /","/;
-			foreach (@tab2) {
-				s/ +$//g;
-				s/" */"/g;
-				/^"?(.+?)"\:"(.+) */;
-				my $val = $2;
-				my $key = $1;
-				if ($key eq "img") {
-					# Pour je ne sais quelle raison ils backslashent les slashes
-					# ça passerait peut-être sans filtre, mais vaut mieux
-					# filtrer quand même !
-					$val =~ s/\\\//\//g;
-				}
-				$hash{$key} = $val;
-			}
-			push @tracks,($hash{img} ? "pic:$hash{img} " : "")."$hash{artiste} : $hash{titre} ($hash{album})";
-		}
-		if (open(F,">stream_info")) {
-			print F "$codec $bitrate\n";
-			foreach (reverse @tracks) {
-				print F "$_\n";
-			}
-			close(F);
-		}
-		send_cmd_prog();
-		$time_prog = time()+30;
-	} else {
-		print "format inconnu $res\n";
-	}
-}
-
 my $pid;
 open(F,"<info.pid") || die "can't open info.pid !\n";
 $pid = <F>;
@@ -279,11 +224,11 @@ sub update_codec_info {
 $SIG{TERM} = \&check_eof;
 my $rin = "";
 vec($rin,fileno(STDIN),1) = 1;
-if ($prog) {
+if ($prog && $net) {
 	$time_prog = time()+1;
-	print "filter: time_prog set\n";
 }
 
+my $old_str = "";
 while (1) {
 
 	chomp;
@@ -305,7 +250,19 @@ while (1) {
 		handle_images();
 	}
 	if ($time_prog && $time_prog <= $t0) {
-		handle_prog();
+		my $str = handle_prog($prog,"$codec $bitrate");
+		if ($str) {
+			$time_prog = time()+30;
+			print "send_cmd_prog got str $str\n";
+			send_cmd_prog();
+			if ($str ne $old_str) {
+				print "new call to handle_image (old = $old_str)\n";
+				handle_images($str);
+				$old_str = $str;
+			}
+		} else {
+			print "filter: pas obtenu de str $str\n";
+		}
 	}
 	if ($nfound > 0) {
 		my $ret = sysread(STDIN,$buff,8192,length($buff));
