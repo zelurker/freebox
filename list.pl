@@ -62,7 +62,11 @@ sub read_conf {
 }
 
 sub save_conf {
-	$conf{"sel_$source"} = $found;
+	if ($base_flux) {
+		$conf{"sel_$source\_$base_flux"} = $found;
+	} else {
+		$conf{"sel_$source"} = $found;
+	}
 	if (open(F,">$ENV{HOME}/.freebox/conf")) {
 		foreach (keys %conf) {
 			print F "$_ = $conf{$_}\n";
@@ -138,7 +142,11 @@ sub read_freebox {
 
 sub read_list {
 #	print "list: read_list source $source base_flux $base_flux mode_flux $mode_flux\n";
-	$found = $conf{"sel_$source"};
+	if ($base_flux) {
+		$found = $conf{"sel_$source\_$base_flux"};
+	} else {
+		$found = $conf{"sel_$source"};
+	}
 	if ($source eq "menu") {
 		@list = ();
 		$base_flux = "";
