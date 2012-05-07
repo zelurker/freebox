@@ -4,6 +4,7 @@
 
 use LWP 5.64;
 use strict;
+use Encode;
 
 our $browser = LWP::UserAgent->new(keep_alive => 0);
 $browser->timeout(5);
@@ -27,6 +28,8 @@ sub handle_prog($) {
 		return;
 	}
 	my $res = $response->content;
+	my @tracks;
+	my ($fa,$ft);
 	if ($res =~ s/^\{//) { # format oui fm
 		foreach (split /\],/,$res) {
 			next if (!(/^"last$suffixe":\[(.+)/));
@@ -34,8 +37,6 @@ sub handle_prog($) {
 			$c =~ s/^{//;
 			$c =~ s/}$//;
 			my @tab = split /\},\{/,$c;
-			my @tracks;
-			my ($fa,$ft);
 			foreach (@tab) {
 				my %hash = ();
 				my @tab2 = split /","/;
@@ -58,17 +59,50 @@ sub handle_prog($) {
 				$ft = $hash{$titre} if (!$ft);
 				$fa = $hash{$artiste} if (!$fa);
 			}
-			if (open(F,">stream_info")) {
-				print F "$info\n";
-				foreach (reverse @tracks) {
-					print F "$_\n";
-				}
-				close(F);
-			}
-			return "$fa : $ft"; # Renvoie la chaine pour google images
+			last;
 		}
+
+	} elsif ($res =~ /^<\?xml/) {
+		# mfm minimum, peut-être d'autres...
+
+		print "format xml reconnu\n";
+
+		my %hash;
+		while ($res =~ s/(.+?)[\n\r]//) {
+			$_ = $1;
+			if (/^<\?xml/ && /encoding=\'(.+?)\'/) {
+				if ($1 eq "UTF-8") {
+					print "réencodage latin9\n";
+					Encode::from_to($res, "utf-8", "iso-8859-15");
+				} else {
+					print "encoding $1\n";
+				}
+			} elsif (/<morceau/) {
+				%hash = ();
+			} elsif (/<(.+?)><\!\[CDATA\[(.+?)\]/) {
+				$hash{$1} = $2 if ($2 && $2 ne "]");
+			} elsif (/<\/morceau/) {
+				$fa = $hash{chanteur} if (!$fa);
+				$ft = $hash{chanson} if (!$ft);
+				print "morceau $fa $ft\n";
+				push @tracks,
+				($hash{pochette} ? "pic:$hash{pochette} " : "").
+				"$hash{chanteur} : $hash{chanson}";
+			}
+		}
+
 	} else {
 		print "format inconnu $res\n";
+	}
+	if (@tracks) {
+		if (open(F,">stream_info")) {
+			print F "$info\n";
+			foreach (reverse @tracks) {
+				print F "$_\n";
+			}
+			close(F);
+		}
+		return "$fa : $ft"; # Renvoie la chaine pour google images
 	}
 	return 0;
 }
