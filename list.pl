@@ -445,15 +445,6 @@ sub switch {
 	return 1;
 }
 
-sub send_command {
-	my $cmd = shift;
-	if (sysopen(F,"fifo_cmd",O_WRONLY|O_NONBLOCK)) {
-		print "send_command : $cmd\n";
-		print F $cmd;
-		close(F);
-	}
-}
-
 sub reset_current {
 	# replace tout sur current
 	if (open(A,"<current")) {

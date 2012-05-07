@@ -9,6 +9,15 @@ use Socket;
 use Image::Info qw(image_info dim);
 use POSIX qw(SIGALRM);
 
+sub send_command {
+	my $cmd = shift;
+	if (sysopen(F,"fifo_cmd",O_WRONLY|O_NONBLOCK)) {
+		print "send_command : $cmd\n";
+		print F $cmd;
+		close(F);
+	}
+}
+
 sub have_net {
 	my $net = 1;
 	eval {
@@ -161,10 +170,16 @@ sub setup_output {
 			close(F);
 		}
 	}
+	print "info: reçu long $long\n";
+	if (!$long) {
+		$long = $height*2/3;
+	} elsif ($long =~ /^[a-z]/i) {
+		$long = "";
+	} # else pass long as is...
 	if ($pic) { #  && $width < 720) {
         my $info = image_info("$pic");
         my($w, $h) = dim($info);
-        if ($w > $width/2) {
+        if ($w > $width/2 || $h > $long-20) {
             my $div = 0;
             if ($w/2 < $width/2) {
                 $div = 2;
@@ -180,12 +195,7 @@ sub setup_output {
 	}
 
 	# print STDERR "output on pipe width $width height $height\n";
-	if (!$long) {
-		$long = $height*2/3;
-	} elsif ($long =~ /^[a-z]/i) {
-		$long = "";
-	} # else pass long as is...
-	# print "calling $prog fifo $width $height $long\n";
+	print "calling $prog fifo $width $height $long\n";
 	if ($width > 100 && $height > 100) {
 		$out = open_bmovl();
 		print $out "$prog fifo $width $height $long\n" if ($out);

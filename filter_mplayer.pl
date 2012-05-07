@@ -24,8 +24,11 @@ eval {
 my $images = 0;
 my @cur_images;
 our $agent;
+our $pos;
 my $last_t = 0;
 our $stream = 0;
+our %bookmarks;
+dbmopen %bookmarks,"bookmarks.db",0666;
 our $init = 0;
 if (!$@ && $net) {
 	# google images dispo si pas d'erreur
@@ -181,6 +184,14 @@ sub check_eof {
 			close(F);
 		}
 	}
+	if ($source eq "Fichiers vidéo" && $exit =~ /ID_EXIT=QUIT/) {
+		print "filter: take bookmark pos $pos for name $serv\n";
+		$bookmarks{$serv} = $pos;
+	} else {
+		print "filter: source $source exit $exit name $serv\n";
+		delete $bookmarks{$serv};
+	}
+	dbmclose %bookmarks;
 	exit(0); # au cas où on est là par un signal
 }
 
@@ -365,10 +376,16 @@ while (1) {
 				kill "USR1",$pid;
 			}
 			send_cmd_prog();
+			if ($bookmarks{$serv}) {
+				print "filter: j'ai un bookmark pour cette vidéo\n";
+				send_command("seek $bookmarks{$serv} 2\n");
+			}
 		} elsif (/End of file/ || /^EOF code/) {
 			print "filter: end of video\n";
 			kill "USR2",$pid;
 			check_eof();
+		} elsif (!$stream && /^A:(.+?) V:/) {
+			$pos = $1;
 		}
 	}
 }
