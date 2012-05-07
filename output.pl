@@ -164,17 +164,19 @@ sub setup_output {
 	if ($pic) { #  && $width < 720) {
         my $info = image_info("$pic");
         my($w, $h) = dim($info);
-		my $div = 0;
-		if ($w/2 < $width/2) {
-			$div = 2;
-		} elsif ($w/3 < $width/2) {
-			$div = 3;
-		}
-		$div = 2 if ($div == 0);
-		if ($div > 0) {
-			print "on lance convert $pic -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg $pic\n";
-			system("convert $pic -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg $pic");
-		}
+        if ($w > $width/2) {
+            my $div = 0;
+            if ($w/2 < $width/2) {
+                $div = 2;
+            } elsif ($w/3 < $width/2) {
+                $div = 3;
+            }
+            $div = 2 if ($div == 0);
+            if ($div > 0) {
+                print "on lance convert $pic -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg $pic\n";
+                system("convert $pic -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg $pic");
+            }
+        }
 	}
 
 	# print STDERR "output on pipe width $width height $height\n";
