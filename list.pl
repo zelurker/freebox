@@ -542,8 +542,10 @@ sub load_file2($$$$$) {
 		close(G);
 		print "sending quit\n";
 		unlink("id","stream_info");
-		send_command("quit\n");
+		# Remarque ici on ne veut pas que le message id_exit=quit sorte de
+		# filter, donc on le kille juste avant d'envoyer la commande de quit
 		system("kill `cat player2.pid`");
+		send_command("quit\n");
 	}
 }
 
