@@ -160,7 +160,7 @@ if [ -f "$name" ] || echo $src|grep -q flux; then
 		name=`head -n 7 current|tail -n 1`
 		# Le -frames 0 ici est totalement obligatoire sinon ça peut être
 		# très long sur certains fichiers h264 !
-		if [ "$src" != "flux" ]; then
+		if ! ( echo "$src"|grep -q flux ); then
 			mplayer2 -identify -vo null -ao null -frames 0 "$name" > id
 			if grep -q "no video" id || grep -q "NO AUDIO" id || \
 				grep -q "AUDIO_CODEC=ffaac" id; then
@@ -179,7 +179,7 @@ if [ -f "$name" ] || echo $src|grep -q flux; then
 		wait $pid
 		src=`head -n 2 current|tail -n 1`
 		length=""
-		if [ "$src" != "flux" ] && ! echo $src|grep -q Fichiers; then
+		if ! echo "$src" |grep -q "flux" && ! echo $src|grep -q Fichiers; then
 			length=`perl eval_end.pl`
 		fi
 		if [ "$length" != "0" ] && [ "$length" != "" ]; then
