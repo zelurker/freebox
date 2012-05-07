@@ -14,6 +14,7 @@
 use strict;
 use Fcntl;
 require "output.pl";
+use LWP 5.64;
 
 my $net = have_net();
 eval {
@@ -33,13 +34,23 @@ if (!$@ && $net) {
 		server => 'images.google.com',
 	);
 }
+our $prog;
+our ($codec,$bitrate);
 our $titre = "";
 our $artist;
 our $album;
 our $old_titre = "";
 our $time;
+our $time_prog;
 our $last_image;
 my $buff = "";
+
+our $browser = LWP::UserAgent->new(keep_alive => 0);
+$browser->timeout(5);
+$browser->default_header(
+	[ 'Accept-Language' => "fr-fr"
+	]
+);
 
 sub handle_result {
 	my $result = shift;
@@ -137,6 +148,54 @@ sub handle_images {
 	$time = time()+25;
 }
 
+sub handle_prog {
+	return if (!$net);
+	my $response = $browser->get($prog);
+	if (! $response->is_success) {
+		print "filter: pas pu récupérer le prog en $prog\n";
+		return;
+	}
+	my $res = $response->content;
+	if ($res =~ /^\{"last":\[(.+?)\]/) {
+		# Format oui fm
+		my $c = $1;
+		$c =~ s/^{//;
+		$c =~ s/}$//;
+		my @tab = split /\},\{/,$c;
+		my @tracks;
+		foreach (@tab) {
+			my %hash = ();
+			my @tab2 = split /","/;
+			foreach (@tab2) {
+				s/ +$//g;
+				s/" */"/g;
+				/^"?(.+?)"\:"(.+) */;
+				my $val = $2;
+				my $key = $1;
+				if ($key eq "img") {
+					# Pour je ne sais quelle raison ils backslashent les slashes
+					# ça passerait peut-être sans filtre, mais vaut mieux
+					# filtrer quand même !
+					$val =~ s/\\\//\//g;
+				}
+				$hash{$key} = $val;
+			}
+			push @tracks,($hash{img} ? "pic:$hash{img} " : "")."$hash{artiste} : $hash{titre} ($hash{album})";
+		}
+		if (open(F,">stream_info")) {
+			print F "$codec $bitrate\n";
+			foreach (reverse @tracks) {
+				print F "$_\n";
+			}
+			close(F);
+		}
+		send_cmd_prog();
+		$time_prog = time()+30;
+	} else {
+		print "format inconnu $res\n";
+	}
+}
+
 my $pid;
 open(F,"<info.pid") || die "can't open info.pid !\n";
 $pid = <F>;
@@ -148,11 +207,13 @@ if (open(F,"<current")) {
 }
 our ($chan,$source,$serv,$flav) = @_;
 chomp ($chan,$source,$serv,$flav);
+$serv =~ s/ (http.+)//;
+$prog = $1;
+print "filter: prog = $prog\n";
 $source =~ s/\/.+//;
 unlink "stream_info";
 my ($width,$height) = ();
 my $exit = "";
-my ($codec,$bitrate);
 
 sub check_eof {
 	print "check_eof: $source\n";
@@ -218,19 +279,33 @@ sub update_codec_info {
 $SIG{TERM} = \&check_eof;
 my $rin = "";
 vec($rin,fileno(STDIN),1) = 1;
+if ($prog) {
+	$time_prog = time()+1;
+	print "filter: time_prog set\n";
+}
+
 while (1) {
 
 	chomp;
 	my $t = undef;
-	$t = $time - time() if ($time);
+	my $t0 = time();
+	$t = $time - $t0 if ($time);
 	if ($t < 0) {
 		handle_images();
 		next;
 	}
+	if (($t && $time_prog - $t0 < $t) || !$t) {
+		$t = $time_prog - $t0;
+	}
+
 	my $rout = $rin;
 	my $nfound = select($rout,undef,undef,$t);
-	if ($time && $time <= time()) {
+	$t0 = time();
+	if ($time && $time <= $t0) {
 		handle_images();
+	}
+	if ($time_prog && $time_prog <= $t0) {
+		handle_prog();
 	}
 	if ($nfound > 0) {
 		my $ret = sysread(STDIN,$buff,8192,length($buff));
@@ -282,11 +357,11 @@ while (1) {
 			$stream = 1;
 			while (s/([a-z_]+)\=\'(.*?)\'\;//i) {
 				my ($name,$val) = ($1,$2);
-				if ($name eq "StreamTitle") {
+				if ($name eq "StreamTitle" && $val) {
 					$info .= "$val ";
 					$titre = $val;
 					$info .= " (pas de WWW::Google::Images)" if (!$images);
-				} elsif ($val && $name ne "StreamUrl") {
+				} elsif ($val && $name !~ /^(StreamUrl|adw_ad|durationMilliseconds|insertionType|metadata)/) {
 					$info .= " + $name=\'$val\' ";
 				}
 			}

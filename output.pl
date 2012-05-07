@@ -162,7 +162,7 @@ sub setup_output {
 		}
 	}
 	if ($pic) { #  && $width < 720) {
-        my $info = image_info("picture.jpg");
+        my $info = image_info("$pic");
         my($w, $h) = dim($info);
 		my $div = 0;
 		if ($w/2 < $width/2) {
@@ -172,8 +172,8 @@ sub setup_output {
 		}
 		$div = 2 if ($div == 0);
 		if ($div > 0) {
-			print "on lance convert picture.jpg -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg picture.jpg\n";
-			system("convert picture.jpg -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg picture.jpg");
+			print "on lance convert $pic -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg $pic\n";
+			system("convert $pic -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg $pic");
 		}
 	}
 

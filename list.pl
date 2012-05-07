@@ -498,6 +498,8 @@ sub load_file2($$$$$) {
 	# pour redémarrer à froid sur le nouveau fichier. Obligatoire quand on vient
 	# d'une source non vidéo vers une source vidéo par exemple.
 	my ($name,$serv,$flav,$audio,$video) = @_;
+	$serv =~ s/ (http.+)//;
+	my $prog = $1;
 	send_command("pause\n");
 	if (-f "player1.pid") {
 	    my $pid = `cat player1.pid`;
@@ -511,6 +513,7 @@ sub load_file2($$$$$) {
 	    # très bien lui même.
 		my $old = $serv;
 	    $serv = get_mms($serv) if ($serv =~ /^http/);
+		print "get_mms $old -> $serv\n";
 		if ($serv) {
 			print "flux: loadfile $serv from $serv\n";
 			open(G,">live");
@@ -523,6 +526,7 @@ sub load_file2($$$$$) {
 		open(G,">current");
 		my $src = ($source eq "cd" ? "flux" : $source);
 		$src .= "/$base_flux" if ($base_flux);
+		$serv .= " $prog" if ($prog);
 		# $serv est en double en 7ème ligne, c'est voulu
 		# oui je sais, c'est un bordel
 		# A nettoyer un de ces jours dans run_mp1/freebox
@@ -796,6 +800,7 @@ while (1) {
 				$base_flux .= "/$name";
 				read_list();
 			} else {
+				print "lecture flux: load_file2 $serv\n";
 				load_file2($name,$serv,$flav,$audio,$video);
 			}
 		} else {

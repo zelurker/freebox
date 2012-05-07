@@ -60,7 +60,7 @@ function launch() {
 	rm -f fifo fifo_cmd
 	mkfifo fifo fifo_cmd
 	# On récupère le nom à jour
-	name=`head -n 7 current|tail -n 1`
+	name=`head -n 7 current|tail -n 1|sed 's/ http.*//'`
 	if echo $src|grep -q flux; then
 		echo "lancement flux name=$name"
 		if echo $name|grep mms; then

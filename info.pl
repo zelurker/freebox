@@ -24,6 +24,10 @@ require HTTP::Cookies;
 require "output.pl";
 
 our $net = have_net();
+our @cache_pic;
+our ($last_prog, $last_chan,$last_long);
+our %chaines = ();
+our ($channel,$long);
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
@@ -62,9 +66,58 @@ sub get_stream_info {
 	undef;
 }
 
-our @cache_pic;
-our ($last_prog, $last_chan,$last_long);
-our %chaines = ();
+sub myget {
+	# un get avec cache
+	my $url = shift;
+	my $name = $url;
+	my $raw = undef;
+	$name =~ s/^.+\///;
+	if (-f "cache/$name") {
+		my $size = -s "cache/$name";
+		utime(undef,undef,"cache/$name");
+		return "cache/$name";
+	} else {
+		print "cache: geting $url\n";
+		my $pid = fork();
+		if ($pid) {
+			push @cache_pic,[$pid,$last_chan,$last_prog,$last_long,$name];
+		} else {
+			$raw = get $url || print STDERR "can't get image $name\n";
+			if ($raw) {
+				if (open(F,">cache/$name")) {
+					syswrite(F,$raw,length($raw));
+					close(F);
+				}
+			}
+			exit(0);
+		}
+	}
+	$raw;
+}
+
+sub read_stream_info {
+	my ($time,$cmd) = @_;
+	# Là il peut y avoir un problème si une autre source a le même nom
+	# de chaine, genre une radio et une chaine de télé qui ont le même
+	# nom... Pour l'instant pas d'idée sur comment éviter ça...
+	my ($cur,$last,$info) = get_stream_info();
+	$cur =~ s/pic:(http.+?) //;
+	my $pic = $1;
+	$pic = myget $pic if ($pic);
+	$last =~ s/pic:(http.+?) //;
+	if ($info) {
+		my $out = setup_output("bmovl-src/bmovl","",0);
+		if ($out) {
+			print $out "$pic\n\n";
+			my ($sec,$min,$hour) = localtime($time);
+
+			print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
+			print $out "Dernier morceau : $last\n" if ($last);
+			close_fifo($out);
+		}
+		$last_chan = $channel;
+	}
+}
 
 mkdir "cache" if (! -d "cache");
 mkdir "chaines" if (! -d "chaines");
@@ -92,15 +145,14 @@ sub REAPER {
 			   	-f "cache/$cache_pic[$n][4]") {
 				# L'image est arrivée, réaffiche le bandeau d'info alors
 				print "repaer found prog $n / $#cache_pic\n";
-				disp_prog($chaines{$last_chan}[$last_prog],$last_long);
+				if (!-f "stream_info") {
+					disp_prog($chaines{$last_chan}[$last_prog],$last_long);
+				} else {
+					read_stream_info(time(),"prog $last_chan");
+				}
 				splice @cache_pic,$n,1;
 				last if ($n > $#cache_pic);
 				redo;
-			} else {
-				print "n=$n cache_pic $#cache_pic $child == $cache_pic[$n][0] && $last_chan eq $cache_pic[$n][1]
-				&& $last_prog == $cache_pic[$n][2] &&
-				$last_long eq $cache_pic[$n][3] &&
-				-f cache/$cache_pic[$n][4]\n";
 			}
 		}
 	}
@@ -203,37 +255,6 @@ my %icons = (
 	294 => "http://upload.wikimedia.org/wikipedia/fr/thumb/6/67/IDF1.png/100px-IDF1.png",
 	1500 => "http://upload.wikimedia.org/wikipedia/fr/thumb/3/3f/Logo_nolife.svg/208px-Logo_nolife.svg.png",
 );
-
-sub myget {
-	# un get avec cache
-	my $url = shift;
-	my $name = $url;
-	my $raw = undef;
-	$name =~ s/^.+\///;
-	if (-f "cache/$name") {
-		my $size = -s "cache/$name";
-		utime(undef,undef,"cache/$name");
-		open(F,"<cache/$name");
-		sysread F,$raw,$size;
-		close(F);
-	} else {
-		print "cache: geting $url\n";
-		my $pid = fork();
-		if ($pid) {
-			push @cache_pic,[$pid,$last_chan,$last_prog,$last_long,$name];
-		} else {
-			$raw = get $url || print STDERR "can't get image $name\n";
-			if ($raw) {
-				if (open(F,">cache/$name")) {
-					syswrite(F,$raw,length($raw));
-					close(F);
-				}
-			}
-			exit(0);
-		}
-	}
-	$raw;
-}
 
 sub dateheure {
 	my $_ = shift;
@@ -402,7 +423,6 @@ foreach (@selected_channels) {
 }
 
 system("rm -f fifo_info && mkfifo fifo_info");
-my ($channel,$long);
 read_prg: 
 print "appel getlisteprogrammes read_prg\n";
 $program_text = getListeProgrammes(0) if (!$program_text);
@@ -437,15 +457,6 @@ sub disp_prog {
 
 			$raw = myget $$sub[9]; 
 		}
-		if ($raw) {
-			if (open(F,">picture.jpg")) {
-				print F $raw;
-				close(F);
-				$raw = 1;
-			} else {
-				print "can't create picture.jpg\n";
-			}
-		}
 	}
 	# Check channel logo
 	my $url = $icons{$$sub[0]};
@@ -454,7 +465,7 @@ sub disp_prog {
 	my $out = setup_output("bmovl-src/bmovl",$raw,$long);
 
 	print $out "$name\n";
-	print $out "picture.jpg" if ($raw);
+	print $out $raw if ($raw);
 
 	print $out "\n$$sub[1] : $start - $end\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
@@ -836,23 +847,8 @@ if (!$rtab) {
 	my $name = get_cur_name();
 	if ($name eq $channel) {
 		if (-f "stream_info") {
-			# Là il peut y avoir un problème si une autre source a le même nom
-			# de chaine, genre une radio et une chaine de télé qui ont le même
-			# nom... Pour l'instant pas d'idée sur comment éviter ça...
-			my ($cur,$last,$info) = get_stream_info();
-			if ($info) {
-				my $out = setup_output("bmovl-src/bmovl","",0);
-				if ($out) {
-					print $out "\n\n";
-					($sec,$min,$hour) = localtime($time);
-
-					print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
-					print $out "Dernier morceau : $last\n" if ($last);
-					close_fifo($out);
-				}
-				$last_chan = $channel;
-				goto read_fifo;
-			}
+			read_stream_info($time,$cmd);
+			goto read_fifo;
 		}
 	} # $name eq $channel
 }
