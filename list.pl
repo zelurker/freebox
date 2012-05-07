@@ -37,6 +37,8 @@ if (open(F,"<current")) {
 	close(F);
 }
 my ($chan,$source,$serv,$flav) = @_;
+$source =~ s/\/(.+)//;
+my $base_flux = $1;
 chomp ($chan,$source,$serv,$flav);
 $chan = lc($chan);
 $source = "freeboxtv" if (!$source);
@@ -44,7 +46,6 @@ $source = "freeboxtv" if (!$source);
 
 my (@list);
 our $found = undef;
-my $base_flux = "";
 my $mode_flux;
 our %conf;
 
@@ -521,6 +522,7 @@ sub load_file2($$$$$) {
 		system("kill -USR2 `cat info.pid`");
 		open(G,">current");
 		my $src = ($source eq "cd" ? "flux" : $source);
+		$src .= "/$base_flux" if ($base_flux);
 		# $serv est en double en 7ème ligne, c'est voulu
 		# oui je sais, c'est un bordel
 		# A nettoyer un de ces jours dans run_mp1/freebox
@@ -805,6 +807,7 @@ while (1) {
 			my ($n,$src,$s,$f,$a,$v) =  <F>;
 			close(F);
 			chomp($s,$f,$a,$v,$src);
+			$src =~ s/\/.+//;
 			if ($s ne $serv || $flav ne $f || $audio ne $a || $v ne $video || $src ne $source) {
 				unlink( "list_coords","info_coords","stream_info",
 					"numero_coords");

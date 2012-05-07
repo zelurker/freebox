@@ -148,6 +148,7 @@ if (open(F,"<current")) {
 }
 our ($chan,$source,$serv,$flav) = @_;
 chomp ($chan,$source,$serv,$flav);
+$source =~ s/\/.+//;
 unlink "stream_info";
 my ($width,$height) = ();
 my $exit = "";

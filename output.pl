@@ -131,6 +131,7 @@ sub setup_output {
 	}
 	my ($chan,$source,$serv,$flav) = @_;
 	chomp $source;
+	$source =~ s/\/.+//;
 	my ($width,$height);
 	my $out;
 	if ($source eq "flux") {

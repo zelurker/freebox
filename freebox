@@ -61,7 +61,7 @@ function launch() {
 	mkfifo fifo fifo_cmd
 	# On récupère le nom à jour
 	name=`head -n 7 current|tail -n 1`
-	if [ "$src" == "flux" ]; then
+	if echo $src|grep -q flux; then
 		echo "lancement flux name=$name"
 		if echo $name|grep mms; then
 			# Très approximatif comme détection mais en tous cas les flux
@@ -135,7 +135,7 @@ elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_li
 fi
 init_mp1 "$1" $2 $3 $4 $5
 name=`head -n 7 current|tail -n 1`
-if [ -f "$name" ] || [ "$src" == "flux" ]; then
+if [ -f "$name" ] || echo $src|grep -q flux; then
 
 	again=1
 	# Cette boucle est pour récupérer la main quand on sort par erreur du
