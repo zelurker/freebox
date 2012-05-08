@@ -21,13 +21,21 @@ sub get_mms {
 	$browser->max_size(65000);
 	my $response = $browser->get($url);
 	return undef if (!$response->is_success);
-	# On ne peut pas interprêter content-type, certains serveurs renvoient
-	# mpegurl pour des m3u, genre : http://www.zeradio.net/ecouter/playlist.m3u
-# 	if ($response->header("Content-type") !~ /text/) {
-# 		print "url is not text : ",$response->header("Content-type"),"\n";
-# 		return $url;
-# 	}
-	my $page = $response->content;
+	my $page;
+	if ($response->header("Content-type") =~ /audio/) {
+		# audio/xxx est quand même prenable !
+		print "url is not text : ",$response->header("Content-type"),"\n";
+		$browser->max_size(5000);
+		$page = $response->content;
+		if ($page !~ /^\#EXTM3U/) {
+			# Evitez les crétins qui gèrent le m3u en audio !!!
+			return $url;
+		} else {
+			print "crétin de m3u évité\n";
+		}
+	} else {
+		$page = $response->content;
+	}
 	if (!$page) {
 		print STDERR "could not get $url\n";
 	} elsif ($page =~ /^\#EXTM3U/) {
