@@ -65,8 +65,6 @@ sub handle_prog($) {
 	} elsif ($res =~ /^<\?xml/) {
 		# mfm minimum, peut-être d'autres...
 
-		print "format xml reconnu\n";
-
 		my %hash;
 		while ($res =~ s/(.+?)[\n\r]//) {
 			$_ = $1;
@@ -74,8 +72,6 @@ sub handle_prog($) {
 				if ($1 eq "UTF-8") {
 					print "réencodage latin9\n";
 					Encode::from_to($res, "utf-8", "iso-8859-15");
-				} else {
-					print "encoding $1\n";
 				}
 			} elsif (/<morceau/) {
 				%hash = ();
@@ -84,13 +80,57 @@ sub handle_prog($) {
 			} elsif (/<\/morceau/) {
 				$fa = $hash{chanteur} if (!$fa);
 				$ft = $hash{chanson} if (!$ft);
-				print "morceau $fa $ft\n";
 				push @tracks,
 				($hash{pochette} ? "pic:$hash{pochette} " : "").
 				"$hash{chanteur} : $hash{chanson}";
 			}
 		}
 
+	} elsif ($res =~ /^updateData/) {
+		# le format rtl2, de loin le + merdique carrément du code js !
+		# Super top : l'encodage utf à la con sur plusieurs caractères
+		# voir la page http://www.eteks.com/tips/tip3.html pour le détail du
+		# codage. Pas trouvé de méthode automatique pour dégager ça...
+		my %codage = (
+			'\u00e0' => 'à',
+			'\u00e2' => 'â',
+			'\u00e4' => 'ä',
+			'\u00e7' => 'ç',
+			'\u00e8' => 'è',
+			'\u00e9' => 'é',
+			'\u00ea' => 'ê',
+			'\u00eb' => 'ë',
+			'\u00ee' => 'î',
+			'\u00ef' => 'ï',
+			'\u00f4' => 'ô',
+			'\u00f6' => 'ö',
+			'\u00f9' => 'ù',
+			'\u00fb' => 'û',
+			'\u00fc' => 'ü',
+		);
+		foreach (keys %codage) {
+			# Ce crétin ne remplace pas le \ dans la source avec la 1ère regexp
+			$res =~ s/$_/$codage{$_}/gi;
+			# donc on est obligé de faire un 2ème tour !
+			$res =~ s/\\$codage{$_}/$codage{$_}/g;
+		}
+		if ($res =~ /"songs"\:\[(.+?)\]/) {
+			foreach (split /\},\{/,$1) {
+				my %hash = ();
+				foreach (split /\"?\,\"/) {
+					s/^"//;
+					s/"$//;
+					my ($k,$v) = split(/"\:"/);
+					$hash{$k} = $v;
+				}
+				$fa = $hash{artist} if (!$fa);
+				$ft = $hash{title} if (!$ft);
+				push @tracks,
+				($hash{cover} ? "pic:$hash{cover} " : "").
+				"$hash{artist} : $hash{title}".
+			   	($hash{album} ? " ($hash{album})" : "");
+			}
+		}
 	} else {
 		print "format inconnu $res\n";
 	}
