@@ -117,6 +117,8 @@ sub conv_channel {
 		"LCP" => "La chaîne parlementaire",
 		"Onzeo" => "Onzéo",
 		"TEVA" => "Téva",
+		"Equidia live" => "Equidia",
+		"Luxe.TV" => "Luxe TV",
 	);
 	$channel =~ s/ \(bas débit\)//;
 	$channel =~ s/ hd$//i;
