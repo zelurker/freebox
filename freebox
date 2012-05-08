@@ -61,6 +61,7 @@ function launch() {
 	mkfifo fifo fifo_cmd
 	# On récupère le nom à jour
 	name=`head -n 7 current|tail -n 1|sed 's/ http.*//'`
+	bmovl=bmovl=1:0:fifo,
 	if echo $src|grep -q flux; then
 		echo "lancement flux name=$name"
 		if echo $name|grep mms; then
@@ -76,16 +77,15 @@ function launch() {
 		sed 's/drive name:[ \t]*//'`
 		echo mplayer2 -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
-			conf=$PWD/input.conf:file=fifo_cmd
+			conf=$PWD/input.conf:file=fifo_cmd -vf $bmovl"screenshot"
 		mplayer2 -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
-			conf=$PWD/input.conf:file=fifo_cmd \
+			conf=$PWD/input.conf:file=fifo_cmd -vf $bmovl"screenshot" \
 			| perl filter_mplayer.pl &
 	else
 		if [ "$audio" != "" ]; then
 			audio2="-aid $audio"
 		fi
-		bmovl=bmovl=1:0:fifo,
 		mplayer=mplayer2
 		idle=""
 		if [ "$src" != "Fichiers vidéo" ]; then
