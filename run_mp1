@@ -9,6 +9,45 @@ if ! [ -d livetv ]; then
 fi
 find livetv/ -mtime +1 -delete
 
+function fallback
+{
+	serv=`head -n 3 current|tail -n 1`
+	flav=`head -n 4 current|tail -n 1`
+	audio=`head -n 5 current|tail -n 1`
+	video=`head -n 6 current|tail -n 1`
+	src=`head -n 2 current|tail -n 1`
+	if [ "$audio" == "0" ]; then
+		audio=""
+	fi
+	if [ "$video" == "0" ]; then
+		video=""
+	fi
+	if [ "$service" == "$serv" ] && [ "$flavour" == "$flav" ]; then
+		service=201
+		flavour=sd
+		chaine="France 2"
+	else
+		service=$serv
+		flavour=$flav
+		chaine=`head -n 1 current|tail -n 1`
+		name=`head -n 7 current|tail -n 1`
+	fi
+}
+
+function change_flav
+{
+	if [ "$tried" == "" ] && [ "$flavour" != "" ]; then
+		tried=flavour
+		if [ "$flavour" == "sd" ]; then
+			flavour=ld
+		elif [ "$flavour" == "ld" ] || [ "$flavour" == "hd" ]; then
+			flavour=sd
+		fi
+	else
+		fallback
+	fi
+}
+
 service=$1
 flavour=$2
 audio=$3
@@ -81,33 +120,8 @@ while [ "$ok" == "0" ]; do
 	echo run_mp1: fin attente fichier tries=$tries
 	if ! ps -p `cat player1.pid` >& /dev/null
 	then
-		if [ "$tried" == "" ] && [ "$flavour" != "" ]; then
-			tried=flavour
-			if [ "$flavour" == "sd" ]; then
-				flavour=ld
-			elif [ "$flavour" == "ld" ]; then
-				flavour=sd
-			fi
-		else
-			serv=`head -n 3 current|tail -n 1`
-			flav=`head -n 4 current|tail -n 1`
-			audio=`head -n 5 current|tail -n 1`
-			video=`head -n 6 current|tail -n 1`
-			src=`head -n 2 current|tail -n 1`
-			if [ "$audio" == "0" ]; then
-				audio=""
-			fi
-			if [ "$video" == "0" ]; then
-				video=""
-			fi
-			if [ "$service" == "$serv" ] && [ "$flavour" == "$flav" ]; then
-				service=201
-				flavour=sd
-			else
-				service=$serv
-				flavour=$flav
-			fi
-		fi
+		echo plus de player1 tried=$tried flavour=$flavour
+		change_flav
 	else
 		size=0
 		# Et attend que la taille sur disque soit au moins d'1 Mo
@@ -116,17 +130,15 @@ while [ "$ok" == "0" ]; do
 			[ $(( `date +%s`-$start )) -lt 5 ]; do
 			size=`stat --printf=%s "$name"`
 		done
+		timeout=$(( `date +%s`-$start ))
 		if ps -p `cat player1.pid` >& /dev/null && [ -f "$name" ]; then
 			ok=1 # fini !
 		fi
-		if [ $(( `date +%s`-$start )) -gt 10 ]; then
+		if [ $timeout -gt 5 ] || [ "$timeout" == "5" ] || [ "$ok" == "0" ]; then
 			# timeout
-			echo run_mp1: timeout, falling back to default freebox src
+			echo run_mp1: timeout $timeout, ok=$ok change_flav
 			kill `cat player1.pid`
-			service=201
-			flavour=sd
-			src=freeboxtv
-			chaine="France 2"
+			change_flav
 			ok=0
 		fi
 	fi
@@ -147,5 +159,5 @@ echo $flavour >> current
 echo $audio >> current
 echo $video >> current
 echo $name >> current
-echo run_mp1 ok name=$name size=`stat --printf=%s "$name"`
+echo run_mp1 ok name=$name size=`stat --printf=%s "$name"` service=$service
 exit 0
