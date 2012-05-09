@@ -246,11 +246,11 @@ while (1) {
 	my $t = undef;
 	my $t0 = time();
 	$t = $time - $t0 if ($time);
-	if ($t < 0) {
+	if ($t && $t < 0) {
 		handle_images();
 		next;
 	}
-	if (($t && $time_prog - $t0 < $t) || !$t) {
+	if ($time_prog && (($t && $time_prog - $t0 < $t) || !$t)) {
 		$t = $time_prog - $t0;
 	}
 
