@@ -3,6 +3,7 @@
 #include <SDL/SDL_ttf.h>
 #include <SDL/SDL_image.h>
 #include <SDL/SDL_rotozoom.h>
+#include "savesurf.h"
 #include "lib.h"
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -156,7 +157,14 @@ static int info(int fifo, int argc, char **argv)
 		    }
 
 		    if (ratio < 1.0) {
-			SDL_Surface *s = zoomSurface(chan,chan->w*ratio,chan->h*ratio,SMOOTHING_ON);
+			strcpy(buff,channel);
+			char *p = strrchr(buff,'.');
+			sprintf(p,"-%g.bmp",ratio);
+			SDL_Surface *s = SDL_LoadBMP(buff);
+			if (!s) {
+			    s = zoomSurface(chan,ratio,ratio,SMOOTHING_ON);
+			    png_save_surface(buff,s);
+			}
 			SDL_FreeSurface(chan);
 			chan = s;
 		    }
@@ -173,7 +181,15 @@ static int info(int fifo, int argc, char **argv)
 		    }
 
 		    if (ratio < 1.0) {
-			SDL_Surface *s = zoomSurface(pic,pic->w*ratio,pic->h*ratio,SMOOTHING_ON);
+			strcpy(buff,picture);
+			char *p = strrchr(buff,'.');
+			sprintf(p,"-%g.bmp",ratio);
+			SDL_Surface *s = SDL_LoadBMP(buff);
+			if (!s) {
+			    s = zoomSurface(pic,ratio,ratio,SMOOTHING_ON);
+			    printf("zoom from %d %d to %d %d ratio %g\n",pic->w,pic->h,s->w,s->h,ratio);
+			    png_save_surface(buff,s);
+			}
 			SDL_FreeSurface(pic);
 			pic = s;
 		    }
