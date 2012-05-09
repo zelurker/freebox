@@ -6,7 +6,6 @@
 use strict;
 use Fcntl;
 use Socket;
-use Image::Info qw(image_info dim);
 use POSIX qw(SIGALRM);
 
 sub send_command {
@@ -178,23 +177,6 @@ sub setup_output {
 	} elsif ($long =~ /^[a-z]/i) {
 		$long = "";
 	} # else pass long as is...
-	if ($pic) { #  && $width < 720) {
-        my $info = image_info("$pic");
-        my($w, $h) = dim($info);
-        if ($w > $width/2 || $h > $long-20) {
-            my $div = 0;
-            if ($w/2 < $width/2) {
-                $div = 2;
-            } elsif ($w/3 < $width/2) {
-                $div = 3;
-            }
-            $div = 2 if ($div == 0);
-            if ($div > 0) {
-                print "on lance convert $pic -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg $pic\n";
-                system("convert $pic -geometry ".($w/$div)."x truc.jpg && mv -f truc.jpg $pic");
-            }
-        }
-	}
 
 	# print STDERR "output on pipe width $width height $height\n";
 	print "calling $prog fifo $width $height $long\n";

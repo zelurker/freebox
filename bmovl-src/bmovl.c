@@ -2,6 +2,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include <SDL/SDL_image.h>
+#include <SDL/SDL_rotozoom.h>
 #include "lib.h"
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -142,17 +143,42 @@ static int info(int fifo, int argc, char **argv)
 		myfgets(buff,8192,stdin);
 		title = strdup(buff);
 
-		/* Determine max length of text */
-		if (chan && (chan->w >= width/2 || 3+fsize+chan->h+8+(pic ? pic->h+8 : 0) >= maxh)) {
-			/* Give priority to picture, remove channel logo 1st if not enough
-			 * space */
+		/* Redimensionnement éventuel */
+		if (chan) {
+		    double ratio = 1.0;
+		    if (chan->w > width/2) 
+			ratio = width/2.0/(chan->w);
+		    int h = maxh - fsize - 8*2;
+		    if (pic) h = h/2 - 8;
+		    if (chan->h > h) {
+			double ratio2 = h*1.0/chan->h;
+			if (ratio2 < ratio) ratio = ratio2;
+		    }
+
+		    if (ratio < 1.0) {
+			SDL_Surface *s = zoomSurface(chan,chan->w*ratio,chan->h*ratio,SMOOTHING_ON);
 			SDL_FreeSurface(chan);
-			chan = NULL;
+			chan = s;
+		    }
 		}
-		if (pic && (pic->w >= width/2 || 3+fsize+pic->h+8+(chan ? chan->h+8 : 0)>=maxh)) {
+		if (pic) {
+		    double ratio = 1.0;
+		    if (pic->w > width/2) 
+			ratio = width/2.0/(pic->w);
+		    int h = maxh - fsize - 8*2;
+		    if (chan) h = h/2-8;
+		    if (pic->h > h) {
+			double ratio2 = h*1.0/pic->h;
+			if (ratio2 < ratio) ratio = ratio2;
+		    }
+
+		    if (ratio < 1.0) {
+			SDL_Surface *s = zoomSurface(pic,pic->w*ratio,pic->h*ratio,SMOOTHING_ON);
 			SDL_FreeSurface(pic);
-			pic = NULL;
+			pic = s;
+		    }
 		}
+
 		int myx,w=0,h;
 		if (chan) w = chan->w;
 		if (pic && pic->w>w) w = pic->w;
