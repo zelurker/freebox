@@ -122,7 +122,7 @@ for n in player1.pid; do
 	fi
 done
 if ! [ -f info.pid ]; then
-	./bmovl-src/bmovl fifo &
+	./bmovl-src/bmovl fifo >& bmovl-log &
 fi	
 if ! ps -p `cat info_pl.pid`>&/dev/null; then
 	perl info.pl &
