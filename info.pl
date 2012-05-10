@@ -103,12 +103,14 @@ sub read_stream_info {
 	my ($cur,$last,$info) = get_stream_info();
 	$cur =~ s/pic:(http.+?) //;
 	my $pic = $1;
-	$pic = myget $pic if ($pic);
-	$last =~ s/pic:(http.+?) //;
+	if ($pic) {
+		$pic = myget $pic;
+		$last =~ s/pic:(http.+?) //;
+	}
 	if ($info) {
 		my $out = setup_output("bmovl-src/bmovl","",0);
 		if ($out) {
-			print $out "$pic\n\n";
+			print $out ($pic ? "$pic" : "")."\n\n";
 			my ($sec,$min,$hour) = localtime($time);
 
 			print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
