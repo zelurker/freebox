@@ -27,6 +27,8 @@ my $numero = "";
 my $time_numero = undef;
 my $last_list = "";
 
+$SIG{PIPE} = sub { print "list: sigpipe ignoré\n" };
+
 my @modes = (
 	"freeboxtv",  "dvb", "Enregistrements", "Fichiers vidéo", "Fichiers son", "livetv", "flux","radios freebox",
 	"cd");

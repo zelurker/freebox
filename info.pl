@@ -29,6 +29,8 @@ our ($last_prog, $last_chan,$last_long);
 our %chaines = ();
 our ($channel,$long);
 
+$SIG{PIPE} = sub { print "info: sigpipe ignoré\n" };
+
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
 	if (open(F,"<current")) {
