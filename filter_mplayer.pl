@@ -163,6 +163,60 @@ unlink "stream_info";
 my ($width,$height) = ();
 my $exit = "";
 
+sub send_cmd_fifo($$) {
+	my ($fifo,$cmd) = @_;
+	my $tries = 1;
+	my $error;
+	do {
+		if (sysopen(F,"$fifo",O_WRONLY|O_NONBLOCK)) {
+			$error = 0;
+			print F "$cmd\n";
+			close(F);
+		} else {
+			print "filter: send_cmd $fifo $cmd impossible tries=$tries !\n" if ($tries >= 10);
+			$error = 1;
+			select undef,undef,undef,0.1;
+		}
+
+	} while ($error && $tries++ <= 20);
+}
+
+sub send_cmd_list($) {
+	my $cmd = shift;
+	send_cmd_fifo("fifo_list",$cmd);
+}
+
+sub send_cmd_info($) {
+	my $cmd = shift;
+	send_cmd_fifo("fifo_info",$cmd);
+}
+
+sub bindings($) {
+	my $cmd = shift;
+	print "*** filter: bindings $cmd (",ord($cmd)," ",ord(index($cmd,1)),") ",length($cmd),"\n";
+	if (ord($cmd) >= 0xd0 && ord($cmd) <= 0xd9) {
+		# Hack pour réussir à transmettre KP0..KP9 à travers sdl
+		$cmd = "KP".chr(ord("0")+ord($cmd)-0xd0);
+	}
+
+	if ($cmd =~ /^KP(\d)/) {
+		send_cmd_list($1);
+	} elsif ($cmd =~ /KP_ENTER/) {
+		if (-f "list_coords" || -f "numero_coords") {
+			send_cmd_list("zap1");
+		} elsif (-f "info_coords") {
+			send_cmd_info("zap1");
+		}
+	} elsif ($cmd eq "KP_INS") {
+		send_cmd_list("0");
+	} elsif ($cmd =~ /^[A-Z]$/) {
+		# Touche alphabétique
+		send_cmd_list($cmd);
+	} else {
+		print "bindings: touche non reconnue $cmd\n";
+	}
+}
+
 sub check_eof {
 	print "check_eof: $source\n";
 	unlink("video_size","stream_info");
@@ -179,10 +233,7 @@ sub check_eof {
 	}
 	if ($source eq "Fichiers son" && $exit !~ /ID_EXIT=QUIT/) {
 		print "filter: envoi nextchan\n";
-		if (open(F,">fifo_list")) {
-			print F "nextchan\n";
-			close(F);
-		}
+		send_cmd_list("nextchan");
 	}
 	if ($source eq "Fichiers vidéo" && $exit =~ /ID_EXIT=QUIT/) {
 		print "filter: take bookmark pos $pos for name $serv\n";
@@ -196,20 +247,7 @@ sub check_eof {
 }
 
 sub send_cmd_prog {
-	my $tries = 1;
-	my $error;
-	do {
-		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
-			$error = 0;
-			print F "prog $chan\n";
-			close(F);
-		} else {
-			print "filter: envoi commande prog from filter impossible tries=$tries !\n" if ($tries >= 2);
-			$error = 1;
-			sleep(1);
-		}
-
-	} while ($error && $tries++ < 2);
+	send_cmd_info("prog $chan");
 }
 
 sub update_codec_info {
@@ -286,6 +324,7 @@ while (1) {
 		}
 
 		if (defined($ret) && $ret == 0) {
+			print "filter: sortie sur ret $ret\n";
 			last;
 		}
 	} else {
@@ -386,6 +425,8 @@ while (1) {
 			check_eof();
 		} elsif (!$stream && /^A:(.+?) V:/) {
 			$pos = $1;
+		} elsif (/No bind found for key \'(.+)\'/) {
+			bindings($1);
 		}
 	}
 }

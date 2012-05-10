@@ -77,10 +77,12 @@ function launch() {
 		sed 's/drive name:[ \t]*//'`
 		echo mplayer2 -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
-			conf=$PWD/input.conf:file=fifo_cmd -vf $bmovl"screenshot"
+			nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd -vf \
+			$bmovl"screenshot"
 		mplayer2 -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
 			-stop-xscreensaver -identify -input \
-			conf=$PWD/input.conf:file=fifo_cmd -vf $bmovl"screenshot" \
+			nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd -vf \
+			$bmovl"screenshot" 2>&1 \
 			| perl filter_mplayer.pl &
 	else
 		if [ "$audio" != "" ]; then
@@ -99,14 +101,14 @@ function launch() {
 		fi
 		echo $mplayer $idle $audio2 $length -vf $bmovl"screenshot$filter" \
 			-cache 100 -stop-xscreensaver -identify -input \
-			conf=$PWD/input.conf:file=fifo_cmd $demuxer \
+			nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 			"$name" avec filtre en pipe
 
 			$mplayer $idle $audio2 $length \
 				-vf $bmovl"screenshot$filter" -cache 100 \
 				-stop-xscreensaver -identify -input \
-				conf=$PWD/input.conf:file=fifo_cmd $demuxer \
-				"$name" | perl filter_mplayer.pl &
+				nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd $demuxer \
+				"$name" 2>&1 | perl filter_mplayer.pl &
 	fi
 	echo $! > player2.pid
 	audio2=""

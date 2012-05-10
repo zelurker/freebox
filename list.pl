@@ -757,6 +757,8 @@ while (1) {
 		read_list();
 		close_mode() if ($mode_opened);
 	} elsif ($cmd =~ /^zap(1|2)/) {
+		# zap1 : zappe sur la sélection en cours
+		# zap2 : zappe sur le nom de chaine passé en paramètre
 		if ($cmd =~ s/^zap2 //) {
 			($found) = find_name($cmd);
 		}
@@ -953,7 +955,6 @@ while (1) {
 			}
 		}
 
-		print "list: reçu $cmd, numero=$numero\n";
 		open(F,">numero_coords");
 		close(F);
 		if (!-f "list_coords") {
@@ -979,6 +980,17 @@ while (1) {
 				print F "refresh\n"; # pour réveiller info
 				close(F);
 			}
+			next;
+		}
+	} elsif ($cmd =~ /^[A-Z]$/) { # alphabétique
+		my $old = $found;
+		for (; $found <= $#list; $found++) {
+			my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+			last if ($name =~ /^$cmd/i);
+		}
+		if ($found > $#list) {
+			# not found
+			$found = $old;
 			next;
 		}
 	} elsif ($cmd eq "nextchan") {

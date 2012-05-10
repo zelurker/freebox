@@ -665,10 +665,24 @@ static int numero(int fifo, int argc, char **argv) {
     return 0;
 }
 
+static void send_cmd(char *cmd) {
+    char *buf = strdup(cmd);
+    if (buf[strlen(buf)-1] >= 32) 
+	strcat(buf,"\n");
+    int file = open("fifo_cmd",O_WRONLY|O_NONBLOCK);
+    if (file > 0) {
+	write(file,buf,strlen(buf));
+	close(file);
+    } else
+	printf("could not send command %s\n",buf);
+    free(buf);
+}
+
 static void handle_event(SDL_Event *event) {
     if (!nb_keys) read_inputs();
     if (event->type != SDL_KEYDOWN) return;
     int input = event->key.keysym.sym;
+    int mod = event->key.keysym.mod;
     printf("reçu touche %d (%c)\n",input,input);
     int n;
     for (n=0; n<nb_keys; n++) {
@@ -677,15 +691,27 @@ static void handle_event(SDL_Event *event) {
 	    if (!strncmp(command[n],"run",3))
 		system(&command[n][4]);
 	    else {
-		int cmd = open("fifo_cmd",O_WRONLY|O_NONBLOCK);
-		if (cmd > 0) {
-		    write(cmd,command[n],strlen(command[n]));
-		    close(cmd);
-		} else
-		    printf("could not send command\n");
+		send_cmd(command[n]);
 	    }
 	    break;
 	}
+    }
+    if (n >= nb_keys) { // Pas trouvé
+	char buf[80];
+	if (input > 255) {
+	    /* Pas la peine d'essayer de renvoyer un code > 255, il est 
+	     * perdu. Ca olibge à une réinterprétation tordue ici */
+	    if (input >= SDLK_KP0 && input <= SDLK_KP9)
+		input = 0xd0+input-SDLK_KP0;
+	    else if (input == SDLK_KP_ENTER)
+		input = 13;
+	} else if (input >= 'a' && input <= 'z' && (mod & KMOD_SHIFT)) {
+	    // Particularité : shift + touche alphabétique pour naviguer par
+	    // lettre dans les listes
+	    input -= 32;
+	}
+	sprintf(buf,"key_down_event %d",input);
+	send_cmd(buf);
     }
 }
 
