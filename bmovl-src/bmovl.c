@@ -733,15 +733,20 @@ static int image(int argc, char **argv) {
     int y = atoi(argv[3]);
     int w = atoi(argv[4]);
     int h = atoi(argv[5]);
-    r.x = x; r.y = y; r.w = w; r.h = h;
-    SDL_FillRect(sdl_screen,&r,0);
+    double ratio = w*1.0/pic->w;
+    if (h*1.0/pic->h < ratio) ratio = h*1.0/pic->h;
+    if (ratio > 4.0) ratio = 4.0;
+    SDL_Surface *s = zoomSurface(pic,ratio,ratio,SMOOTHING_ON);
+    SDL_FreeSurface(pic);
+    pic = s;
+    SDL_FillRect(sdl_screen,&r,0); // Efface l'ancienne
     r.x = 0; r.y = 0; r.w = pic->w; r.h = pic->h;
     if (pic->w > w) r.w = w;
     if (pic->h > h) r.h = h;
     SDL_Rect dst;
     dst.x = x; dst.y = y;
     SDL_BlitSurface(pic,&r,sdl_screen,&dst);
-    SDL_UpdateRect(sdl_screen,x,y,w,h);
+    SDL_UpdateRect(sdl_screen,0,0,0,0);
     SDL_FreeSurface(pic);
     r.x = x; r.y = y; r.w = w; r.h = h; // pour l'affichage de la liste...
     return(0);
