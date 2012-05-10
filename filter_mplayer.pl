@@ -13,6 +13,7 @@
 
 use strict;
 use Fcntl;
+use POSIX qw(:sys_wait_h);
 require "output.pl";
 require "playlist.pl";
 
@@ -47,6 +48,46 @@ our $time;
 our $time_prog;
 our $last_image;
 my $buff = "";
+our %bg_pic;
+
+sub REAPER {
+	my $child;
+	# loathe SysV: it makes us not only reinstate
+	# the handler, but place it after the wait
+	$SIG{CHLD} = \&REAPER;
+# Les images arrivent en tache de fond...
+	while (($child = waitpid(-1,WNOHANG)) > 0) {
+		if ($bg_pic{$child}) {
+			my ($pic,$x,$y,$w,$h) = @{$bg_pic{$child}};
+			print "filter: reaper: reçu $pic,$x,$y,$w,$h pour child $child\n";
+			if (! -f "$pic") {
+				print "filter: pas d'image $pic pour child $child\n";
+			}
+			if ($last_image && $pic ne $last_image) {
+				unlink $last_image;
+			}
+			$last_image = $pic;
+			my $ftype = `file $pic`;
+			chomp $ftype;
+			if ($ftype =~ /error/i) {
+				my $result = $cur_images[1];
+				handle_result($result);
+				next;
+			}
+			if ($ftype =~ /gzip/) {
+				rename($pic,"$pic.gz");
+				system("gunzip $pic.gz");
+			}
+			my $out = open_bmovl();
+			print $out "image $pic $x $y $w $h\n";
+			close($out);
+			delete $bg_pic{$child};
+		} else {
+			print "filter: didn't find bg_pic for child $child\n";
+		}
+	}
+}
+$SIG{CHLD} = \&REAPER;
 
 sub handle_result {
 	my $result = shift;
@@ -78,39 +119,19 @@ sub handle_result {
 			$h = $ay-$y;
 		}
 
-		my ($pic,$ftype);
-		do {
-			$pic = $image->save_content(base => 'image');
+		my ($pic);
+		my $url = $image->content_url();
+		my $ext = $url;
+		$ext =~ s/.+\.//;
+		my $name = "image.$ext";
+		my $pid = fork();
+		if ($pid == 0) {
+			$pic = $image->save_content(file => $name);
 			print "handle_result: context ",$image->context_url()," name $pic\n";
-			if ($last_image && $pic ne $last_image) {
-				if ($last_image eq "1") {
-					print "on évite d'effacer le fichier 1\n";
-				} else {
-					unlink $last_image;
-				}
-			}
-			$last_image = $pic;
-			if ($last_image eq "1") {
-				print "*** filter: last_image = 1\n";
-				$last_image = undef;
-			}
-			$ftype = `file $pic`;
-			chomp $ftype;
-			if ($ftype =~ /error/i) {
-				$image = $result->next;
-				if (!$image) {
-					return if (!$image);
-				}
-			}
-		} while ($ftype =~ /error/i);
-
-		if ($ftype =~ /gzip/) {
-			rename($pic,"$pic.gz");
-			system("gunzip $pic.gz");
+			exit 0;
+		} else {
+			$bg_pic{$pid} = [$name,$x,$y,$w,$h];
 		}
-		my $out = open_bmovl();
-		print $out "image $pic $x $y $w $h\n";
-		close($out);
 	}
 }
 
