@@ -369,6 +369,10 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int fsel = !strcmp(argv[0],"fsel");
     int mode_list = !strcmp(argv[0],"mode_list");
     TTF_Font *font = open_font(fsize);
+    if (!font) {
+	printf( "bmovl: no font !!! Find Vera.ttf\n");
+	return 1;
+    }
     int num[20];
     int current = -1;
     myfgets(buff,4096,stdin);

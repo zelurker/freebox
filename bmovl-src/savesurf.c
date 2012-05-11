@@ -77,13 +77,13 @@ int png_save_surface(char *filename, SDL_Surface *surf)
 	if (info_ptr == NULL) {
 		png_destroy_write_struct(&png_ptr, (png_infopp)NULL);
 		printf("png_create_info_struct error!\n");
-		exit(-1);
+		return(-1);
 	}
 
 	if (setjmp(png_jmpbuf(png_ptr))) {
 		png_destroy_write_struct(&png_ptr, &info_ptr);
 		fclose(fp);
-		exit(-1);
+		return(-1);
 	}
 
 	png_init_io(png_ptr, fp);

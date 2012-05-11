@@ -396,6 +396,14 @@ sub get_nolife {
 
 my $channels_text = getListeChaines();
 our @chan = split(/\:\$\$\$\:/,$channels_text);
+if (!@chan || $#chan == 0) {
+	print "aucune chaine ? On essaye encore...\n";
+	unlink "liste_chaines";
+	@chan = split(/\:\$\$\$\:/,getListeChaines());
+	print "après 2ème essai : $#chan chaines\n";
+} else {
+	print "chan $#chan\n";
+}
 my $sel = "";
 foreach (@def_chan) {
 	s/\+/\\+/g;

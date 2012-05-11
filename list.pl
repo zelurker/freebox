@@ -69,7 +69,9 @@ sub save_conf {
 	} else {
 		$conf{"sel_$source"} = $found;
 	}
-	if (open(F,">$ENV{HOME}/.freebox/conf")) {
+	my $dir = "$ENV{HOME}/.freebox";
+	mkdir $dir;
+	if (open(F,">$dir/conf")) {
 		foreach (keys %conf) {
 			print F "$_ = $conf{$_}\n";
 		}
@@ -174,6 +176,11 @@ sub read_list {
 				close(F);
 			}
 		} else {
+			$list = read_freebox();
+		}
+		if ($list !~ /EXTINF/) {
+			unlink "freebox.m3u";
+			print "format freebox.m3u pété, on essaye encore...\n";
 			$list = read_freebox();
 		}
 		my @rejets;

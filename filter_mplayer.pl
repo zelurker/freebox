@@ -22,20 +22,13 @@ use Data::Dumper;
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Deepcopy = 1;
 our %ipc;
+our $agent;
 my $net = have_net();
+my $images = 0;
 eval {
 	require WWW::Google::Images;
 	WWW::Google::Images->import();
 };
-my $images = 0;
-our @cur_images;
-our $agent;
-our $pos;
-my $last_t = 0;
-our $stream = 0;
-our %bookmarks;
-dbmopen %bookmarks,"bookmarks.db",0666;
-our $init = 0;
 if (!$@ && $net) {
 	# google images dispo si pas d'erreur
 	$images = 1;
@@ -43,6 +36,13 @@ if (!$@ && $net) {
 		server => 'images.google.com',
 	);
 }
+our @cur_images;
+our $pos;
+my $last_t = 0;
+our $stream = 0;
+our %bookmarks;
+dbmopen %bookmarks,"bookmarks.db",0666;
+our $init = 0;
 our $prog;
 our ($codec,$bitrate);
 our $titre = "";
@@ -251,8 +251,8 @@ sub check_eof {
 			close(F);
 		}
 	}
-	if ($source eq "Fichiers son" && $exit !~ /ID_EXIT=QUIT/) {
-		print "filter: envoi nextchan\n";
+	if ($source eq "Fichiers son" && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
+		print "filter: envoi nextchan exit $exit\n";
 		send_cmd_list("nextchan");
 	}
 	if ($source eq "Fichiers vidéo" && $exit =~ /ID_EXIT=QUIT/) {
@@ -410,7 +410,7 @@ while (1) {
 			$artist = $1;
 		} elsif (/Album: (.+)/i) {
 			$album = $1;
-		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\) of (.+?) \((.+?)\)/) {
+		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
 			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
 			if ($t1 - $last_t >= 1) {
 				if (!$artist && !$titre && $chan =~ /(.+) - (.+)\..../) {
@@ -418,10 +418,10 @@ while (1) {
 					($artist,$titre) = ($1,$2);
 				}
 				handle_images("$artist - $titre") # ($album)")
-				if ($last_t == 0 && ($artist || $titre));
+				if ($images && $last_t == 0 && ($artist || $titre));
 				$last_t = $t1;
 				if (open(F,">stream_info")) {
-					print F "$codec $bitrate\n";
+					print F "$codec $bitrate".($images ? "" : " - pas de WWW::Google::Images")."\n";
 					print F "$artist - $titre ($album) $t2 ".int($t1*100/$t3),"%\n";
 					close(F);
 					send_cmd_prog();
