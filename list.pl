@@ -614,6 +614,9 @@ while (1) {
 		clear("list_coords");
 		clear("info_coords");
 		close_mode() if ($mode_opened);
+		my $out = open_bmovl();
+		print $out "image\n";
+		close($out);
 		next;
 	} elsif ($cmd eq "refresh") {
 		my $found0 = $found;
@@ -978,10 +981,7 @@ while (1) {
 		if (!-f "list_coords") {
 			# Si la liste est affichée de toutes façons ça va provoquer une
 			# commande à info, pas la peine de le réveiller
-			if (open(F,">fifo_info")) {
-				print F "refresh\n"; # pour réveiller info
-				close(F);
-			}
+			send_cmd_info("refresh");
 			next;
 		}
 	} elsif ($cmd =~ /^[A-Z]$/) { # alphabétique

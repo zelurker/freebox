@@ -58,29 +58,10 @@ sub REAPER {
 # Les images arrivent en tache de fond...
 	while (($child = waitpid(-1,WNOHANG)) > 0) {
 		if ($bg_pic{$child}) {
-			my ($pic,$x,$y,$w,$h) = @{$bg_pic{$child}};
-			print "filter: reaper: reçu $pic,$x,$y,$w,$h pour child $child\n";
-			if (! -f "$pic") {
-				print "filter: pas d'image $pic pour child $child\n";
-			}
-			if ($last_image && $pic ne $last_image) {
-				unlink $last_image;
-			}
-			$last_image = $pic;
-			my $ftype = `file $pic`;
-			chomp $ftype;
-			if ($ftype =~ /error/i) {
+			if (!-f $bg_pic{$child}) {
 				my $result = $cur_images[1];
 				handle_result($result);
-				next;
 			}
-			if ($ftype =~ /gzip/) {
-				rename($pic,"$pic.gz");
-				system("gunzip $pic.gz");
-			}
-			my $out = open_bmovl();
-			print $out "image $pic $x $y $w $h\n";
-			close($out);
 			delete $bg_pic{$child};
 		} else {
 			print "filter: didn't find bg_pic for child $child\n";
@@ -128,9 +109,31 @@ sub handle_result {
 		if ($pid == 0) {
 			$pic = $image->save_content(file => $name);
 			print "handle_result: context ",$image->context_url()," name $pic\n";
+			if (! -f "$pic") {
+				print "filter: pas d'image $pic\n";
+				exit 0;
+			}
+			if ($last_image && $pic ne $last_image) {
+				unlink $last_image;
+			}
+			$last_image = $pic;
+			my $ftype = `file $pic`;
+			chomp $ftype;
+			if ($ftype =~ /error/i) {
+				unlink "$pic";
+				print "filter: type image $ftype\n";
+				exit 0;
+			}
+			if ($ftype =~ /gzip/) {
+				rename($pic,"$pic.gz");
+				system("gunzip $pic.gz");
+			}
+			my $out = open_bmovl();
+			print $out "image $pic $x $y $w $h\n";
+			close($out);
 			exit 0;
 		} else {
-			$bg_pic{$pid} = [$name,$x,$y,$w,$h];
+			$bg_pic{$pid} = $name;
 		}
 	}
 }
@@ -183,34 +186,6 @@ $source =~ s/\/.+//;
 unlink "stream_info";
 my ($width,$height) = ();
 my $exit = "";
-
-sub send_cmd_fifo($$) {
-	my ($fifo,$cmd) = @_;
-	my $tries = 1;
-	my $error;
-	do {
-		if (sysopen(F,"$fifo",O_WRONLY|O_NONBLOCK)) {
-			$error = 0;
-			print F "$cmd\n";
-			close(F);
-		} else {
-			print "filter: send_cmd $fifo $cmd impossible tries=$tries !\n" if ($tries >= 10);
-			$error = 1;
-			select undef,undef,undef,0.1;
-		}
-
-	} while ($error && $tries++ <= 20);
-}
-
-sub send_cmd_list($) {
-	my $cmd = shift;
-	send_cmd_fifo("fifo_list",$cmd);
-}
-
-sub send_cmd_info($) {
-	my $cmd = shift;
-	send_cmd_fifo("fifo_info",$cmd);
-}
 
 sub bindings($) {
 	my $cmd = shift;

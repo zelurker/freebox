@@ -8,6 +8,34 @@ use Fcntl;
 use Socket;
 use POSIX qw(SIGALRM);
 
+sub send_cmd_fifo($$) {
+	my ($fifo,$cmd) = @_;
+	my $tries = 1;
+	my $error;
+	do {
+		if (sysopen(F,"$fifo",O_WRONLY|O_NONBLOCK)) {
+			$error = 0;
+			print F "$cmd\n";
+			close(F);
+		} else {
+			print "filter: send_cmd $fifo $cmd impossible tries=$tries !\n" if ($tries >= 10);
+			$error = 1;
+			select undef,undef,undef,0.1;
+		}
+
+	} while ($error && $tries++ <= 20);
+}
+
+sub send_cmd_list($) {
+	my $cmd = shift;
+	send_cmd_fifo("fifo_list",$cmd);
+}
+
+sub send_cmd_info($) {
+	my $cmd = shift;
+	send_cmd_fifo("fifo_info",$cmd);
+}
+
 sub send_command {
 	my $cmd = shift;
 	if (sysopen(F,"fifo_cmd",O_WRONLY|O_NONBLOCK)) {
