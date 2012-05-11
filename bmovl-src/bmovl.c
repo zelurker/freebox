@@ -772,7 +772,7 @@ int image(int argc, char **argv) {
 	bmp = argv[1];
     SDL_Surface *pic = IMG_Load(bmp);
     if (!pic) {
-	printf("image: peut pas charger %s\n",argv[0]);
+	printf("image: peut pas charger %s\n",bmp);
 	return(1);
     }
     if (bmp != bg_pic)
