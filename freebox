@@ -99,6 +99,7 @@ function launch() {
 			# du fichier quand on commence la lecture, ça fait pas beaucoup !
 			mplayer=mplayer
 		fi
+		mplayer=mplayer
 		echo $mplayer $idle $audio2 $length -vf $bmovl"screenshot$filter" \
 			-cache 100 -stop-xscreensaver -identify -input \
 			nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd $demuxer \
