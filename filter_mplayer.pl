@@ -16,14 +16,19 @@ use Fcntl;
 use POSIX qw(:sys_wait_h);
 require "output.pl";
 require "playlist.pl";
+use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
+use Data::Dumper;
 
+$Data::Dumper::Indent = 0;
+$Data::Dumper::Deepcopy = 1;
+our %ipc;
 my $net = have_net();
 eval {
 	require WWW::Google::Images;
 	WWW::Google::Images->import();
 };
 my $images = 0;
-my @cur_images;
+our @cur_images;
 our $agent;
 our $pos;
 my $last_t = 0;
@@ -63,6 +68,17 @@ sub REAPER {
 				handle_result($result);
 			}
 			delete $bg_pic{$child};
+		} elsif ($ipc{$child}) {
+			my $id = $ipc{$child};
+			my $dump;
+			shmread($id,$dump,0,180000) || die "shmread: $!";
+			my $result;
+			$dump =~ s/\000+//;
+			eval($dump);
+			handle_result($result);
+			push @cur_images,$result;
+			shmctl($id, IPC_RMID, 0)        || die "shmctl: $!";
+			delete $ipc{$child};
 		} else {
 			print "filter: didn't find bg_pic for child $child\n";
 		}
@@ -157,10 +173,18 @@ sub handle_images {
 		}
 
 		@cur_images = ($cur);
+		my $size = 200000;
+		my $id = shmget(IPC_PRIVATE, $size, S_IRUSR | S_IWUSR) || die "shmget $!\n";
+		my $pid = fork();
+		if ($pid) {
+			$ipc{$pid} = $id;
+		} else {
+			my $result = $agent->search($cur, limit => 10);
+			my $dump = Data::Dumper->Dump([$result],[qw(result)]);
+			shmwrite($id,$dump,0,180000) || die "shmwrite\n";
+			exit(0);
+		}
 
-		my $result = $agent->search($cur, limit => 10);
-		handle_result($result);
-		push @cur_images,$result;
 	} else {
 		my $result = $cur_images[1];
 		handle_result($result);
