@@ -24,26 +24,34 @@
 static int fifo;
 static char *fifo_str;
 static int server,infoy,listy,listh;
-static SDL_Rect r;
+static char bg_pic[1024];
+
+static void clear_screen() {
+    if (sdl_screen) {
+
+	if (SDL_MUSTLOCK(sdl_screen))
+	    SDL_LockSurface(sdl_screen);
+	*bg_pic = 0;
+
+	memset(sdl_screen->pixels,0,sdl_screen->w*sdl_screen->h*
+		sdl_screen->format->BytesPerPixel);
+	SDL_UpdateRect(sdl_screen,0,0,sdl_screen->w,sdl_screen->h);
+
+	if (SDL_MUSTLOCK(sdl_screen))
+	    SDL_UnlockSurface(sdl_screen);
+    }
+}
 
 /* Les commandes de connexion/déconnexion au fifo mplayer doivent être passés
  * par signaux et pas par le fifo de commande parce que malheureusement un
  * mplayer peut quitter pendant qu'une commande est en cours, dans ce cas là
  * pour ne pas rester bloqué en lecture rien de mieux que le signal */
 static void disconnect(int signal) {
-	if (!fifo) return;
-	close(fifo);
-	/* les updates dans sdl_screen peuvent rentrer en collision et provoquer
-	 * un lock, vaut mieux éviter !!! */
-#if 0
-	if (sdl_screen) {
-	    memset(sdl_screen->pixels,0,sdl_screen->w*sdl_screen->h*
-		    sdl_screen->format->BytesPerPixel);
-	    SDL_UpdateRect(sdl_screen,0,0,sdl_screen->w,sdl_screen->h);
-	}
-#endif
+    if (!fifo) return;
+    close(fifo);
+    clear_screen();
 
-	fifo = 0;
+    fifo = 0;
 }
 
 static void myconnect(int signal) {
@@ -61,6 +69,7 @@ static void myconnect(int signal) {
 	fifo = open( fifo_str, O_WRONLY /* |O_NONBLOCK */ );
     else
 	fifo = 0;
+    clear_screen();
     if (fifo <= 0) {
 	printf("server: could not open fifo !\n");
 	fifo = 0;
@@ -79,6 +88,8 @@ static TTF_Font *open_font(int fsize) {
     if (!font) font = TTF_OpenFont("/usr/share/fonts/truetype/ttf-bitstream-vera/Vera.ttf",12);
     return font;
 }
+
+int image(int argc, char **argv);
 
 static int info(int fifo, int argc, char **argv)
 {
@@ -331,6 +342,10 @@ static int info(int fifo, int argc, char **argv)
 	fprintf(f,"%d %d %d %d ",sf->w, sf->h,
 			x, y);
 	fclose(f);
+	if (sdl_screen && *bg_pic) {
+	    printf("actualisation image après info\n");
+	    image(1,NULL);
+	}
 
 	return 0;
 }
@@ -360,11 +375,6 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     source = strdup(buff);
     int nb=0,w,h;
     int margew = width/36, margeh=height/36;
-    if (sdl_screen && r.w && r.x < margew ) {
-	SDL_FillRect(sdl_screen,&r,0);
-	SDL_UpdateRect(sdl_screen,r.x,r.y,r.w,r.h);
-	r.x = r.y = r.w = r.h = 0;
-    }
     int maxw = (fsel ? width : width/2)-margew*2;
     int maxh = height - margeh*2;
     int numw = 0;
@@ -400,9 +410,9 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int n;
     int x=8,y=8;
 
-    wlist += numw+8; // le numÃ©ro sur la gauche (3 chiffres + sÃ©parateur)
+    wlist += numw+8; // le numéro sur la gauche (3 chiffres + séparateur)
     int xright = x+wlist;
-    wlist += indicw; // place pour le > Ã  la fin
+    wlist += indicw; // place pour le > à la fin
     if (wlist > maxw-16) {
 	wlist = maxw-16;
 	xright = x+wlist-indicw-16;
@@ -415,7 +425,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
     y += put_string(sf,font,x,y,source,SDL_MapRGB(sf->format,0xff,0xff,0x80),
 	    height);
-    x += numw+8; // alignÃ© aprÃ¨s les numÃ©ros
+    x += numw+8; // aligné après les numéros
     int fg = get_fg(sf);
     int red = SDL_MapRGB(sf->format,0xff,0x50,0x50);
     int cyan = SDL_MapRGB(sf->format, 0x50,0xff,0xff);
@@ -485,7 +495,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    }
 	}
     }
-
+	
     // Display
     if (mode_list) {
 	x = oldx+oldw;
@@ -505,6 +515,30 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 		x, y,sely);
 	fclose(f);
     }
+    if (sdl_screen && *bg_pic) {
+	// Dans ce cas là il peut rester un bout d'image en dessous à virer
+	int infoy = 0;
+	f = fopen("info_coords","r");
+	if (f) {
+	    int oldx,oldy,oldw,oldh;
+	    fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	    fclose(f);
+	    h = oldy - y;
+	    infoy = oldy;
+	}
+	int maxy = (infoy ? infoy : sdl_screen->h);
+	SDL_Rect r;
+	r.x = 0;
+	r.y = y + sf->h;
+	r.w = sdl_screen->w;
+	r.h = maxy - r.y;
+	if (maxy > r.y) {
+	    printf("list: on vire la partie du bas : %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
+	    SDL_FillRect(sdl_screen,&r,0);
+	    SDL_UpdateRects(sdl_screen,1,&r);
+	} else
+	    printf("list: rien à virer en dessous : %d,%d,%d,%d et maxy=%d\n",x,y,sf->w,sf->h,maxy);
+    }
     // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
     // apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
     // Pour l'instant le meilleur contournement c'est ça.
@@ -514,6 +548,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 
     // Clean up
     SDL_FreeSurface(sf);
+
     if (current > -1 && !noinfo) {
 	int info=0;
 	int tries = 0;
@@ -539,6 +574,10 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     for (n=0; n<nb; n++)
 	free(list[n]);
     TTF_CloseFont(font);
+    if (sdl_screen && *bg_pic) {
+	printf("actualisation image après list\n");
+	image(1,NULL);
+    }
     return 0;
 }
 
@@ -715,8 +754,10 @@ static void handle_event(SDL_Event *event) {
     }
 }
 
-static int image(int argc, char **argv) {
-    if (argc != 6) {
+int image(int argc, char **argv) {
+    printf("start image %d\n",argc);
+    static int lastx,lasty,lastw,lasth;
+    if (argc != 6 && argc != 1) {
 	printf("image: argc = %d\n",argc);
 	return(1);
     }
@@ -724,31 +765,99 @@ static int image(int argc, char **argv) {
 	printf("image appelé sans sdl_screen !\n");
 	return(1);
     }
-    SDL_Surface *pic = IMG_Load(argv[1]);
+    char *bmp;
+    if (argc==1)
+	bmp = bg_pic;
+    else
+	bmp = argv[1];
+    SDL_Surface *pic = IMG_Load(bmp);
     if (!pic) {
 	printf("image: peut pas charger %s\n",argv[0]);
 	return(1);
     }
-    int x = atoi(argv[2]);
-    int y = atoi(argv[3]);
-    int w = atoi(argv[4]);
-    int h = atoi(argv[5]);
+    if (bmp != bg_pic)
+	strcpy(bg_pic,bmp);
+    int x,y,w,h;
+    int infoy=0;
+    if (argc == 1) {
+	x = sdl_screen->w/36;
+	y = sdl_screen->h/36;
+	w = sdl_screen->w - x;
+	h = sdl_screen->h - y;
+    } else {
+	x = atoi(argv[2]);
+	y = atoi(argv[3]);
+	w = atoi(argv[4]);
+	h = atoi(argv[5]);
+    }
+    FILE *f = fopen("list_coords","r");
+    if (f) {
+	int oldx,oldy,oldw,oldh,oldsel;
+	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
+	fclose(f);
+	x = oldx + oldw;
+	y = oldy;
+    }
+    f = fopen("info_coords","r");
+    if (f) {
+	int oldx,oldy,oldw,oldh;
+	fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	fclose(f);
+	infoy = oldy;
+	printf("image: maxy taken from info_coords %d\n",infoy);
+    }
+    int maxy = (infoy ? infoy : sdl_screen->h-sdl_screen->h/36);
+    w = sdl_screen->w - sdl_screen->w/36 - x;
+    h = maxy - y;
+    if (bmp == bg_pic && lastx == x && lasty == y && lastw == w && lasth == h){
+	// Rien à mettre à jour
+	SDL_FreeSurface(pic);
+	return 0;
+    } else {
+	lastx = x;
+	lasty = y;
+	lastw = w;
+	lasth = h;
+    }
+
+    printf("image: %d,%d\n",w,h);
     double ratio = w*1.0/pic->w;
     if (h*1.0/pic->h < ratio) ratio = h*1.0/pic->h;
     if (ratio > 4.0) ratio = 4.0;
     SDL_Surface *s = zoomSurface(pic,ratio,ratio,SMOOTHING_ON);
     SDL_FreeSurface(pic);
     pic = s;
-    SDL_FillRect(sdl_screen,&r,0); // Efface l'ancienne
+    SDL_Rect r;
     r.x = 0; r.y = 0; r.w = pic->w; r.h = pic->h;
     if (pic->w > w) r.w = w;
     if (pic->h > h) r.h = h;
+    if (x + pic->w < sdl_screen->w) {
+	// Il peut un rester un bout de l'ancienne image à droite
+	SDL_Rect r;
+	r.x = x+pic->w;
+	r.w = sdl_screen->w-r.x;
+	r.y = 0;
+	r.h = maxy;
+	SDL_FillRect(sdl_screen,&r,0);
+	printf("on vire le bout à droite : %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
+    } else {
+	printf("rien à virer à droite : %d + %d >= %d\n",x,w,sdl_screen->w);
+    }
+    if (y + pic->h < maxy) {
+	// Et en dessous ?
+	SDL_Rect r;
+	r.x = x;
+	r.w = sdl_screen->w-r.x;
+	r.y = y+pic->h;
+	r.h = maxy - r.y;
+	SDL_FillRect(sdl_screen,&r,0);
+    }
     SDL_Rect dst;
     dst.x = x; dst.y = y;
     SDL_BlitSurface(pic,&r,sdl_screen,&dst);
+    printf("image %d,%d,%d,%d\n",x,y,pic->w,pic->h);
     SDL_UpdateRect(sdl_screen,0,0,0,0);
     SDL_FreeSurface(pic);
-    r.x = x; r.y = y; r.w = w; r.h = h; // pour l'affichage de la liste...
     return(0);
 }
 
