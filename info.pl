@@ -28,6 +28,7 @@ our @cache_pic;
 our ($last_prog, $last_chan,$last_long);
 our %chaines = ();
 our ($channel,$long);
+my $time_refresh = 0;
 
 $SIG{PIPE} = sub { print "info: sigpipe ignoré\n" };
 
@@ -682,6 +683,9 @@ if (!$channel) {
 			}
 		}
 		$delay -= $time if ($delay);
+		if ((-f "list_coords" || -f "numero_coords") && $delay > 1) {
+			$delay = 1;
+		}
 
 		my $nfound;
 		eval {
@@ -690,6 +694,7 @@ if (!$channel) {
 			open(F,"<fifo_info") || die "ouverture fifo_info !\n";
 			alarm(0);
 			$nfound = 1;
+			($cmd) = <F>;
 		};
 		$nfound = 0 if ($@);
 
@@ -702,9 +707,12 @@ if (!$channel) {
 			}
 		}
 		handle_records($time);
+		if (-f "list_coords" || -f "numero_coords" && $time-$time_refresh >= 1) {
+			$time_refresh = $time;
+			send_cmd_list("refresh");
+		}
 
 		if ($nfound > 0) {
-			($cmd) = <F>;
 			if ($cmd) {
 				chomp ($cmd);
 				my @tab = split(/ /,$cmd);
