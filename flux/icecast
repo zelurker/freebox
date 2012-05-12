@@ -6,6 +6,7 @@ use strict;
 my $mode = shift @ARGV;
 my $str;
 if ($mode eq "Recherche") {
+	delete $ENV{WINDOWID};
     $str = `zenity --entry --text="A chercher (regex)"`;
 	chomp $str;
 }

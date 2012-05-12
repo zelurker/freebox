@@ -146,9 +146,7 @@ sub read_freebox {
 
 sub read_list {
 #	print "list: read_list source $source base_flux $base_flux mode_flux $mode_flux\n";
-	if ($base_flux) {
-		$found = $conf{"sel_$source\_$base_flux"};
-	} else {
+	if (!$base_flux) {
 		$found = $conf{"sel_$source"};
 	}
 	if ($source eq "menu") {
@@ -357,6 +355,7 @@ sub read_list {
 			if (-x "flux/$b") {
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 				$serv = "" if (!$mode_flux);
+				print "list: execution plugin flux $b param $serv\n";
 				open(F,"flux/$b $serv|");
 				$mode_flux = <F>;
 				chomp $mode_flux;
@@ -378,6 +377,9 @@ sub read_list {
 		}
 	} else {
 		print "read_list: source inconnue $source\n";
+	}
+	if ($base_flux) {
+		$found = $conf{"sel_$source\_$base_flux"};
 	}
 }
 

@@ -27,7 +27,7 @@ sub get_mms {
 		print "url is not text : ",$response->header("Content-type"),"\n";
 		$browser->max_size(5000);
 		$page = $response->content;
-		if ($page !~ /^\#EXTM3U/) {
+		if ($page !~ /^\#EXTM3U/ && $page !~ /^\[playlist/ && $page !~ /"mms/) {
 			# Evitez les crétins qui gèrent le m3u en audio !!!
 			return $url;
 		} else {
