@@ -134,6 +134,7 @@ static int info(int fifo, int argc, char **argv)
 		if (argc == 5) deby = atoi(argv[4]);
 		int maxh = height - deby - 8;
 		int fsize = height/35;
+		if (fsize < 10) fsize = 10;
 		if (desc) {
 			free(desc);
 			TTF_CloseFont(font);
@@ -366,6 +367,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     width = atoi(argv[2]);
     height = atoi(argv[3]);
     int fsize = height/35;
+    if (fsize < 10) fsize = 10;
     int fsel = !strcmp(argv[0],"fsel");
     int mode_list = !strcmp(argv[0],"mode_list");
     TTF_Font *font = open_font(fsize);
