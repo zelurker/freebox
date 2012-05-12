@@ -165,32 +165,17 @@ sub setup_output {
 	$source =~ s/\/.+//;
 	my ($width,$height);
 	my $out;
-	if ($source eq "flux") {
-		my $tries = 3;
-		my $error;
-		$width = 0;
-		do {
-			# Purée c'est vraiment la course quand on lance tout, on arrive à
-			# se retrouver ici avant que la fenetre graphique ne soit créée,
-			# top rapide, vraiment !!!
-			if (open(F,"<desktop")) {
-				($width,$height) = <F>;
-				chomp($width,$height);
-				close(F);
-				$error = 0;
-			} else {
-				select(undef,undef,undef,0.5);
-				$error = 1;
-			}
-		} while ($error && $tries--);
-	} else {
-		# On attend plus video_size
-		if (open(F,"<video_size") || open(F,"<desktop")) {
-			($width,$height) = <F>;
-			chomp $width;
-			chomp $height;
-			close(F);
-		}
+	# On attend plus video_size
+	sleep(1) if (!-f "video_size");
+	if (open(F,"<video_size") || open(F,"<desktop")) {
+		# Si on démarre sur une chaine dvb cryptée, mplayer sort et freebox
+		# passe en boucle. Dans ce cas là on obtient jamais video_size, donc
+		# on se rabat sur desktop, la taille de la fenêtre de fond, ça tombe
+		# bien...
+		($width,$height) = <F>;
+		chomp $width;
+		chomp $height;
+		close(F);
 	}
 	print "info: reçu long $long\n";
 	if (!$long) {
