@@ -728,15 +728,19 @@ static void handle_event(SDL_Event *event) {
     int mod = event->key.keysym.mod;
     printf("reçu touche %d (%c)\n",input,input);
     int n;
-    for (n=0; n<nb_keys; n++) {
-	if (input == keys[n]) {
-	    printf("touche trouvée, commande %s\n",command[n]);
-	    if (!strncmp(command[n],"run",3))
-		system(&command[n][4]);
-	    else {
-		send_cmd(command[n]);
+    if (mod & KMOD_SHIFT)
+	n=nb_keys; // skip the loop
+    else {
+	for (n=0; n<nb_keys; n++) {
+	    if (input == keys[n]) {
+		printf("touche trouvée, commande %s\n",command[n]);
+		if (!strncmp(command[n],"run",3))
+		    system(&command[n][4]);
+		else {
+		    send_cmd(command[n]);
+		}
+		break;
 	    }
-	    break;
 	}
     }
     if (n >= nb_keys) { // Pas trouvé

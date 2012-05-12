@@ -992,15 +992,28 @@ while (1) {
 			next;
 		}
 	} elsif ($cmd =~ /^[A-Z]$/) { # alphabétique
+		$found = 1 if ($found == 0);
 		my $old = $found;
+		$cmd = ord($cmd);
 		for (; $found <= $#list; $found++) {
 			my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-			last if ($name =~ /^$cmd/i);
+			last if (ord(uc($name)) >= $cmd);
 		}
+		if ($found > $#list || $found == $old) {
+			for ($found = 1; $found < $old; $found++) {
+				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+				last if (ord(uc($name)) >= $cmd);
+			}
+		}
+			
 		if ($found > $#list) {
 			# not found
 			$found = $old;
+			my ($name) = get_name($list[$found]);
+			print "list: touche pas trouvée, format : $name\n";
 			next;
+		} else {
+			print "list: touche trouvée, found $found old $old\n";
 		}
 	} elsif ($cmd eq "nextchan") {
 		reset_current() if (! -f "list_coords");
