@@ -64,7 +64,7 @@ function launch() {
 	bmovl=bmovl=1:0:fifo,
 	if echo $src|grep -q flux; then
 		echo "lancement flux name=$name"
-		if echo $name|grep mms; then
+		if echo $name|grep -q mms || echo $src|grep -q youtube; then
 			# Très approximatif comme détection mais en tous cas les flux
 			# vidéo mms, particulièrement france 2, nécessitent du cache.
 			cache=1000
@@ -209,7 +209,5 @@ if [ -f "$name" ] || echo $src|grep -q flux; then
 fi
 rm -f info_coords list_coords numero_coords mode_coords fifo fifo_cmd
 kill `cat info.pid`
-echo fichier 1 :
-ls 1
 
 

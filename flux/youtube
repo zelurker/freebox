@@ -1,0 +1,30 @@
+#!/usr/bin/perl
+
+use LWP::Simple;
+use strict;
+
+my $mode = shift @ARGV;
+my $str;
+if (!$mode) {
+	delete $ENV{WINDOWID};
+    $str = `zenity --entry --text="A chercher (regex)"`;
+	chomp $str;
+}
+print "direct\n" if (!$mode);
+exit(0) if (!$str);
+$str =~ s/ /\+/g;
+$_ = get "http://www.youtube.com/results?search_query=$str&oq=$str";
+
+my ($name,$url);
+my %list = ();
+my $content = 0;
+foreach (split /\n/) {
+	s/\&\#(..)\;/chr($1)/ge;
+	$content = 1 if (/div class="result-item-main-content/);
+	if ($content) {
+		if (/href="(\/.+?)".*?\>(.+)<\/a/) {
+			print "$2\nhttp://www.youtube.com$1\n";
+			$content = 0;
+		}
+	}
+}

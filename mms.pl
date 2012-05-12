@@ -27,7 +27,7 @@ sub get_mms {
 		print "url is not text : ",$response->header("Content-type"),"\n";
 		$browser->max_size(5000);
 		$page = $response->content;
-		if ($page !~ /^\#EXTM3U/ && $page !~ /^\[playlist/ && $page !~ /"mms/) {
+		if ($page !~ /^\#EXTM3U/ && $page !~ /^\[playlist/) {
 			# Evitez les crétins qui gèrent le m3u en audio !!!
 			return $url;
 		} else {
@@ -57,6 +57,17 @@ sub get_mms {
 	} elsif ($page =~ /"(mms.+?)"/) {
 		print "mms url : $1 from $url\n";
 		return $1;
+	} elsif ($page =~ /yt.preload.start\(/) { # Youtube
+		while ($page =~ s/yt.preload.start\("(.+?)"\)//) {
+			next if ($1 =~ /xml$/);
+			my $url = $1;
+			$url =~ s/\\\//\//g;
+			$url =~ s/%(..)/chr(hex($1))/ge;
+			$url =~ s/generate_204/videoplayback/g;
+			$url =~ s/\\u(....)/chr(hex($1))/ge;
+			print "youtube url $url\n";
+			return $url;
+		}
 	} else {
 		open(F,">dump");
 		print F $page;
