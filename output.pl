@@ -8,6 +8,15 @@ use Fcntl;
 use Socket;
 use POSIX qw(SIGALRM);
 
+sub send_bmovl {
+	my $cmd = shift;
+	my $f = open_bmovl();
+	if ($f) {
+		print $f "$cmd\n";
+		close($f);
+	}
+}
+
 sub send_cmd_fifo($$) {
 	my ($fifo,$cmd) = @_;
 	my $tries = 1;
@@ -89,11 +98,7 @@ sub clear($) {
 		my $coords = <F>;
 		chomp $coords;
 		close(F);
-		my $f = open_bmovl();
-		if ($f) {
-			print $f "CLEAR $coords\n";
-			close($f);
-		}
+		send_bmovl("CLEAR $coords");
 		unlink("$name");
 	}
 }
@@ -105,23 +110,11 @@ sub alpha {
 		chomp $coords;
 		close(F);
 		for(my $i=$start; $i != $stop; $i+=$step) {
-			my $f = open_bmovl();
-			if ($f) {
-				print $f "ALPHA $coords $i\n";
-				close($f);
-			}
+			send_bmovl("ALPHA $coords $i");
 		}
-		my $f = open_bmovl();
-		if ($f) {
-			print $f "ALPHA $coords $stop\n";
-			close($f);
-		}
-		my $f = open_bmovl();
+		send_bmovl("ALPHA $coords $stop");
 		# le clear est pour l'affichage direct quand pas de mplayer
-		if ($f) {
-			print $f "CLEAR $coords\n";
-			close($f);
-		}
+		send_bmovl("CLEAR $coords");
 	}
 }
 

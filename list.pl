@@ -621,9 +621,7 @@ while (1) {
 		clear("list_coords");
 		clear("info_coords");
 		close_mode() if ($mode_opened);
-		my $out = open_bmovl();
-		print $out "image\n";
-		close($out);
+		send_bmovl("image");
 		next;
 	} elsif ($cmd eq "refresh") {
 		my $found0 = $found;
@@ -971,11 +969,7 @@ while (1) {
 		close(F);
 		if (!-f "list_coords") {
 			# Si la liste est affichée faut envoyer cette commande à la fin
-			my $out = open_bmovl();
-			if ($out) {
-				print $out "numero $numero\n";
-				close($out);
-			}
+			send_bmovl("numero $numero");
 		}
 		for (my $n=0; $n<=$#list; $n++) {
 			my ($num,$name) = @{$list[$n][0]};
@@ -1106,11 +1100,7 @@ while (1) {
 		$last_list = $cur;
 	}
 	if ($cmd =~ /^(\d|backspace)$/i) {
-		my $out = open_bmovl();
-		if ($out) {
-			print $out "numero $numero\n";
-			close($out);
-		}
+		send_bmovl("numero $numero");
 	}
 }
 

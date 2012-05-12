@@ -734,8 +734,8 @@ if (!$channel) {
 			print "alpha sur start_timer\n";
 			alpha("info_coords",-40,-255,-5);
 			unlink "info_coords";
-			print "suppression info_coords sur alpha (timer)\n";
 			$start_timer = 0;
+			send_bmovl("image");
 		}
 	} while (!$cmd);
 	#$timer_start = [gettimeofday];
@@ -799,9 +799,7 @@ if (!$channel) {
 	    # Ces commandes sont juste passées à bmovl sans rien changer
 	    # mais en passant par ici ça permet de réinitialiser le timeout
 	    # de fondu, plutôt pratique...
-	    my $f = open_bmovl();
-	    print $f "$cmd\n";
-	    close($f);
+		send_bmovl($cmd);
 		$start_timer = 0;
 	    goto read_fifo;
 	} elsif ($cmd =~ /^(up|down)$/) {
