@@ -255,7 +255,7 @@ static int info(int fifo, int argc, char **argv)
 
 		// Ok, finalement on affiche les chaines (heure, titre, desc)
 		x = myx;
-		y = 8;
+		y = margeh;
 		TTF_SetFontStyle(font,TTF_STYLE_BOLD);
 		y += put_string(sf,font,18,y,heure,fg,0);
 		r.x = 18;
@@ -381,15 +381,18 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     source = strdup(buff);
     int nb=0,w,h;
     int margew = width/36, margeh=height/36;
-    int maxw = (fsel ? width : width/2)-margew*2;
-    int maxh = height - margeh*2;
+    int maxw = (fsel || !strcmp(argv[0],"longlist") ? width :
+	    width/2)-margew*2;
+    int maxh = height - margeh*2 - fsize*3;
     int numw = 0;
     // Lecture des chaines, 20 maxi.
     int wlist,hlist;
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
     get_size(font,source,&wlist,&hlist,maxw);
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
-    while (!feof(stdin) && nb<20 && hlist+fsize < maxh) {
+    hlist += margeh;
+    // 1ère boucle : on stocke les infos...
+    while (!feof(stdin) && nb<20) {
 	if (!myfgets(buff,4096,stdin)) break;
 	if (buff[0] == '*') current = nb;
 	status[nb] = buff[0];
@@ -398,25 +401,42 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    end_nb++;
 	*end_nb++ = 0;
 	if (!fsel && !mode_list) {
-	    get_size(font,&buff[1],&w,&h,maxw);
-	    if (w > numw) numw = w;
 	    num[nb] = atoi(&buff[1]);
 	}
 	list[nb++] = strdup(end_nb);
+    }
+    for (; nb<20; nb++)
+	list[nb] = NULL;
+    // 2ème tour de boucle : on trouve les dimensions
+    if (!fsel && !mode_list) {
+	sprintf(buff,"%d",num[nb-1]);
+	get_size(font,buff,&w,&h,maxw);
+	numw = w;
+    } else
+	numw = 0;
+    nb = 0;
+    while (hlist+fsize < maxh && nb < 20) {
+	char *end_nb = list[nb];
+	if (!end_nb) break;
+	int fleche = 0;
 	int l = strlen(end_nb);
-	if (end_nb[l-1] == '>')
+	if (end_nb[l-1] == '>') {
 	    end_nb[l-1] = 0;
-	get_size(font,end_nb,&w,&h,maxw-numw);
+	    fleche = 1;
+	}
+	get_size(font,end_nb,&w,&h,maxw-numw-margew*2);
+//	printf("prévision list: hlist:%d/%d %s from %d\n",hlist,maxh,end_nb,numw+margew*2);
 	if (w > wlist) wlist = w;
 	hlist += h;
+	if (fleche) end_nb[l-1] = '>';
+	nb++;
     }
-    get_size(font,">",&w,&h,maxw);
     int indicw = w;
 
     int n;
-    int x=8,y=8;
+    int x=margew,y=margeh;
 
-    wlist += numw+8; // le numéro sur la gauche (3 chiffres + séparateur)
+    wlist += numw+margew; // le numéro sur la gauche (3 chiffres + séparateur)
     int xright = x+wlist;
     wlist += indicw; // place pour le > à la fin
     if (wlist > maxw-16) {
@@ -431,13 +451,13 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
     y += put_string(sf,font,x,y,source,SDL_MapRGB(sf->format,0xff,0xff,0x80),
 	    height);
-    x += numw+8; // aligné après les numéros
+    x += numw+margew; // aligné après les numéros
     int fg = get_fg(sf);
     int red = SDL_MapRGB(sf->format,0xff,0x50,0x50);
     int cyan = SDL_MapRGB(sf->format, 0x50,0xff,0xff);
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
     int bg = get_bg(sf),sely;
-    for (n=0; n<nb; n++) {
+    for (n=0; n<nb && y+fsize < maxh; n++) {
 	int hidden = 0;
 	int l = strlen(list[n]);
 	if (list[n][l-1] == '>') {
@@ -445,20 +465,19 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    hidden = 1;
 	}
 	int y0 = y;
-	char buff[5];
 	sprintf(buff,"%d",num[n]);
 	if (current == n) {
 	    SDL_Rect r;
-	    r.x = 8; r.y = y; r.w = wlist; r.h = fsize;
+	    r.x = margew; r.y = y; r.w = wlist; r.h = fsize;
 	    SDL_FillRect(sf,&r,fg);
 	    if (!fsel && !mode_list)
-		put_string(sf,font,8,y,buff,bg,height); // NumÃ©ro
+		put_string(sf,font,margew,y,buff,bg,height); // Numéro
 	    int dy = put_string(sf,font,x,y,list[n],bg,height);
 	    if (dy != fsize) { // bad guess, 2nd try...
 		r.h = dy;
 		SDL_FillRect(sf,&r,fg);
 		if (!fsel && !mode_list)
-		    put_string(sf,font,8,y,buff,bg,height); // NumÃ©ro
+		    put_string(sf,font,margew,y,buff,bg,height); // NumÃ©ro
 		dy = put_string(sf,font,x,y,list[n],bg,height);
 	    }
 	    sely = y+dy/2;
@@ -473,14 +492,16 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 		fg = cyan;
 	    }
 	    if (!fsel && !mode_list)
-		put_string(sf,font,8,y,buff,fg,height); // NumÃ©ro
+		put_string(sf,font,margew,y,buff,fg,height); // NumÃ©ro
 	    y += put_string(sf,font,x,y,list[n],fg,height);
 	    if (status[n] == 'R' || status[n] == 'D') fg = oldfg;
 	}
 	if (hidden) {
 	    put_string(sf,font,xright,y0,">",(current == n ? bg : fg),height);
 	}
+//	printf("y:%d/%d %s from %d\n",y0,maxh,list[n],x);
     }
+//    printf("sortie de boucle nb %d y %d + fsize %d < maxh %d\n",nb,y,fsize,maxh);
 
     int oldx,oldy,oldw,oldh,oldsel;
 
@@ -974,7 +995,7 @@ int main(int argc, char **argv) {
 		} else if (!strcmp(cmd,"list")) {
 		    ret = list(fifo,argc,myargv,0);
 		} else if (!strcmp(cmd,"list-noinfo") || !strcmp(cmd,"fsel") ||
-			!strcmp(cmd,"mode_list")) {
+			!strcmp(cmd,"mode_list") || !strcmp(cmd,"longlist")) {
 		    ret = list(fifo,argc,myargv,1);
 		} else if (!strcmp(cmd,"CLEAR"))
 		    ret = clear(fifo,argc,myargv);
