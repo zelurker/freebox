@@ -355,8 +355,22 @@ sub read_list {
 			if (-x "flux/$b") {
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 				$serv = "" if (!$mode_flux);
-				print "list: execution plugin flux $b param $serv\n";
-				open(F,"flux/$b $serv|");
+				if ($serv eq "Recherche") {
+					delete $ENV{WINDOWID};
+					$serv = `zenity --entry --text="A chercher (regex)"`;
+					chomp $serv;
+					$serv = "result:$serv";
+					$base_flux =~ s/(.+?)\/.+/$1\/$serv/;
+				}
+				if (!$serv && $base_flux =~ /\/result\:(.+)/) {
+					# Quand on relance freebox, get_name ne peut pas avoir la
+					# bonne valeur, on doit la déduire de base_flux si on veut
+					# que ça marche !
+					$serv = $1;
+				}
+
+				print "list: execution plugin flux $b param $serv base_flux $base_flux\n";
+				open(F,"flux/$b \"$serv\"|");
 				$mode_flux = <F>;
 				chomp $mode_flux;
 			} else {

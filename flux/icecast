@@ -3,16 +3,11 @@
 use LWP::Simple;
 use strict;
 
-my $mode = shift @ARGV;
-my $str;
-if ($mode eq "Recherche") {
-	delete $ENV{WINDOWID};
-    $str = `zenity --entry --text="A chercher (regex)"`;
-	chomp $str;
-}
+my $str = shift @ARGV;
+$str =~ s/^result\://;
 $_ = get "http://dir.xiph.org/yp.xml";
 print "direct\n";
-print "Recherche\nRecherche\n" if (!$mode);
+print "Recherche\nRecherche\n";
 my ($name,$url);
 my %list = ();
 foreach (split /\n/) {

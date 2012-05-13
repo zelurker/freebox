@@ -55,9 +55,8 @@ if (!$arg) {
 # souple que la page html de base qui ne les donne que par 10.
 
 my $page;
-if ($arg eq "Recherche") {
-	delete $ENV{WINDOWID};
-    my $str = `zenity --entry --text="A chercher"`;
+if ($arg =~ /^result\:(.+)/) {
+	my $str = $1;
     $str =~ s/ /%20/g;
     $page = get_url("http://www.shoutcast.com/Internet-Radio/$str");
 } else {
