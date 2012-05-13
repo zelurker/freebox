@@ -144,9 +144,7 @@ sub handle_result {
 				rename($pic,"$pic.gz");
 				system("gunzip $pic.gz");
 			}
-			my $out = open_bmovl();
-			print $out "image $pic $x $y $w $h\n";
-			close($out);
+			send_bmovl("image $pic $x $y $w $h");
 			exit 0;
 		} else {
 			$bg_pic{$pid} = $name;
@@ -249,6 +247,21 @@ sub check_eof {
 		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
 			print F "clear\n";
 			close(F);
+		}
+	}
+	if (!$exit) {
+		print "filter: fait quitter mplayer...\n";
+		send_command("quit\n");
+		eval {
+			alarm(2);
+			while (<>) {}
+			alarm(0);
+		};
+		if ($@) {
+			system("killall mplayer; killall mplayer2");
+			print "filter: kill !!!\n";
+		} else {
+			print "filter: mplayer parti proprement !\n";
 		}
 	}
 	if ($source eq "Fichiers son" && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
@@ -432,6 +445,7 @@ while (1) {
 				open(F,">video_size") || die "can't write to video_size\n";
 				print F "$width\n$height\n";
 				close(F);
+				print "filter: envoi USR1 à $pid\n";
 				kill "USR1",$pid;
 			}
 			send_cmd_prog();
@@ -441,6 +455,7 @@ while (1) {
 			}
 		} elsif (/End of file/ || /^EOF code/) {
 			print "filter: end of video\n";
+			print "filter: USR2 point1\n";
 			kill "USR2",$pid;
 			check_eof();
 		} elsif (!$stream && /^A:(.+?) V:/) {
@@ -450,6 +465,7 @@ while (1) {
 		}
 	}
 }
+print "filter: USR2 point2\n";
 kill "USR2",$pid;
 if ($exit) {
 	open(F,">id") || die "can't write to id\n";
