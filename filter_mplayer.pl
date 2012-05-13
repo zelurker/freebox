@@ -253,7 +253,7 @@ sub check_eof {
 		print "filter: fait quitter mplayer...\n";
 		send_command("quit\n");
 		eval {
-			alarm(2);
+			alarm(3);
 			while (<>) {}
 			alarm(0);
 		};
@@ -289,7 +289,14 @@ sub check_eof {
 }
 
 sub send_cmd_prog {
-	send_cmd_info("prog $chan");
+	# Le test -f info_coords est pour essayer de ne pas effacer le bandeau
+	# sur timer quand on l'a affiché en fixe.
+	# Evidemment ça va pas marhcer dans 100% des cas, si le morceau commence
+	# et que send_cmd_prog est appelé avant que le bandeau n'ait eu le temps
+	# de s'effacer, il va devenir fixe.
+	# Bah au moins ça donne un moyen d'avoir un bandeau fixe ou pas de bandeau
+	# du tout sans liste.
+	send_cmd_info("prog".(-f "info_coords" ? ":long" : "")." $chan");
 }
 
 sub update_codec_info {
@@ -305,10 +312,10 @@ sub update_codec_info {
 			print F "$codec $bitrate\n";
 			print F $info if ($info);
 			close(F);
+			send_cmd_prog();
 		} else {
 			print "impossible de créer stream_info !\n";
 		}
-		send_cmd_prog();
 	}
 }
 
@@ -341,11 +348,32 @@ while (1) {
 		handle_images();
 	}
 	if ($time_prog && $time_prog <= $t0) {
+		unlink "stream_info.0";
+		rename "stream_info","stream_info.0";
 		my $str = handle_prog($prog,"$codec $bitrate");
 		if ($str) {
 			$time_prog = time()+30;
-			print "send_cmd_prog got str $str\n";
-			send_cmd_prog();
+			my $diff = 0;
+			if (open(F,"stream_info")) {
+				if (open(G,"<stream_info.0")) {
+					while (<F>) {
+						if ($_ ne <G>) {
+							$diff = 1;
+							last;
+						}
+					}
+					close(G);
+				} else {
+					$diff = 1;
+				}
+				close(F);
+			} 
+			if ($diff) {
+				print "send_cmd_prog got str $str\n";
+				send_cmd_prog();
+			} else {
+				print "filter: pas de cmd prog, pas de diff\n";
+			}
 			if ($str ne $old_str) {
 				print "new call to handle_image (old = $old_str)\n";
 				handle_images($str);
