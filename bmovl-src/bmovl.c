@@ -69,7 +69,6 @@ static void myconnect(int signal) {
 	fifo = open( fifo_str, O_WRONLY /* |O_NONBLOCK */ );
     else
 	fifo = 0;
-    clear_screen();
     if (fifo <= 0) {
 	printf("server: could not open fifo !\n");
 	fifo = 0;
