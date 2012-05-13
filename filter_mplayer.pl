@@ -260,9 +260,18 @@ sub check_eof {
 		if ($@) {
 			system("killall mplayer; killall mplayer2");
 			print "filter: kill !!!\n";
+			$exit .= "ID_EXIT=QUIT ";
+			sleep(1);
+			system("killall -9 mplayer; killall -9 mplayer2");
 		} else {
 			print "filter: mplayer parti proprement !\n";
 		}
+	}
+	if ($exit) {
+		open(F,">id") || die "can't write to id\n";
+		print F "$exit\n";
+		close(F);
+		print "filter: fichier id créé\n";
 	}
 	if ($source eq "Fichiers son" && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
 		print "filter: envoi nextchan exit $exit\n";
@@ -390,6 +399,7 @@ while (1) {
 			$width = $1; $height = $2; # fallback here if it fails
 		} elsif (/ID_(EXIT|SIGNAL)/) {
 			$exit .= $_;
+			check_eof() if (/ID_SIGNAL=6/);
 		} elsif (/End of file/i) {
 			$exit .= $_;
 		} elsif (/ICY Info/) {
@@ -443,9 +453,11 @@ while (1) {
 		} elsif (/Starting playback/) {
 			if ($width && $height) {
 				open(F,">video_size") || die "can't write to video_size\n";
+				print "filter: init video $width x $height\n";
 				print F "$width\n$height\n";
 				close(F);
 				print "filter: envoi USR1 à $pid\n";
+				unlink("list_coords","video_coords","info_coords","numero_coords","mode_coords");
 				kill "USR1",$pid;
 			}
 			send_cmd_prog();
@@ -467,11 +479,5 @@ while (1) {
 }
 print "filter: USR2 point2\n";
 kill "USR2",$pid;
-if ($exit) {
-	open(F,">id") || die "can't write to id\n";
-	print F "$exit\n";
-	close(F);
-	print "filter: fichier id créé\n";
-}
 print "filter: exit message : $exit\n";
 check_eof();
