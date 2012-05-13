@@ -166,7 +166,9 @@ sub setup_output {
 	my ($width,$height);
 	my $out;
 	# On attend plus video_size
-	sleep(1) if (!-f "video_size");
+	# En cas d'attente on bloquerait d'autant à chaque commande vers info
+	# ou list c'est totalement insupportable. Normalement ce n'est plus
+	# nécessaire
 	if (open(F,"<video_size") || open(F,"<desktop")) {
 		# Si on démarre sur une chaine dvb cryptée, mplayer sort et freebox
 		# passe en boucle. Dans ce cas là on obtient jamais video_size, donc
