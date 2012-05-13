@@ -216,10 +216,10 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 			char *white,old;
 			int myw,myh,pos;;
 			do { // cut on whites
-				if (y > maxy && x > 18) {
+				if (y > maxy && x > 4) {
 					// We just got below the pictures, use the space then !
-					x = 18;
-					maxw = sf->w-x-8;
+					x = 4;
+					maxw = sf->w-x-4;
 				}
 
 				white = NULL;

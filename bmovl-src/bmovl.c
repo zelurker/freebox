@@ -170,8 +170,8 @@ static int info(int fifo, int argc, char **argv)
 		    if (ratio < 1.0) {
 			strcpy(buff,channel);
 			char *p = strrchr(buff,'.');
-			sprintf(p,"-%g.bmp",ratio);
-			SDL_Surface *s = SDL_LoadBMP(buff);
+			sprintf(p,"-%g.png",ratio);
+			SDL_Surface *s = IMG_Load(buff);
 			if (!s) {
 			    s = zoomSurface(chan,ratio,ratio,SMOOTHING_ON);
 			    png_save_surface(buff,s);
@@ -209,7 +209,7 @@ static int info(int fifo, int argc, char **argv)
 		int myx,w=0,h;
 		if (chan) w = chan->w;
 		if (pic && pic->w>w) w = pic->w;
-		if (w) myx = 26+w; else myx = 18;
+		if (w) myx = 3*4+2+w; else myx = 4;
 		int wtext=0,htext=0;
 		buff[0] = 0;
 		int len = 0;
@@ -222,16 +222,16 @@ static int info(int fifo, int argc, char **argv)
 		desc = strdup(buff);
 
 		TTF_SetFontStyle(font,TTF_STYLE_BOLD);
-		get_size(font,heure,&w,&h,width-32); // 1st string : all the width (top)
+		get_size(font,heure,&w,&h,width-4*4); // 1st string : all the width (top)
 		htext += h;
 		wtext = w;
 		int himg = h;
 		int maxw = 0;
 		if (pic) maxw = pic->w;
 		if (chan && chan->w>maxw) maxw = chan->w;
-		if (maxw) maxw = width-maxw-24;
+		if (maxw) maxw = width-maxw-3*4;
 		else
-			maxw = width - 32;
+			maxw = width - 4*4;
 
 		get_size(font,title,&w,&h,maxw);
 		htext += h;
@@ -254,10 +254,10 @@ static int info(int fifo, int argc, char **argv)
 
 		// Ok, finalement on affiche les chaines (heure, titre, desc)
 		x = myx;
-		y = margeh;
+		y = 4;
 		TTF_SetFontStyle(font,TTF_STYLE_BOLD);
-		y += put_string(sf,font,18,y,heure,fg,0);
-		r.x = 18;
+		y += put_string(sf,font,4,y,heure,fg,0);
+		r.x = 4;
 		r.y = y;
 		if (chan) {
 			if (y + chan->h < sf->h) {
@@ -389,7 +389,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
     get_size(font,source,&wlist,&hlist,maxw);
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
-    hlist += margeh;
+    hlist += 4;
     // 1Ëre boucle : on stocke les infos...
     while (!feof(stdin) && nb<20) {
 	if (!myfgets(buff,4096,stdin)) break;
@@ -404,18 +404,19 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	}
 	list[nb++] = strdup(end_nb);
     }
-    for (; nb<20; nb++)
-	list[nb] = NULL;
     // 2Ëme tour de boucle : on trouve les dimensions
+    int nb2;
     if (!fsel && !mode_list) {
 	sprintf(buff,"%d",num[nb-1]);
 	get_size(font,buff,&w,&h,maxw);
 	numw = w;
+	for (nb2=nb; nb2<20; nb2++)
+	    list[nb2] = NULL;
     } else
 	numw = 0;
-    nb = 0;
-    while (hlist+fsize < maxh && nb < 20) {
-	char *end_nb = list[nb];
+    nb2 = 0;
+    while (hlist+fsize < maxh && nb2 < nb) {
+	char *end_nb = list[nb2];
 	if (!end_nb) break;
 	int fleche = 0;
 	int l = strlen(end_nb);
@@ -423,34 +424,35 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    end_nb[l-1] = 0;
 	    fleche = 1;
 	}
-	get_size(font,end_nb,&w,&h,maxw-numw-margew*2);
-//	printf("prÈvision list: hlist:%d/%d %s from %d\n",hlist,maxh,end_nb,numw+margew*2);
+	get_size(font,end_nb,&w,&h,maxw-numw-4*2);
+//	printf("prÈvision list: hlist:%d/%d %s from %d\n",hlist,maxh,end_nb,numw+4*2);
 	if (w > wlist) wlist = w;
 	hlist += h;
 	if (fleche) end_nb[l-1] = '>';
-	nb++;
+	nb2++;
     }
+    get_size(font,">",&w,&h,maxw);
     int indicw = w;
 
     int n;
-    int x=margew,y=margeh;
+    int x=4,y=4;
 
-    wlist += numw+margew; // le numÈro sur la gauche (3 chiffres + sÈparateur)
+    wlist += numw+4; // le numÈro sur la gauche (3 chiffres + sÈparateur)
     int xright = x+wlist;
     wlist += indicw; // place pour le > ‡ la fin
-    if (wlist > maxw-16) {
-	wlist = maxw-16;
-	xright = x+wlist-indicw-16;
+    if (wlist > maxw-4*2) {
+	wlist = maxw-4*2;
+	xright = x+wlist-indicw-4*2;
     }
     /*	if (hlist > maxh)
 	hlist = maxh; */
 
-    SDL_Surface *sf = create_surface(wlist+16,hlist+16);
+    SDL_Surface *sf = create_surface(wlist+4*2,hlist+4*2);
 
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
     y += put_string(sf,font,x,y,source,SDL_MapRGB(sf->format,0xff,0xff,0x80),
 	    height);
-    x += numw+margew; // alignÈ aprËs les numÈros
+    x += numw+4; // alignÈ aprËs les numÈros
     int fg = get_fg(sf);
     int red = SDL_MapRGB(sf->format,0xff,0x50,0x50);
     int cyan = SDL_MapRGB(sf->format, 0x50,0xff,0xff);
@@ -467,16 +469,16 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	sprintf(buff,"%d",num[n]);
 	if (current == n) {
 	    SDL_Rect r;
-	    r.x = margew; r.y = y; r.w = wlist; r.h = fsize;
+	    r.x = 4; r.y = y; r.w = wlist; r.h = fsize;
 	    SDL_FillRect(sf,&r,fg);
 	    if (!fsel && !mode_list)
-		put_string(sf,font,margew,y,buff,bg,height); // NumÈro
+		put_string(sf,font,4,y,buff,bg,height); // NumÈro
 	    int dy = put_string(sf,font,x,y,list[n],bg,height);
 	    if (dy != fsize) { // bad guess, 2nd try...
 		r.h = dy;
 		SDL_FillRect(sf,&r,fg);
 		if (!fsel && !mode_list)
-		    put_string(sf,font,margew,y,buff,bg,height); // Num√©ro
+		    put_string(sf,font,4,y,buff,bg,height); // Num√©ro
 		dy = put_string(sf,font,x,y,list[n],bg,height);
 	    }
 	    sely = y+dy/2;
@@ -491,7 +493,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 		fg = cyan;
 	    }
 	    if (!fsel && !mode_list)
-		put_string(sf,font,margew,y,buff,fg,height); // Num√©ro
+		put_string(sf,font,4,y,buff,fg,height); // Num√©ro
 	    y += put_string(sf,font,x,y,list[n],fg,height);
 	    if (status[n] == 'R' || status[n] == 'D') fg = oldfg;
 	}
