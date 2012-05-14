@@ -63,6 +63,7 @@ sub get_stream_info {
 			$last = $cur;
 			$cur = $_;
 		}
+		$last =~ s/pic\:.+? //;
 		close(F);
 		return ($cur,$last,$info);
 	}
