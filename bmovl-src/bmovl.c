@@ -90,6 +90,37 @@ static TTF_Font *open_font(int fsize) {
 
 int image(int argc, char **argv);
 
+static void clear_rect(SDL_Surface *sf,int x, int y, int *indents)
+{
+    SDL_Rect b;
+    int bg = get_bg(sf);
+    int *i = indents;
+    while (*i) {
+	if (y > *i) {
+	    // printf("next: y %d > %d, set x to %d\n",y,*i,i[1]);
+	    x = i[1];
+	    i += 2;
+	} else {
+	    // printf("next h = %d - y %d - 1\n",*i,y);
+	    b.x =x; b.y = y; b.w = sf->w-x-1; b.h = *i++-y;
+	    // printf("next: clear %d %d %d %d\n",x,y,b.w,b.h);
+	    SDL_FillRect(sf,&b,bg);
+	    x = *i++;
+	    y = i[-2];
+	}
+    }
+    b.x =x; b.y = y; b.w = sf->w-x-1; b.h = sf->h-y;
+    SDL_FillRect(sf,&b,bg);
+}
+
+static void adjust_indent(int *x, int *y, int *indents)
+{
+    while (*indents && *y > *indents) {
+	*x = indents[1];
+	indents += 2;
+    }
+}
+
 static int info(int fifo, int argc, char **argv)
 {
 	char *s = strrchr(argv[0],'/');
@@ -106,7 +137,7 @@ static int info(int fifo, int argc, char **argv)
 	static SDL_Surface *sf;
 	static SDL_Rect r;
 	int x,y;
-	int indents[6], nb_indents = 0;
+	static int indents[6], nb_indents;
 	SDL_Surface *chan = NULL,*pic = NULL;
 	int list_opened = 0;
 	FILE *f = fopen("list_coords","r");
@@ -186,7 +217,7 @@ static int info(int fifo, int argc, char **argv)
 		    if (pic->w > width/2) 
 			ratio = width/2.0/(pic->w);
 		    int h = maxh - fsize - 8*2;
-		    if (chan) h = h/2-8;
+		    if (chan) h = h-4-chan->h;
 		    if (pic->h > h) {
 			double ratio2 = h*1.0/pic->h;
 			if (ratio2 < ratio) ratio = ratio2;
@@ -266,16 +297,18 @@ static int info(int fifo, int argc, char **argv)
 			}
 			SDL_FreeSurface(chan);
 		}
+		nb_indents = 0;
 		if (pic) {
 			if (r.y + pic->h < sf->h) {
-			    indents[nb_indents++] = r.y-fsize;
+			    printf("ajout indents pic : %d %d en %d\n",r.y-fsize,r.x+pic->w+4,nb_indents);
+			    indents[nb_indents++] = r.y;
 			    indents[nb_indents++] = r.x+pic->w+4;
 			    SDL_BlitSurface(pic,NULL,sf,&r);
 			    r.y += pic->h+8;
 			}
 			SDL_FreeSurface(pic);
 		}
-		indents[nb_indents++] = r.y-fsize;
+		indents[nb_indents++] = r.y;
 		indents[nb_indents++] = 4;
 		indents[nb_indents++] = 0;
 		y += put_string(sf,font,x,y,title,fg,indents);
@@ -292,27 +325,20 @@ static int info(int fifo, int argc, char **argv)
 		free(heure);
 		free(title);
 	} else if (!strcmp(argv[0],"next")) {
-		x = x0; y = y0;
 		if (!next) return 0;
 		prev[nb_prev++] = str;
 		if (nb_prev == MAX_PREV) nb_prev = MAX_PREV-1;
 		str = next;
-		SDL_Rect b;
-		int bg = get_bg(sf);
-		b.x = x; b.y = y; b.w = sf->w-x-1; b.h = sf->h-y-1;
-		SDL_FillRect(sf,&b,bg);
-		b.x = 18; b.y = r.y; b.w = x-18; b.h = sf->h-r.y-1;
-		SDL_FillRect(sf,&b,bg);
+		clear_rect(sf,x0,y0,indents);
+		x = x0; y = y0;
+		adjust_indent(&x,&y,indents);
 	} else if (!strcmp(argv[0],"prev")) {
 		if (!nb_prev) return 0;
 		str = prev[--nb_prev];
+		clear_rect(sf,x0,y0,indents);
 		x = x0; y = y0;
-		SDL_Rect b;
-		int bg = get_bg(sf);
-		b.x = x; b.y = y; b.w = sf->w-x-1; b.h = sf->h-y-1;
-		SDL_FillRect(sf,&b,bg);
-		b.x = 18; b.y = r.y; b.w = x-18; b.h = sf->h-r.y-1;
-		SDL_FillRect(sf,&b,bg);
+		x = x0; y = y0;
+		adjust_indent(&x,&y,indents);
 	} else {
 		printf("info: unknown command %s\n",argv[0]);
 		return 1;

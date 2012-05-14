@@ -217,74 +217,86 @@ int direct_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 		char *text, int color, int *indents)
 {
-	/* Gère les retours charriots dans la chaine, renvoie la hauteur totale */
-	int maxw = sf->w-x-4;
-	int h = 0;
-	char *beg = text,*s;
-	int fin = 0;
-	next = NULL;
-	do {
-		s = strchr(beg,'\n');
-		if (s) *s = 0;
-		if (*beg) {
+    /* Gère les retours charriots dans la chaine, renvoie la hauteur totale */
+    int maxw = sf->w-x-4;
+    int h = 0;
+    char *beg = text,*s;
+    int fin = 0;
+    next = NULL;
+    do {
+	s = strchr(beg,'\n');
+	if (s) *s = 0;
+	if (*beg) {
 
-			char *white,old;
-			int myw,myh,pos;;
-			do { // cut on whites
-				if (indents && *indents &&
-					y > *indents && x > 4) {
-					// We just got below the pictures, use the space then !
-					x = indents[1];
-					indents += 2;
-					maxw = sf->w-x-4;
-				}
-
-				white = NULL;
-				do {
-					TTF_SizeText(font,beg,&myw,&myh);
-					if (myw > maxw) {
-						if (myw/3 > maxw)
-							pos = strlen(beg)/2;
-						else
-							pos = strlen(beg)-1;
-						old = beg[pos];
-						beg[pos] = 0;
-						if (white)
-							*white = ' ';
-						white = strrchr(beg,' ');
-						beg[pos] = old;
-						if (white)
-							*white = 0;
-					}
-				} while (myw > maxw && white); 
-
-				// we have a substring that can be displayed here...
-				int ht = direct_string(sf,font,x,y,beg,color);
-				if (!ht) {
-					fin = 1;
-					next = beg;
-				}
-				h += ht;
-				y += ht;
-
-				if (white) {
-					*white = ' ';
-					beg = white+1;
-				}
-				if (fin) break;
-			} while (white);
-
-		} else {
-			h += 12;
-			y += 12;
+	    char *white,old;
+	    int myw,myh,pos;;
+	    do { // cut on whites
+		TTF_SizeText(font,beg,&myw,&myh);
+		/* Le test est vraiment tordu, je ne pensais pas que ça serait
+		 * à ce point là.
+		 * Le problème vient de ce qui se passe quand du texte se
+		 * retrouve à cheval sur une indentation.
+		 * Si la prochaine indentation décale à gauche, alors il faut
+		 * attendre que tout le texte soit dans l'indentation pour
+		 * changer.
+		 * Si elle décale à droite alors dès que la base du texte
+		 * déborde il faut changer. */
+		if (indents && *indents &&
+			((y+myh-1 >= *indents && indents[1] > x) ||
+			 (y >= *indents && indents[1] < x))) {
+		    // printf("put_string: y %d > indent %d, x = %d\n",y,*indents,indents[1]);
+		    // We just got below the pictures, use the space then !
+		    x = indents[1];
+		    indents += 2;
+		    maxw = sf->w-x-4;
 		}
-		if (s) {
-			*s = '\n';
-			beg = s+1;
+
+		white = NULL;
+		do {
+		    TTF_SizeText(font,beg,&myw,&myh);
+		    if (myw > maxw) {
+			if (myw/3 > maxw)
+			    pos = strlen(beg)/2;
+			else
+			    pos = strlen(beg)-1;
+			old = beg[pos];
+			beg[pos] = 0;
+			if (white)
+			    *white = ' ';
+			white = strrchr(beg,' ');
+			beg[pos] = old;
+			if (white)
+			    *white = 0;
+		    }
+		} while (myw > maxw && white); 
+
+		// we have a substring that can be displayed here...
+		int ht = direct_string(sf,font,x,y,beg,color);
+		if (!ht) {
+		    fin = 1;
+		    next = beg;
+		}
+		h += ht;
+		y += ht;
+
+		if (white) {
+		    *white = ' ';
+		    beg = white+1;
 		}
 		if (fin) break;
-	} while (s && *beg);
-	return h;
+	    } while (white);
+
+	} else {
+	    h += 12;
+	    y += 12;
+	}
+	if (s) {
+	    *s = '\n';
+	    beg = s+1;
+	}
+	if (fin) break;
+    } while (s && *beg);
+    return h;
 }
 
 int myfgets(char *buff, int size, FILE *f) {
