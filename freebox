@@ -45,6 +45,7 @@ cmd=""
 append $flavour
 append $audio
 append $video
+echo ./run_mp1 "$service" $cmd "$src" "$chaine"
 ./run_mp1 "$service" $cmd "$src" "$chaine"
 }
 
@@ -124,7 +125,7 @@ for n in player1.pid; do
 	fi
 done
 if ! [ -f info.pid ]; then
-	./bmovl-src/bmovl fifo >& bmovl-log &
+	./bmovl-src/bmovl fifo &
 fi	
 if ! ps -p `cat info_pl.pid`>&/dev/null; then
 	perl info.pl &
