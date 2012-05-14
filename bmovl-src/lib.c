@@ -196,15 +196,30 @@ static char *next;
 
 char *get_next_string() { return next; }
 
+int direct_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
+	char *text, int color)
+{
+    // Retourne la hauteur de la chaine affichée ou 0
+    SDL_Rect dest;
+    int maxh = sf->h-8;
+    dest.x = x; dest.y = y;
+    SDL_Color *col = (SDL_Color*)&color; // dirty hack !
+    SDL_Surface *tf = TTF_RenderText_Solid(font,text,*col);
+    int ret = 0;
+    if (y + tf->h <= maxh) {
+	SDL_BlitSurface(tf,NULL,sf,&dest);
+	ret = tf->h;
+    }
+    SDL_FreeSurface(tf);
+    return ret; 
+}
+
 int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
-		char *text, int color, int maxy)
+		char *text, int color, int *indents)
 {
 	/* Gère les retours charriots dans la chaine, renvoie la hauteur totale */
-	/* maxy is the maximum y value beside the pictures, after this the text
-	 * goes back on the left */
-	int maxw = sf->w-x-8;
+	int maxw = sf->w-x-4;
 	int h = 0;
-	int maxh = sf->h-8;
 	char *beg = text,*s;
 	int fin = 0;
 	next = NULL;
@@ -216,9 +231,11 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 			char *white,old;
 			int myw,myh,pos;;
 			do { // cut on whites
-				if (y > maxy && x > 4) {
+				if (indents && *indents &&
+					y > *indents && x > 4) {
 					// We just got below the pictures, use the space then !
-					x = 4;
+					x = indents[1];
+					indents += 2;
 					maxw = sf->w-x-4;
 				}
 
@@ -242,19 +259,13 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 				} while (myw > maxw && white); 
 
 				// we have a substring that can be displayed here...
-				SDL_Rect dest;
-				dest.x = x; dest.y = y;
-				SDL_Color *col = (SDL_Color*)&color; // dirty hack !
-				SDL_Surface *tf = TTF_RenderText_Solid(font,beg,*col);
-				if (y + tf->h <= maxh)
-					SDL_BlitSurface(tf,NULL,sf,&dest);
-				else {
+				int ht = direct_string(sf,font,x,y,beg,color);
+				if (!ht) {
 					fin = 1;
 					next = beg;
 				}
-				h += tf->h;
-				y += tf->h;
-				SDL_FreeSurface(tf);
+				h += ht;
+				y += ht;
 
 				if (white) {
 					*white = ' ';

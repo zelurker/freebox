@@ -106,6 +106,7 @@ static int info(int fifo, int argc, char **argv)
 	static SDL_Surface *sf;
 	static SDL_Rect r;
 	int x,y;
+	int indents[6], nb_indents = 0;
 	SDL_Surface *chan = NULL,*pic = NULL;
 	int list_opened = 0;
 	FILE *f = fopen("list_coords","r");
@@ -170,7 +171,7 @@ static int info(int fifo, int argc, char **argv)
 		    if (ratio < 1.0) {
 			strcpy(buff,channel);
 			char *p = strrchr(buff,'.');
-			sprintf(p,"-%g.png",ratio);
+			sprintf(p,"-%g.png",chan->h*ratio);
 			SDL_Surface *s = IMG_Load(buff);
 			if (!s) {
 			    s = zoomSurface(chan,ratio,ratio,SMOOTHING_ON);
@@ -194,8 +195,8 @@ static int info(int fifo, int argc, char **argv)
 		    if (ratio < 1.0) {
 			strcpy(buff,picture);
 			char *p = strrchr(buff,'.');
-			sprintf(p,"-%g.bmp",ratio);
-			SDL_Surface *s = SDL_LoadBMP(buff);
+			sprintf(p,"-%g.png",pic->h*ratio);
+			SDL_Surface *s = IMG_Load(buff);
 			if (!s) {
 			    s = zoomSurface(pic,ratio,ratio,SMOOTHING_ON);
 			    printf("zoom from %d %d to %d %d ratio %g\n",pic->w,pic->h,s->w,s->h,ratio);
@@ -208,7 +209,6 @@ static int info(int fifo, int argc, char **argv)
 
 		int myx,w=0,h;
 		if (chan) w = chan->w;
-		if (pic && pic->w>w) w = pic->w;
 		if (w) myx = 3*4+2+w; else myx = 4;
 		int wtext=0,htext=0;
 		buff[0] = 0;
@@ -256,7 +256,7 @@ static int info(int fifo, int argc, char **argv)
 		x = myx;
 		y = 4;
 		TTF_SetFontStyle(font,TTF_STYLE_BOLD);
-		y += put_string(sf,font,4,y,heure,fg,0);
+		y += put_string(sf,font,4,y,heure,fg,NULL);
 		r.x = 4;
 		r.y = y;
 		if (chan) {
@@ -268,12 +268,17 @@ static int info(int fifo, int argc, char **argv)
 		}
 		if (pic) {
 			if (r.y + pic->h < sf->h) {
-				SDL_BlitSurface(pic,NULL,sf,&r);
-				r.y += pic->h+8;
+			    indents[nb_indents++] = r.y-fsize;
+			    indents[nb_indents++] = r.x+pic->w+4;
+			    SDL_BlitSurface(pic,NULL,sf,&r);
+			    r.y += pic->h+8;
 			}
 			SDL_FreeSurface(pic);
 		}
-		y += put_string(sf,font,x,y,title,fg,r.y);
+		indents[nb_indents++] = r.y-fsize;
+		indents[nb_indents++] = 4;
+		indents[nb_indents++] = 0;
+		y += put_string(sf,font,x,y,title,fg,indents);
 		y += 12;
 		TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
 		str = desc;
@@ -313,7 +318,7 @@ static int info(int fifo, int argc, char **argv)
 		return 1;
 	}
 		
-	y += put_string(sf,font,x,y,str,fg,r.y);
+	y += put_string(sf,font,x,y,str,fg,indents);
 	next = get_next_string();
 
 	// Display
@@ -451,7 +456,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
     y += put_string(sf,font,x,y,source,SDL_MapRGB(sf->format,0xff,0xff,0x80),
-	    height);
+	    NULL);
     x += numw+4; // aligné après les numéros
     int fg = get_fg(sf);
     int red = SDL_MapRGB(sf->format,0xff,0x50,0x50);
@@ -472,14 +477,14 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    r.x = 4; r.y = y; r.w = wlist; r.h = fsize;
 	    SDL_FillRect(sf,&r,fg);
 	    if (!fsel && !mode_list)
-		put_string(sf,font,4,y,buff,bg,height); // Numéro
-	    int dy = put_string(sf,font,x,y,list[n],bg,height);
+		put_string(sf,font,4,y,buff,bg,NULL); // Numéro
+	    int dy = put_string(sf,font,x,y,list[n],bg,NULL);
 	    if (dy != fsize) { // bad guess, 2nd try...
 		r.h = dy;
 		SDL_FillRect(sf,&r,fg);
 		if (!fsel && !mode_list)
-		    put_string(sf,font,4,y,buff,bg,height); // NumÃ©ro
-		dy = put_string(sf,font,x,y,list[n],bg,height);
+		    put_string(sf,font,4,y,buff,bg,NULL); // NumÃ©ro
+		dy = put_string(sf,font,x,y,list[n],bg,NULL);
 	    }
 	    sely = y+dy/2;
 	    y += dy;
@@ -493,12 +498,12 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 		fg = cyan;
 	    }
 	    if (!fsel && !mode_list)
-		put_string(sf,font,4,y,buff,fg,height); // NumÃ©ro
-	    y += put_string(sf,font,x,y,list[n],fg,height);
+		put_string(sf,font,4,y,buff,fg,NULL); // NumÃ©ro
+	    y += put_string(sf,font,x,y,list[n],fg,NULL);
 	    if (status[n] == 'R' || status[n] == 'D') fg = oldfg;
 	}
 	if (hidden) {
-	    put_string(sf,font,xright,y0,">",(current == n ? bg : fg),height);
+	    direct_string(sf,font,xright,y0,">",(current == n ? bg : fg));
 	}
 //	printf("y:%d/%d %s from %d\n",y0,maxh,list[n],x);
     }
@@ -558,7 +563,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	SDL_Rect r;
 	r.x = 0;
 	r.y = y + sf->h;
-	r.w = sdl_screen->w;
+	r.w = sf->w + x;
 	r.h = maxy - r.y;
 	if (maxy > r.y) {
 	    printf("list: on vire la partie du bas : %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
@@ -577,8 +582,8 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     // Clean up
     SDL_FreeSurface(sf);
 
+    int info=0;
     if (current > -1 && !noinfo) {
-	int info=0;
 	int tries = 0;
 	while (tries++ < 4 && info <= 0) {
 	    info = open("fifo_info",O_WRONLY|O_NONBLOCK);
@@ -602,7 +607,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     for (n=0; n<nb; n++)
 	free(list[n]);
     TTF_CloseFont(font);
-    if (sdl_screen && *bg_pic) {
+    if (sdl_screen && *bg_pic && info <= 0) {
 	printf("actualisation image après list\n");
 	image(1,NULL);
     }
@@ -720,7 +725,7 @@ static int numero(int fifo, int argc, char **argv) {
     get_size(font,argv[1],&w,&h,width-32);
     SDL_Surface *sf = create_surface(w+16,h+16);
     int fg = get_fg(sf);
-    put_string(sf,font,8,8,argv[1],fg,0);
+    put_string(sf,font,8,8,argv[1],fg,NULL);
     int x = width-margew-sf->w, y = margeh*2;
     blit(fifo, sf, x, y, -40, 0);
     SDL_FreeSurface(sf);

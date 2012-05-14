@@ -7,8 +7,11 @@ int send_command(int fifo,char *cmd);
 
 void get_size(TTF_Font *font, char *text, int *w, int *h, int maxw);
 
+// direct_string : pas de retour à la ligne, sortie directe
+int direct_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
+	char *text, int color);
 int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y, 
-		char *text, int color, int maxy);
+		char *text, int color, int *indents);
 
 int myfgets(char *buff, int size, FILE *f);
 
