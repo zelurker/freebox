@@ -140,7 +140,8 @@ while [ "$ok" == "0" ]; do
 			size=`stat --printf=%s "$name"`
 		done
 		timeout=$(( `date +%s`-$start ))
-		if ps -p `cat player1.pid` >& /dev/null && [ -f "$name" ]; then
+		if ps -p `cat player1.pid` >& /dev/null && [ -f "$name" ] && \
+			[ $size -gt 1024000 ]; then
 			ok=1 # fini !
 		fi
 		if [ $timeout -gt 6 ] || [ "$timeout" == "6" ] || [ "$ok" == "0" ]; then
