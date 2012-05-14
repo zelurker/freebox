@@ -790,6 +790,13 @@ if (!$channel) {
 		my $rtab = $chaines{$last_chan};
 		if ($rtab) {
 			my $n = $last_prog-1;
+			if ($n < 0) {
+				my $old = $#$rtab;
+				getListeProgrammes(-1);
+				$rtab = $chaines{$last_chan};
+				$n += $#$rtab - $old;
+			}
+
 			$n=0 if ($n < 0);
 			disp_prog($$rtab[$n],$last_long);
 			$last_prog = $n;
@@ -1007,6 +1014,12 @@ sub parse_prg($) {
 			$chaines{$chan} = [\@sub];
 		}
 	}
+	foreach (keys %chaines) {
+		my @tab = sort { $$a[3] <=> $$b[3] } @{$chaines{$_}};
+		$chaines{$_} = \@tab;
+	}
+
+
 	print scalar localtime," fin traitement fichier, $nb_collision collisions\n";
 	$chaines{"nolife"} = get_nolife($chaines{"nolife"}) if (!$chaines{nolife});
 	print scalar localtime," fin traitement nolife\n";
