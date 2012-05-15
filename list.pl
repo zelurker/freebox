@@ -678,6 +678,7 @@ while (1) {
 	} elsif ($cmd eq "left") {
 		if ($mode_opened) {
 			close_mode();
+			send_bmovl("image");
 			next;
 		}
 		if ($source eq "flux" && $base_flux && 

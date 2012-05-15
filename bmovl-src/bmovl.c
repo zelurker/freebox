@@ -509,7 +509,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 		r.h = dy;
 		SDL_FillRect(sf,&r,fg);
 		if (!fsel && !mode_list)
-		    put_string(sf,font,4,y,buff,bg,NULL); // NumÃ©ro
+		    put_string(sf,font,4,y,buff,bg,NULL); // Numéro
 		dy = put_string(sf,font,x,y,list[n],bg,NULL);
 	    }
 	    sely = y+dy/2;
@@ -524,7 +524,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 		fg = cyan;
 	    }
 	    if (!fsel && !mode_list)
-		put_string(sf,font,4,y,buff,fg,NULL); // NumÃ©ro
+		put_string(sf,font,4,y,buff,fg,NULL); // Numéro
 	    y += put_string(sf,font,x,y,list[n],fg,NULL);
 	    if (status[n] == 'R' || status[n] == 'D') fg = oldfg;
 	}
@@ -587,9 +587,9 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	}
 	int maxy = (infoy ? infoy : sdl_screen->h);
 	SDL_Rect r;
-	r.x = 0;
+	r.x = (mode_list ? x : 0);
 	r.y = y + sf->h;
-	r.w = sf->w + x;
+	r.w = sf->w + (mode_list ? 0 : x);
 	r.h = maxy - r.y;
 	if (maxy > r.y) {
 	    printf("list: on vire la partie du bas : %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
@@ -853,13 +853,14 @@ int image(int argc, char **argv) {
 	w = atoi(argv[4]);
 	h = atoi(argv[5]);
     }
-    FILE *f = fopen("list_coords","r");
+    FILE *f = fopen("mode_coords","r");
+    if (!f) f = fopen("list_coords","r");
     if (f) {
 	int oldx,oldy,oldw,oldh,oldsel;
 	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
 	fclose(f);
 	x = oldx + oldw;
-	y = oldy;
+	// y = oldy;
     }
     f = fopen("info_coords","r");
     if (f) {
