@@ -136,7 +136,7 @@ while [ "$ok" == "0" ]; do
 		# Et attend que la taille sur disque soit au moins d'1 Mo
 		while [ -f "$name" ] && [ $size -lt 1024000 ] && \
 			ps -p `cat player1.pid` >& /dev/null && \
-			[ $(( `date +%s`-$start )) -lt 5 ]; do
+			[ $(( `date +%s`-$start )) -lt 6 ]; do
 			size=`stat --printf=%s "$name"`
 		done
 		timeout=$(( `date +%s`-$start ))
