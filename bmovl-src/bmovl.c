@@ -499,7 +499,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    chan[nb2] = s;
 	    printf("chan %d redim %d %d\n",nb2,chan[nb2]->w,chan[nb2]->h);
 	}
-	if (chan[nb]) w += chan[nb]->w+4;
+	if (chan[nb2]) w += chan[nb2]->w+4;
 //	printf("prévision list: hlist:%d/%d %s from %d\n",hlist,maxh,end_nb,numw+4*2);
 	if (w > wlist) wlist = w;
 	hlist += h;
