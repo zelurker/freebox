@@ -118,41 +118,6 @@ sub alpha {
 	}
 }
 
-sub conv_channel {
-	my $channel = shift;
-	my %corresp =
-	(
-		"RTL9" => "RTL 9",
-		"Luxe.TV" => "Luxe TV",
-		"AB 1" => "AB1",
-		"IDF 1" => "IDF1",
-		"i>TELE" => "iTélé",
-		"i> TELE" => "iTélé",
-		"TV5 Monde" => "TV5MONDE",
-		"France ô" => "France Ô",
-		"france o" => "France Ô",
-		"DirectStar" => "Direct Star",
-		"Télénantes Nantes 7" => "Nantes 7",
-		"NRJ12" => "NRJ 12",
-		"LCP" => "La chaîne parlementaire",
-		"Onzeo" => "Onzéo",
-		"TEVA" => "Téva",
-		"Equidia live" => "Equidia",
-		"Luxe.TV" => "Luxe TV",
-	);
-	$channel =~ s/ \(bas débit\)//;
-	$channel =~ s/ hd$//i;
-	$channel =~ s/ sat$//i;
-	$channel =~ s/^Télénantes //;
-	$channel =~ s/ *$//;
-	foreach (keys %corresp) {
-		if (lc($_) eq $channel) {
-			return  lc($corresp{$_});
-		}
-	}
-	return lc($channel);
-}
-
 sub setup_output {
 	my ($prog,$pic,$long) = @_;
 	@_ = ();
@@ -196,30 +161,6 @@ sub setup_output {
 		$out = *STDERR;
 	}
 	$out;
-}
-
-sub setup_image {
-	my ($browser,$url) = @_;
-	my $name = "";
-	if ($url) {
-		($name) = $url =~ /.+\/(.+)/;
-#		print STDERR "channel name $name from $url\n";
-		$name = "chaines/$name";
-		if (! -f $name) {
-#			print STDERR "no channel logo, trying to get it from web\n";
-			my $response = $browser->get($url);
-
-			if ($response->is_success) {
-				open(F,">$name") || die "can't create channel logo $name\n";
-				print F $response->content;
-				close(F);
-			} else {
-#				print STDERR "could not get logo from $url\n";
-				$name = "";
-			}
-		}
-	}
-	$name;
 }
 
 1;

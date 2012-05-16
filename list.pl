@@ -19,6 +19,7 @@ use Fcntl;
 use File::Glob 'bsd_glob'; # le glob dans perl c'est n'importe quoi !
 require "output.pl";
 require "mms.pl";
+require "chaines.pl";
 
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
@@ -233,8 +234,15 @@ sub read_list {
 					(!$tv && $video ne "no-video"));
 
 				$num -= 10000 if (!$tv);
+				my $pic = get_chan_pic($name);
+				if ($pic) {
+					print "$pic from $name\n";
+				} else {
+					print "no pic found for name $name\n";
+				}
 
-				my @cur = ($num,$name,$service,$flavour,$audio,$video,$red);
+				my @cur = ($num,$name,$service,$flavour,$audio,$video,$red,
+				$pic);
 				if ($last_num != $num) {
 					$last_num = $num;
 					push @list,[\@cur];
@@ -257,7 +265,8 @@ sub read_list {
 			my $service = $fields[0];
 			my $name = $service;
 			$name =~ s/\(.+\)//; # name sans le transpondeur
-			push @list,[[$num++,$name,$service]];
+			my $pic = get_chan_pic($name);
+			push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
 		}
 		close(F);
 	} elsif ($source =~ /^(livetv|Enregistrements)$/) {
@@ -1082,7 +1091,7 @@ while (1) {
 	for (my $nb=1; $nb<=$nb_elem; $nb++) {
 		last if (++$n > $#list);
 		my $rtab = $list[$n];
-		my ($num,$name,$service,$flavour,$audio,$video,$red) = @{$$rtab[0]};
+		my ($num,$name,$service,$flavour,$audio,$video,$red,$pic) = @{$$rtab[0]};
 		if ($n == $found) {
 			$cur .= "*";
 		} elsif ($red) {
@@ -1099,7 +1108,7 @@ while (1) {
 		if (!$num) {
 			die "list split failed\n";
 		}
-		$cur .= sprintf("%3d:%s",$num,$name);
+		$cur .= sprintf("%3d:%s",$num,($pic ? "pic:$pic " : "").$name);
 		if ($#$rtab > 0) {
 			$cur .= ">";
 		}

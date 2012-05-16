@@ -381,11 +381,28 @@ static int info(int fifo, int argc, char **argv)
 	return 0;
 }
 
+static int disp_list(SDL_Surface *sf, TTF_Font *font, int x, int y, char *list,
+	SDL_Surface *chan,int col)
+{
+    int dy;
+    if (chan) {
+	SDL_Rect r;
+	r.x = x;
+	r.y = y;
+	printf("affichage chan %d %d en x %d y %d\n",chan->w,chan->h,x,y);
+	SDL_BlitSurface(chan,NULL,sf,&r);
+	dy = put_string(sf,font,x+chan->w+4,y,list,col,NULL);
+    } else
+	dy = put_string(sf,font,x,y,list,col,NULL);
+    return dy;
+}
+
 static int list(int fifo, int argc, char **argv, int noinfo)
 {
     int width,height;
 
     char *source,buff[4096],*list[20],status[20];
+    SDL_Surface *chan[20];
 
     if(argc<4) {
 	printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
@@ -433,6 +450,17 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	if (!fsel && !mode_list) {
 	    num[nb] = atoi(&buff[1]);
 	}
+	if (!strncmp(end_nb,"pic:",4)) {
+	    // Extension : si le nom commence par pic:filename
+	    // alors filename est une image (séparation par un espace)
+	    char *s = strchr(end_nb+4,' ');
+	    if (s) {
+		*s = 0;
+		chan[nb] = IMG_Load(end_nb+4);
+		end_nb = s+1;
+	    }
+	} else
+		chan[nb] = NULL;
 	list[nb++] = strdup(end_nb);
     }
     // 2ème tour de boucle : on trouve les dimensions
@@ -441,11 +469,16 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	sprintf(buff,"%d",num[nb-1]);
 	get_size(font,buff,&w,&h,maxw);
 	numw = w;
-	for (nb2=nb; nb2<20; nb2++)
+	for (nb2=nb; nb2<20; nb2++) {
 	    list[nb2] = NULL;
+	    chan[nb2] = NULL;
+	}
     } else
 	numw = 0;
+    get_size(font,">",&w,&h,maxw);
+    int indicw = w;
     nb2 = 0;
+    int larg = maxw-numw-indicw-4*2;
     while (hlist+fsize < maxh && nb2 < nb) {
 	char *end_nb = list[nb2];
 	if (!end_nb) break;
@@ -455,15 +488,24 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    end_nb[l-1] = 0;
 	    fleche = 1;
 	}
-	get_size(font,end_nb,&w,&h,maxw-numw-4*2);
+	get_size(font,end_nb,&w,&h,larg);
+	if (chan[nb2] && (chan[nb2]->h > h || chan[nb2]->w > larg/4)) {
+	    double ratio = h*1.0/chan[nb2]->h;
+	    double ratio2 = larg/4*1.0/chan[nb2]->w;
+	    if (ratio2 < ratio)
+		ratio = ratio2;
+	    SDL_Surface *s = zoomSurface(chan[nb2],ratio,ratio,SMOOTHING_ON);
+	    SDL_FreeSurface(chan[nb2]);
+	    chan[nb2] = s;
+	    printf("chan %d redim %d %d\n",nb2,chan[nb2]->w,chan[nb2]->h);
+	}
+	if (chan[nb]) w += chan[nb]->w+4;
 //	printf("prévision list: hlist:%d/%d %s from %d\n",hlist,maxh,end_nb,numw+4*2);
 	if (w > wlist) wlist = w;
 	hlist += h;
 	if (fleche) end_nb[l-1] = '>';
 	nb2++;
     }
-    get_size(font,">",&w,&h,maxw);
-    int indicw = w;
 
     int n;
     int x=4,y=4;
@@ -472,6 +514,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int xright = x+wlist;
     wlist += indicw; // place pour le > à la fin
     if (wlist > maxw-4*2) {
+	printf("tronquage wlist old %d new %d\n",wlist,maxw-4*2);
 	wlist = maxw-4*2;
 	xright = x+wlist-indicw-4*2;
     }
@@ -504,13 +547,14 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    SDL_FillRect(sf,&r,fg);
 	    if (!fsel && !mode_list)
 		put_string(sf,font,4,y,buff,bg,NULL); // Numéro
-	    int dy = put_string(sf,font,x,y,list[n],bg,NULL);
+	    int dy;
+	    dy = disp_list(sf,font,x,y,list[n],chan[n],bg);
 	    if (dy != fsize) { // bad guess, 2nd try...
 		r.h = dy;
 		SDL_FillRect(sf,&r,fg);
 		if (!fsel && !mode_list)
 		    put_string(sf,font,4,y,buff,bg,NULL); // Numéro
-		dy = put_string(sf,font,x,y,list[n],bg,NULL);
+		dy = disp_list(sf,font,x,y,list[n],chan[n],bg);
 	    }
 	    sely = y+dy/2;
 	    y += dy;
@@ -525,7 +569,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    }
 	    if (!fsel && !mode_list)
 		put_string(sf,font,4,y,buff,fg,NULL); // Numéro
-	    y += put_string(sf,font,x,y,list[n],fg,NULL);
+	    y += disp_list(sf,font,x,y,list[n],chan[n],fg);
 	    if (status[n] == 'R' || status[n] == 'D') fg = oldfg;
 	}
 	if (hidden) {
@@ -630,8 +674,10 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    printf("on abandonne fifo_info !\n");
     }
     free(source);
-    for (n=0; n<nb; n++)
+    for (n=0; n<nb; n++) {
 	free(list[n]);
+	if (chan[n]) SDL_FreeSurface(chan[n]);
+    }
     TTF_CloseFont(font);
     if (sdl_screen && *bg_pic && info <= 0) {
 	printf("actualisation image après list\n");
