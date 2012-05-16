@@ -111,7 +111,6 @@ sub setup_image {
 	# Renvoie un nom de fichier à partir du numéro de chaine
 	# (celui contenu dans liste_chaines renvoyé par télérama).
 	my ($field) = @_;
-	my $browser = get_browser();
 	my $url = $icons{$field};
 	my $name = "";
 	if ($url) {
@@ -120,6 +119,7 @@ sub setup_image {
 		$name = "chaines/$name";
 		if (! -f $name) {
 #			print STDERR "no channel logo, trying to get it from web\n";
+			my $browser = get_browser();
 			my $response = $browser->get($url);
 
 			if ($response->is_success) {
