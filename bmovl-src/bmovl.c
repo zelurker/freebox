@@ -52,6 +52,7 @@ static void disconnect(int signal) {
     clear_screen();
 
     fifo = 0;
+    unlink("video_size");
 }
 
 static void myconnect(int signal) {
@@ -230,7 +231,6 @@ static int info(int fifo, int argc, char **argv)
 			SDL_Surface *s = IMG_Load(buff);
 			if (!s) {
 			    s = zoomSurface(pic,ratio,ratio,SMOOTHING_ON);
-			    printf("zoom from %d %d to %d %d ratio %g\n",pic->w,pic->h,s->w,s->h,ratio);
 			    png_save_surface(buff,s);
 			}
 			SDL_FreeSurface(pic);
@@ -300,7 +300,6 @@ static int info(int fifo, int argc, char **argv)
 		nb_indents = 0;
 		if (pic) {
 			if (r.y + pic->h < sf->h) {
-			    printf("ajout indents pic : %d %d en %d\n",r.y-fsize,r.x+pic->w+4,nb_indents);
 			    indents[nb_indents++] = r.y;
 			    indents[nb_indents++] = r.x+pic->w+4;
 			    SDL_BlitSurface(pic,NULL,sf,&r);
@@ -373,25 +372,23 @@ static int info(int fifo, int argc, char **argv)
 	fprintf(f,"%d %d %d %d ",sf->w, sf->h,
 			x, y);
 	fclose(f);
-	if (sdl_screen && *bg_pic) {
-	    printf("actualisation image après info\n");
+	if (sdl_screen && *bg_pic) 
 	    image(1,NULL);
-	}
 
 	return 0;
 }
 
 static int disp_list(SDL_Surface *sf, TTF_Font *font, int x, int y, char *list,
-	SDL_Surface *chan,int col)
+	SDL_Surface *chan,int col, int h)
 {
     int dy;
     if (chan) {
 	SDL_Rect r;
 	r.x = x;
 	r.y = y;
-	printf("affichage chan %d %d en x %d y %d\n",chan->w,chan->h,x,y);
 	SDL_BlitSurface(chan,NULL,sf,&r);
-	dy = put_string(sf,font,x+chan->w+4,y,list,col,NULL);
+	put_string(sf,font,x+chan->w+4,y+(chan->h-h)/2,list,col,NULL);
+	dy = chan->h;
     } else
 	dy = put_string(sf,font,x,y,list,col,NULL);
     return dy;
@@ -402,6 +399,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int width,height;
 
     char *source,buff[4096],*list[20],status[20];
+    int heights[20];
     SDL_Surface *chan[20];
 
     if(argc<4) {
@@ -428,7 +426,8 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     source = strdup(buff);
     int nb=0,w,h;
     int margew = width/36, margeh=height/36;
-    int maxw = (fsel || !strcmp(argv[0],"longlist") ? width :
+    int longlist = !strcmp(argv[0],"longlist");
+    int maxw = (fsel || longlist ? width :
 	    width/2)-margew*2;
     int maxh = height - margeh*2 - fsize*3;
     int numw = 0;
@@ -479,7 +478,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int indicw = w;
     nb2 = 0;
     int larg = maxw-numw-indicw-4*2;
-    while (hlist+fsize < maxh && nb2 < nb) {
+    while ((hlist+fsize < maxh || nb2 < current) && nb2 < nb) {
 	char *end_nb = list[nb2];
 	if (!end_nb) break;
 	int fleche = 0;
@@ -489,7 +488,8 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    fleche = 1;
 	}
 	get_size(font,end_nb,&w,&h,larg);
-	if (chan[nb2] && (chan[nb2]->h > h || chan[nb2]->w > larg/4)) {
+	heights[nb2] = h; // Hauteur du texte, sans l'image
+	if (chan[nb2] && !longlist && (chan[nb2]->h > h || chan[nb2]->w > larg/4)) {
 	    double ratio = h*1.0/chan[nb2]->h;
 	    double ratio2 = larg/4*1.0/chan[nb2]->w;
 	    if (ratio2 < ratio)
@@ -497,9 +497,11 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    SDL_Surface *s = zoomSurface(chan[nb2],ratio,ratio,SMOOTHING_ON);
 	    SDL_FreeSurface(chan[nb2]);
 	    chan[nb2] = s;
-	    printf("chan %d redim %d %d\n",nb2,chan[nb2]->w,chan[nb2]->h);
 	}
-	if (chan[nb2]) w += chan[nb2]->w+4;
+	if (chan[nb2]) {
+	    w += chan[nb2]->w+4;
+	    if (chan[nb2]->h > h) h = chan[nb2]->h;
+	}
 //	printf("prévision list: hlist:%d/%d %s from %d\n",hlist,maxh,end_nb,numw+4*2);
 	if (w > wlist) wlist = w;
 	hlist += h;
@@ -514,10 +516,11 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int xright = x+wlist;
     wlist += indicw; // place pour le > à la fin
     if (wlist > maxw-4*2) {
-	printf("tronquage wlist old %d new %d\n",wlist,maxw-4*2);
 	wlist = maxw-4*2;
 	xright = x+wlist-indicw-4*2;
     }
+    if (hlist + fsize > maxh)
+	hlist = maxh - fsize;
     /*	if (hlist > maxh)
 	hlist = maxh; */
 
@@ -527,12 +530,29 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     y += put_string(sf,font,x,y,source,SDL_MapRGB(sf->format,0xff,0xff,0x80),
 	    NULL);
     x += numw+4; // aligné après les numéros
+
+    // Détermine start
+    int start;
+    for  (start = 0; start < nb; start++) {
+	int y0 = y;
+	for (n=start; n<nb && y0+fsize < maxh; n++) {
+	    if (chan[n] && y0+chan[n]->h > maxh)
+		break;
+	    y0 += (chan[n] ? chan[n]->h : heights[n]);
+	}
+	if (n>current) {
+	    break;
+	}
+    }
+
     int fg = get_fg(sf);
     int red = SDL_MapRGB(sf->format,0xff,0x50,0x50);
     int cyan = SDL_MapRGB(sf->format, 0x50,0xff,0xff);
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
     int bg = get_bg(sf),sely;
-    for (n=0; n<nb && y+fsize < maxh; n++) {
+    for (n=start; n<nb && y+fsize < maxh; n++) {
+	if (chan[n] && y+chan[n]->h > maxh)
+	    break;
 	int hidden = 0;
 	int l = strlen(list[n]);
 	if (list[n][l-1] == '>') {
@@ -543,19 +563,13 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	sprintf(buff,"%d",num[n]);
 	if (current == n) {
 	    SDL_Rect r;
-	    r.x = 4; r.y = y; r.w = wlist; r.h = fsize;
+	    r.x = 4; r.y = y; r.w = wlist; r.h = heights[n];
+	    if (chan[n]) r.h = chan[n]->h;
 	    SDL_FillRect(sf,&r,fg);
 	    if (!fsel && !mode_list)
 		put_string(sf,font,4,y,buff,bg,NULL); // Numéro
 	    int dy;
-	    dy = disp_list(sf,font,x,y,list[n],chan[n],bg);
-	    if (dy != fsize) { // bad guess, 2nd try...
-		r.h = dy;
-		SDL_FillRect(sf,&r,fg);
-		if (!fsel && !mode_list)
-		    put_string(sf,font,4,y,buff,bg,NULL); // Numéro
-		dy = disp_list(sf,font,x,y,list[n],chan[n],bg);
-	    }
+	    dy = disp_list(sf,font,x,y,list[n],chan[n],bg,heights[n]);
 	    sely = y+dy/2;
 	    y += dy;
 	} else {
@@ -569,7 +583,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    }
 	    if (!fsel && !mode_list)
 		put_string(sf,font,4,y,buff,fg,NULL); // Numéro
-	    y += disp_list(sf,font,x,y,list[n],chan[n],fg);
+	    y += disp_list(sf,font,x,y,list[n],chan[n],fg,heights[n]);
 	    if (status[n] == 'R' || status[n] == 'D') fg = oldfg;
 	}
 	if (hidden) {
@@ -636,11 +650,9 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	r.w = sf->w + (mode_list ? 0 : x);
 	r.h = maxy - r.y;
 	if (maxy > r.y) {
-	    printf("list: on vire la partie du bas : %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
 	    SDL_FillRect(sdl_screen,&r,0);
 	    SDL_UpdateRects(sdl_screen,1,&r);
-	} else
-	    printf("list: rien à virer en dessous : %d,%d,%d,%d et maxy=%d\n",x,y,sf->w,sf->h,maxy);
+	} 
     }
     // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
     // apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.

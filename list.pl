@@ -20,6 +20,7 @@ use File::Glob 'bsd_glob'; # le glob dans perl c'est n'importe quoi !
 require "output.pl";
 require "mms.pl";
 require "chaines.pl";
+use HTML::Entities;
 
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
@@ -392,6 +393,20 @@ sub read_list {
 				my $name = $_;
 				my $service = <F>;
 				chomp ($name,$service);
+				$name =~ s/^pic:(.+?) //;
+				my $pic = $1;
+				if ($pic =~ /.+\/(.+?)\/default.jpg/) {
+					# Youtube
+					my $file = "cache/$1_yt.jpg";
+					if (!-f $file) {
+						if (open(G,">$file")) {
+							print G get $pic;
+							close(G);
+						}
+					}
+					$name = "pic:$file ".decode_entities($name);
+				}
+
 				push @list,[[$num++,$name,$service]];
 			}
 			print "list: ".($#list+1)." flux\n";

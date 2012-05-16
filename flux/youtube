@@ -8,19 +8,37 @@ $str =~ s/^result\://;
 print "direct\n";
 print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
 $str =~ s/ /\+/g;
-$_ = get "http://www.youtube.com/results?search_query=$str&oq=$str";
+if ($str) {
+	$_ = get "http://www.youtube.com/results?search_query=$str&oq=$str";
+} else {
+	$_ = get "http://www.youtube.com/";
+}
 
 my ($name,$url);
 my %list = ();
 my $content = 0;
-my ($link,$text);
+my ($link,$text,$img);
 foreach (split /\n/) {
 	s/\&\#(..)\;/chr($1)/ge;
 	$content = 1 if (/div class="result-item-main-content/);
 	$content = 2 if (/div class="feed-item-content/);
+	if (/yt-thumb-clip-inner.+?src="(.+?)"/) {
+		my $truc = $1;
+		$img = $truc if ($truc =~ /jpg$/);
+	} 
+	if (/data-thumb="\/\/(.+?)"/) {
+		my $truc = "http://$1";
+		if ($truc =~ /jpg$/) {
+			$img = $truc;
+		}
+	}
 	if ($content == 1) {
 		if (/href="(\/.+?)".*?\>(.+)<\/a/) {
-			print "$2\nhttp://www.youtube.com$1\n";
+			my ($url,$text) = ($1,$2);
+			$img = "http:$img" if ($img =~ /^\/\//);
+			print ($img ? "pic:$img " : "");
+			print "$text\nhttp://www.youtube.com$url\n";
+			$img = undef;
 			$content = 0;
 		}
 	} elsif ($content == 2) {
@@ -32,7 +50,8 @@ foreach (split /\n/) {
 			$text = 1;
 		} elsif ($text) {
 			s/^[ \t]+//;
-			print "$_\n$link\n";
+			print ($img ? "pic:$img " : "");
+			print "$_\nhttp://www.youtube.com$link\n";
 			$link = $text = $content = undef;
 		}
 	}
