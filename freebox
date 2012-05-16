@@ -77,11 +77,11 @@ function launch() {
 		cd=`grep "drive name" /proc/sys/dev/cdrom/info|
 		sed 's/drive name:[ \t]*//'`
 		echo mplayer2 -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
-			-stop-xscreensaver -identify -input \
+			-stop-xscreensaver -identify -idle -input \
 			nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd -vf \
 			$bmovl"screenshot"
 		mplayer2 -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
-			-stop-xscreensaver -identify -input \
+			-stop-xscreensaver -identify -idle -input \
 			nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd -vf \
 			$bmovl"screenshot" 2>&1 \
 			| perl filter_mplayer.pl &
@@ -93,6 +93,8 @@ function launch() {
 		idle=""
 		if [ "$src" != "Fichiers vidéo" ]; then
 			filter=",kerndeint"
+		else
+			idle="-idle"
 		fi
 		if [ "$src" == "freeboxtv" ] || [ "$src" == "dvb" ]; then
 			# L'index n'est pas dynamique pour les fichiers ts dans mplayer2
