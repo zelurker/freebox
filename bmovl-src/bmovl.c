@@ -385,10 +385,11 @@ static int disp_list(SDL_Surface *sf, TTF_Font *font, int x, int y, char *list,
     if (chan) {
 	SDL_Rect r;
 	r.x = x;
-	r.y = y;
+	dy = put_string(sf,font,x+chan->w+4,
+		y+(chan->h > h ? (chan->h-h)/2 : 0),list,col,NULL);
+	if (chan->h > dy) dy = chan->h;
+	r.y = y + (dy-chan->h)/2;
 	SDL_BlitSurface(chan,NULL,sf,&r);
-	put_string(sf,font,x+chan->w+4,y+(chan->h-h)/2,list,col,NULL);
-	dy = chan->h;
     } else
 	dy = put_string(sf,font,x,y,list,col,NULL);
     return dy;
@@ -538,7 +539,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	for (n=start; n<nb && y0+fsize < maxh; n++) {
 	    if (chan[n] && y0+chan[n]->h > maxh)
 		break;
-	    y0 += (chan[n] ? chan[n]->h : heights[n]);
+	    y0 += (chan[n] && chan[n]->h>heights[n] ? chan[n]->h : heights[n]);
 	}
 	if (n>current) {
 	    break;
@@ -564,7 +565,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	if (current == n) {
 	    SDL_Rect r;
 	    r.x = 4; r.y = y; r.w = wlist; r.h = heights[n];
-	    if (chan[n]) r.h = chan[n]->h;
+	    if (chan[n] && chan[n]->h > heights[n]) r.h = chan[n]->h;
 	    SDL_FillRect(sf,&r,fg);
 	    if (!fsel && !mode_list)
 		put_string(sf,font,4,y,buff,bg,NULL); // Numéro
