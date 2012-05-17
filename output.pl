@@ -100,6 +100,9 @@ sub clear($) {
 		close(F);
 		send_bmovl("CLEAR $coords");
 		unlink("$name");
+		if (!-f "list_coords" && !-f "numero_coords" && !-f "info_coords") {
+			send_bmovl("HIDE");
+		}
 	}
 }
 

@@ -110,7 +110,7 @@ static void clear_rect(SDL_Surface *sf,int x, int y, int *indents)
 	    y = i[-2];
 	}
     }
-    b.x =x; b.y = y; b.w = sf->w-x-1; b.h = sf->h-y;
+    b.x =x; b.y = y; b.w = sf->w-x-1; b.h = sf->h-y-1;
     SDL_FillRect(sf,&b,bg);
 }
 
@@ -1097,6 +1097,8 @@ int main(int argc, char **argv) {
 		    ret = image(argc,myargv);
 		else if (!strcmp(cmd,"numero"))
 		    ret = numero(fifo,argc,myargv);
+		else if (!strcmp(cmd,"HIDE"))
+		    send_command(fifo,"HIDE\n");
 
 		if (ret) {
 		    printf("bmovl: command returned %d\n",ret);
