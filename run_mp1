@@ -99,6 +99,7 @@ while [ "$ok" == "0" ]; do
 		freebox|freeboxtv|"radios freebox")
 		    if ! ping -q -W 1 -c 1 194.2.0.20 >& /dev/null; then
 				echo pas de réseau, pas de freebox
+				rm current
 				exit 1
 		    fi
 

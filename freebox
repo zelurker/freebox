@@ -140,7 +140,7 @@ elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_li
 fi
 init_mp1 "$1" $2 $3 $4 $5
 name=`head -n 7 current|tail -n 1`
-if [ -f "$name" ] || echo $src|grep -q flux; then
+if ! [ -f current ] || [ -f "$name" ] || echo $src|grep -q flux; then
 
 	again=1
 	# Cette boucle est pour récupérer la main quand on sort par erreur du
@@ -165,7 +165,7 @@ if [ -f "$name" ] || echo $src|grep -q flux; then
 		name=`head -n 7 current|tail -n 1`
 		# Le -frames 0 ici est totalement obligatoire sinon ça peut être
 		# très long sur certains fichiers h264 !
-		if ! ( echo "$src"|grep -q flux ); then
+		if ! ( echo "$src"|grep -q flux ) && [ "$name" != "" ]; then
 			mplayer2 -identify -vo null -ao null -frames 0 "$name" > id
 			if grep -q "no video" id || grep -q "NO AUDIO" id || \
 				grep -q "AUDIO_CODEC=ffaac" id; then
