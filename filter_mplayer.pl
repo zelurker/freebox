@@ -277,7 +277,7 @@ sub check_eof {
 		print "filter: envoi nextchan exit $exit\n";
 		send_cmd_list("nextchan");
 	}
-	if ($source eq "Fichiers vidéo" && $exit =~ /ID_EXIT=QUIT/) {
+	if ($source eq "Fichiers vidéo" && ($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
 		print "filter: take bookmark pos $pos for name $serv\n";
 		$bookmarks{$serv} = $pos;
 	} else {
