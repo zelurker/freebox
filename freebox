@@ -94,6 +94,11 @@ function launch() {
 		if [ "$src" != "Fichiers vidéo" ]; then
 			filter=",kerndeint"
 		else
+			if ! echo $chaine|grep -q -i mpg$ && !echo $chaine|grep -q ts$; then
+				filter=""
+			else
+				filter=",kerndeint"
+			fi
 			idle="-idle"
 		fi
 		if [ "$src" == "freeboxtv" ] || [ "$src" == "dvb" ]; then
