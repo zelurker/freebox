@@ -64,6 +64,7 @@ sub conv_channel {
 	my $channel = shift;
 	my %corresp =
 	(
+		"Poker Channel" => "The Poker Channel",
 		"RTL9" => "RTL 9",
 		"Luxe.TV" => "Luxe TV",
 		"AB 1" => "AB1",
