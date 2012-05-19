@@ -257,10 +257,11 @@ sub read_list {
 			@list = sort { $$a[0][1] cmp $$b[0][1] } @list;
 		}
 	} elsif ($source eq "dvb") {
-		open(F,"<$ENV{HOME}/.mplayer/channels.conf") || die "can't open channels.conf\n";
+		my $f;
+		open($f,"<$ENV{HOME}/.mplayer/channels.conf") || die "can't open channels.conf\n";
 		@list = ();
 		my $num = 1;
-		while (<F>) {
+		while (<$f>) {
 			chomp;
 			my @fields = split(/\:/);
 			my $service = $fields[0];
@@ -269,7 +270,7 @@ sub read_list {
 			my $pic = get_chan_pic($name);
 			push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
 		}
-		close(F);
+		close($f);
 	} elsif ($source =~ /^(livetv|Enregistrements)$/) {
 		@list = ();
 		my $num = 1;
