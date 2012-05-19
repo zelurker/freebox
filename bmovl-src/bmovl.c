@@ -822,11 +822,11 @@ static int numero(int fifo, int argc, char **argv) {
     return 0;
 }
 
-static void send_cmd(char *cmd) {
+static void send_cmd(char *fifo, char *cmd) {
     char *buf = strdup(cmd);
     if (buf[strlen(buf)-1] >= 32) 
 	strcat(buf,"\n");
-    int file = open("fifo_cmd",O_WRONLY|O_NONBLOCK);
+    int file = open(fifo,O_WRONLY|O_NONBLOCK);
     if (file > 0) {
 	write(file,buf,strlen(buf));
 	close(file);
@@ -851,7 +851,7 @@ static void handle_event(SDL_Event *event) {
 		if (!strncmp(command[n],"run",3))
 		    system(&command[n][4]);
 		else {
-		    send_cmd(command[n]);
+		    send_cmd("fifo_cmd",command[n]);
 		}
 		break;
 	    }
@@ -862,17 +862,28 @@ static void handle_event(SDL_Event *event) {
 	if (input > 255) {
 	    /* Pas la peine d'essayer de renvoyer un code > 255, il est 
 	     * perdu. Ca olibge à une réinterprétation tordue ici */
-	    if (input >= SDLK_KP0 && input <= SDLK_KP9)
-		input = 0xd0+input-SDLK_KP0;
-	    else if (input == SDLK_KP_ENTER)
-		input = 13;
+	    if (input >= SDLK_KP0 && input <= SDLK_KP9) {
+		buf[0] = input-SDLK_KP0+'0';
+		buf[1] = 0;
+		send_cmd("fifo_list",buf);
+		return;
+	    } else if (input == SDLK_KP_ENTER || input == SDLK_RETURN) {
+		FILE *f = fopen("list_coords","r");
+		if (!f) f = fopen("numero_coords","r");
+		if (f) {
+		    fclose(f);
+		    send_cmd("fifo_list","zap1");
+		} else
+		    send_cmd("fifo_info","zap1");
+		return;
+	    }
 	} else if (input >= 'a' && input <= 'z' && (mod & KMOD_SHIFT)) {
 	    // Particularité : shift + touche alphabétique pour naviguer par
 	    // lettre dans les listes
 	    input -= 32;
 	}
 	sprintf(buf,"key_down_event %d",input);
-	send_cmd(buf);
+	send_cmd("fifo_cmd",buf);
     }
 }
 
