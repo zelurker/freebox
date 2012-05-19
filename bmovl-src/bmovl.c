@@ -351,16 +351,22 @@ static int info(int fifo, int argc, char **argv)
 	y = height - sf->h - margeh;
 	if (list_opened && y < listy+listh)
 	    y = listy+listh;
-	f = fopen("info_coords","r");
+	f = fopen("list_coords","r");
 	if (f) {
+	    fclose(f); // La liste s'affiche sur un clear, rien à faire
+	} else {
+	    f = fopen("info_coords","r");
+	    if (f) {
 		int oldx,oldy,oldw,oldh;
 		fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
 		fclose(f);
 		if (oldh > sf->h) {
-			char buff[2048];
-			sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy);
-			send_command(fifo, buff);
+		    char buff[2048];
+		    sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy);
+		    printf("info: %s",buff);
+		    send_command(fifo, buff);
 		}
+	    }
 	}
 	/* printf("bmovl: blit %d %d %d %d avec width %d height %d\n",
 			sf->w,sf->h,x,y,width,height); */
@@ -660,7 +666,6 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     // Pour l'instant le meilleur contournement c'est ça.
     blit(fifo, sf, x, y, -40, (noinfo ? 0 : 1));
     listy = y; listh = sf->h;
-    send_command(fifo,"SHOW\n");
 
     // Clean up
     SDL_FreeSurface(sf);
@@ -685,7 +690,8 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    if (tries > 1) printf("bmovl: %d tries for fifo_info\n",tries);
 	} else
 	    printf("on abandonne fifo_info !\n");
-    }
+    } else
+	send_command(fifo,"SHOW\n");
     free(source);
     for (n=0; n<nb; n++) {
 	free(list[n]);
