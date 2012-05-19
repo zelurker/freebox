@@ -205,7 +205,6 @@ sub get_chan_pic($) {
 		return setup_image(1500);
 	}
 	if (!%chan) {
-		print "get_chan_pic: call getlistechaines\n";
 		getListeChaines(have_net());
 	}
 	$name = conv_channel($name);
