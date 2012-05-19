@@ -429,11 +429,14 @@ sub disp_prog {
 sub send_list {
 	# envoie une commande à fifo_list et récupère la réponse
 	my $cmd = shift;
-	open(F,">fifo_list");
-	print F $cmd;
-	close(F);
+	if (abs($time_refresh-$time) <= 1) {
+		print "refresh trop proche, sleep 2...\n";
+		sleep(2);
+	}
+	send_cmd_list($cmd);
+	print "send_list: sent $cmd\n";
 	$cmd = undef;
-	if (open(F,"<fifo_list")) {
+	if (open(F,"<reply_list")) {
 		while (<F>) {
 			chomp;
 			$cmd = $_;
@@ -442,6 +445,7 @@ sub send_list {
 	} else {
 		print "can't read from fifo_list\n";
 	}
+	print "send_list: got $cmd\n";
 	$cmd;
 }
 
@@ -750,7 +754,7 @@ if (!$channel) {
 		$start_timer = 0;
 	    goto read_fifo;
 	} elsif ($cmd =~ /^(up|down)$/) {
-		$cmd = send_list(($cmd eq "up" ? "next" : "prev")." $last_chan\n");
+		$cmd = send_list(($cmd eq "up" ? "next" : "prev")." $last_chan");
 		$channel = lc($cmd);
 		print "got channel :$channel.\n";
 		$long = $last_long;
@@ -770,7 +774,9 @@ if (!$channel) {
 		$start_timer = time+5 if (!$long);
 	} elsif ($cmd eq "record") {
 		my $rtab = $chaines{$last_chan}[$last_prog];
-		$cmd = send_list("info ".lc($$rtab[1])."\n");
+		$cmd = send_list("info ".lc($$rtab[1]));
+		clear("info_coords");
+		clear("list_coords");
 		my ($src,$num,$name,$service,$flavour,$audio,$video) = split(/\,/,$cmd);
 		print "enreg: info returned $src,$num,$name,$service,$flavour,$audio,$video\n";
 		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($$rtab[3]);

@@ -647,8 +647,8 @@ sub close_numero {
 
 read_conf();
 read_list();
-system("rm -f fifo_list && mkfifo fifo_list");
-$SIG{TERM} = sub { unlink "fifo_list"; };
+system("rm -f fifo_list && mkfifo fifo_list; mkfifo reply_list");
+$SIG{TERM} = sub { unlink "fifo_list","reply_list"; };
 my $nb_elem = 16;
 while (1) {
 	open(F,"<fifo_list") || die "can't read fifo_list\n";
@@ -899,7 +899,7 @@ while (1) {
 			next;
 		}
 	} elsif ($cmd =~ /^name /) {
-		open(F,">fifo_list") || die "can't write fifo_list\n";
+		open(F,">reply_list") || die "can't write fifo_list\n";
 		my @arg = split(/ /,$cmd);
 		if ($#arg < 2 && $source =~ /freebox/) {
 			print F "syntax: name service flavour [audio] $#arg\n";
@@ -919,7 +919,7 @@ while (1) {
 		close(F);
 		next;
 	} elsif ($cmd =~ /^(next|prev) /) {
-		open(R,">fifo_list") || die "can't write to fifo_list\n";
+		open(R,">reply_list") || die "can't write to fifo_list\n";
 		my $next;
 		$next = $cmd =~ s/^next //;
 		$cmd =~ s/^prev //;
@@ -948,7 +948,7 @@ while (1) {
 		close(R);
 		next;
 	} elsif ($cmd =~ s/^info //) {
-		open(R,">fifo_list") || die "can't write to fifo_list\n";
+		open(R,">reply_list") || die "can't write to fifo_list\n";
 		if (!$cmd) {
 			print R "syntax: info <nom de la chaine>\n";
 		} else {
