@@ -668,7 +668,6 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     listy = y; listh = sf->h;
 
     // Clean up
-    SDL_FreeSurface(sf);
 
     int info=0;
     if (current > -1 && !noinfo) {
@@ -693,6 +692,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     } else
 	send_command(fifo,"SHOW\n");
     free(source);
+    SDL_FreeSurface(sf);
     for (n=0; n<nb; n++) {
 	free(list[n]);
 	if (chan[n]) SDL_FreeSurface(chan[n]);
