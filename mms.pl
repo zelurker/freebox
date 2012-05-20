@@ -40,16 +40,14 @@ sub get_mms {
 		print STDERR "could not get $url\n";
 	} elsif ($page =~ /^\#EXTM3U/) {
 		# m3u, on interprête d'après le contenu et pas l'extension
-		while ($page =~ s/(.+?)[\n\r]//) {
-			$_ = $1;
+		foreach (split /\r?\n/,$page) {
 			next if (/^\#/);
 			return $_ if (/^http/);
 		}
 		print "could not find url in m3u $page from $url\n";
 		exit(1);
 	} elsif ($page =~ /^\[playlist/) {
-		while ($page =~ s/(.+?)[\n\r]//) {
-			$_ = $1;
+		foreach (split /\r?\n/,$page) {
 			return $1 if (/^File\d*\=(http.+)/);
 		}
 		print "pls impossible à traiter $page from $url\n";
