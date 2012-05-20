@@ -98,6 +98,9 @@ sub clear($) {
 		my $coords = <F>;
 		chomp $coords;
 		close(F);
+		my @coords = split(/ /,$coords);
+		$coords = join(" ",@coords[0..3]);
+		print "clear: clear $coords\n";
 		send_bmovl("CLEAR $coords");
 		unlink("$name");
 		if (!-f "list_coords" && !-f "numero_coords" && !-f "info_coords") {

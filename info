@@ -11,7 +11,7 @@ else
 		serv=`head -n 3 current|tail -n 1`
 		flav=`head -n 4 current|tail -n 1`
 		echo name $serv $flav > fifo_list
-		ch=`cat fifo_list`
+		ch=`cat reply_list`
 	fi
 	echo "prog:long $ch" > fifo_info
 fi

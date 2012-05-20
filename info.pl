@@ -429,10 +429,6 @@ sub disp_prog {
 sub send_list {
 	# envoie une commande à fifo_list et récupère la réponse
 	my $cmd = shift;
-	if (abs($time_refresh-$time) <= 1) {
-		print "refresh trop proche, sleep 2...\n";
-		sleep(2);
-	}
 	send_cmd_list($cmd);
 	print "send_list: sent $cmd\n";
 	$cmd = undef;
@@ -775,8 +771,8 @@ if (!$channel) {
 	} elsif ($cmd eq "record") {
 		my $rtab = $chaines{$last_chan}[$last_prog];
 		$cmd = send_list("info ".lc($$rtab[1]));
-		clear("info_coords");
-		clear("list_coords");
+		clear("info_coords") if (-f "info_coords");
+		clear("list_coords") if (-f "list_coords");
 		my ($src,$num,$name,$service,$flavour,$audio,$video) = split(/\,/,$cmd);
 		print "enreg: info returned $src,$num,$name,$service,$flavour,$audio,$video\n";
 		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($$rtab[3]);

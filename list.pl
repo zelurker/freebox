@@ -22,6 +22,7 @@ require "mms.pl";
 require "chaines.pl";
 use HTML::Entities;
 
+our ($l);
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
 close(F);
@@ -648,13 +649,14 @@ sub close_numero {
 read_conf();
 read_list();
 system("rm -f fifo_list && mkfifo fifo_list; mkfifo reply_list");
-$SIG{TERM} = sub { unlink "fifo_list","reply_list"; };
+$SIG{TERM} = sub { close($l); unlink "fifo_list","reply_list"; exit(0); };
 my $nb_elem = 16;
+open($l,"<fifo_list") || die "can't read fifo_list\n";
+my $lout;
 while (1) {
-	open(F,"<fifo_list") || die "can't read fifo_list\n";
-	my $cmd = <F>;
+	my $cmd = <$l>;
 	chomp $cmd;
-	close(F);
+	next if (!defined($cmd));
 	again:
 	print "list: commande reçue après again : $cmd\n";
 	if (-f "list_coords" && $cmd eq "clear") {
@@ -899,7 +901,6 @@ while (1) {
 			next;
 		}
 	} elsif ($cmd =~ /^name /) {
-		open(F,">reply_list") || die "can't write fifo_list\n";
 		my @arg = split(/ /,$cmd);
 		if ($#arg < 2 && $source =~ /freebox/) {
 			print F "syntax: name service flavour [audio] $#arg\n";
@@ -919,17 +920,17 @@ while (1) {
 		close(F);
 		next;
 	} elsif ($cmd =~ /^(next|prev) /) {
-		open(R,">reply_list") || die "can't write to fifo_list\n";
 		my $next;
 		$next = $cmd =~ s/^next //;
 		$cmd =~ s/^prev //;
+		open($lout,">reply_list") || die "can't write reply_list\n";
 		if (!$cmd) {
-			print R "syntax: next|prev <nom de la chaine>\n";
+			print $lout "syntax: next|prev <nom de la chaine>\n";
 		} else {
 			reset_current() if (!-f "list_coords");
 			my ($n,$x) = find_name($cmd);
 			if (!defined($n)) {
-				print R "not found $cmd\n";
+				print $lout "not found $cmd\n";
 			} else {
 				my $name;
 				if ($next) {
@@ -942,28 +943,28 @@ while (1) {
 					$prev = $#list if ($prev < 0);
 					($name) =get_name($list[$prev]); 
 				}
-				print R "$name\n";
+				print $lout "$name\n";
 			}
 		}
-		close(R);
+		close($lout);
 		next;
 	} elsif ($cmd =~ s/^info //) {
-		open(R,">reply_list") || die "can't write to fifo_list\n";
+		open($lout,">reply_list") || die "can't write reply_list\n";
 		if (!$cmd) {
-			print R "syntax: info <nom de la chaine>\n";
+			print $lout "syntax: info <nom de la chaine>\n";
 		} else {
 			# si la commande est envoyée par le bandeau d'info tout seul
 			# revenir à la source utilisée par la chaine courante
 			reset_current() if (! -f "list_coords");
 			my ($n,$x) = find_name($cmd);
 			if (!defined($n)) {
-				print R "not found $cmd\n";
+				print $lout "not found $cmd\n";
 			} else {
 				print "cmd info: $source,",join(",",@{$list[$n][$x]}),"\n";
-				print R "$source,",join(",",@{$list[$n][$x]}),"\n";
+				print $lout "$source,",join(",",@{$list[$n][$x]}),"\n";
 			}
 		}
-		close(R);
+		close($lout);
 		next;
 	} elsif ($cmd =~ /^switch_mode/) {
 		my @arg = split(/ /,$cmd);
@@ -1146,4 +1147,6 @@ while (1) {
 		send_bmovl("numero $numero");
 	}
 }
+close($l);
+print "list à la fin input vide\n";
 

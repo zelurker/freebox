@@ -87,7 +87,7 @@ while [ "$ok" == "0" ]; do
 		else
 			echo name "$service" $flavour $audio > fifo_list
 		fi
-		chaine=`cat fifo_list`
+		chaine=`cat reply_list`
 	fi
 	chaine2=`echo $chaine|sed 's/\//_/g'`
 	name=livetv/`date +"%Y%m%d %H%M%S $chaine2.ts"`
