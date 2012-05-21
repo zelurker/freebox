@@ -144,6 +144,7 @@ sub read_freebox {
 	close(F);
 	$list = join("\n",@list);
 	@list = ();
+	$list =~ s/ \(standard\)//g;
 	$list;
 }
 
@@ -194,7 +195,7 @@ sub read_list {
 			close(F);
 		}
 
-		Encode::from_to($list, "utf-8", "iso-8859-15");
+		Encode::from_to($list, "utf-8", "iso-8859-15") if ($list !~ /débit/);
 
 		my ($num,$name,$service,$flavour,$audio,$video);
 		my $last_num = undef;
@@ -656,7 +657,11 @@ my $lout;
 while (1) {
 	my $cmd = <$l>;
 	chomp $cmd;
-	next if (!defined($cmd));
+	if (!defined($cmd)) {
+		close($l);
+		open($l,"<fifo_list") || die "can't read fifo_list\n";
+		next;
+	}
 	again:
 	print "list: commande reçue après again : $cmd\n";
 	if (-f "list_coords" && $cmd eq "clear") {

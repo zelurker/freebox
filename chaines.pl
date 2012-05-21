@@ -83,7 +83,7 @@ sub conv_channel {
 		"Equidia live" => "Equidia",
 		"Luxe.TV" => "Luxe TV",
 	);
-	$channel =~ s/ \(bas débit\)//;
+	$channel =~ s/ \(.+\)//;
 	$channel =~ s/ hd$//i;
 	$channel =~ s/ sat$//i;
 	$channel =~ s/^Télénantes //;
