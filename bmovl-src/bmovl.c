@@ -819,6 +819,13 @@ static int numero(int fifo, int argc, char **argv) {
     put_string(sf,font,8,8,argv[1],fg,NULL);
     int x = width-margew-sf->w, y = margeh*2;
     blit(fifo, sf, x, y, -40, 0);
+    f = fopen("list_coords","r");
+    if (!f) f = fopen("info_coords","r");
+    if (f)
+	fclose(f);
+    else
+	// De fortes chances que tout soit caché si y a ni liste ni info !
+	send_command(fifo,"SHOW\n");
     SDL_FreeSurface(sf);
     f = fopen("numero_coords","w");
     if (f) {
