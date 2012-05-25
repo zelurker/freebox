@@ -30,6 +30,8 @@ our ($last_prog, $last_chan,$last_long);
 our %chaines = ();
 our ($channel,$long);
 my $time_refresh = 0;
+our @days = ("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi",
+	"Samedi");
 
 $SIG{PIPE} = sub { print "info: sigpipe ignoré\n" };
 
@@ -171,7 +173,6 @@ $SIG{TERM} = sub { unlink "info_pl.pid"; unlink "fifo_info"; exit(0); };
 # Constants
 #
 
-my $read_before = undef;
 my @records = ();
 if (open(F,"<recordings")) {
 	while (<F>) {
@@ -387,21 +388,41 @@ my $last_hour = 0;
 
 my $start_timer = 0;
 read_fifo:
+my $read_before = undef;
 ($channel,$long) = ();
 # my $timer_start;
 my $time;
+
+sub disp_duree($) {
+	my $duree = shift;
+	if ($duree < 60) {
+		$duree."s";
+	} elsif ($duree < 3600) {
+		sprintf("%d min",$duree/60);
+	} else {
+		my $h = sprintf("%d",$duree/3600);
+		sprintf("%dh%02d",$h,($duree-$h*3600)/60);
+	}
+}
 
 sub disp_prog {
 	my ($sub,$long) = @_;
 	my $start = $$sub[3];
 	my $end = $$sub[4];
+	my @date = split('/', $$sub[12]);
+	$date = timelocal_nocheck(0,0,12,$date[0],$date[1]-1,$date[2]-1900);
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday) = localtime($date);
+	my $time = time();
+	my $reste = undef;
+	if ($time > $start && $time < $end) {
+		$reste = $end-$time;
+	}
 	$start = get_time($start);
 	$end = get_time($end);
 	my $raw = 0;
 	if ($$sub[9]) {
 		# Prsence d'une image...
 		if ($$sub[9] !~ /^http/) {
-			my @date = split('/', $$sub[12]);
 			my @time = split(':', $start);
 			my $img = $date[2]."-".$date[1]."-".$date[0]."_".$$sub[0]."_".$time[0].":".$time[1].".jpg";
 			$raw = myget $site_img.$img;
@@ -420,7 +441,9 @@ sub disp_prog {
 	print $out "$name\n";
 	print $out $raw if ($raw);
 
-	print $out "\n$$sub[1] : $start - $end\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
+	print $out "\n$$sub[1] : $start - $end ".
+	($reste ? "reste ".disp_duree($reste) : "($days[$wday])").
+	"\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
 	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
 	close_fifo($out);
@@ -631,7 +654,7 @@ if (!$channel) {
 			}
 		}
 		$delay -= $time if ($delay);
-		if ((-f "list_coords" || -f "numero_coords") && $delay > 1) {
+		if ((-f "list_coords" || -f "numero_coords") && $delay && $delay > 1) {
 			$delay = 1;
 		}
 
@@ -707,9 +730,9 @@ if (!$channel) {
 					my ($j,$m,$a) = split(/\//,$date);
 					$a -= 1900;
 					$m--;
-					$date = timegm_nocheck(0,0,0,$j,$m,$a)+24*3600;
+					$date = timelocal_nocheck(0,0,0,$j,$m,$a)+24*3600;
 					my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
-					my $d2 = timegm_nocheck(0,0,0,$mday,$mon,$year);
+					my $d2 = timelocal_nocheck(0,0,0,$mday,$mon,$year);
 					my $offset = ($date-$d2)/(24*3600);
 					print "A récupérer offset $offset\n";
 					print "appel getlisteprogrammes suite\n";
@@ -731,7 +754,9 @@ if (!$channel) {
 			my $n = $last_prog-1;
 			if ($n < 0) {
 				my $old = $#$rtab;
-				getListeProgrammes(-1);
+				my $d = get_prev_offset($rtab);
+				print "prevprog: offset $d\n";
+				getListeProgrammes($d);
 				$rtab = $chaines{$last_chan};
 				$n += $#$rtab - $old;
 			}
@@ -854,11 +879,15 @@ for (my $n=0; $n<=$#$rtab; $n++) {
 }
 # print "time ",dateheure($time)," start ",dateheure($$rtab[0][3]),"\n";
 if ($time < $$rtab[0][3] && !$read_before) {
-	print "pas trouvé l'heure ",dateheure($time)," cmp ",dateheure($$rtab[0][3]),", mais on va récupérer le jour d'avant...\n";
-	$program_text = getListeProgrammes(-1).$program_text;
+	print "pas trouvé l'heure ",dateheure($time)," cmp ",dateheure($$rtab[0][3]),", mais on va récupérer le jour d'avant...($channel)\n";
+	my $d = get_prev_offset($rtab);
+	print "offset trouvé pour date précédente : $d\n";
+	getListeProgrammes($d);
 	$read_before = 1;
 	$rtab = $chaines{$channel};
 	goto reprise_nolife;
+} elsif ($read_before) {
+	print "pas trouvé l'heure ",dateheure($time)," cmp ",dateheure($$rtab[0][3]),", on a déjà le jour d'avant...($channel)\n";
 }
 if ($time > $$rtab[$#$rtab][4] && !$read_after) {
 	update_channel($channel);
@@ -888,6 +917,18 @@ goto read_fifo;
 # Functions
 #
 
+sub get_prev_offset {
+	my $rtab = shift;
+	my ($j,$m,$a) = split(/\//,$$rtab[0][12]);
+	$a -= 1900;
+	$m--;
+	my $d = timelocal_nocheck(0,0,0,$j,$m,$a)-3600*24;
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
+	my $d2 = timelocal_nocheck(0,0,0,$mday,$mon,$year);
+	$d = int(($d-$d2)/(3600*24));
+	$d;
+}
+
 sub parse_prg($) {
 	# Interprête le résultat de la requête de programmes...
 	my $program_text = shift;	
@@ -911,6 +952,21 @@ sub parse_prg($) {
 	my @fields2 = ();
 	my $date0 = $date;
 
+	# Voilà en commentaire les champs récupérés
+	# chanid => 0,
+	# chan_name => 1,
+	# title => 2,
+	# start => 3,
+	# stop => 4,
+	# category => 5,
+	# desc => 6,
+	# details => 7,
+	# rating => 8,
+	# image => 9,
+	# stars => 10,
+	# crit => 11,
+	# airdate => 12,
+	# showview => 13
 	foreach (@fields) {
 		my $old = $_;
 		my @sub = split(/\$\$\$/);
@@ -953,6 +1009,7 @@ sub parse_prg($) {
 			}
 		} else {
 			$chaines{$chan} = [\@sub];
+			push @fields2,$old;
 		}
 	}
 	foreach (keys %chaines) {
@@ -1024,6 +1081,7 @@ sub getListeProgrammes {
 	return undef if (!$response->is_success);
 
 	my $program_text = $response->content;
+
 	$program_text = parse_prg($program_text);
 
 	open(F,">day".($offset));
