@@ -826,12 +826,12 @@ static int numero(int fifo, int argc, char **argv) {
     else
 	// De fortes chances que tout soit caché si y a ni liste ni info !
 	send_command(fifo,"SHOW\n");
-    SDL_FreeSurface(sf);
     f = fopen("numero_coords","w");
     if (f) {
 	fprintf(f,"%d %d %d %d\n",sf->w,sf->h,x,y);
 	fclose(f);
     }
+    SDL_FreeSurface(sf);
     return 0;
 }
 
