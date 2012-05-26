@@ -410,7 +410,7 @@ sub disp_prog {
 	my $start = $$sub[3];
 	my $end = $$sub[4];
 	my @date = split('/', $$sub[12]);
-	$date = timelocal_nocheck(0,0,12,$date[0],$date[1]-1,$date[2]-1900);
+	my $date = timelocal_nocheck(0,0,12,$date[0],$date[1]-1,$date[2]-1900);
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday) = localtime($date);
 	my $time = time();
 	my $reste = undef;
