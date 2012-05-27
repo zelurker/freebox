@@ -506,8 +506,10 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    chan[nb2] = s;
 	}
 	if (chan[nb2]) {
+	    get_size(font,end_nb,&w,&h,larg-chan[nb2]->w-4);
 	    w += chan[nb2]->w+4;
 	    if (chan[nb2]->h > h) h = chan[nb2]->h;
+	    heights[nb2] = h; // Hauteur du texte, sans l'image
 	}
 //	printf("prévision list: hlist:%d/%d %s from %d\n",hlist,maxh,end_nb,numw+4*2);
 	if (w > wlist) wlist = w;
