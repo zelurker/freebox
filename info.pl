@@ -245,15 +245,13 @@ sub get_nolife {
 	sub conv_date {
 		my $date = shift;
 		my ($a,$mois,$j,$h,$m,$s) = $date =~ /^(....).(..).(..) (..).(..).(..)/;
-		$a -= 1900;
-		$mois--;
-		timegm_nocheck($s,$m,$h,$j,$mois,$a);
+		timegm_nocheck($s,$m,$h,$j,$mois-1,$a-1900);
 	}
 
 	sub get_date {
 		my $time = shift;
-		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
-		sprintf("%d%02d%02d",$year+1900,$mon,$mday);
+		my ($sec,$min,$hour,$mday,$mon,$year) = gmtime($time); 
+		sprintf("%d/%02d/%02d",$mday,$mon+1,$year+1900);
 	}
 
 	sub get_field {
