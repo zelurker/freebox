@@ -92,11 +92,15 @@ function launch() {
 		mplayer=mplayer2
 		idle=""
 		if [ "$src" != "Fichiers vidéo" ]; then
-			if echo $chaine|grep -q HD || echo $chaine|grep -q "bas débit"; then
-				filter=""
-			else
+			# Finalement les chaines hd sont quand même entrelacées (france2)
+			# Remarque vdpau se fiche complètement que le filtre soit activé
+			# ou pas, il fait tout tout seul. Pour les autres, vaut donc mieux
+			# l'activer par défaut...
+#			if echo $chaine|grep -q HD || echo $chaine|grep -q "bas débit"; then
+#				filter=""
+#			else
 				filter=",kerndeint"
-			fi
+#			fi
 			cache=100
 			if [ "$src" == "freeboxtv" ]; then
 				cache=1000
@@ -122,7 +126,7 @@ function launch() {
 			nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 			"$name" avec filtre en pipe
 
-			$mplayer $idle $audio2 $length \
+			$mplayer $idle $audio2 $length -framedrop -autosync 10 \
 				-vf $bmovl"screenshot$filter" -cache $cache \
 				-stop-xscreensaver -identify -input \
 				nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd $demuxer \
