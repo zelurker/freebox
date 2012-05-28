@@ -22,9 +22,10 @@ sub get_mms {
 	my $response = $browser->get($url);
 	return undef if (!$response->is_success);
 	my $page;
-	if ($response->header("Content-type") =~ /audio/) {
+	my $type = $response->header("Content-type");
+	if ($type =~ /audio/) {
 		# audio/xxx est quand même prenable !
-		print "url is not text : ",$response->header("Content-type"),"\n";
+		print "url is not text : $type\n";
 		$browser->max_size(5000);
 		$page = $response->content;
 		if ($page !~ /^\#EXTM3U/ && $page !~ /^\[playlist/) {
@@ -34,6 +35,9 @@ sub get_mms {
 			print "crétin de m3u évité\n";
 		}
 	} else {
+		if (!$type) {
+			print "mms: pas de content-type: $type\n";
+		}
 		$page = $response->content;
 	}
 	if (!$page) {
@@ -67,16 +71,20 @@ sub get_mms {
 			return $url;
 		}
 	} else {
-		open(F,">dump");
-		print F $page;
-		close(F);
+# 		open(F,">dump");
+# 		print F $page;
+# 		close(F);
 		while ($page =~ s/iframe src\="(.+?)"//m) {
 			print "trying iframe $1\n";
 			my $r = get_mms($1);
 			return $r if ($r);
 		}
 		print "did not find mms from $url\n";
-		return undef;
+		if (!$type) {
+			return $url;
+		} else {
+			return undef;
+		}
 	}
 	return $url;
 }

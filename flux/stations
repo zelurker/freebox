@@ -104,6 +104,12 @@ Kiss FM
 http://gisv3.tv-radio.com/station/kissfm-mp3/kissfm-mp3-128k.m3u
 La Grosse Radio
 http://www.lagrosseradio.com/son/stream/192.m3u
+La Grosse Radio Rock
+http://hd.lagrosseradio.info:8192/;stream.nsv
+La Grosse Radio Metal
+http://hd.lagrosseradio.info:8200/;stream.nsv
+La Grosse Radio Reggae
+http://hd.lagrosseradio.info:8300/;stream.nsv
 Le Mouv'
 http://www.tv-radio.com/station/le_mouv_mp3/le_mouv_mp3-128k.m3u
 M2 Radio
