@@ -92,7 +92,15 @@ function launch() {
 		mplayer=mplayer2
 		idle=""
 		if [ "$src" != "Fichiers vidéo" ]; then
-			filter=",kerndeint"
+			if echo $chaine|grep -q HD || echo $chaine|grep -q "bas débit"; then
+				filter=""
+			else
+				filter=",kerndeint"
+			fi
+			cache=100
+			if [ "$src" == "freeboxtv" ]; then
+				cache=1000
+			fi
 		else
 			if ! echo $chaine|grep -q -i mpg$ && !echo $chaine|grep -q ts$; then
 				filter=""
@@ -100,6 +108,8 @@ function launch() {
 				filter=",kerndeint"
 			fi
 			idle="-idle"
+			# Valeur pour éviter les interruptions par nfs en wifi !
+			cache=7000
 		fi
 		if [ "$src" == "freeboxtv" ] || [ "$src" == "dvb" ]; then
 			# L'index n'est pas dynamique pour les fichiers ts dans mplayer2
@@ -108,12 +118,12 @@ function launch() {
 			mplayer=mplayer
 		fi
 		echo $mplayer $idle $audio2 $length -vf $bmovl"screenshot$filter" \
-			-cache 100 -stop-xscreensaver -identify -input \
+			-cache $cache -stop-xscreensaver -identify -input \
 			nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 			"$name" avec filtre en pipe
 
 			$mplayer $idle $audio2 $length \
-				-vf $bmovl"screenshot$filter" -cache 100 \
+				-vf $bmovl"screenshot$filter" -cache $cache \
 				-stop-xscreensaver -identify -input \
 				nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd $demuxer \
 				"$name" 2>&1 | perl filter_mplayer.pl &
