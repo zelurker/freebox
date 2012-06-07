@@ -129,6 +129,11 @@ while [ "$ok" == "0" ]; do
 		tries=$(( $tries+1 ))
 	done
 	echo run_mp1: fin attente fichier tries=$tries
+	size=`stat --printf=%s "$name"`
+	if [ "$size" == "0" ]; then
+		echo run_mp1: shortcut fichier à 0
+		kill `cat player1.pid`
+	fi
 	if ! ps -p `cat player1.pid` >& /dev/null
 	then
 		echo plus de player1 tried=$tried flavour=$flavour
@@ -138,15 +143,20 @@ while [ "$ok" == "0" ]; do
 		# Et attend que la taille sur disque soit au moins d'1 Mo
 		while [ -f "$name" ] && [ $size -lt 1024000 ] && \
 			ps -p `cat player1.pid` >& /dev/null && \
-			[ $(( `date +%s`-$start )) -lt 6 ]; do
+			[ $(( `date +%s`-$start )) -lt 10 ]; do
 			size=`stat --printf=%s "$name"`
 		done
+		echo run_mp1: out of timeout loop, file : `ls -sk "$name"` ps :
+		ps -p `cat player1.pid`
+		
 		timeout=$(( `date +%s`-$start ))
 		if ps -p `cat player1.pid` >& /dev/null && [ -f "$name" ] && \
 			[ $size -gt 1024000 ]; then
 			ok=1 # fini !
+		else
+			echo run_mp1: timeout $timeout
 		fi
-		if [ $timeout -gt 6 ] || [ "$timeout" == "6" ] || [ "$ok" == "0" ]; then
+		if [ $timeout -gt 10 ] || [ "$timeout" == "10" ] || [ "$ok" == "0" ]; then
 			# timeout
 			echo run_mp1: timeout $timeout, ok=$ok change_flav
 			kill `cat player1.pid`
