@@ -66,6 +66,8 @@ sub REAPER {
 			if (!-f $bg_pic{$child}) {
 				my $result = $cur_images[1];
 				handle_result($result);
+			} else {
+				$last_image = $bg_pic{$child};
 			}
 			delete $bg_pic{$child};
 		} elsif ($ipc{$child}) {
@@ -132,7 +134,6 @@ sub handle_result {
 			if ($last_image && $pic ne $last_image) {
 				unlink $last_image;
 			}
-			$last_image = $pic;
 			my $ftype = `file $pic`;
 			chomp $ftype;
 			if ($ftype =~ /error/i) {
