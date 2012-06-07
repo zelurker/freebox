@@ -351,21 +351,16 @@ static int info(int fifo, int argc, char **argv)
 	y = height - sf->h - margeh;
 	if (list_opened && y < listy+listh)
 	    y = listy+listh;
-	f = fopen("list_coords","r");
+	f = fopen("info_coords","r");
 	if (f) {
-	    fclose(f); // La liste s'affiche sur un clear, rien à faire
-	} else {
-	    f = fopen("info_coords","r");
-	    if (f) {
-		int oldx,oldy,oldw,oldh;
-		fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
-		fclose(f);
-		if (oldh > sf->h) {
-		    char buff[2048];
-		    sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy);
-		    printf("info: %s",buff);
-		    send_command(fifo, buff);
-		}
+	    int oldx,oldy,oldw,oldh;
+	    fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	    fclose(f);
+	    if (oldh > sf->h) {
+		char buff[2048];
+		sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy);
+		printf("info: %s",buff);
+		send_command(fifo, buff);
 	    }
 	}
 	/* printf("bmovl: blit %d %d %d %d avec width %d height %d\n",
