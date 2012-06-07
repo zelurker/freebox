@@ -629,12 +629,6 @@ if (!$channel) {
 				$delay = undef;
 			}
 		}
-		if ($start_timer && $start_timer <= $time) {
-			# start_timer peut se retrouver en anomalie comme ici
-			# si l'un des cadres change de status avant qu'il soit à 0
-			# dans ce cas on le remet à 0 ici.
-			$start_timer = 0;
-		}
 
 		if ($start_timer && # $start_timer > $time && 
 			(!$delay || $start_timer < $delay)) {
@@ -777,7 +771,11 @@ if (!$channel) {
 		$channel = lc($cmd);
 		print "got channel :$channel.\n";
 		$long = $last_long;
-		$start_timer = time+5 if (!$long);
+		if (!$long) {
+			$start_timer = time+5 
+		} else {
+			$start_timer = 0;
+		}
 	} elsif ($cmd eq "zap1") {
 		if (open(F,">fifo_list")) {
 			print F "zap2 $last_chan\n";
@@ -785,12 +783,17 @@ if (!$channel) {
 		} else {
 			print "can't talk to fifo_list\n";
 		}
+		$start_timer = 0;
 		goto read_fifo;
 	} elsif ($cmd =~ s/^prog //) {
 		# Note : $long est passé collé à la commande par un :
 		# mais il est séparé avant même l'interprêtation, dès la lecture
 		$channel = lc($cmd);
-		$start_timer = time+5 if (!$long);
+		if (!$long) {
+			$start_timer = time+5 
+		} else {
+			$start_timer = 0;
+		}
 	} elsif ($cmd eq "record") {
 		my $rtab = $chaines{$last_chan}[$last_prog];
 		$cmd = send_list("info ".lc($$rtab[1]));
