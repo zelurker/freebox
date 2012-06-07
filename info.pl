@@ -19,6 +19,7 @@ use IO::Handle;
 use Encode;
 use Fcntl;
 use Socket;
+use Data::Dumper;
 
 require HTTP::Cookies;
 require "output.pl";
@@ -1014,8 +1015,15 @@ sub parse_prg($) {
 		}
 	}
 	foreach (keys %chaines) {
-		my @tab = sort { $$a[3] <=> $$b[3] } @{$chaines{$_}};
-		$chaines{$_} = \@tab;
+		eval {
+			my @tab = sort { $$a[3] <=> $$b[3] } @{$chaines{$_}};
+			$chaines{$_} = \@tab;
+		};
+		if ($@) {
+			print "info: *** erreur $! chaine $_\n";
+			Dumper($chaines{$_});
+		}
+
 	}
 
 
