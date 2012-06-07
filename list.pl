@@ -167,7 +167,22 @@ sub read_list {
 	} elsif ($source =~ /freebox/) {
 		my $list;
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-		if (!-f "freebox.m3u" || -M "freebox.m3u" >= 1) {
+		if ($source =~ /Radios/i) {
+			if (open(F,"<Freebox-Radios.m3u")) {
+				$list = "";
+				while (<F>) {
+					$list .= $_;
+				}
+				close(F);
+				print "freebox radios lue... ";
+				print "pas " if ($list !~ /EXTINF/);
+				print "validé\n";
+			} else {
+				print "impossible d'ouvrir le fichier de radios\n";
+				@list = ();
+				return;
+			}
+		} elsif (!-f "freebox.m3u" || -M "freebox.m3u" >= 1) {
 			$list = get "http://mafreebox.freebox.fr/freeboxtv/playlist.m3u";
 			if (!$list) {
 				print "can't get freebox playlist\n";
@@ -216,8 +231,10 @@ sub read_list {
 					$flavour = $1;
 				}
 				die "pas de numéro pour $_\n" if (!$num);
+				next if (!defined($flavour) && $tv);
 				my $reject = 0;
 				my $red = 0;
+
 				foreach (@rejets) {
 					if ($$_[0] eq $service && $$_[1] eq $flavour &&
 						$$_[2] eq $audio && $$_[3] eq $video) {

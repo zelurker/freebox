@@ -1,0 +1,511 @@
+#EXTM3U
+#EXTINF:0,10001 - Europe 1
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100004
+#EXTINF:0,10003 - France Inter
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100006
+#EXTINF:0,10004 - RMC Info
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100004
+#EXTINF:0,10005 - RTL
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100004
+#EXTINF:0,10006 - Chérie FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100004
+#EXTINF:0,10007 - Virgin Radio
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100004
+#EXTINF:0,10008 - Fun Radio
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1007
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100013
+#EXTINF:0,10009 - Nostalgie
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100004
+#EXTINF:0,10010 - NRJ
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100011
+#EXTINF:0,10011 - RFM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100011
+#EXTINF:0,10012 - Rire et Chansons
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100011
+#EXTINF:0,10013 - RTL 2
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100001
+#EXTINF:0,10014 - Skyrock
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100011
+#EXTINF:0,10015 - BFM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100011
+#EXTINF:0,10016 - France Culture
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100006
+#EXTINF:0,10017 - France Info
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100010
+#EXTINF:0,10018 - France Musiques
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100006
+#EXTINF:0,10019 - Radio Classique
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100005
+#EXTINF:0,10020 - Contact FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100013
+#EXTINF:0,10021 - FIP
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100006
+#EXTINF:0,10022 - Le Mouv'
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100006
+#EXTINF:0,10023 - Nova
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100005
+#EXTINF:0,10024 - Ouï FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100005
+#EXTINF:0,10025 - TSF Jazz
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100005
+#EXTINF:0,10026 - France BLEU - la CityRadio
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100010
+#EXTINF:0,10027 - RFI
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100005
+#EXTINF:0,10028 - RFI Multilingues
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100013
+#EXTINF:0,10030 - Radio FG
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100005
+#EXTINF:0,10031 - TEMPOMIX
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100008
+#EXTINF:0,10032 - Fréquence Jazz
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100011
+#EXTINF:0,10033 - Tropiques FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1008
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100002
+#EXTINF:0,10034 - Beur FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100013
+#EXTINF:0,10035 - Voltage
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100001
+#EXTINF:0,10036 - Sud Radio
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100001
+#EXTINF:0,10037 - Ado FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100001
+#EXTINF:0,10038 - MplusM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100002
+#EXTINF:0,10039 - RFO Martinique
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1007
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100002
+#EXTINF:0,10040 - Metropolys
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100002
+#EXTINF:0,10041 - Top Music
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100010
+#EXTINF:0,10042 - Rts FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100010
+#EXTINF:0,10043 - Evasion
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100010
+#EXTINF:0,10044 - Radio Scoop
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
+#EXTINF:0,10046 - Radio 8
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100008
+#EXTINF:0,10048 - Vibration
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100001
+#EXTINF:0,10049 - KISS FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100002
+#EXTINF:0,10050 - 1onAir Connect
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100002
+#EXTINF:0,10051 - Radio Mont Blanc
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1007
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100006
+#EXTINF:0,10052 - Radio Néo
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100007
+#EXTINF:0,10053 - Public Sante Detente
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1007
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100010
+#EXTINF:0,10054 - Public Sante Famille
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1007
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100008
+#EXTINF:0,10055 - Public Sante Loisirs
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1007
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
+#EXTINF:0,10056 - Public Sante Seniors
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1007
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100007
+#EXTINF:0,10061 - Radio Latina
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100013
+#EXTINF:0,10063 - Espace FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100007
+#EXTINF:0,10064 - Hit West
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
+#EXTINF:0,10065 - Radio Public Santé
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100010
+#EXTINF:0,10067 - STL FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1008
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100012
+#EXTINF:0,10068 - FC RADIO L'essentiel
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100012
+#EXTINF:0,10069 - NTI
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100012
+#EXTINF:0,10070 - Web-Station
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1008
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100008
+#EXTINF:0,10071 - Radio Junior
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100002
+#EXTINF:0,10072 - Canal Académie
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100012
+#EXTINF:0,10073 - Corsica Radio
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
+#EXTINF:0,10077 - Radio ô
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
+#EXTINF:0,10078 - Ultimix
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1008
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100010
+#EXTINF:0,10079 - 100 %
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100008
+#EXTINF:0,10080 - Netradio
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1008
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100006
+#EXTINF:0,10082 - Radio Notre-Dame
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100008
+#EXTINF:0,10084 - Radio Sing Sing
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100012
+#EXTINF:0,10085 - Monte-Carlo Doualiya
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100012
+#EXTINF:0,10086 - Radio Mélodie
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100007
+#EXTINF:0,10087 - Radio Star
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
+#EXTINF:0,10088 - SUN
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100007
+#EXTINF:0,10089 - Radio Soleil
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1008
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
+#EXTINF:0,10090 - RFO Guadeloupe
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100014
+#EXTINF:0,10091 - RFO Guyane
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100014
+#EXTINF:0,10092 - RFO Réunion
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100014
+#EXTINF:0,10093 - RFO Saint Pierre et Miquelon
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100014
+#EXTINF:0,10094 - RFO Polynésie
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100014
+#EXTINF:0,10095 - RFO Nouvelle Calédonie
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100014
+#EXTINF:0,10096 - RFO Wallis
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1007
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100014
+#EXTINF:0,10097 - RFO Mayotte
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1008
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100014
+#EXTINF:0,10098 - Radio MNS
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1008
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100007
+#EXTINF:0,10099 - Public Santé Sexo
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1009
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100002
+#EXTINF:0,10100 - MaxLaRadio
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100007
+#EXTINF:0,10101 - Public Santé Nutri-Conso
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1009
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100007
+#EXTINF:0,10102 - FG Underground
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100012
+#EXTINF:0,10103 - FG Dance By Hakimakli
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1009
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100012
+#EXTINF:0,10105 - Radio Moussaillons
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1009
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100008
+#EXTINF:0,10106 - Punjabi Sound
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1009
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100006
+#EXTINF:0,10107 - Radio Amplitude
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100015
+#EXTINF:0,10108 - Tikva FM
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1002
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100015
+#EXTINF:0,10109 - XHTVFM Latina
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1003
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100015
+#EXTINF:0,10110 - XHTVFM Europa Dance
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100015
+#EXTINF:0,10111 - Chante France
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1005
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100015
+#EXTINF:0,10112 - Let's Go Zik
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1006
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100015
+#EXTINF:0,10113 - Urban Hit
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1009
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
+#EXTINF:0,10114 - France Maghreb 2
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1007
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100015
+#EXTINF:0,10115 - Only Rai
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1008
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100015
+#EXTINF:0,10116 - Radio Vag
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1001
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100008
+#EXTINF:0,10117 - ORTC Radio
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1004
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100009
+#EXTINF:0,10118 - Corail la webradio
+#EXTVLCOPT:ts-es-id-pid
+#EXTVLCOPT:no-video
+#EXTVLCOPT:audio-track-id=1009
+rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=100015

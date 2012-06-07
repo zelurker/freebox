@@ -62,6 +62,7 @@ function launch() {
 	mkfifo fifo fifo_cmd
 	# On récupère le nom à jour
 	name=`head -n 7 current|tail -n 1|sed 's/ http.*//'`
+	audio=`head -n 5 current|tail -n 1`
 	bmovl=bmovl=1:0:fifo,
 	if echo $src|grep -q flux; then
 		echo "lancement flux name=$name"
@@ -90,17 +91,27 @@ function launch() {
 			audio2="-aid $audio"
 		fi
 		mplayer=mplayer2
+		if [ "$src" == "freeboxtv" ] || [ "$src" == "dvb" ] ||
+			[ "$audio2" != "" ]; then
+			# L'index n'est pas dynamique pour les fichiers ts dans mplayer2
+			# ce qui veut dire qu'on ne peut seeker au delà de la fin détectée
+			# du fichier quand on commence la lecture, ça fait pas beaucoup !
+			mplayer=mplayer
+		fi
 		idle=""
 		if [ "$src" != "Fichiers vidéo" ]; then
 			# Finalement les chaines hd sont quand même entrelacées (france2)
 			# Remarque vdpau se fiche complètement que le filtre soit activé
 			# ou pas, il fait tout tout seul. Pour les autres, vaut donc mieux
 			# l'activer par défaut...
-#			if echo $chaine|grep -q HD || echo $chaine|grep -q "bas débit"; then
-#				filter=""
-#			else
+			if echo $chaine|grep -q HD || echo $chaine|grep -q "bas débit"; then
 				filter=",kerndeint"
-#			fi
+				# length="$length -correct-pts"
+				# Index doesn't work anyway in hd with mplayer
+				mplayer=mplayer2
+			else
+				filter=",kerndeint"
+			fi
 			cache=100
 			if [ "$src" == "freeboxtv" ]; then
 				cache=1000
@@ -114,12 +125,6 @@ function launch() {
 			idle="-idle"
 			# Valeur pour éviter les interruptions par nfs en wifi !
 			cache=7000
-		fi
-		if [ "$src" == "freeboxtv" ] || [ "$src" == "dvb" ]; then
-			# L'index n'est pas dynamique pour les fichiers ts dans mplayer2
-			# ce qui veut dire qu'on ne peut seeker au delà de la fin détectée
-			# du fichier quand on commence la lecture, ça fait pas beaucoup !
-			mplayer=mplayer
 		fi
 		echo $mplayer $idle $audio2 $length -vf $bmovl"screenshot$filter" \
 			-cache $cache -stop-xscreensaver -identify -input \
