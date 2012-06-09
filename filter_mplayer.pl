@@ -131,9 +131,6 @@ sub handle_result {
 				print "filter: pas d'image $pic\n";
 				exit 0;
 			}
-			if ($last_image && $pic ne $last_image) {
-				unlink $last_image;
-			}
 			my $ftype = `file $pic`;
 			chomp $ftype;
 			if ($ftype =~ /error/i) {
