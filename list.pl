@@ -121,12 +121,16 @@ sub cd_menu {
 					$artist = $val;
 				} elsif ($name eq "ID_CDDB_INFO_ALBUM") {
 					$base_flux .= $val;
-				} elsif ($name =~ /ID_CDDB_INFO_TRACK_\d+_NAME/) {
+				} elsif ($name =~ /ID_CDDB_INFO_TRACK_(\d+)_NAME/) {
 					$track = $val;
 					print "track = $track\n";
 				} elsif ($name =~ /ID_CDDB_INFO_TRACK_(\d+)_MSF/) {
 					print "list: $artist - $track / $1\n";
-					push @list,[[$1,"$artist - $track ($val)","cddb://$1"]];
+					if ($list[$1-1]) {
+						$list[$1-1][0][1].= "$track";
+					} else {
+						push @list,[[$1,"$track","cddb://$1"]];
+					}
 				} elsif ($name =~ /ID_CDDA_TRACK_(\d+)_MSF/) {
 					push @list_cdda,[[$1,"pas d'info cddb ($val)","cdda://$1"]] if ($val ne "00:00:00");
 				}
@@ -520,11 +524,18 @@ sub switch {
 
 sub reset_current {
 	# replace tout sur current
-	if (open(A,"<current")) {
-		my $name  = <A>;
-		my $src = <A>;
-		close(A);
+	my $f;
+	if (open($f,"<current")) {
+		my $name  = <$f>;
+		my $src = <$f>;
+		close($f);
 		chomp($name, $src);
+		$src =~ s/\/(.+)//;
+		if ($1 && $base_flux ne $1) {
+			$base_flux = $1;
+			print "reset_current: read_list sur base_flux $base_flux\n";
+			read_list();
+		}
 		if ($src ne $source) {
 			print "reset_current: reseting to $src\n";
 			$source = $src;
