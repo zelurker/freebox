@@ -11,6 +11,7 @@
 # clear : efface la liste et le cadre d'info éventuel
 # list : affiche la liste
 # switch_mode : change de mode
+# reset_current : resynchronise la liste après une màj du fichier current
 
 use strict;
 use LWP::Simple;
@@ -110,7 +111,7 @@ sub cd_menu {
 		open(F,"mplayer -cdrom-device $cd cddb:// -nocache -identify -frames 0|");
 		my $track;
 		@list = @list_cdda = ();
-		my $artist;
+		my ($artist,@duree);
 		while (<F>) {
 			chomp;
 			if (/(ID.+?)\=(.+)/) {
@@ -126,10 +127,11 @@ sub cd_menu {
 					print "track = $track\n";
 				} elsif ($name =~ /ID_CDDB_INFO_TRACK_(\d+)_MSF/) {
 					print "list: $artist - $track / $1\n";
+					$duree[$1-1] = $val;
 					if ($list[$1-1]) {
 						$list[$1-1][0][1].= "$track";
 					} else {
-						push @list,[[$1,"$track","cddb://$1"]];
+						push @list,[[$1,"$track","cddb://$1-99"]];
 					}
 				} elsif ($name =~ /ID_CDDA_TRACK_(\d+)_MSF/) {
 					push @list_cdda,[[$1,"pas d'info cddb ($val)","cdda://$1"]] if ($val ne "00:00:00");
@@ -139,6 +141,9 @@ sub cd_menu {
 			}
 		}
 		close(F);
+		for (my $n=0; $n<=$#list; $n++) {
+			$list[$n][0][1] .= " ($duree[$n])";
+		}
 	} while ($error && ++$tries <= 3);
 	$found = 0;
 	@list = @list_cdda if (!@list);
@@ -591,7 +596,7 @@ sub load_file2($$$$$) {
 	    kill "TERM",$pid;
 	    unlink "player1.pid";
 	}
-	if ($serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac)$/i) {
+	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac)$/i) {
 	    # Gestion des pls supprimée, mplayer semble les gérer
 	    # très bien lui même.
 		my $old = $serv;
@@ -619,7 +624,13 @@ sub load_file2($$$$$) {
 		unlink("id","stream_info");
 		# Remarque ici on ne veut pas que le message id_exit=quit sorte de
 		# filter, donc on le kille juste avant d'envoyer la commande de quit
-		system("kill `cat player2.pid`");
+		my $f;
+		if (open($f,"<player2.pid")) {
+			my $pid = <$f>;
+			chomp $pid;
+			close($f);
+			kill "TERM" => $pid;
+		}
 	}
 }
 
@@ -936,8 +947,8 @@ while (1) {
 				system("kill `cat player2.pid`; kill -USR2 `cat info.pid`");
 				unlink "id";
 			}
-			next;
 		}
+		next;
 	} elsif ($cmd =~ /^name /) {
 		my @arg = split(/ /,$cmd);
 		if ($#arg < 2 && $source =~ /freebox/) {
@@ -1092,12 +1103,9 @@ while (1) {
 	} elsif ($cmd eq "nextchan") {
 		reset_current() if (! -f "list_coords");
 		$found++;
-		if ($found <= $#list) {
-			$cmd = "zap1";
-			goto again;
-		} else {
-			$found = $#list;
-		}
+		$found = $#list if ($found > $#list);
+		$cmd = "zap1";
+		goto again;
 	} elsif ($cmd eq "prevchan") {
 		reset_current() if (! -f "list_coords");
 		$found--;
@@ -1107,6 +1115,9 @@ while (1) {
 		} else {
 			$found = 0;
 		}
+	} elsif ($cmd eq "reset_current") {
+		reset_current();
+		next if (!-f "list_coords");
 	} elsif ($cmd ne "list") {
 		print "list: commande inconnue :$cmd!\n";
 		next;

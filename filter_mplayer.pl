@@ -24,6 +24,7 @@ $Data::Dumper::Deepcopy = 1;
 our %ipc;
 our $agent;
 my @list;
+my @duree;
 my $net = have_net();
 my $images = 0;
 eval {
@@ -39,6 +40,7 @@ if (!$@ && $net) {
 }
 our @cur_images;
 our $pos;
+my $last_track;
 my $last_t = 0;
 our $stream = 0;
 our %bookmarks;
@@ -92,7 +94,12 @@ $SIG{CHLD} = \&REAPER;
 sub handle_result {
 	my $result = shift;
 	my $image;
+	if (!$result) {
+		print "handle_result sans result ???\n";
+		return;
+	}
 	if ($image = $result->next()) {
+		print "handle_result: next\n";
 		open(F,"<desktop");
 		my $w = <F>;
 		my $h = <F>;
@@ -123,6 +130,7 @@ sub handle_result {
 		my $url = $image->content_url();
 		my $ext = $url;
 		$ext =~ s/.+\.//;
+		$ext = substr($ext,0,3); # On ne garde que les 3 1ers caractères !
 		my $name = "image.$ext";
 		my $pid = fork();
 		if ($pid == 0) {
@@ -148,6 +156,8 @@ sub handle_result {
 		} else {
 			$bg_pic{$pid} = $name;
 		}
+	} else {
+		print "handle_result: fin de liste!\n";
 	}
 }
 
@@ -158,6 +168,7 @@ sub handle_images {
 	print "handle_image: $cur.\n";
 	return if (!$net);
 	if (!@cur_images || $cur_images[0] ne $cur) {
+		print "handle_image: reset search\n";
 		# Reset de la recherche précédente si pas finie !
 		if ($cur_images[1]) {
 			my $result = $cur_images[1];
@@ -176,13 +187,15 @@ sub handle_images {
 		if ($pid) {
 			$ipc{$pid} = $id;
 		} else {
-			my $result = $agent->search($cur, limit => 10);
+			$cur =~ s/û/u/g; # Pour une raison inconnue allergie !
+			my $result = $agent->search($cur, limit => 15);
 			my $dump = Data::Dumper->Dump([$result],[qw(result)]);
-			shmwrite($id,$dump,0,180000) || die "shmwrite\n";
+			shmwrite($id,$dump,0,length($dump)) || die "shmwrite\n";
 			exit(0);
 		}
 
 	} else {
+		print "handle_image calling handle_result\n";
 		my $result = $cur_images[1];
 		handle_result($result);
 	}
@@ -459,12 +472,25 @@ while (1) {
 		} elsif (/Artist: (.+)/i || /ID_CDDB_INFO_ARTIST=(.+)/) {
 			$artist = $1;
 		} elsif (/ID_CDDB_INFO_TRACK_(\d+)_NAME=(.+)/) {
-			$list[$1] = $2;
-		} elsif (/Album: (.+)/i) {
+			$list[$1] = ($list[$1] ? $list[$1] : "").$2;
+		} elsif (/ID_CDDB_INFO_TRACK_(\d+)_MSF=(.+)/) {
+			$duree[$1] = $2;
+		} elsif (/Album: (.+)/i || /ID_CDDB_INFO_ALBUM=(.+)/) {
 			$album = $1;
-		} elsif (/ID_FILENAME=cddb...(.+)/) {
+		} elsif (/ID_CDDA_TRACK=(\d+)/) {
+			next if ($last_track && $last_track == $1); 
+			$last_track = $1;
 			$titre = $list[$1];
 			print "filter: cddb: on prend titre = $titre artist $artist\n";
+			my $f;
+			if (open($f,">current")) {
+				print $f "$titre\ncd/$artist - $album\ncddb://$1-99\n\n\ncddb://$1-99\n";
+				close($f);
+				print "filter: current updated on cdda info\n";
+				$chan = "$titre ($duree[$1])";
+				send_cmd_prog();
+				send_cmd_list("reset_current");
+			}
 			handle_images("$artist - $titre") # ($album)")
 		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
 			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
