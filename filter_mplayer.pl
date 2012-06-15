@@ -23,6 +23,7 @@ $Data::Dumper::Indent = 0;
 $Data::Dumper::Deepcopy = 1;
 our %ipc;
 our $agent;
+my @list;
 my $net = have_net();
 my $images = 0;
 eval {
@@ -274,7 +275,7 @@ sub check_eof {
 		close(F);
 		print "filter: fichier id créé\n";
 	}
-	if ($source eq "Fichiers son" && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
+	if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
 		print "filter: envoi nextchan exit $exit\n";
 		send_cmd_list("nextchan");
 	}
@@ -458,10 +459,16 @@ while (1) {
 			}
 		} elsif (/Title: (.+)/i) {
 			$titre = $1;
-		} elsif (/Artist: (.+)/i) {
+		} elsif (/Artist: (.+)/i || /ID_CDDB_INFO_ARTIST=(.+)/) {
 			$artist = $1;
+		} elsif (/ID_CDDB_INFO_TRACK_(\d+)_NAME=(.+)/) {
+			$list[$1] = $2;
 		} elsif (/Album: (.+)/i) {
 			$album = $1;
+		} elsif (/ID_FILENAME=cddb...(.+)/) {
+			$titre = $list[$1];
+			print "filter: cddb: on prend titre = $titre artist $artist\n";
+			handle_images("$artist - $titre") # ($album)")
 		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
 			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
 			if ($t1 - $last_t >= 1) {

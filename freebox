@@ -64,7 +64,7 @@ function launch() {
 	name=`head -n 7 current|tail -n 1|sed 's/ http.*//'`
 	audio=`head -n 5 current|tail -n 1`
 	bmovl=bmovl=1:0:fifo,
-	if echo $src|grep -q flux; then
+	if echo $src|grep -qE 'flux|cd'; then
 		echo "lancement flux name=$name"
 		if echo $name|grep -q mms || echo $src|grep -q youtube; then
 			# Très approximatif comme détection mais en tous cas les flux
@@ -77,12 +77,19 @@ function launch() {
 		fi
 		cd=`grep "drive name" /proc/sys/dev/cdrom/info|
 		sed 's/drive name:[ \t]*//'`
-		echo mplayer2 -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
-			-stop-xscreensaver -identify -idle -input \
+		mplayer=mplayer2
+		if echo $name|grep -q cddb; then
+			mplayer=mplayer
+			idle=
+		else
+			idle="-idle"
+		fi
+		echo $mplayer -cdrom-device "/dev/$cd" "$name" -cache $cache \
+			-stop-xscreensaver -identify $idle -quiet -input \
 			nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd -vf \
 			$bmovl"screenshot"
-		mplayer2 -cdrom-device "/dev/$cd" "$name" -quiet -cache $cache \
-			-stop-xscreensaver -identify -idle -input \
+		$mplayer -cdrom-device "/dev/$cd" "$name" -cache $cache \
+			-stop-xscreensaver -identify $idle -quiet -input \
 			nodefault-bindings:conf=$PWD/input.conf:file=fifo_cmd -vf \
 			$bmovl"screenshot" 2>&1 \
 			| perl filter_mplayer.pl &
@@ -164,7 +171,7 @@ elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_li
 fi
 init_mp1 "$1" $2 $3 $4 $5
 name=`head -n 7 current|tail -n 1`
-if ! [ -f current ] || [ -f "$name" ] || echo $src|grep -q flux; then
+if ! [ -f current ] || [ -f "$name" ] || echo $src|grep -qE 'flux|cd'; then
 
 	again=1
 	# Cette boucle est pour récupérer la main quand on sort par erreur du
@@ -189,7 +196,7 @@ if ! [ -f current ] || [ -f "$name" ] || echo $src|grep -q flux; then
 		name=`head -n 7 current|tail -n 1`
 		# Le -frames 0 ici est totalement obligatoire sinon ça peut être
 		# très long sur certains fichiers h264 !
-		if ! ( echo "$src"|grep -q flux ) && [ "$name" != "" ]; then
+		if ! ( echo "$src"|grep -qE 'flux|cd' ) && [ "$name" != "" ]; then
 			mplayer2 -identify -vo null -ao null -frames 0 "$name" > id
 			if grep -q "no video" id || grep -q "NO AUDIO" id || \
 				grep -q "AUDIO_CODEC=ffaac" id; then
@@ -208,7 +215,7 @@ if ! [ -f current ] || [ -f "$name" ] || echo $src|grep -q flux; then
 		wait $pid
 		src=`head -n 2 current|tail -n 1`
 		length=""
-		if ! echo "$src" |grep -q "flux" && ! echo $src|grep -q Fichiers; then
+		if ! echo "$src" |grep -qE 'flux|cd' && ! echo $src|grep -q Fichiers; then
 			length=`perl eval_end.pl`
 		fi
 		if [ "$length" != "0" ] && [ "$length" != "" ]; then

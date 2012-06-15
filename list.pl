@@ -110,6 +110,7 @@ sub cd_menu {
 		open(F,"mplayer -cdrom-device $cd cddb:// -nocache -identify -frames 0|");
 		my $track;
 		@list = @list_cdda = ();
+		my $artist;
 		while (<F>) {
 			chomp;
 			if (/(ID.+?)\=(.+)/) {
@@ -117,15 +118,17 @@ sub cd_menu {
 				print "scanning $name = $val\n";
 				if ($name eq "ID_CDDB_INFO_ARTIST") {
 					$base_flux = "$val - ";
+					$artist = $val;
 				} elsif ($name eq "ID_CDDB_INFO_ALBUM") {
 					$base_flux .= $val;
 				} elsif ($name =~ /ID_CDDB_INFO_TRACK_\d+_NAME/) {
 					$track = $val;
 					print "track = $track\n";
 				} elsif ($name =~ /ID_CDDB_INFO_TRACK_(\d+)_MSF/) {
-					push @list,[[$1,"$track ($val)","cddb://$1-99"]];
+					print "list: $artist - $track / $1\n";
+					push @list,[[$1,"$artist - $track ($val)","cddb://$1"]];
 				} elsif ($name =~ /ID_CDDA_TRACK_(\d+)_MSF/) {
-					push @list_cdda,[[$1,"pas d'info cddb ($val)","cdda://$1-99"]] if ($val ne "00:00:00");
+					push @list_cdda,[[$1,"pas d'info cddb ($val)","cdda://$1"]] if ($val ne "00:00:00");
 				}
 			} elsif (/500 Internal Server Error/) {
 				$error = 1;
@@ -184,6 +187,7 @@ sub read_list {
 			}
 		} elsif (!-f "freebox.m3u" || -M "freebox.m3u" >= 1) {
 			$list = get "http://mafreebox.freebox.fr/freeboxtv/playlist.m3u";
+			$list =~ s/ \(standard\)//g;
 			if (!$list) {
 				print "can't get freebox playlist\n";
 				$list = read_freebox();
@@ -592,7 +596,7 @@ sub load_file2($$$$$) {
 		unlink( "list_coords","info_coords","video_size");
 		system("kill -USR2 `cat info.pid`");
 		open(G,">current");
-		my $src = ($source eq "cd" ? "flux" : $source);
+		my $src = $source; # ($source eq "cd" ? "flux" : $source);
 		$src .= "/$base_flux" if ($base_flux);
 		$serv .= " $prog" if ($prog);
 		# $serv est en double en 7ème ligne, c'est voulu
@@ -868,7 +872,8 @@ while (1) {
 				load_file2($name,$serv,$flav,$audio,$video);
 				next;
 			}
-		} elsif ($source eq "flux" || $source eq "cd") {
+		} elsif ($source =~ /^(flux|cd)/) {
+			print "list: source pour lancement $source\n";
 			if (!$base_flux) {
 				$base_flux = $name;
 				$mode_flux = "";
@@ -897,7 +902,7 @@ while (1) {
 				$flav = 0 if (!$flav);
 				$video = 0 if (!$video);
 				$audio = 0 if (!$audio);
-				print "lancement ./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"\n";
+				print "list: source $source lancement ./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"\n";
 				# Si player2 ne démarre pas correctement freebox peut se
 				# retrouver à boucler dessus et la pipe de commande n'est
 				# jamais ouverte dans ce cas là. Il vaut mieux passer par
