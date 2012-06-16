@@ -484,7 +484,7 @@ while (1) {
 			print "filter: cddb: on prend titre = $titre artist $artist\n";
 			my $f;
 			if (open($f,">current")) {
-				print $f "$titre\ncd/$artist - $album\ncddb://$1-99\n\n\ncddb://$1-99\n";
+				print $f "$titre ($duree[$1])\ncd/$artist - $album\ncddb://$1-99\n\n\ncddb://$1-99\n";
 				close($f);
 				print "filter: current updated on cdda info\n";
 				$chan = "$titre ($duree[$1])";
