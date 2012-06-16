@@ -883,13 +883,23 @@ while (1) {
 				$conf{tri_video} = ($conf{tri_video} eq "nom" ? "date" : "nom");
 				read_list();
 			} elsif ($name =~ /\/$/) { # Répertoire
+				my $old;
 				if ($serv eq "..") {
-					$conf{$path} =~ s/^(.*)\/.+/$1/;
+					$conf{$path} =~ s/^(.*)\/(.+)/$1/;
+					$old = "$2/";
 					$conf{$path} = "/" if (!$conf{$path});
 				} else {
 					$conf{$path} = $serv;
 				}
+				my $n;
 				read_list();
+				for ($n=0; $n<=$#list; $n++) {
+					my ($name) = get_name($list[$n]);
+					if ($name eq $old) {
+						$found = $n;
+						last;
+					}
+				}
 			} else {
 				load_file2($name,$serv,$flav,$audio,$video);
 				next;
