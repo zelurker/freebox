@@ -898,7 +898,6 @@ static void handle_event(SDL_Event *event) {
 }
 
 int image(int argc, char **argv) {
-    printf("start image %d\n",argc);
     static int lastx,lasty,lastw,lasth;
     if (argc != 6 && argc != 1) {
 	printf("image: argc = %d\n",argc);
@@ -948,7 +947,6 @@ int image(int argc, char **argv) {
 	fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
 	fclose(f);
 	infoy = oldy;
-	printf("image: maxy taken from info_coords %d\n",infoy);
     }
     int maxy = (infoy ? infoy : sdl_screen->h-sdl_screen->h/36);
     w = sdl_screen->w - sdl_screen->w/36 - x;

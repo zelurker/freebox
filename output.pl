@@ -150,7 +150,6 @@ sub setup_output {
 		chomp $height;
 		close(F);
 	}
-	print "info: reçu long $long\n";
 	if (!$long) {
 		$long = $height*2/3;
 	} elsif ($long =~ /^[a-z]/i) {
@@ -158,7 +157,7 @@ sub setup_output {
 	} # else pass long as is...
 
 	# print STDERR "output on pipe width $width height $height\n";
-	print "calling $prog fifo $width $height $long\n";
+	# print "calling $prog fifo $width $height $long\n";
 	if ($width > 100 && $height > 100) {
 		$out = open_bmovl();
 		print $out "$prog fifo $width $height $long\n" if ($out);
