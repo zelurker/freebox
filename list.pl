@@ -917,6 +917,7 @@ while (1) {
 			} else {
 				print "lecture flux: load_file2 $serv\n";
 				load_file2($name,$serv,$flav,$audio,$video);
+				next;
 			}
 		} else {
 			# cas freeboxtv/dvb/radios freebox
@@ -957,8 +958,8 @@ while (1) {
 				system("kill `cat player2.pid`; kill -USR2 `cat info.pid`");
 				unlink "id";
 			}
+			next;
 		}
-		next;
 	} elsif ($cmd =~ /^name /) {
 		my @arg = split(/ /,$cmd);
 		if ($#arg < 2 && $source =~ /freebox/) {
