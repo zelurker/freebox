@@ -560,34 +560,13 @@ sub reset_current {
 	}
 }
 
-sub load_file($) {
-	my $serv = shift;
-	# charge le fichier pointé dans la liste (contenu dans $serv)
-	send_command("pause\n");
-	my $p1 = undef;
-	if (-f "player1.pid") {
-	    $p1 = 1;
-	    my $pid = `cat player1.pid`;
-	    chomp $pid;
-	    print "pid à tuer $pid.\n";
-	    kill "TERM",$pid;
-	    unlink "player1.pid";
-	}
-	send_command("loadfile '$serv'\n");
-	print "loadfile envoyée ($serv)\n";
-	send_command("pause\n") if (!$p1);
-	open(F,">live");
-	close(F);
-	unlink( "list_coords","info_coords");
-}
-
 sub load_file2($$$$$) {
 	# Même chose que load_file mais en + radical, ce coup là on kille le player
 	# pour redémarrer à froid sur le nouveau fichier. Obligatoire quand on vient
 	# d'une source non vidéo vers une source vidéo par exemple.
 	my ($name,$serv,$flav,$audio,$video) = @_;
-	$serv =~ s/ (http.+)//;
-	my $prog = $1;
+	my $prog;
+	$prog = $1 if ($serv =~ s/ (http.+)//);
 	send_command("pause\n");
 	if (-f "player1.pid") {
 	    my $pid = `cat player1.pid`;
@@ -596,7 +575,7 @@ sub load_file2($$$$$) {
 	    kill "TERM",$pid;
 	    unlink "player1.pid";
 	}
-	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac)$/i) {
+	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac|ts)$/i) {
 	    # Gestion des pls supprimée, mplayer semble les gérer
 	    # très bien lui même.
 		my $old = $serv;
@@ -875,7 +854,7 @@ while (1) {
 				goto again;
 			}
 		} elsif ($source =~ /^(livetv|Enregistrements)$/) {
-			load_file($serv);
+			load_file2($name,$serv,$flav,$audio,$video);
 			next;
 		} elsif ($source =~ /^Fichiers/) {
 			my $path = ($source eq "Fichiers vidéo" ? "video_path" : "music_path");
