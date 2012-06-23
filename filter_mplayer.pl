@@ -292,7 +292,7 @@ sub check_eof {
 		print "filter: envoi nextchan exit $exit\n";
 		send_cmd_list("nextchan");
 	}
-	if ($source eq "Fichiers vidéo" && ($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
+	if ($source =~ /(Fichiers vidéo|livetv|Enregist)/ && ($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
 		print "filter: take bookmark pos $pos for name $serv\n";
 		$bookmarks{$serv} = $pos;
 	} else {
@@ -528,7 +528,7 @@ while (1) {
 			}
 			send_cmd_prog();
 			if ($bookmarks{$serv}) {
-				print "filter: j'ai un bookmark pour cette vidéo\n";
+				print "filter: j'ai un bookmark pour cette vidéo : $bookmarks{$serv}\n";
 				send_command("seek $bookmarks{$serv} 2\n");
 			}
 		} elsif (/End of file/ || /^EOF code/) {
