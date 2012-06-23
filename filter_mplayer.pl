@@ -41,7 +41,7 @@ if (!$@ && $net) {
 our @cur_images;
 our $pos;
 my $last_track;
-my $last_t = 0;
+my $last_t = 5;
 our $stream = 0;
 our %bookmarks;
 dbmopen %bookmarks,"bookmarks.db",0666;
@@ -135,22 +135,25 @@ sub handle_result {
 		my $pid = fork();
 		if ($pid == 0) {
 			$pic = $image->save_content(file => $name);
-			print "handle_result: context ",$image->context_url()," name $pic\n";
+			print "handle_result: net $net context ",$image->context_url()," name $pic\n";
 			if (! -f "$pic") {
 				print "filter: pas d'image $pic\n";
 				exit 0;
 			}
 			my $ftype = `file $pic`;
 			chomp $ftype;
-			if ($ftype =~ /error/i) {
-				unlink "$pic";
-				print "filter: type image $ftype\n";
-				exit 0;
-			}
 			if ($ftype =~ /gzip/) {
 				rename($pic,"$pic.gz");
 				system("gunzip $pic.gz");
 			}
+			my $ftype = `file $pic`;
+			chomp $ftype;
+			if ($ftype =~ /error/i || $ftype =~ /HTML/) {
+				unlink "$pic";
+				print "filter: type image $ftype\n";
+				exit 0;
+			}
+			print "handle_result: calling image $pic $x $y $w $h\n";
 			send_bmovl("image $pic $x $y $w $h");
 			exit 0;
 		} else {
@@ -303,7 +306,7 @@ sub check_eof {
 sub send_cmd_prog {
 	# Le test -f info_coords est pour essayer de ne pas effacer le bandeau
 	# sur timer quand on l'a affiché en fixe.
-	# Evidemment ça va pas marhcer dans 100% des cas, si le morceau commence
+	# Evidemment ça va pas marcher dans 100% des cas, si le morceau commence
 	# et que send_cmd_prog est appelé avant que le bandeau n'ait eu le temps
 	# de s'effacer, il va devenir fixe.
 	# Bah au moins ça donne un moyen d'avoir un bandeau fixe ou pas de bandeau
@@ -364,7 +367,7 @@ while (1) {
 		rename "stream_info","stream_info.0";
 		my $str = handle_prog($prog,"$codec $bitrate");
 		if ($str) {
-			$time_prog = time()+30;
+			$time_prog = $t0+30;
 			my $diff = 0;
 			if (open(F,"stream_info")) {
 				if (open(G,"<stream_info.0")) {
@@ -499,15 +502,19 @@ while (1) {
 					# Déduction de l'artiste et du titre sur le nom de fichier
 					($artist,$titre) = ($1,$2);
 				}
-				handle_images("$artist - $titre") # ($album)")
-				if ($images && $last_t == 0 && ($artist || $titre));
-				$last_t = $t1;
-				if (open(F,">stream_info")) {
-					print F "$codec $bitrate".($images ? "" : " - pas de WWW::Google::Images")."\n";
-					print F "$artist - $titre ($album) $t2 ".int($t1*100/$t3),"%\n";
-					close(F);
-					send_cmd_prog();
+				if ($images && $last_t == 5 && ($artist || $titre)) {
+					print "handle_image from timer\n";
+					handle_images("$artist - $titre");
 				}
+				if (!$last_t || -f "info_coords") {
+					if (open(F,">stream_info")) {
+						print F "$codec $bitrate".($images ? "" : " - pas de WWW::Google::Images")."\n";
+						print F "$artist - $titre ($album) $t2 ".int($t1*100/$t3),"%\n";
+						close(F);
+						send_cmd_prog();
+					}
+				}
+				$last_t = $t1;
 			}
 		} elsif (/Starting playback/) {
 			if ($width && $height) {
