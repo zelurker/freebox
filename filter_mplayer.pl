@@ -28,6 +28,7 @@ our $eof = 0;
 my @duree;
 my $net = have_net();
 my $images = 0;
+our $connected;
 eval {
 	require WWW::Google::Images;
 	WWW::Google::Images->import();
@@ -291,16 +292,18 @@ sub check_eof {
 		close(F);
 		print "filter: fichier id créé\n";
 	}
-	if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
-		print "filter: envoi nextchan exit $exit\n";
-		send_cmd_list("nextchan");
-	}
-	if ($source =~ /(Fichiers vidéo|livetv|Enregist)/ && ($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
-		print "filter: take bookmark pos $pos for name $serv\n";
-		$bookmarks{$serv} = $pos;
-	} else {
-		print "filter: source $source exit $exit name $serv\n";
-		delete $bookmarks{$serv};
+	if ($connected) {
+		if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
+			print "filter: envoi nextchan exit $exit\n";
+			send_cmd_list("nextchan");
+		}
+		if ($source =~ /(Fichiers vidéo|livetv|Enregist)/ && ($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
+			print "filter: take bookmark pos $pos for name $serv\n";
+			$bookmarks{$serv} = $pos;
+		} else {
+			print "filter: source $source exit $exit name $serv\n";
+			delete $bookmarks{$serv};
+		}
 	}
 	dbmclose %bookmarks;
 	exit(0); # au cas où on est là par un signal
@@ -539,6 +542,7 @@ while (1) {
 				print "filter: envoi USR1 à $pid\n";
 				unlink("list_coords","video_coords","info_coords","numero_coords","mode_coords");
 				kill "USR1",$pid;
+				$connected = 1;
 			}
 			send_cmd_prog();
 			if ($bookmarks{$serv}) {
@@ -547,8 +551,10 @@ while (1) {
 			}
 		} elsif (/End of file/ || /^EOF code/) {
 			print "filter: end of video\n";
-			print "filter: USR2 point1\n";
-			kill "USR2",$pid;
+			if ($connected) {
+				print "filter: USR2 point1\n";
+				kill "USR2",$pid;
+			}
 			check_eof();
 		} elsif (!$stream && /^A:(.+?) V:/) {
 			$pos = $1;
@@ -557,7 +563,9 @@ while (1) {
 		}
 	}
 }
-print "filter: USR2 point2\n";
-kill "USR2",$pid;
+if ($connected) {
+	print "filter: USR2 point2\n";
+	kill "USR2",$pid;
+}
 print "filter: exit message : $exit\n";
 check_eof();
