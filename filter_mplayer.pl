@@ -24,6 +24,7 @@ $Data::Dumper::Deepcopy = 1;
 our %ipc;
 our $agent;
 my @list;
+our $eof = 0;
 my @duree;
 my $net = have_net();
 my $images = 0;
@@ -41,7 +42,7 @@ if (!$@ && $net) {
 our @cur_images;
 our $pos;
 my $last_track;
-my $last_t = 5;
+my $last_t = 0;
 our $stream = 0;
 our %bookmarks;
 dbmopen %bookmarks,"bookmarks.db",0666;
@@ -251,6 +252,8 @@ sub bindings($) {
 }
 
 sub check_eof {
+	return if ($eof);
+	$eof = 1;
 	print "check_eof: $source\n";
 	unlink("video_size","stream_info");
 	if ($last_image eq "1") {
@@ -304,6 +307,7 @@ sub check_eof {
 }
 
 sub send_cmd_prog {
+	my $short = shift;
 	# Le test -f info_coords est pour essayer de ne pas effacer le bandeau
 	# sur timer quand on l'a affiché en fixe.
 	# Evidemment ça va pas marcher dans 100% des cas, si le morceau commence
@@ -311,7 +315,13 @@ sub send_cmd_prog {
 	# de s'effacer, il va devenir fixe.
 	# Bah au moins ça donne un moyen d'avoir un bandeau fixe ou pas de bandeau
 	# du tout sans liste.
-	send_cmd_info("prog".(-f "info_coords" ? ":long" : "")." $chan");
+	my $cmd;
+	if ($short) {
+		$cmd = "prog";
+	} elsif (-f "info_coords") {
+		$cmd = "prog:long";
+	}
+	send_cmd_info("$cmd $chan");
 }
 
 sub update_codec_info {
@@ -463,7 +473,7 @@ while (1) {
 				print F "$info\n";
 				close(F);
 			}
-			system("./info 1 &");
+			send_cmd_prog();
 
 			if ($images && $titre =~ /\-/ && $titre ne $old_titre) {
 				handle_images($titre) ;
@@ -502,7 +512,7 @@ while (1) {
 					# Déduction de l'artiste et du titre sur le nom de fichier
 					($artist,$titre) = ($1,$2);
 				}
-				if ($images && $last_t == 5 && ($artist || $titre)) {
+				if ($images && $last_t == 0 && ($artist || $titre)) {
 					print "handle_image from timer\n";
 					handle_images("$artist - $titre");
 				}
@@ -511,10 +521,14 @@ while (1) {
 						print F "$codec $bitrate".($images ? "" : " - pas de WWW::Google::Images")."\n";
 						print F "$artist - $titre ($album) $t2 ".int($t1*100/$t3),"%\n";
 						close(F);
-						send_cmd_prog();
+						send_cmd_prog(1);
 					}
 				}
-				$last_t = $t1;
+				if ($last_t == 0) {
+					$last_t = 5; # le délai pour que l'info puisse se barrer
+				} else {
+					$last_t = $t1;
+				}
 			}
 		} elsif (/Starting playback/) {
 			if ($width && $height) {
