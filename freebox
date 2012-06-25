@@ -115,7 +115,7 @@ function launch() {
 				filter=",kerndeint"
 				# length="$length -correct-pts"
 				# Index doesn't work anyway in hd with mplayer
-				mplayer=mplayer2
+				mplayer=mplayer
 			else
 				filter=",kerndeint"
 			fi
@@ -197,18 +197,10 @@ if ! [ -f current ] || [ -f "$name" ] || echo $src|grep -qE 'flux|cd'; then
 		# Le -frames 0 ici est totalement obligatoire sinon ça peut être
 		# très long sur certains fichiers h264 !
 		if ! ( echo "$src"|grep -qE 'flux|cd' ) && [ "$name" != "" ]; then
-			mplayer2 -identify -vo null -ao null -frames 0 "$name" > id
-			if grep -q "no video" id || grep -q "NO AUDIO" id || \
-				grep -q "AUDIO_CODEC=ffaac" id; then
-			# En fait c'est pas toutes les vidéos hd qui ont un problème,
-			# seulement celles qui ont du aac dedans.
-			# Dommage parce que le demuxer lavf explose complètement l'index
-			# ce qui est très énervant...
-				demuxer="-demuxer lavf -framedrop "
-				echo lavf activé
-			else
+		#	mplayer2 -identify -vo null -ao null -frames 0 "$name" > id
+		# Apparemment plus besoin de tricher avec demuxer lavf ou mpegts pour
+		# les flux h264/hd
 				demuxer=""
-			fi
 		fi
 		launch
 		pid=$!
