@@ -105,6 +105,7 @@ sub clear($) {
 		unlink("$name");
 		if (!-f "list_coords" && !-f "numero_coords" && !-f "info_coords") {
 			send_bmovl("HIDE");
+			send_bmovl("image");
 		}
 	}
 }
