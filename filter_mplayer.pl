@@ -28,7 +28,7 @@ our $eof = 0;
 my @duree;
 my $net = have_net();
 my $images = 0;
-our $connected;
+our ($connected,$started);
 eval {
 	require WWW::Google::Images;
 	WWW::Google::Images->import();
@@ -292,7 +292,7 @@ sub check_eof {
 		close(F);
 		print "filter: fichier id créé\n";
 	}
-	if ($connected) {
+	if ($started) {
 		if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
 			print "filter: envoi nextchan exit $exit\n";
 			send_cmd_list("nextchan");
@@ -510,7 +510,7 @@ while (1) {
 			handle_images("$artist - $titre") # ($album)")
 		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
 			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
-			if ($t1 - $last_t >= 1) {
+			if (($last_t == 6 && $t1 > $last_t) || ($last_t != 6 && abs($t1 - $last_t) >= 1)) {
 				if (!$artist && !$titre && $chan =~ /(.+) - (.+)\..../) {
 					# Déduction de l'artiste et du titre sur le nom de fichier
 					($artist,$titre) = ($1,$2);
@@ -528,7 +528,7 @@ while (1) {
 					}
 				}
 				if ($last_t == 0) {
-					$last_t = 5; # le délai pour que l'info puisse se barrer
+					$last_t = 6; # le délai pour que l'info puisse se barrer
 				} else {
 					$last_t = $t1;
 				}
@@ -544,6 +544,7 @@ while (1) {
 				kill "USR1",$pid;
 				$connected = 1;
 			}
+			$started = 1;
 			send_cmd_prog();
 			if ($bookmarks{$serv}) {
 				print "filter: j'ai un bookmark pour cette vidéo : $bookmarks{$serv}\n";
