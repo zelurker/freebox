@@ -886,6 +886,17 @@ static void handle_event(SDL_Event *event) {
 		} else
 		    send_cmd("fifo_info","zap1");
 		return;
+	    } else if (input >= SDLK_F1 && input <= SDLK_F12) {
+		buf[0] = 'F';
+		if (input < SDLK_F10) {
+		    buf[1] = input-SDLK_F1+'1';
+		    buf[2] = 0;
+		} else {
+		    buf[1] = '1';
+		    buf[2] = input-SDLK_F10+'0';
+		    buf[3] = 0;
+		}
+		send_cmd("fifo_list",buf);
 	    }
 	} else if (input >= 'a' && input <= 'z' && (mod & KMOD_SHIFT)) {
 	    // Particularité : shift + touche alphabétique pour naviguer par
