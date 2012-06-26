@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Récupération des liens mms ou autres à partir d'une page web
+# Gère les programmes de certaines stations de radio web (lien http)
 
 use LWP 5.64;
 use strict;
