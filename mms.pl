@@ -28,7 +28,7 @@ sub get_mms {
 		print "url is not text : $type\n";
 		$browser->max_size(5000);
 		$page = $response->content;
-		if ($page !~ /^\#EXTM3U/ && $page !~ /^\[playlist/) {
+		if ($page !~ /^(\#EXTM3U|http|\[playlist)/) {
 			# Evitez les crétins qui gèrent le m3u en audio !!!
 			return $url;
 		} else {
@@ -42,7 +42,7 @@ sub get_mms {
 	}
 	if (!$page) {
 		print STDERR "could not get $url\n";
-	} elsif ($page =~ /^\#EXTM3U/) {
+	} elsif ($page =~ /^(\#EXTM3U|http)/) {
 		# m3u, on interprête d'après le contenu et pas l'extension
 		foreach (split /\r?\n/,$page) {
 			next if (/^\#/);

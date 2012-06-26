@@ -4,21 +4,48 @@ use LWP::Simple;
 use strict;
 
 my $str = shift @ARGV;
-$str =~ s/^result\://;
-$_ = get "http://dir.xiph.org/yp.xml";
+if ($str =~ s/^result\://) {
+	print STDERR "icecast: recherche http://dir.xiph.org/search?search=$str\n";
+	$_ = get "http://dir.xiph.org/search?search=$str";
+} elsif ($str) { # Catégorie par défaut
+	print STDERR "icecast: categ http://dir.xiph.org/by_genre/$str\n";
+	$_ = get "http://dir.xiph.org/by_genre/$str";
+} else { # Ou rien
+	$_ = get "http://dir.xiph.org/";
+}
+open(F,">dump");
+print F $_;
+close(F);
 print "direct\n";
 print "Recherche\nRecherche\n";
+print "Catégories...\nCatégories\n" if (!$str || $str =~ /result/);
 my ($name,$url);
 my %list = ();
+my %categories = ();
+my $format;
 foreach (split /\n/) {
-	$name = $1 if (/<server_name>(.+)<\//);
-	$url = $1 if (/<listen_url>(.+)<\/listen_url>/);
-	if (/<genre>(.+)<\/genre/) {
-		$list{"$name ($1)"} = $url;
+	$categories{$1}=$2 if (/by_genre\/(.+?)" title="(.+?)"/);
+	if (/class="format" title="(.+?)"/) {
+		$format = $1;
+	} elsif (/by_format\/(.+?)"/ && $format) {
+		$format = "$1 $format";
+	}
+	if (/href="(.+?)" title=".*?\'(.+?)\'/) {
+		$name = $2;
+		$url = $1;
+		$list{"$name ($format)"} = "http://dir.xiph.org$url";
+		$format = undef;
 	}
 }
+if ($str eq "Catégories") {
+	foreach (sort { lc($categories{$a}) cmp lc($categories{$b}) }
+		keys %categories) {
+		print "$categories{$_}\n$_\n";
+	}
+	exit 0;
+}
+print STDERR "liste par défaut:\n";
 foreach (sort { lc($a) cmp lc($b) } keys %list) {
-	next if ($str && $_ !~ /$str/i);
 	print "$_\n$list{$_}\n";
 }
 
