@@ -1,4 +1,0 @@
-#!/bin/sh
-
-echo switch_mode freeboxtv > fifo_list
-

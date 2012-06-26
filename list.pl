@@ -527,6 +527,16 @@ sub switch {
 	return 1;
 }
 
+sub switch_mode {
+	my $found = shift;
+	do {
+		$found++;
+		$found = 0 if ($found > $#modes);
+		$source = $modes[$found];
+	} while (!switch($source));
+	read_list();
+}
+
 sub reset_current {
 	# replace tout sur current
 	my $f;
@@ -1024,12 +1034,7 @@ while (1) {
 				}
 			}
 		}
-		do {
-			$found++;
-			$found = 0 if ($found > $#modes);
-			$source = $modes[$found];
-		} while (!switch($source));
-		read_list();
+		switch_mode($found);
 	} elsif ($cmd eq "menu") {
 		$source = "menu";
 		read_list();
@@ -1089,6 +1094,15 @@ while (1) {
 			next;
 		} else {
 			print "list: touche trouvée, found $found old $old\n";
+		}
+	} elsif ($cmd =~ /^F(\d+)$/) { # Touche de fonction
+		my $nb = $1-2;
+		if ($nb > $#modes || $nb == 14) {
+			$source = "menu";
+			read_list();
+		} else {
+			print "list: switch $nb\n";
+			switch_mode($nb);
 		}
 	} elsif ($cmd eq "nextchan") {
 		reset_current() if (! -f "list_coords");

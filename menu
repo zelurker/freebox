@@ -1,4 +1,0 @@
-#!/bin/sh
-
-echo menu > fifo_list
-

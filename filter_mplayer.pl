@@ -244,7 +244,7 @@ sub bindings($) {
 		}
 	} elsif ($cmd eq "KP_INS") {
 		send_cmd_list("0");
-	} elsif ($cmd =~ /^[A-Z]$/) {
+	} elsif ($cmd =~ /^[A-Z]$/ || $cmd =~ /^F\d+$/) {
 		# Touche alphabétique
 		send_cmd_list($cmd);
 	} else {

@@ -1,4 +1,0 @@
-#!/bin/sh
-
-echo switch_mode dvb > fifo_list
-
