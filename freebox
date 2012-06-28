@@ -171,7 +171,7 @@ elif ( ! [ -f player2.pid ] || ! ps -p `cat player2.pid` || ! ps -p `cat info_li
 fi
 init_mp1 "$1" $2 $3 $4 $5
 name=`head -n 7 current|tail -n 1`
-if ! [ -f current ] || [ -f "$name" ] || echo $src|grep -qE 'flux|cd'; then
+if ! [ -f current ] || [ -f "$name" ] || echo $src|grep -qE 'flux|cd|lilvetv|Enregistrements'; then
 
 	again=1
 	# Cette boucle est pour récupérer la main quand on sort par erreur du
