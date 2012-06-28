@@ -324,7 +324,7 @@ sub send_cmd_prog {
 	} elsif (-f "info_coords") {
 		$cmd = "prog:long";
 	}
-	send_cmd_info("$cmd $chan");
+	send_cmd_info("$cmd $chan") if ($cmd);
 }
 
 sub update_codec_info {
@@ -545,7 +545,7 @@ while (1) {
 				$connected = 1;
 			}
 			$started = 1;
-			send_cmd_prog();
+			send_cmd_prog(1);
 			if ($bookmarks{$serv}) {
 				print "filter: j'ai un bookmark pour cette vidéo : $bookmarks{$serv}\n";
 				send_command("seek $bookmarks{$serv} 2\n");
