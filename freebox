@@ -129,7 +129,7 @@ function launch() {
 			else
 				filter=",kerndeint"
 			fi
-			idle="-idle"
+			idle="-idle -v"
 			# Valeur pour éviter les interruptions par nfs en wifi !
 			cache=7000
 		fi
