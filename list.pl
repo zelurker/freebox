@@ -397,7 +397,10 @@ sub read_list {
 			}
 			if (-x "flux/$b") {
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-				$serv = "" if (!$mode_flux);
+				if (!$mode_flux) {
+					$serv = "";
+					$base_flux =~ s/^(.+?)\/.+/$1/;
+				}
 				if ($serv eq "Recherche") {
 					delete $ENV{WINDOWID};
 					$serv = `zenity --entry --text="A chercher (regex)"`;

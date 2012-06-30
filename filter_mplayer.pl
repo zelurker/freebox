@@ -227,7 +227,7 @@ my ($width,$height) = ();
 my $exit = "";
 
 sub get_mplayer {
-	open(F,"|ps ae pid,cmd");
+	open(F,"ps ao pid,cmd|");
 	my $pid = undef;
 	while (<F>) {
 		if (/mplayer/ && !/dumpstream/ && /$serv/) {
