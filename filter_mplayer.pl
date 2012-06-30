@@ -226,6 +226,19 @@ unlink "stream_info";
 my ($width,$height) = ();
 my $exit = "";
 
+sub get_mplayer {
+	open(F,"|ps ae pid,cmd");
+	my $pid = undef;
+	while (<F>) {
+		if (/mplayer/ && !/dumpstream/ && /$serv/) {
+			($pid) = /^ *(\d+) /;
+			last;
+		}
+	}
+	close(F);
+	$pid;
+}
+
 sub bindings($) {
 	my $cmd = shift;
 	print "*** filter: bindings $cmd (",ord($cmd)," ",ord(index($cmd,1)),") ",length($cmd),"\n";
@@ -277,11 +290,19 @@ sub check_eof {
 			alarm(0);
 		};
 		if ($@) {
-			system("killall mplayer; killall mplayer2");
-			print "filter: kill !!!\n";
-			$exit .= "ID_EXIT=QUIT ";
-			sleep(1);
-			system("killall -9 mplayer; killall -9 mplayer2");
+			# On va tacher de récupérer le bon pid !
+			my $pid = get_mplayer();
+			print "filter:pid mplayer: $pid\n";
+			if ($pid) {
+				kill "TERM", $pid;
+				$exit .= "ID_EXIT=QUIT ";
+				sleep(1);
+				my $pid = get_mplayer();
+				if ($pid) {
+					print "filter: mplayer pid=$pid, on kille -9 !\n";
+					kill "KILL", $pid;
+				}
+			}
 		} else {
 			print "filter: mplayer parti proprement !\n";
 		}
@@ -555,8 +576,17 @@ while (1) {
 			if ($connected) {
 				print "filter: USR2 point1\n";
 				kill "USR2",$pid;
+				$connected = 0;
+				$started = 0;
+				if ($source =~ /Fichiers vidéo/) {
+					delete $bookmarks{$serv};
+					sleep(1);
+					send_cmd_list("list");
+				}
 			}
-			check_eof();
+			# A priori pas la peine d'envoyer un check_eof ici, ça va éviter
+			# de fermer précipitement en cas de -idle
+			# check_eof();
 		} elsif (!$stream && /^A:(.+?) V:/) {
 			$pos = $1;
 		} elsif (/No bind found for key \'(.+)\'/) {
