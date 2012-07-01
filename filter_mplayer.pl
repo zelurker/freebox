@@ -216,7 +216,7 @@ if (open(F,"<current")) {
 	@_ = <F>;
 	close(F);
 }
-our ($chan,$source,$serv,$flav) = @_;
+our ($chan,$source,$serv,$flav,,,$name) = @_;
 chomp ($chan,$source,$serv,$flav);
 $serv =~ s/ (http.+)//;
 $prog = $1;
@@ -227,10 +227,10 @@ my ($width,$height) = ();
 my $exit = "";
 
 sub get_mplayer {
-	open(F,"ps ao pid,cmd|");
+	open(F,"ps axo pid,cmd|");
 	my $pid = undef;
 	while (<F>) {
-		if (/mplayer/ && !/dumpstream/ && /$serv/) {
+		if (/mplayer/ && !/dumpstream/ && /$name/) {
 			($pid) = /^ *(\d+) /;
 			last;
 		}
@@ -281,7 +281,7 @@ sub check_eof {
 			close(F);
 		}
 	}
-	if (!$exit) {
+	if (!$exit || $exit eq "ID_SIGNAL=11") {
 		print "filter: fait quitter mplayer...\n";
 		send_command("quit\n");
 		eval {
@@ -476,7 +476,7 @@ while (1) {
 			$width = $1; $height = $2; # fallback here if it fails
 		} elsif (/ID_(EXIT|SIGNAL)/) {
 			$exit .= $_;
-			check_eof() if (/ID_SIGNAL=6/);
+			check_eof() if (/ID_SIGNAL=(6|11)/);
 		} elsif (/End of file/i) {
 			$exit .= $_;
 		} elsif (/ICY Info/) {
