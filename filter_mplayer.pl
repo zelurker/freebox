@@ -487,7 +487,11 @@ while (1) {
 				if ($name eq "StreamTitle" && $val) {
 					$info .= "$val ";
 					$titre = $val;
-					$info .= " (pas de WWW::Google::Images)" if (!$images);
+					if (!$net) {
+						$info .= " pas de réseau)";
+					} elsif (!$images) {
+						$info .= " (pas de WWW::Google::Images)";
+					}
 				} elsif ($val && $name !~ /^(StreamUrl|adw_ad|durationMilliseconds|insertionType|metadata)/) {
 					$info .= " + $name=\'$val\' ";
 				}
@@ -542,8 +546,13 @@ while (1) {
 				}
 				if (!$last_t || -f "info_coords") {
 					if (open(F,">stream_info")) {
-						print F "$codec $bitrate".($images ? "" : " - pas de WWW::Google::Images")."\n";
-						print F "$artist - $titre ($album) $t2 ".int($t1*100/$t3),"%\n";
+						print F "$codec $bitrate";
+						if (!$net) {
+							print F " - pas de réseau";
+						} elsif (!$images) {
+							print F " - pas de WWW::Google::Images";
+						}
+						print F "\n$artist - $titre ($album) $t2 ".int($t1*100/$t3),"%\n";
 						close(F);
 						send_cmd_prog(1);
 					}
