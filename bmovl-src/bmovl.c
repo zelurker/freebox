@@ -25,6 +25,7 @@ static int fifo;
 static char *fifo_str;
 static int server,infoy,listy,listh;
 static char bg_pic[1024];
+static int must_clear_screen;
 
 static void clear_screen() {
     if (sdl_screen) {
@@ -35,10 +36,11 @@ static void clear_screen() {
 
 	memset(sdl_screen->pixels,0,sdl_screen->w*sdl_screen->h*
 		sdl_screen->format->BytesPerPixel);
-	SDL_UpdateRect(sdl_screen,0,0,sdl_screen->w,sdl_screen->h);
 
 	if (SDL_MUSTLOCK(sdl_screen))
 	    SDL_UnlockSurface(sdl_screen);
+
+	SDL_UpdateRect(sdl_screen,0,0,sdl_screen->w,sdl_screen->h);
     }
 }
 
@@ -49,7 +51,7 @@ static void clear_screen() {
 static void disconnect(int signal) {
     if (!fifo) return;
     close(fifo);
-    clear_screen();
+    must_clear_screen = 1; // pas d'appel direct, ça freeze des fois
 
     fifo = 0;
     unlink("video_size");
@@ -1073,6 +1075,10 @@ int main(int argc, char **argv) {
 		tv.tv_sec = 0;
 		tv.tv_usec = 100000; // 0.1s
 		int ret = select(sfd+1,&set,NULL,NULL,&tv);
+		if (must_clear_screen) {
+		    clear_screen();
+		    must_clear_screen = 0;
+		}
 		if (ret > 0) {
 		    if (server) {
 			printf("server collision on accept, should not happen\n");
