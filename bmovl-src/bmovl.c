@@ -68,9 +68,14 @@ static void myconnect(int signal) {
      * déconnexion ou d'un timeout, nettement + simple comme ça */
     if (fifo)
 	close(fifo);
-    if (fifo_str)
+    if (fifo_str) {
+	fifo = open( fifo_str, O_WRONLY |O_NONBLOCK );
+	if (fifo)
+	    close(fifo);
+	else
+	    return;
 	fifo = open( fifo_str, O_WRONLY /* |O_NONBLOCK */ );
-    else
+    } else
 	fifo = 0;
     if (fifo <= 0) {
 	printf("server: could not open fifo !\n");
