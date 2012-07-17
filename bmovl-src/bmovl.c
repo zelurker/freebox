@@ -57,6 +57,11 @@ static void disconnect(int signal) {
     unlink("video_size");
 }
 
+static void myalarm(int signal) {
+    printf("alarm boucle 1s\n");
+    alarm(1);
+}
+
 static void myconnect(int signal) {
     /* Finalement on fait totalement confiance au script freebox pour la
      * fiabilité de la pipe ici et on l'ouvre en blocante. Il y a un SIGPIPE
@@ -69,12 +74,9 @@ static void myconnect(int signal) {
     if (fifo)
 	close(fifo);
     if (fifo_str) {
-	fifo = open( fifo_str, O_WRONLY |O_NONBLOCK );
-	if (fifo)
-	    close(fifo);
-	else
-	    return;
+	alarm(1);
 	fifo = open( fifo_str, O_WRONLY /* |O_NONBLOCK */ );
+	alarm(0);
     } else
 	fifo = 0;
     if (fifo <= 0) {
@@ -1027,6 +1029,7 @@ int main(int argc, char **argv) {
 	signal(SIGUSR2, &disconnect);
 	signal(SIGPIPE, &disconnect);
 	signal(SIGTERM, &myexit);
+	signal(SIGALRM, &myalarm);
 	FILE *f = fopen("info.pid","w");
 	fprintf(f,"%d\n",getpid());
 	fclose(f);

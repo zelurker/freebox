@@ -281,7 +281,7 @@ sub check_eof {
 			close(F);
 		}
 	}
-	if (!$exit || $exit eq "ID_SIGNAL=11") {
+	if (!$exit || $exit =~ /ID_SIGNAL.(11|6)/) {
 		print "filter: fait quitter mplayer...\n";
 		send_command("quit\n");
 		eval {
@@ -295,7 +295,7 @@ sub check_eof {
 			print "filter:pid mplayer: $pid\n";
 			if ($pid) {
 				kill "TERM", $pid;
-				$exit .= "ID_EXIT=QUIT ";
+				# $exit .= "ID_EXIT=QUIT ";
 				sleep(1);
 				my $pid = get_mplayer();
 				if ($pid) {

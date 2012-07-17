@@ -141,7 +141,7 @@ while [ "$ok" == "0" ]; do
 	else
 		size=0
 		# Et attend que la taille sur disque soit au moins d'1 Mo
-		while [ -f "$name" ] && [ $size -lt 1024000 ] && \
+		while [ -f "$name" ] && [ $size -lt 2048000 ] && \
 			ps -p `cat player1.pid` >& /dev/null && \
 			[ $(( `date +%s`-$start )) -lt 10 ]; do
 			size=`stat --printf=%s "$name"`
