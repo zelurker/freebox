@@ -365,6 +365,10 @@ static int info(int fifo, int argc, char **argv)
 	    int oldx,oldy,oldw,oldh;
 	    fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
 	    fclose(f);
+	    if (list_opened && oldy < listy+listh) {
+		oldy = listy+listh;
+		oldh = y+sf->h-oldy;
+	    }
 	    if (oldh > sf->h) {
 		char buff[2048];
 		sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy);
