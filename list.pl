@@ -22,6 +22,7 @@ require "output.pl";
 require "mms.pl";
 require "chaines.pl";
 use HTML::Entities;
+use Time::HiRes qw(gettimeofday tv_interval);
 
 our ($l);
 open(F,">info_list.pid") || die "info_list.pid\n";
@@ -35,7 +36,7 @@ $SIG{PIPE} = sub { print "list: sigpipe ignoré\n" };
 
 my @modes = (
 	"freeboxtv",  "dvb", "Enregistrements", "Fichiers vidéo", "Fichiers son", "livetv", "flux","radios freebox",
-	"cd");
+	"cd","apps");
 my ($mode_opened,$mode_sel);
 
 if (open(F,"<current")) {
@@ -149,6 +150,70 @@ sub cd_menu {
 	@list = @list_cdda if (!@list);
 }
 
+sub apps_menu {
+	our %apps;
+	@list = ();
+	if (!%apps) {
+		my $lang = lc($ENV{LANG});
+		my ($lang2) = ($lang =~ /^(..)_/);
+		print "test lang $lang,$lang2\n";
+		while (</usr/share/applications/*>) {
+			next if (!open(F,"<$_"));
+			my $file = $_;
+			my %fields;
+			while (<F>) {
+				chomp;
+				if (/(.+)\=(.+)/) {
+					$fields{lc($1)} = $2;
+				}
+			}
+			close(F);
+			next if ($fields{"terminal"} eq "true");
+			next if ($fields{"onlyshowin"}); # app specific
+			next if (!$fields{"categories"}); # si, si, ça arrive !!!
+			$fields{categories} =~ s/;$//; # supprime éventuel ; à la fin
+            foreach ($lang2,$lang) {
+				if ($fields{"name[$_]"}) {
+					$fields{name} = $fields{"name[$_]"}; 
+					Encode::from_to($fields{name}, "utf-8", "iso-8859-15");
+				}
+			}
+			push @{$apps{$fields{categories}}},[$fields{name},$fields{icon},$fields{exec}];
+			if (length($fields{categories}) < 2) {
+				print "categ $fields{categories}: $fields{name},$fields{icon},$fields{exec} fichier $file\n";
+			}
+		}
+	}
+	my %categ;
+	foreach (keys %apps) {
+		if ($base_flux && /^$base_flux/) {
+			my $key = $_;
+			s/^$base_flux\;?//;
+			s/;.+$//;
+			if ($_ && !$categ{$_}) {
+				$categ{$_} = 1;
+				push @list,[[1,$_,""]];
+			} elsif (!$_) {
+				foreach (@{$apps{$key}}) {
+					push @list,[[2,$$_[0],$$_[2]]];
+				}
+			}
+		} elsif (!$base_flux) {
+			my $key = $_;
+			s/\;.+//;
+			if (!$categ{$_}) {
+				$categ{$_} = 1;
+				push @list,[[1,$_,""]];
+			}
+		}
+	}
+	@list = sort { $$a[0][1] cmp $$b[0][1] } @list;
+	for (my $n=0; $n<=$#list; $n++) {
+		$list[$n][0][0] = $n+1;
+		print "list $n $list[$n][0][0] $list[$n][0][1]\n";
+	}
+}
+
 sub read_freebox {
 	my $list;
 	open(F,"<freebox.m3u") || die "can't read freebox playlist\n";
@@ -174,6 +239,8 @@ sub read_list {
 				push @list,[[$nb++,$_]];
 			}
 		}
+	} elsif ($source eq "apps") {
+		apps_menu();
 	} elsif ($source eq "cd") {
 		cd_menu();	
 	} elsif ($source =~ /freebox/) {
@@ -573,6 +640,16 @@ sub reset_current {
 	}
 }
 
+sub kill_player1 {
+	if (-f "player1.pid") {
+		my $pid = `cat player1.pid`;
+		chomp $pid;
+		print "pid2 à tuer $pid.\n";
+		kill "TERM",$pid;
+		unlink "player1.pid";
+	}
+}
+
 sub load_file2($$$$$) {
 	# Même chose que load_file mais en + radical, ce coup là on kille le player
 	# pour redémarrer à froid sur le nouveau fichier. Obligatoire quand on vient
@@ -581,13 +658,7 @@ sub load_file2($$$$$) {
 	my $prog;
 	$prog = $1 if ($serv =~ s/ (http.+)//);
 	send_command("pause\n");
-	if (-f "player1.pid") {
-	    my $pid = `cat player1.pid`;
-	    chomp $pid;
-	    print "pid2 à tuer $pid.\n";
-	    kill "TERM",$pid;
-	    unlink "player1.pid";
-	}
+	kill_player1();
 	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac|ts)$/i) {
 	    # Gestion des pls supprimée, mplayer semble les gérer
 	    # très bien lui même.
@@ -748,19 +819,29 @@ while (1) {
 			send_bmovl("image");
 			next;
 		}
-		if ($source eq "flux" && $base_flux && 
-		    ($found < $nb_elem || $nb_elem == 0)) {
-			if ($base_flux =~ /\//) {
-				$base_flux =~ s/(.+)\/.+/$1/;
+		if ($found < $nb_elem || $nb_elem == 0) {
+			if ($source =~ "flux" && $base_flux) { 
 				if ($base_flux =~ /\//) {
-					$mode_flux = "list";
+					$base_flux =~ s/(.+)\/.+/$1/;
+					if ($base_flux =~ /\//) {
+						$mode_flux = "list";
+					} else {
+						$mode_flux = "";
+					}
 				} else {
-					$mode_flux = "";
+					$base_flux = "";
 				}
-			} else {
-				$base_flux = "";
+				read_list();
+			} elsif ($source eq "apps" && $base_flux) {
+				if ($base_flux =~ /;/) {
+					print "base_flux avant $base_flux\n";
+					$base_flux =~ s/(.+);.+/$1/;
+					print "base_flux après $base_flux\n";
+				} else {
+					$base_flux = "";
+				}
+				read_list();
 			}
-			read_list();
 		} else {
 			$found -= $nb_elem;
 		}
@@ -895,6 +976,50 @@ while (1) {
 			} else {
 				load_file2($name,$serv,$flav,$audio,$video);
 				next;
+			}
+		} elsif ($source eq "apps") {
+			my ($name,$serv) = get_name($list[$found]);
+			if (!$serv) {
+				if ($base_flux) {
+					$base_flux .= ";$name";
+				} else {
+					$base_flux = $name;
+				}
+				read_list();
+			} else {
+				$serv =~ s/ .+//; # Ne garde que la commande
+				if (open(F,"<desktop")) {
+					my ($width,$height);
+					($width,$height) = <F>;
+					chomp $width;
+					chomp $height;
+					close(F);
+					my $margew = sprintf("%d",$width/36);
+					my $margeh = sprintf("%d",$height/36);
+					$width -= 2*$margew;
+					$height -= 2*$margeh;
+					$serv .= " -geometry ".$width."x".$height."+$margew+$margeh";
+				} else {
+					print "pas de fichier desktop\n";
+				}
+				print "list: exec $serv\n";
+				send_command("pause\n");
+				kill_player1();
+				my $timer_start = [gettimeofday];
+				system("$serv");
+				my $elapsed = tv_interval($timer_start,[gettimeofday]);
+				if ($elapsed < 1) {
+					print "list: temps d'execution trop court, on tente sans geometry\n";
+					$serv =~ s/ .+//;
+					system("$serv");
+				}
+				reset_current();
+				send_command("pause\n");
+				unlink("current"); # pour être sûr que la commande zap passera
+				$cmd = "zap1";
+				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+				print "would zap to $name,$serv,$flav,$audio,$video\n";
+				goto again;
 			}
 		} elsif ($source =~ /^(flux|cd)/) {
 			print "list: source pour lancement $source\n";
