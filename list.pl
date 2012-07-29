@@ -22,7 +22,6 @@ require "output.pl";
 require "mms.pl";
 require "chaines.pl";
 use HTML::Entities;
-use Time::HiRes qw(gettimeofday tv_interval);
 
 our ($l);
 open(F,">info_list.pid") || die "info_list.pid\n";
@@ -998,21 +997,17 @@ while (1) {
 					my $margeh = sprintf("%d",$height/36);
 					$width -= 2*$margew;
 					$height -= 2*$margeh;
-					$serv .= " -geometry ".$width."x".$height."+$margew+$margeh";
+					my $l = `$serv -h|grep geometry`;
+					my ($g) = $l =~ /(\-\-?geometry)/;
+
+					$serv .= " $g $width"."x".$height."+$margew+$margeh" if ($g);
 				} else {
 					print "pas de fichier desktop\n";
 				}
 				print "list: exec $serv\n";
 				send_command("pause\n");
 				kill_player1();
-				my $timer_start = [gettimeofday];
 				system("$serv");
-				my $elapsed = tv_interval($timer_start,[gettimeofday]);
-				if ($elapsed < 1) {
-					print "list: temps d'execution trop court, on tente sans geometry\n";
-					$serv =~ s/ .+//;
-					system("$serv");
-				}
 				reset_current();
 				send_command("pause\n");
 				unlink("current"); # pour être sûr que la commande zap passera
