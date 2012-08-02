@@ -318,7 +318,7 @@ sub check_eof {
 			print "filter: envoi nextchan exit $exit\n";
 			send_cmd_list("nextchan");
 		}
-		if ($source =~ /(Fichiers vidéo|livetv|Enregist)/ && ($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
+		if ($source =~ /(Fichiers|livetv|Enregist)/ && ($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
 			print "filter: take bookmark pos $pos for name $serv\n";
 			$bookmarks{$serv} = $pos;
 		} else {
@@ -535,6 +535,7 @@ while (1) {
 			handle_images("$artist - $titre") # ($album)")
 		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
 			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
+			$pos = $t1; # bookmark (podcast...)
 			if (($last_t == 6 && $t1 > $last_t) || ($last_t != 6 && abs($t1 - $last_t) >= 1)) {
 				if (!$artist && !$titre && $chan =~ /(.+) - (.+)\..../) {
 					# Déduction de l'artiste et du titre sur le nom de fichier
