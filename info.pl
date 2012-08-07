@@ -853,8 +853,10 @@ if (!$rtab && $net) {
 if (!$rtab) {
 	# Pas trouvé la chaine
 	my $out = setup_output("bmovl-src/bmovl","",0);
+	$cmd =~ s/pic:(.+?) //;
+	my $pic = $1;
 
-	print $out "\n\n";
+	print $out "$pic\n\n";
 	($sec,$min,$hour) = localtime($time);
 
 	print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
