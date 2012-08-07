@@ -14,14 +14,17 @@ if ($str) {
 	$_ = get "http://www.youtube.com/";
 }
 
+# open(F,">dump.html");
+# print F $_;
+# close(F);
 my ($name,$url);
 my %list = ();
 my $content = 0;
 my ($link,$text,$img);
 foreach (split /\n/) {
 	s/\&\#(..)\;/chr($1)/ge;
-	$content = 1 if (/div class="result-item-main-content/);
-	$content = 2 if (/div class="feed-item-content/);
+	$content = 1 if (/div class="result-item-main-content"/ || /class="yt-lockup-ellipsize"/);
+	$content = 2 if (/div class="feed-item-content"/);
 	if (/yt-thumb-clip-inner.+?src="(.+?)"/) {
 		my $truc = $1;
 		$img = $truc if ($truc =~ /jpg$/);
