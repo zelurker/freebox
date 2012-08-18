@@ -12,6 +12,7 @@
 # rabattre sur select/sysread, et ça alourdit considérablement l'écriture...
 
 use strict;
+use Socket;
 use Fcntl;
 use POSIX qw(:sys_wait_h);
 require "output.pl";
@@ -19,6 +20,29 @@ require "playlist.pl";
 use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
 
+our $pid_mplayer;
+if (@ARGV) {
+	# Lancement de mplayer à partir de filter
+	socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
+	||  die "socketpair: $!";
+
+	CHILD->autoflush(1);
+	PARENT->autoflush(1);
+	$pid_mplayer = fork();
+	if ($pid_mplayer == 0) {
+		close CHILD;
+		open(STDIN, "<&PARENT") || die "can't dup stdin to parent";
+		# close(STDIN);
+		open(STDOUT, ">&PARENT") || die "can't dup stdout to parent";
+		open(STDERR, ">&PARENT") || die "can't dup stderr";
+		exec(@ARGV);
+	}
+} else {
+	*CHILD = *STDIN;
+}
+@ARGV = ();
+close(PARENT);
+	
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Deepcopy = 1;
 our %ipc;
@@ -226,19 +250,6 @@ unlink "stream_info";
 my ($width,$height) = ();
 my $exit = "";
 
-sub get_mplayer {
-	open(F,"ps axo pid,cmd|");
-	my $pid = undef;
-	while (<F>) {
-		if (/mplayer/ && !/dumpstream/ && /$name/) {
-			($pid) = /^ *(\d+) /;
-			last;
-		}
-	}
-	close(F);
-	$pid;
-}
-
 sub bindings($) {
 	my $cmd = shift;
 	print "*** filter: bindings $cmd (",ord($cmd)," ",ord(index($cmd,1)),") ",length($cmd),"\n";
@@ -291,16 +302,14 @@ sub check_eof {
 		};
 		if ($@) {
 			# On va tacher de récupérer le bon pid !
-			my $pid = get_mplayer();
-			print "filter:pid mplayer: $pid\n";
-			if ($pid) {
-				kill "TERM", $pid;
+			if ($pid_mplayer) {
+				kill "TERM", $pid_mplayer;
 				# $exit .= "ID_EXIT=QUIT ";
 				sleep(1);
-				my $pid = get_mplayer();
-				if ($pid) {
-					print "filter: mplayer pid=$pid, on kille -9 !\n";
-					kill "KILL", $pid;
+				my $pid_mplayer = get_mplayer();
+				if ($pid_mplayer) {
+					print "filter: mplayer pid=$pid_mplayer, on kille -9 !\n";
+					kill "KILL", $pid_mplayer;
 				}
 			}
 		} else {
@@ -370,7 +379,7 @@ sub update_codec_info {
 
 $SIG{TERM} = \&check_eof;
 my $rin = "";
-vec($rin,fileno(STDIN),1) = 1;
+vec($rin,fileno(CHILD),1) = 1;
 if ($prog && $net) {
 	$time_prog = time()+1;
 }
@@ -433,7 +442,7 @@ while (1) {
 		}
 	}
 	if ($nfound > 0) {
-		my $ret = sysread(STDIN,$buff,8192,length($buff));
+		my $ret = sysread(CHILD,$buff,8192,length($buff));
 		$buff =~ s/\x00+//;
 		if (length($buff) > 40000) {
 			open(F,">buff");

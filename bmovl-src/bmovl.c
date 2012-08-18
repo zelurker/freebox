@@ -853,8 +853,13 @@ static void send_cmd(char *fifo, char *cmd) {
     if (file > 0) {
 	write(file,buf,strlen(buf));
 	close(file);
-    } else
+    } else {
 	printf("could not send command %s\n",buf);
+	if (strcmp(fifo,"fifo_list")) {
+	    printf("trying to send to fifo_list instead...\n");
+	    send_cmd("fifo_list",cmd);
+	}
+    }
     free(buf);
 }
 
@@ -916,8 +921,13 @@ static void handle_event(SDL_Event *event) {
 	    // lettre dans les listes
 	    input -= 32;
 	}
-	sprintf(buf,"key_down_event %d",input);
-	send_cmd("fifo_cmd",buf);
+	if (fifo) {
+	    sprintf(buf,"key_down_event %d",input);
+	    send_cmd("fifo_cmd",buf);
+	} else {
+	    sprintf(buf,"%c",input);
+	    send_cmd("fifo_list",buf);
+	}
     }
 }
 

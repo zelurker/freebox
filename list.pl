@@ -14,6 +14,7 @@
 # reset_current : resynchronise la liste après une màj du fichier current
 
 use strict;
+use POSIX qw(strftime :sys_wait_h);
 use LWP::Simple;
 use Encode;
 use Fcntl;
@@ -24,6 +25,7 @@ require "chaines.pl";
 use HTML::Entities;
 
 our ($l);
+our $pid_player2;
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
 close(F);
@@ -649,6 +651,74 @@ sub kill_player1 {
 	}
 }
 
+sub run_mplayer2 {
+	my ($name,$src,$serv,$flav,$audio,$video) = @_;
+	$l = undef; # Ne ferme pas ça dans le fils !!!
+	unlink "fifo_cmd","fifo";
+	system("mkfifo fifo_cmd fifo");
+	my $player = "mplayer2";
+	my $cache = 100;
+	my $idle = "";
+	my $filter = "";
+	my $cd = "";
+	my $pwd;
+	chomp ($pwd = `pwd`);
+	my $quiet = "";
+	if ($src =~ /(flux|cd)/) {
+		$quiet = "-quiet";
+		if ($name =~ /mms/ || $src =~ /youtube/) {
+			$cache = 1000;
+		}
+		if ($src =~ /cd/) {
+			if (open(F,"</proc/sys/dev/cdrom/info")) {
+				while (<F>) {
+					chomp;
+					if (/drive name:[ \t]+(.+)/) {
+						$cd = $1;
+						last;
+					}
+				}
+				close(F);
+				print "cd drive : $cd\n";
+				$cd = "-cdrom-device /dev/$cd " if ($cd);
+			}
+		}
+		if ($name =~ /cddb/) {
+			$player = "mplayer";
+		} else {
+			$idle = "-idle";
+		}	   
+		$serv =~ s/ http.+//; # Stations de radio, vire l'url du prog
+	} else {
+		$audio = "-aid $audio " if ($audio);
+		if ($src =~ /(dvb|freeboxtv)/ || $audio) {
+			$player = "mplayer"; # pourquoi test sur $audio ?
+		}
+		if ($src =~ /Fichiers vidéo/) {
+			if ($name =~ /(mpg|ts)$/) {
+				$filter = ",kerndeint";
+			}
+			$idle = "-idle";
+			$cache = 5000;
+		} elsif ($src =~ /freeboxtv/ && $name =~ /HD/ || $name =~ /bas débit/) {
+			$filter = ",kerndeint";
+			$player = "mplayer";
+		}
+	}
+	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$serv,"-cache",$cache,
+		"-stop-xscreensaver","-identify",$idle,$quiet,"-input",
+		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
+		"bmovl=1:0:fifo,screenshot$filter");
+	for (my $n=0; $n<=$#list; $n++) {
+		if (!$list[$n]) {
+			splice(@list,$n,1);
+			redo;
+		}
+	}
+	print join(",",@list),"\n";
+	exec(@list);
+}
+
 sub load_file2($$$$$) {
 	# Même chose que load_file mais en + radical, ce coup là on kille le player
 	# pour redémarrer à froid sur le nouveau fichier. Obligatoire quand on vient
@@ -671,8 +741,11 @@ sub load_file2($$$$$) {
 		}
 	}
 	if ($serv) {
-		unlink( "list_coords","info_coords","video_size");
-		system("kill -USR2 `cat info.pid`");
+		if ($source !~ /(Fichiers son|cd)/) {
+			print "effacement fichiers coords:$source:\n";
+			unlink( "list_coords","info_coords","video_size");
+			system("kill -USR2 `cat info.pid`");
+		}
 		open(G,">current");
 		my $src = $source; # ($source eq "cd" ? "flux" : $source);
 		$src .= "/$base_flux" if ($base_flux);
@@ -687,11 +760,20 @@ sub load_file2($$$$$) {
 		# Remarque ici on ne veut pas que le message id_exit=quit sorte de
 		# filter, donc on le kille juste avant d'envoyer la commande de quit
 		my $f;
-		if (open($f,"<player2.pid")) {
-			my $pid = <$f>;
-			chomp $pid;
-			close($f);
-			kill "TERM" => $pid;
+		if ($pid_player2) {
+			print "player2 pid ok, kill...\n";
+			kill "TERM" => $pid_player2;
+		}
+		# On a déjà pas de player2, on admet qu'il faut tout relancer
+		# dans ce cas là
+		print "run_mplayer2...\n";
+		if ($src =~ /(dvb|freeboxtv)/) {
+			print "lancement run_mp1...\n";
+			system("./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"");
+		}
+		$pid_player2 = fork();
+		if ($pid_player2 == 0) {
+			run_mplayer2($name,$src,$serv,$flav,$audio,$video);
 		}
 	}
 }
@@ -755,16 +837,51 @@ sub close_numero {
 read_conf();
 read_list();
 system("rm -f fifo_list && mkfifo fifo_list; mkfifo reply_list");
-$SIG{TERM} = sub { close($l); unlink "fifo_list","reply_list"; exit(0); };
+sub REAPER {
+	my $child;
+	# loathe SysV: it makes us not only reinstate
+	# the handler, but place it after the wait
+	$SIG{CHLD} = \&REAPER;
+	while (($child = waitpid(-1,WNOHANG)) > 0) {
+		print "list: child $child terminated\n";
+		if ($child == $pid_player2) {
+			print "player2 quit\n";
+			$pid_player2 = 0;
+			unlink("fifo","fifo_cmd");
+		}
+# 		if (! -f "info_coords") {
+# 			print "plus d'info_coords, bye\n";
+# 			return;
+# 		}
+	}
+}
+
+sub quit {
+	close($l);
+   	unlink "fifo_list","reply_list";
+   	exit(0);
+}
+
+$SIG{CHLD} = \&REAPER;
+$SIG{TERM} = \&quit;
 my $nb_elem = 16;
-open($l,"<fifo_list") || die "can't read fifo_list\n";
+if (!open($l,"<fifo_list")) {
+	print "failed opening fifo_list, 2nd try...\n";
+	open($l,"<fifo_list") || die "can't open fifo_list\n";
+}
 my $lout;
 while (1) {
-	my $cmd = <$l>;
-	chomp $cmd;
+	my $cmd;
+	if (defined($l)) {
+		$cmd = <$l>;
+		chomp $cmd;
+	}
 	if (!defined($cmd)) {
-		close($l);
-		open($l,"<fifo_list") || die "can't read fifo_list\n";
+		close($l) if (defined($l));
+		open($l,"<fifo_list");
+		if (!defined($l)) {
+			print "list: open fifo_list failed !!!\n";
+		}
 		next;
 	}
 	again:
@@ -1067,7 +1184,8 @@ while (1) {
 				# le message de fin et je vire id pour être sûr !
 				# Pas terrible tout ça, vraiment ! Mais bon ça a l'air de
 				# marcher...
-				system("kill `cat player2.pid`; kill -USR2 `cat info.pid`");
+				kill "TERM" => $pid_player2 if ($pid_player2);
+				system("kill -USR2 `cat info.pid`");
 				unlink "id";
 			}
 			next;
@@ -1245,6 +1363,11 @@ while (1) {
 	} elsif ($cmd eq "reset_current") {
 		reset_current();
 		next if (!-f "list_coords");
+	} elsif ($cmd eq "quit") {
+		print "list: commande quit\n";
+		system("kill `cat info.pid`");
+		system("kill `cat info_pl.pid`") if ((-s "recordings") == 0);
+		quit();
 	} elsif ($cmd ne "list") {
 		print "list: commande inconnue :$cmd!\n";
 		next;
