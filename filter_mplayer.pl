@@ -306,8 +306,8 @@ sub check_eof {
 				kill "TERM", $pid_mplayer;
 				# $exit .= "ID_EXIT=QUIT ";
 				sleep(1);
-				my $pid_mplayer = get_mplayer();
-				if ($pid_mplayer) {
+				# Evidemment ça impose d'avoir /proc mais ça simplifie !
+				if (-f "/proc/$pid_mplayer/cmdline") {
 					print "filter: mplayer pid=$pid_mplayer, on kille -9 !\n";
 					kill "KILL", $pid_mplayer;
 				}
