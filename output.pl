@@ -60,7 +60,7 @@ sub have_net {
 		POSIX::sigaction(SIGALRM,
 			POSIX::SigAction->new(sub { die "alarm" }))
 			or die "Error setting SIGALRM handler: $!\n";
-		alarm(3);
+		alarm(4);
 		my @addresses = gethostbyname("www.google.fr")   or die "Can't resolve : $!\n";
 	};
 	alarm(0);
