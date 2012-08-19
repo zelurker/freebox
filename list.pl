@@ -733,12 +733,14 @@ sub run_mplayer2 {
 			}
 			$idle = "-idle";
 			$cache = 5000;
-		} elsif ($src =~ /freeboxtv/ && $name =~ /HD/ || $name =~ /bas débit/) {
+		} elsif (($src =~ /freeboxtv/ && ($name =~ /HD/ || $name =~ /bas débit/)) ||
+			($src eq "dvb")) {
 			$filter = ",kerndeint";
-			$player = "mplayer";
+			$player = "mplayer" if ($src ne "dvb");
 		}
 	}
 	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$serv,"-cache",$cache,
+		"-framedrop","-autosync",10,
 		"-stop-xscreensaver","-identify",$idle,$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
 		"bmovl=1:0:fifo,screenshot$filter");
@@ -1202,24 +1204,23 @@ while (1) {
 				# retrouver à boucler dessus et la pipe de commande n'est
 				# jamais ouverte dans ce cas là. Il vaut mieux passer par
 				# send_command...
-				send_command("pause\n");
+				send_command("pause\n") if ($pid_player2);
 				system("./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"");
-				send_command("quit\n");
+				send_command("quit\n") if ($pid_player2);
 				unlink "fifo_cmd";
-				# La séquence suivante est un hack pas beau mais jusqu'ici
-				# je n'ai pas trouvé mieux : on quitte mplayer en lui envoyant
-				# quit, mais du coup ça provoque le message id_exit=quit avant
-				# de sortir, du coup il n'y a aucun moyen de le différencier
-				# d'une commande quit envoyée par l'utilisateur. Et là en l'
-				# occurence vu qu'on vient de relancer run_mp1, il faut que
-				# freebox boucle. Donc je kille carrément le filtre dont le pid
-				# est maintenant dans player2.pid avant qu'il ait pu recopier
-				# le message de fin et je vire id pour être sûr !
-				# Pas terrible tout ça, vraiment ! Mais bon ça a l'air de
-				# marcher...
 				kill "TERM" => $pid_player2 if ($pid_player2);
 				system("kill -USR2 `cat info.pid`");
 				unlink "id";
+				if (open(F,"<current")) { # On récupère le nom de fichier
+					(undef,undef,undef,undef,undef,undef,$serv) = <F>;
+					chomp $serv;
+					close(F);
+				}
+				print "lancement $name,$src,$serv,$flav,$audio,$video\n";
+				$pid_player2 = fork();
+				if ($pid_player2 == 0) {
+					run_mplayer2($name,$src,$serv,$flav,$audio,$video);
+				}
 			}
 			next;
 		}
