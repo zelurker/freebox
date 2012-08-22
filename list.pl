@@ -691,7 +691,6 @@ sub run_mplayer2 {
 	system("mkfifo fifo_cmd fifo");
 	my $player = "mplayer2";
 	my $cache = 100;
-	my $idle = "";
 	my $filter = "";
 	my $cd = "";
 	my $pwd;
@@ -718,20 +717,14 @@ sub run_mplayer2 {
 		}
 		if ($name =~ /cddb/) {
 			$player = "mplayer";
-		} else {
-			$idle = "-idle";
 		}	   
 		$serv =~ s/ http.+//; # Stations de radio, vire l'url du prog
 	} else {
 		$audio = "-aid $audio " if ($audio);
-		if ($src =~ /(dvb|freeboxtv)/ || $audio) {
-			$player = "mplayer"; # pourquoi test sur $audio ?
-		}
 		if ($src =~ /Fichiers vidéo/) {
 			if ($name =~ /(mpg|ts)$/) {
 				$filter = ",kerndeint";
 			}
-			$idle = "-idle";
 			$cache = 5000;
 		} elsif (($src =~ /freeboxtv/ && ($name =~ /HD/ || $name =~ /bas débit/)) ||
 			($src eq "dvb")) {
@@ -741,7 +734,7 @@ sub run_mplayer2 {
 	}
 	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$serv,"-cache",$cache,
 		"-framedrop","-autosync",10,
-		"-stop-xscreensaver","-identify",$idle,$quiet,"-input",
+		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
 		"bmovl=1:0:fifo,screenshot$filter");
 	for (my $n=0; $n<=$#list; $n++) {
@@ -778,7 +771,7 @@ sub load_file2($$$$$) {
 	if ($serv) {
 		if ($source !~ /(Fichiers son|cd)/) {
 			print "effacement fichiers coords:$source:\n";
-			unlink( "list_coords","info_coords","video_size");
+			clear( "list_coords","info_coords","video_size");
 			system("kill -USR2 `cat info.pid`");
 		}
 		open(G,">current");

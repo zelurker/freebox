@@ -895,7 +895,7 @@ static void handle_event(SDL_Event *event) {
 		buf[1] = 0;
 		send_cmd("fifo_list",buf);
 		return;
-	    } else if (input == SDLK_KP_ENTER || input == SDLK_RETURN) {
+	    } else if (input == SDLK_KP_ENTER) {
 		FILE *f = fopen("list_coords","r");
 		if (!f) f = fopen("numero_coords","r");
 		if (f) {
@@ -920,13 +920,13 @@ static void handle_event(SDL_Event *event) {
 	    // Particularité : shift + touche alphabétique pour naviguer par
 	    // lettre dans les listes
 	    input -= 32;
-	}
-	if (fifo) {
-	    sprintf(buf,"key_down_event %d",input);
-	    send_cmd("fifo_cmd",buf);
-	} else {
-	    sprintf(buf,"%c",input);
-	    send_cmd("fifo_list",buf);
+	    if (fifo) {
+		sprintf(buf,"key_down_event %d",input);
+		send_cmd("fifo_cmd",buf);
+	    } else {
+		sprintf(buf,"%c",input);
+		send_cmd("fifo_list",buf);
+	    }
 	}
     }
 }

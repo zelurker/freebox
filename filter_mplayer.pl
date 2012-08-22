@@ -20,7 +20,7 @@ require "playlist.pl";
 use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
 
-our $pid_mplayer;
+our ($pid_mplayer,$length);
 if (@ARGV) {
 	# Lancement de mplayer à partir de filter
 	socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
@@ -110,6 +110,9 @@ sub REAPER {
 			push @cur_images,$result;
 			shmctl($id, IPC_RMID, 0)        || die "shmctl: $!";
 			delete $ipc{$child};
+		} elsif ($pid_mplayer == $child) {
+			print "filter: mplayer has just quit !\n";
+			$pid_mplayer = 0;
 		} else {
 			print "filter: didn't find bg_pic for child $child\n";
 		}
@@ -327,11 +330,13 @@ sub check_eof {
 			print "filter: envoi nextchan exit $exit\n";
 			send_cmd_list("nextchan");
 		}
-		if ($source =~ /(Fichiers|livetv|Enregist)/ && ($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
+		if ($length && $pos/$length<0.9 &&
+			$source =~ /(Fichiers|livetv|Enregist)/ &&
+			($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
 			print "filter: take bookmark pos $pos for name $serv\n";
 			$bookmarks{$serv} = $pos;
 		} else {
-			print "filter: source $source exit $exit name $serv\n";
+			print "filter: clear bookmark\n";
 			delete $bookmarks{$serv};
 		}
 	}
@@ -464,6 +469,8 @@ while (1) {
 			$width = $1;
 		} elsif (/ID_VIDEO_HEIGHT=(.+)/) {
 			$height = $1;
+		} elsif (/ID_LENGTH=(.+)/) {
+			$length = $1;
 		} elsif (/ID_AUDIO_CODEC=(.+)/) {
 			$codec = $1;
 			$codec =~ s/mpg123/mp3/;
