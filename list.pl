@@ -280,9 +280,7 @@ sub read_list {
 		$base_flux = "";
 		my $nb = 1;
 		foreach (@modes) {
-			if (switch($_)) {
-				push @list,[[$nb++,$_]];
-			}
+			push @list,[[$nb++,$_]];
 		}
 	} elsif ($source eq "apps") {
 		apps_menu();
@@ -726,10 +724,13 @@ sub run_mplayer2 {
 				$filter = ",kerndeint";
 			}
 			$cache = 5000;
-		} elsif (($src =~ /freeboxtv/ && ($name =~ /HD/ || $name =~ /bas débit/)) ||
-			($src eq "dvb")) {
+		} elsif ($src =~ /(freeboxtv|dvb)/) {
+			# Chaines de télé : mplayer2 ne met pas à jour les indexes
+			# dynamiquement, on ne peut revenir en arrière avec lui on se
+			# retrouve au début de la vidéo, donc il faut absolument mplayer
+			# ici
 			$filter = ",kerndeint";
-			$player = "mplayer" if ($src ne "dvb");
+			$player = "mplayer";
 		}
 	}
 	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$serv,"-cache",$cache,
