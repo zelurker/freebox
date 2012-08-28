@@ -894,13 +894,15 @@ sub quit {
 $SIG{CHLD} = \&REAPER;
 $SIG{TERM} = \&quit;
 my $nb_elem = 16;
-if (!open($l,"<fifo_list")) {
-	print "failed opening fifo_list, 2nd try...\n";
-	open($l,"<fifo_list") || die "can't open fifo_list\n";
-}
+my $init = 1;
+my $cmd = "list";
 my $lout;
 while (1) {
-	my $cmd;
+	if ($init) {
+		$init = 0;
+	} else {
+		$cmd = undef;
+	}
 	if (defined($l)) {
 		$cmd = <$l>;
 		chomp $cmd;
