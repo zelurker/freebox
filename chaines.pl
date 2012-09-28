@@ -151,13 +151,13 @@ sub request {
 
 sub getListeChaines($) {
 	my $net = shift;
-	my $r;
+	my $r = undef;
 	my $tries = 1;
 	my @chan;
 	do {
 		if (!-f "liste_chaines" || -M "liste_chaines" > 30 || -s "liste_chaines" < 512) {
-			print "geting liste_chaines from web...\n";
 			return "" if (!$net);
+			print "geting liste_chaines from web...\n";
 			my $site_addr = "guidetv-iphone.telerama.fr";
 			my $site_prefix = "http://$site_addr/verytv/procedures/";
 			my $url = $site_prefix."ListeChaines.php";
@@ -173,8 +173,11 @@ sub getListeChaines($) {
 				} else {
 					print "can't create liste_chaines\n";
 				}
+			} else {
+				print "getlistechaines: pas de contenu\n";
 			}
-		} else {
+		}
+		if (!$r) {
 			print "using cache for liste_chaines\n";
 			if (open(F,"<liste_chaines")) {
 				while (<F>) {
