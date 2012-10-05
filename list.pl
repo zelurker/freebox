@@ -733,11 +733,20 @@ sub run_mplayer2 {
 			$player = "mplayer";
 		}
 	}
-	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$serv,"-cache",$cache,
+	my $dvd1 = "";
+	my $dvd2 = "";
+	my $dvd3 = "";
+	if ($serv =~ /iso$/i) {
+		$dvd1 = "-dvd-device";
+		$dvd2 = "-nocache";
+		$dvd3 = "dvdnav://";
+	}
+
+	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$dvd1,$serv,"-cache",$cache,
 		"-framedrop","-autosync",10,
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
-		"bmovl=1:0:fifo,screenshot$filter");
+		"bmovl=1:0:fifo,screenshot$filter",$dvd2,$dvd3);
 	for (my $n=0; $n<=$#list; $n++) {
 		if (!$list[$n]) {
 			splice(@list,$n,1);
@@ -755,6 +764,10 @@ sub load_file2($$$$$) {
 	my ($name,$serv,$flav,$audio,$video) = @_;
 	my $prog;
 	$prog = $1 if ($serv =~ s/ (http.+)//);
+	if ($serv =~ /(jpe?g|png|gif|bmp)$/i) {
+		system("feh \"$serv\"");
+		return;
+	}
 	send_command("pause\n");
 	kill_player1();
 	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac|ts)$/i) {
