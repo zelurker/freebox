@@ -736,14 +736,7 @@ sub run_mplayer2 {
 			$player = "mplayer";
 		}
 	}
-	my $dvd1 = "";
-	my $dvd2 = "";
-	my $dvd3 = "";
 	if ($src eq "dvd") {
-		# Bizarrement la gestion dvdnav de mplayer2 a l'air bien pétée
-		# on se retrouve avec des bouts de menus qui restent à l'écran sur
-		# certains dvd pendant la lecture. Aucune idée pourquoi.
-		$player = "mplayer";
 		if (open(F,"</proc/sys/dev/cdrom/info")) {
 			while (<F>) {
 				chomp;
@@ -760,16 +753,17 @@ sub run_mplayer2 {
 		}
 	}
 	if ($serv =~ /iso$/i || $src eq "dvd") {
-		$dvd1 = "-dvd-device";
-		$dvd2 = "-nocache";
-		$dvd3 = "dvdnav://";
+#		$dvd1 = "-dvd-device";
+#		$dvd2 = "-nocache";
+#		$dvd3 = "dvdnav://";
+		exec("vlc","-f",$serv);
 	}
 
-	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$dvd1,$serv,"-cache",$cache,
+	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$serv,"-cache",$cache,
 		"-framedrop","-autosync",10,
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
-		"bmovl=1:0:fifo,screenshot$filter",$dvd2,$dvd3);
+		"bmovl=1:0:fifo,screenshot$filter");
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
 		if (!$list[$n]) {
