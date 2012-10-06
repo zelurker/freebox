@@ -71,7 +71,7 @@ $SIG{PIPE} = sub { print "list: sigpipe ignoré\n" };
 
 my @modes = (
 	"freeboxtv",  "dvb", "Enregistrements", "Fichiers vidéo", "Fichiers son", "livetv", "flux","radios freebox",
-	"cd","apps");
+	"cd","dvd","apps");
 if (!$have_fb || !$have_dvb) {
 	for (my $n=0; $n<=$#modes; $n++) {
 		if ((!$have_fb && $modes[$n] =~ /freebox/) ||
@@ -286,6 +286,9 @@ sub read_list {
 		apps_menu();
 	} elsif ($source eq "cd") {
 		cd_menu();	
+	} elsif ($source eq "dvd") {
+		load_file2("dvd","dvd");
+		return;
 	} elsif ($source =~ /freebox/) {
 		my $list;
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
@@ -736,7 +739,27 @@ sub run_mplayer2 {
 	my $dvd1 = "";
 	my $dvd2 = "";
 	my $dvd3 = "";
-	if ($serv =~ /iso$/i) {
+	if ($src eq "dvd") {
+		# Bizarrement la gestion dvdnav de mplayer2 a l'air bien pétée
+		# on se retrouve avec des bouts de menus qui restent à l'écran sur
+		# certains dvd pendant la lecture. Aucune idée pourquoi.
+		$player = "mplayer";
+		if (open(F,"</proc/sys/dev/cdrom/info")) {
+			while (<F>) {
+				chomp;
+				if (/drive name:[ \t]*(.+)/) {
+					$serv = "/dev/$1";
+				} elsif (/Can read DVD.+1/) {
+					last;
+				}
+			}
+			close(F);
+		} else {
+			print "Can't get dvd drive, assuming /dev/dvd\n";
+			$serv = "/dev/dvd";
+		}
+	}
+	if ($serv =~ /iso$/i || $src eq "dvd") {
 		$dvd1 = "-dvd-device";
 		$dvd2 = "-nocache";
 		$dvd3 = "dvdnav://";
