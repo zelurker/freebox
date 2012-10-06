@@ -748,6 +748,7 @@ sub run_mplayer2 {
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
 		"bmovl=1:0:fifo,screenshot$filter",$dvd2,$dvd3);
 	for (my $n=0; $n<=$#list; $n++) {
+		last if ($n > $#list);
 		if (!$list[$n]) {
 			splice(@list,$n,1);
 			redo;
