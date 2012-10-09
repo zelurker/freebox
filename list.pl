@@ -756,7 +756,7 @@ sub run_mplayer2 {
 #		$dvd1 = "-dvd-device";
 #		$dvd2 = "-nocache";
 #		$dvd3 = "dvdnav://";
-		exec("vlc","-f",$serv);
+		exec("vlc","-f","--deinterlace","-1",$serv);
 	}
 
 	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$serv,"-cache",$cache,
@@ -1243,10 +1243,10 @@ while (1) {
 					chomp $serv;
 					close(F);
 				}
-				print "lancement $name,$src,$serv,$flav,$audio,$video\n";
+				print "lancement $name,$source,$serv,$flav,$audio,$video\n";
 				$pid_player2 = fork();
 				if ($pid_player2 == 0) {
-					run_mplayer2($name,$src,$serv,$flav,$audio,$video);
+					run_mplayer2($name,$source,$serv,$flav,$audio,$video);
 				}
 			}
 			next;
