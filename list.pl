@@ -25,6 +25,8 @@ require "mms.pl";
 require "chaines.pl";
 use HTML::Entities;
 
+our $dvd;
+
 sub have_freebox {
 	# Les crétins de chez free ont fait une ip sur le net au lieu de faire
 	# une ip locale, et cette ip bloque tout traffic y compris le ping de tout
@@ -287,8 +289,9 @@ sub read_list {
 	} elsif ($source eq "cd") {
 		cd_menu();	
 	} elsif ($source eq "dvd") {
-		load_file2("dvd","dvd");
-		return;
+		@list = ([[1,"mplayer"]],
+		[[2,"vlc"]],
+		[[3,"eject"]]);
 	} elsif ($source =~ /freebox/) {
 		my $list;
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
@@ -685,6 +688,45 @@ sub kill_player1 {
 	}
 }
 
+sub mount_dvd() {
+	if (open(F,"</proc/sys/dev/cdrom/info")) {
+		while (<F>) {
+			chomp;
+			if (/drive name:[ \t]*(.+)/) {
+				$dvd = "/dev/$1";
+			} elsif (/Can read DVD.+1/) {
+				last;
+			}
+		}
+		close(F);
+	} else {
+		print "Can't get dvd drive, assuming /dev/dvd\n";
+		$dvd = "/dev/dvd";
+	}
+	if (open(F,"</proc/mounts")) {
+		while (<F>) {
+			my ($dev,$mnt) = split(/ /);
+			if ($dev eq "$dvd") {
+				$dvd = $mnt;
+				close(F);
+				return;
+			}
+		}
+	}
+	close(F);
+	system("mount $dvd");
+	if (open(F,"</proc/mounts")) {
+		while (<F>) {
+			my ($dev,$mnt) = split(/ /);
+			if ($dev eq "$dvd") {
+				$dvd = $mnt;
+				last;
+			}
+		}
+	}
+	close(F);
+}
+
 sub run_mplayer2 {
 	my ($name,$src,$serv,$flav,$audio,$video) = @_;
 	$l = undef; # Ne ferme pas ça dans le fils !!!
@@ -736,34 +778,24 @@ sub run_mplayer2 {
 			$player = "mplayer";
 		}
 	}
-	if ($src eq "dvd") {
-		if (open(F,"</proc/sys/dev/cdrom/info")) {
-			while (<F>) {
-				chomp;
-				if (/drive name:[ \t]*(.+)/) {
-					$serv = "/dev/$1";
-				} elsif (/Can read DVD.+1/) {
-					last;
-				}
-			}
-			close(F);
+	my ($dvd1,$dvd2,$dvd3);
+	if ($serv =~ /iso$/i || $src eq "dvd") {
+		$serv = $dvd;
+		if ($flav eq "mplayer") {
+			$dvd1 = "-dvd-device";
+			$dvd2 = "-nocache";
+			$dvd3 = "dvdnav://";
+			$filter = ",kerndeint";
 		} else {
-			print "Can't get dvd drive, assuming /dev/dvd\n";
-			$serv = "/dev/dvd";
+			exec("vlc","-f","--deinterlace","-1",$serv);
 		}
 	}
-	if ($serv =~ /iso$/i || $src eq "dvd") {
-#		$dvd1 = "-dvd-device";
-#		$dvd2 = "-nocache";
-#		$dvd3 = "dvdnav://";
-		exec("vlc","-f","--deinterlace","-1",$serv);
-	}
 
-	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$serv,"-cache",$cache,
+	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$dvd1,$serv,"-cache",$cache,
 		"-framedrop","-autosync",10,
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
-		"bmovl=1:0:fifo,screenshot$filter");
+		"bmovl=1:0:fifo,screenshot$filter",$dvd2,$dvd3);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
 		if (!$list[$n]) {
@@ -775,7 +807,7 @@ sub run_mplayer2 {
 	exec(@list);
 }
 
-sub load_file2($$$$$) {
+sub load_file2 {
 	# Même chose que load_file mais en + radical, ce coup là on kille le player
 	# pour redémarrer à froid sur le nouveau fichier. Obligatoire quand on vient
 	# d'une source non vidéo vers une source vidéo par exemple.
@@ -1125,6 +1157,14 @@ while (1) {
 				# le cd est en "autostart" !
 				goto again;
 			}
+		} elsif ($source eq "dvd") {
+			mount_dvd();
+			if ($name eq "eject") {
+				system("eject $dvd");
+			} else {
+				load_file2("dvd","dvd",$name);
+			}
+			next;	
 		} elsif ($source =~ /^(livetv|Enregistrements)$/) {
 			load_file2($name,$serv,$flav,$audio,$video);
 			next;
