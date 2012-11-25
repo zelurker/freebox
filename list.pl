@@ -755,7 +755,6 @@ sub run_mplayer2 {
 				}
 				close(F);
 				print "cd drive : $cd\n";
-				$cd = "-cdrom-device /dev/$cd " if ($cd);
 			}
 		}
 		if ($name =~ /cddb/) {
@@ -791,11 +790,12 @@ sub run_mplayer2 {
 		}
 	}
 
-	my @list = ("perl","filter_mplayer.pl",$player,$audio,$cd,$dvd1,$serv,"-cache",$cache,
+	my @list = ("perl","filter_mplayer.pl",$player,$audio,$dvd1,$serv,"-cache",$cache,
 		"-framedrop","-autosync",10,
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
 		"bmovl=1:0:fifo,screenshot$filter",$dvd2,$dvd3);
+	push @list,("-cdrom-device","/dev/$cd") if ($cd);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
 		if (!$list[$n]) {
