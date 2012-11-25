@@ -491,11 +491,11 @@ sub read_list {
 		if (open(F,"<current")) {
 			@_ = <F>;
 			close(F);
-			if ($_[2] =~ /^cd/) {
-				# c'est un flux provoqué par le cd -> ne rien faire
-				$source = "cd";
-				return;
-			}
+# 			if ($_[2] =~ /^cd/) {
+# 				# c'est un flux provoqué par le cd -> ne rien faire
+# 				$source = "cd";
+# 				return;
+# 			}
 		}
 		my $num = 1;
 		if (!$base_flux) {
