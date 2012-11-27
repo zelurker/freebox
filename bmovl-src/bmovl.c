@@ -854,7 +854,7 @@ static void send_cmd(char *fifo, char *cmd) {
 	write(file,buf,strlen(buf));
 	close(file);
     } else {
-	printf("could not send command %s\n",buf);
+	// printf("could not send command %s\n",buf);
 	if (strcmp(fifo,"fifo_list")) {
 	    printf("trying to send to fifo_list instead...\n");
 	    send_cmd("fifo_list",cmd);

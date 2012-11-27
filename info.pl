@@ -26,6 +26,10 @@ require "output.pl";
 require "chaines.pl";
 
 our $net = have_net();
+our $have_fb = 0; # have_freebox
+$have_fb = have_freebox() if ($net);
+our $have_dvb = (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
+
 our @cache_pic;
 our ($last_prog, $last_chan,$last_long);
 our %chaines = ();
@@ -339,47 +343,46 @@ sub get_nolife {
 	$rtab;
 }
 
-#
-# Parameters
-#
-
-my $channels_text = getListeChaines($net);
-our @chan = split(/\:\$\$\$\:/,$channels_text);
-my $sel = "";
-foreach (@def_chan) {
-	s/\+/\\+/g;
-	my $found = 0;
-	for (my $n=0; $n<=$#chan; $n++) {
-		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
-		if ($name =~ /^$_$/i) {
-			$sel .= ",$num";
-			$found = 1;
-			last;
+my $program_text = "";
+our (@chan,@selected_channels) = ();
+if ($have_dvb || $have_fb) {
+	my $channels_text = getListeChaines($net);
+	@chan = split(/\:\$\$\$\:/,$channels_text);
+	my $sel = "";
+	foreach (@def_chan) {
+		s/\+/\\+/g;
+		my $found = 0;
+		for (my $n=0; $n<=$#chan; $n++) {
+			my ($num,$name) = split(/\$\$\$/,$chan[$n]);
+			if ($name =~ /^$_$/i) {
+				$sel .= ",$num";
+				$found = 1;
+				last;
+			}
+		}
+		if (!$found) {
+			print "didn't find default channel $_ in list $channels_text\n";
+			$channels_text = undef;
 		}
 	}
-	if (!$found) {
-		print "didn't find default channel $_ in list $channels_text\n";
-		$channels_text = undef;
-	}
-}
-$sel =~ s/^\,//;
+	$sel =~ s/^\,//;
 
-my @selected_channels = split(/,/,$sel);
+	@selected_channels = split(/,/,$sel);
 
-#
+	#
 # Get channels/programs
-#
-my $program_text = "";
+	#
 
-my %selected_channel;
-foreach (@selected_channels) {
-	$selected_channel{$_} = 1;
+	my %selected_channel;
+	foreach (@selected_channels) {
+		$selected_channel{$_} = 1;
+	}
 }
 
 system("rm -f fifo_info && mkfifo fifo_info");
 read_prg: 
-print "appel getlisteprogrammes read_prg\n";
-$program_text = getListeProgrammes(0) if (!$program_text);
+$program_text = getListeProgrammes(0) if (!$program_text && ($have_dvb ||
+		$have_fb));
 my $nb_days = 1;
 my $cmd;
 debut: 
