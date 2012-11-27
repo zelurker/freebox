@@ -7,9 +7,9 @@ http://str0.creacast.com:900/listen.pls
 Activ radio
 http://activradio.free.fr/www/m3u/activadsl.m3u
 Alouette
-http://www.alouette.fr/alouette.m3u
+http://www.alouette.fr/alouette.m3u http://www.alouette.fr/zenon/xml_out/alouette_onair_drupal.php
 Alpes 1
-http://broadcast.infomaniak.ch/alpes1gap-high.mp3
+http://broadcast.infomaniak.ch/alpes1gap-high.mp3 http://grandgrenoble.alpes1.com/winradio/prog.xml
 Alternantes
 http://www.alternantesfm.net/alternantes_ogg.m3u
 ARL
@@ -39,7 +39,7 @@ http://213.186.61.62:8800/listen.pls
 Enjoy Station
 http://www.enjoystation.net/player/mp3.m3u
 Euradio Nantes
-http://91.121.155.20:8000/euradio.mp3 http://www.euradionantes.eu/afficherTitre.php
+http://80.82.229.202/euradio.mp3 http://www.euradionantes.eu/afficherTitre.php
 Europe 1
 http://vipicecast.yacast.net/europe1
 FG America
@@ -62,7 +62,7 @@ FMC Radio
 http://www.fmcradio.info/module/radio/fmc_haut_debit.m3u
 France bleu Gascogne
 http://95.81.147.3/fbgascogne/all/fbgascogne.mp3
-Fracde bleu loire océan
+France bleu loire océan
 http://95.81.147.3/fbloireocean/all/fbloireocean.mp3
 France Culture
 http://www.tv-radio.com/station/france_culture_mp3/france_culture_mp3-128k.m3u
@@ -72,8 +72,6 @@ France Musique
 http://www.tv-radio.com/station/france_musique_mp3/france_musique_mp3-128k.m3u
 Frequence 3
 http://streams.frequence3.net/mp3-192.m3u
-Frequence 3 - Only90s
-http://streams.frequence3.fr/f3-only90s/mp3-160.m3u
 Frequence Banane
 http://www.frequencebanane.ch/fb_128.m3u
 Frequence Terre
@@ -136,8 +134,6 @@ M2 Radio - Sunshine
 http://www.m2radio.fr/pls/m2sunshine.m3u
 M2 Radio - Vinyl
 http://www.m2radio.fr/pls/m2vinyl.m3u
-MAX la radio
-http://91.121.62.121:9410/listen.pls
 Maxi 80
 http://www.maxi80.com/ecoute/maxi80.m3u
 Maxxima
@@ -162,12 +158,12 @@ MFM Lady
 http://mfm-wr3.ice.infomaniak.ch/mfm-wr1-128.mp3 http://mfmradio.fr/winradio/prog4.xml
 Nostalgie
 http://95.81.147.3/nostalgie/all/nos_113812.mp3
-Nostalgie double tube
-http://95.81.147.3/3404/nostalgie_double_tubes/nos_141933.mp3
-Nostalgie musical
-http://95.81.147.3/3456/nostalgie_musical/nos_113646.mp3
-Nostalgie Wood stock
-http://95.81.147.3/3361/nostalgie_woodstock/nos_14741.mp3
+Nostalgie stars 80
+http://95.81.146.7/4983/nrj_145215.mp3
+Nostalgie 100 légendes
+http://95.81.146.7/3725/nrj_3725.mp3
+Nostalgie Ciné tubes
+http://95.81.146.7/3719/nrj_3719.mp3
 NRJ
 http://95.81.147.3/nrj/all/nrj_113225.mp3
 NRJ Hits
@@ -193,12 +189,12 @@ http://ouifm5.ice.infomaniak.ch/ouifm5.aac http://rock.ouifm.fr/dynamic-menu.jso
 Oui FM DJ Zebra
 http://ouifm5.ice.infomaniak.ch/ouifm6-128.mp3 http://rock.ouifm.fr/dynamic-menu.json _djzebra
 Oxyradio
-http://www.oxyradio.net/listen/oxyradio.pls
+http://oxyradio.net:8000/hd.ogg
 Pacifique FM
-http://r15919.ovh.net:9510/listen.pls
+http://stream.canal44.be:9512
 Paris One Club
 http://www.paris-one.com/pls/radio.pls
-Paris One Reserve
+Paris One Reverse
 http://www.paris-one.com/pls/radio_v6.pls
 Paris One Deeper
 http://www.paris-one.com/pls/radio_deeper.pls
@@ -207,7 +203,7 @@ http://www.paris-one.com/pls/radio_trance.pls
 Paris One Dance
 http://www.paris-one.com/pls/radio_dance.pls
 Prun
-http://partage.legram.fr:8000/prun
+http://streaming.prun.net/streamprun
 Puls Radio
 http://www.pulsradio.com/pls/puls-adsl.m3u
 Puls Radio - Version 8.0
@@ -243,7 +239,7 @@ http://91.121.62.121:8300/listen.pls
 Radio TeenTall
 http://www.radioteentaal.com/masala128.m3u
 RBI FM
-http://213.186.61.62:7400/listen.pls
+http://82.165.135.210:8000/
 RDM - Lorraine
 http://213.186.61.62:7070/listen.pls
 RFM
@@ -252,10 +248,6 @@ RFM Collector
 http://vipicecast.yacast.net/rfm_webradio06
 RFM Night Fever
 http://vipicecast.yacast.net/rfm_webradio02
-RFM Nouveautés
-http://vipicecast.yacast.net/rfm_webradio01
-RFM Music France
-http://vipicecast.yacast.net/rfm_webradio03
 RST
 http://213.186.61.62:8700/listen.pls
 RTL
@@ -265,7 +257,7 @@ http://streaming.radio.rtl2.fr/rtl2-1-44-128 http://radio.rtl2.fr/player.js
 Stop radio
 http://www.stopradio.net/stream/hautdebit.m3u
 Sun
-http://91.121.155.20:8000/sunhd.mp3
+http://www.lesonunique.com/sunhd.pls
 Top Music
 http://players.creacast.com/creacast/topmusic/playlist.m3u
 Virgin Radio
@@ -283,4 +275,4 @@ http://vipicecast.yacast.net/vra_webradio01
 Virgin radio tropical !
 http://vipicecast.yacast.net/vra_webradio04
 Ze Radio
-http://www.zeradio.net/ecouter/playlist.m3u
+http://188.165.156.99:8000/

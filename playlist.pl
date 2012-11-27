@@ -13,7 +13,7 @@ $browser->default_header(
 	]
 );
 
-sub handle_prog($) {
+sub handle_prog {
 	my ($prog,$info) = @_;
 	$prog =~ s/ (.+)//;
 	my $suffixe = $1; # suffixe éventuel au nom
@@ -71,25 +71,31 @@ sub handle_prog($) {
 
 	} elsif ($res =~ /^<\?xml/) {
 		# mfm minimum, peut-être d'autres...
+		print "xml reconnu\n";
 
 		my %hash;
 		while ($res =~ s/(.+?)[\n\r]//) {
 			$_ = $1;
-			if (/^<\?xml/ && /encoding=\'(.+?)\'/) {
-				if ($1 eq "UTF-8") {
+			if (/^<\?xml/ && /encoding=[\'"](.+?)[\'"]/) {
+				if ($1 =~ /UTF-8/i) {
 					print "réencodage latin9\n";
 					Encode::from_to($res, "utf-8", "iso-8859-15");
 				}
-			} elsif (/<morceau/) {
+			} elsif (/<(morceau|item)/) {
 				%hash = ();
 			} elsif (/<(.+?)><\!\[CDATA\[(.+?)\]/) {
 				$hash{$1} = $2 if ($2 && $2 ne "]");
-			} elsif (/<\/morceau/) {
-				$fa = $hash{chanteur} if (!$fa);
-				$ft = $hash{chanson} if (!$ft);
+			} elsif (/<(.+?)>(.+?)<\/(.+?)>/ && $1 eq $3) {
+				$hash{$1} = $2 if ($2 && $2 ne "]");
+			} elsif (/<\/(morceau|item)/) {
+				my $chanteur = $hash{chanteur} || $hash{artist};
+				my $chanson = $hash{chanson} || $hash{title};
+				my $pochette = $hash{pochette} || $hash{img_png};
+				$fa = $chanteur if (!$fa);
+				$ft = $chanson if (!$ft);
 				push @tracks,
-				($hash{pochette} ? "pic:$hash{pochette} " : "").
-				"$hash{chanteur} : $hash{chanson}";
+				($pochette ? "pic:$pochette " : "").
+				"$chanteur : $chanson";
 			}
 		}
 
