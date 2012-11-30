@@ -181,6 +181,7 @@ sub handle_result {
 		$ext =~ s/.+\.//;
 		$ext = substr($ext,0,3); # On ne garde que les 3 1ers caractères !
 		my $name = "image.$ext";
+		unlink $name;
 		my $pid = fork();
 		if ($pid == 0) {
 			my $referer = $url;
@@ -194,7 +195,6 @@ sub handle_result {
 			}
 			my $ftype = `file $pic`;
 			chomp $ftype;
-			print "pic $pic type $ftype\n";
 			if ($ftype =~ /gzip/) {
 				print "gzip content detected\n";
 				rename($pic,"$pic.gz");
