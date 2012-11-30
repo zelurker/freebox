@@ -360,21 +360,19 @@ sub check_eof {
 	exit(0); # au cas où on est là par un signal
 }
 
+our $last_cmd_prog = 0;
+
 sub send_cmd_prog {
-	my $short = shift;
-	# Le test -f info_coords est pour essayer de ne pas effacer le bandeau
-	# sur timer quand on l'a affiché en fixe.
-	# Evidemment ça va pas marcher dans 100% des cas, si le morceau commence
-	# et que send_cmd_prog est appelé avant que le bandeau n'ait eu le temps
-	# de s'effacer, il va devenir fixe.
-	# Bah au moins ça donne un moyen d'avoir un bandeau fixe ou pas de bandeau
-	# du tout sans liste.
-	my $cmd;
-	if ($short) {
-		$cmd = "prog";
-	} elsif (-f "info_coords") {
+	# -f info_coords détecte si le bandeau d'infos est déjà affiché, dans
+	# ce cas là on veut un affichage fixe sinon un qui disparait au bout de
+	# quelques secondes.
+	# on ajoute un timeout pour contourner les sites qui envoient l'info 2
+	# fois de suite avec variation, genre une pub au bout la 2ème fois.
+	my $cmd = "prog";
+	if (-f "info_coords" && time()-$last_cmd_prog >= 10) {
 		$cmd = "prog:long";
 	}
+	$last_cmd_prog = time();
 	send_cmd_info("$cmd $chan") if ($cmd);
 }
 
@@ -514,6 +512,7 @@ while (1) {
 		} elsif (/ICY Info/) {
 			my $info = "";
 			$stream = 1;
+			print "icy debug: reçu $_\n";
 			while (s/([a-z_]+)\=\'(.*?)\'\;//i) {
 				my ($name,$val) = ($1,$2);
 				if ($name eq "StreamTitle" && $val) {
@@ -534,6 +533,7 @@ while (1) {
 				print F "$info\n";
 				close(F);
 			}
+			print "envoie send_cmd_prog\n";
 			send_cmd_prog();
 
 			if ($images && $titre =~ /\-/ && $titre ne $old_titre) {
@@ -588,7 +588,7 @@ while (1) {
 						}
 						print F "\n$artist - $titre ($album) $t2 ".int($t1*100/$t3),"%\n";
 						close(F);
-						send_cmd_prog(1);
+						send_cmd_prog();
 					}
 				}
 				if ($last_t == 0) {
@@ -609,7 +609,7 @@ while (1) {
 				$connected = 1;
 			}
 			$started = 1;
-			send_cmd_prog(1);
+			send_cmd_prog();
 			if ($bookmarks{$serv}) {
 				print "filter: j'ai un bookmark pour cette vidéo : $bookmarks{$serv}\n";
 				send_command("seek $bookmarks{$serv} 2\n");
