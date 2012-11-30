@@ -64,7 +64,7 @@ our $eof = 0;
 my @duree;
 my $net = have_net();
 my $images = 0;
-our ($connected,$started);
+our ($connected,$started,$image_info);
 eval {
 	require WWW::Google::Images;
 	WWW::Google::Images->import();
@@ -76,6 +76,14 @@ if (!$@ && $net) {
 		server => 'images.google.com',
 	);
 }
+eval {
+	require Image::Info;
+	Image::Info->import(qw(image_info dim));
+};
+if (!$@ && $net) {
+	$image_info = 1;
+}
+
 our @cur_images;
 our $pos;
 my $last_track;
@@ -186,17 +194,28 @@ sub handle_result {
 			}
 			my $ftype = `file $pic`;
 			chomp $ftype;
+			print "pic $pic type $ftype\n";
 			if ($ftype =~ /gzip/) {
 				print "gzip content detected\n";
 				rename($pic,"$pic.gz");
 				system("gunzip $pic.gz");
+				$ftype = `file $pic`;
+				chomp $ftype;
+				exit(1);
 			}
-			my $ftype = `file $pic`;
-			chomp $ftype;
 			if ($ftype =~ /error/i || $ftype =~ /HTML/) {
 				unlink "$pic";
 				print "filter: type image $ftype\n";
 				exit 0;
+			}
+			if ($image_info) {
+				my $info = image_info($pic);
+				my ($w,$h) = dim($info);
+				if ($w < 320) {
+					print "image trop petite, on passe à la suite !\n";
+					unlink $pic;
+					exit 0;
+				}
 			}
 			print "handle_result: calling image $pic $x $y $w $h\n";
 			send_bmovl("image $pic $x $y $w $h");
@@ -236,7 +255,7 @@ sub handle_images {
 			$ipc{$pid} = $id;
 		} else {
 			$cur =~ s/û/u/g; # Pour une raison inconnue allergie !
-			my $result = $agent->search($cur, limit => 15);
+			my $result = $agent->search($cur, limit => 20);
 			my $dump = Data::Dumper->Dump([$result],[qw(result)]);
 			shmwrite($id,$dump,0,length($dump)) || die "shmwrite\n";
 			exit(0);
