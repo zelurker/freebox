@@ -19,6 +19,18 @@ require "output.pl";
 require "playlist.pl";
 use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
+use LWP 5.64;
+
+my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
+my $browser = LWP::UserAgent->new(keep_alive => 0,
+	agent =>$useragt);
+$browser->timeout(3);
+$browser->default_header(
+	[ 'Accept-Language' => "fr-fr"
+		#                          'Accept-Encoding' => "gzip,deflate",
+		# 'Accept-Charset' => "ISO-8859-15,utf-8"
+	]
+);
 
 our ($pid_mplayer,$length);
 if (@ARGV) {
@@ -163,15 +175,19 @@ sub handle_result {
 		my $name = "image.$ext";
 		my $pid = fork();
 		if ($pid == 0) {
-			$pic = $image->save_content(file => $name);
-			print "handle_result: net $net context ",$image->context_url()," name $pic\n";
-			if (! -f "$pic") {
-				print "filter: pas d'image $pic\n";
+			my $referer = $url;
+			$referer =~ s/(.+)\/.+?$/$1\//;
+			print "get image $url, referer $referer\n";
+			my $res = $browser->get($url,"Referer" => $referer,":content_file" => $name);
+			$pic = $name;
+			if (!$res->is_success) {
+				print "filter: erreur get ",$res->status_line,"\n";
 				exit 0;
 			}
 			my $ftype = `file $pic`;
 			chomp $ftype;
 			if ($ftype =~ /gzip/) {
+				print "gzip content detected\n";
 				rename($pic,"$pic.gz");
 				system("gunzip $pic.gz");
 			}
