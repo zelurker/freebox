@@ -531,7 +531,6 @@ while (1) {
 		} elsif (/ICY Info/) {
 			my $info = "";
 			$stream = 1;
-			print "icy debug: reçu $_\n";
 			while (s/([a-z_]+)\=\'(.*?)\'\;//i) {
 				my ($name,$val) = ($1,$2);
 				if ($name eq "StreamTitle" && $val) {
