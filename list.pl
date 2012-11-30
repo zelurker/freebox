@@ -27,40 +27,11 @@ use HTML::Entities;
 
 our $dvd;
 
-sub have_freebox {
-	# Les crétins de chez free ont fait une ip sur le net au lieu de faire
-	# une ip locale, et cette ip bloque tout traffic y compris le ping de tout
-	# ce qui ne fait pas partie de leur réseau. Ils sont gentils hein ?
-	# Le + simple pour tester cette saloperie c'est juste de faire un connect
-	# sur le port http.
-	# On pourrait utiliser Net::Ping, mais c'est à peine + simple, et si jamais
-	# un jour ça change on est mal, c mieux comme ça.
-	my $net = 1;
-	eval {
-		POSIX::sigaction(SIGALRM,
-			POSIX::SigAction->new(sub { die "alarm" }))
-			or die "Error setting SIGALRM handler: $!\n";
-		alarm(2);
-		my $remote = "mafreebox.freebox.fr";
-		my $port = 80;
-		my $iaddr   = inet_aton($remote)       || die "no host: $remote";
-		my $paddr   = sockaddr_in($port, $iaddr);
-		my $proto   = getprotobyname("tcp");
-		socket(SOCK, PF_INET, SOCK_STREAM, $proto)  || die "socket: $!";
-		connect(SOCK, $paddr)               || die "connect: $!";
-		close(SOCK);
-		print "Accès freebox ok !\n";
-	};
-	alarm(0);
-	$net = 0 if ($@);
-	$net;
-}
-
-our ($l);
 our $net = have_net();
-my $have_fb = 0; # have_freebox
+our $have_fb = 0; # have_freebox
 $have_fb = have_freebox() if ($net);
 our $have_dvb = (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
+our ($l);
 our $pid_player2;
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
