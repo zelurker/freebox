@@ -501,6 +501,7 @@ while (1) {
 			while (s/([a-z_]+)\=\'(.*?)\'\;//i) {
 				my ($name,$val) = ($1,$2);
 				if ($name eq "StreamTitle" && $val) {
+					$val =~ s/\.\.\. Telech.+//; # vire les pubs de hotmix
 					$info .= "$val ";
 					$titre = $val;
 					if (!$net) {
