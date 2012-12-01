@@ -3,7 +3,7 @@
 if [ -f list_coords ]; then
 	echo $* > fifo_list
 	exit 0
-elif [ -f info_coords ] && ! head -n 2 current|tail -n 1|grep -q Fichiers; then
+elif [ -f info_coords ] && ! [ -f stream_info ] && ! head -n 2 current|tail -n 1|grep -q Fichiers; then
 	echo "$*" > fifo_info
 	exit 0
 fi
