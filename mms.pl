@@ -5,6 +5,8 @@
 use LWP 5.64;
 use strict;
 
+my $debug = 0;
+
 sub get_mms {
 	my $url = shift;
 	my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
@@ -19,26 +21,33 @@ sub get_mms {
 	);
 
 	$browser->max_size(65000);
-	my $response = $browser->get($url);
-	return undef if (!$response->is_success);
-	my $page;
-	my $type = $response->header("Content-type");
-	if ($type =~ /audio/) {
-		# audio/xxx est quand même prenable !
-		print "url is not text : $type\n";
-		$browser->max_size(5000);
-		$page = $response->content;
-		if ($page !~ /^(\#EXTM3U|http|\[playlist)/) {
-			# Evitez les crétins qui gèrent le m3u en audio !!!
-			return $url;
+	my ($page,$type);
+	if (!$debug) {
+		my $response = $browser->get($url);
+		return undef if (!$response->is_success);
+		$type = $response->header("Content-type");
+		if ($type =~ /audio/) {
+			# audio/xxx est quand même prenable !
+			print "url is not text : $type\n";
+			$browser->max_size(5000);
+			$page = $response->content;
+			if ($page !~ /^(\#EXTM3U|http|\[playlist)/) {
+				# Evitez les crétins qui gèrent le m3u en audio !!!
+				return $url;
+			} else {
+				print "crétin de m3u évité\n";
+			}
 		} else {
-			print "crétin de m3u évité\n";
+			if (!$type) {
+				print "mms: pas de content-type: $type\n";
+			}
+			$page = $response->content;
 		}
 	} else {
-		if (!$type) {
-			print "mms: pas de content-type: $type\n";
-		}
-		$page = $response->content;
+		open(F,"<yt.html") || die "can't open yt.html\n";
+		@_ = <F>;
+		close(F);
+		$page = join("",@_);
 	}
 	if (!$page) {
 		print STDERR "could not get $url\n";
@@ -88,6 +97,8 @@ sub get_mms {
 	}
 	return $url;
 }
+
+get_mms() if ($debug);
 
 1;
 

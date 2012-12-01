@@ -4,35 +4,103 @@ use LWP::Simple;
 use strict;
 
 my $str = shift @ARGV;
+my $debug = 0; # infos
+my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
-print "direct\n";
+if ($str =~ /http/) {
+	print STDERR "str $str sending direct\n";
+	print "direct\n";
+} else {
+	print STDERR "str $str sending list\n";
+	print "list\n";
+}
 print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
 $str =~ s/ /\+/g;
-if ($str) {
-	$_ = get "http://www.youtube.com/results?search_query=$str&oq=$str";
+if ($debug && !$str) {
+	# Mode debug : on lit à partir de stdin, passer une page sauvée de youtube
+	# de préférence
+	@_ = <>;
+	$_ = join("",@_);
 } else {
-	$_ = get "http://www.youtube.com/";
+	if ($str && $str !~ /^http/) {
+		$_ = get "http://www.youtube.com/results?search_query=$str&oq=$str";
+	} elsif ($str) {
+		print "debug: get $str\n" if ($debug);
+		$_ = get $str;
+	} else {
+		$_ = get "http://www.youtube.com/";
+	}
 }
 
-# open(F,">dump.html");
+# open(F,">yt.html");
 # print F $_;
 # close(F);
+if ($str =~ /^http/) {
+	# Extrait les formats vidéos de la page
+	my ($title) = /<title>(.+?)<\/title/;
+	my $last = "";
+	while (s/flashvars=\\?"(.+?)\\?"//) {
+		my $url = $1;
+		$url =~ s/\\\//\//g;
+		$url =~ s/%(..)/chr(hex($1))/ge;
+		$url =~ s/generate_204/videoplayback/g;
+		$url =~ s/\\u(....)/chr(hex($1))/ge;
+		# print "flashvars $url\n";
+		while ($url =~ s/url=(.+?)&.+?sig=(.+?)&quality=(.+?)&//) {
+			my ($u,$s,$q) = ($1,$2,$3);
+			$u =~ s/\\\//\//g;
+			while ($u =~ s/%(..)/chr(hex($1))/ge) {}
+			$u =~ s/generate_204/videoplayback/g;
+			$u =~ s/\\u(....)/chr(hex($1))/ge;
+			$q =~ s/,.+//;
+			next if ($u !~ /preferred/);
+			next if ($q eq $last);
+			$last = $q;
+			print "$title $q\n$u&signature=$s\n";
+		}
+		# return $url;
+	}
+	exit(0);
+}
 my ($name,$url);
 my %list = ();
 my $content = 0;
 my ($link,$text,$img);
 foreach (split /\n/) {
 	s/\&\#(..)\;/chr($1)/ge;
-	$content = 1 if (/div class="result-item-main-content"/ || /class="yt-lockup-ellipsize"/);
-	$content = 2 if (/div class="feed-item-content"/);
-	if (/yt-thumb-clip-inner.+?src="(.+?)"/) {
-		my $truc = $1;
-		$img = $truc if ($truc =~ /jpg$/);
+	print "debug:$_\n" if ($dump);
+	if (/div class="result-item-main-content/ ||
+		/class="yt-lockup-ellipsize"/) {
+		$content = 1;
+		print STDERR "*** debug: content $content\n" if ($debug);
+	}
+	if (/div class="feed-item-content"/) {
+		$content = 2;
+		print STDERR "*** debug: content $content\n" if ($debug);
+	}
+	if (/div class="yt-lockup2/) {
+		# Autres résultats de recherche
+		$content = 3;
+		print STDERR "*** debug: content $content\n" if ($debug);
+	}
+
+	if (/href="(.+?)".*yt-thumb-clip-inner.+?src="(.+?)"/) {
+		$link = $1;
+		my $truc = $2;
+		if ($truc =~ /jpg$/) {
+			$img = $truc;
+			print STDERR "debug: img = $truc link $link (ident clip-inner)\n" if ($debug);
+		}
+#		} elsif ($debug) {
+#			print STDERR "debug: failed to recognize image $truc (ident clip-inner\n";
 	} 
 	if (/data-thumb="\/\/(.+?)"/) {
 		my $truc = "http://$1";
 		if ($truc =~ /jpg$/) {
 			$img = $truc;
+			print STDERR "debug: img = $truc (ident data-thumb)\n" if ($debug);
+#		} elsif ($debug) {
+#			print STDERR "debug: failed to recognize image $truc (ident data-thumb\n";
 		}
 	}
 	if ($content == 1) {
@@ -53,8 +121,29 @@ foreach (split /\n/) {
 			$text = 1;
 		} elsif ($text) {
 			s/^[ \t]+//;
-			print ($img ? "pic:$img " : "");
-			print "$_\nhttp://www.youtube.com$link\n";
+			if (!$_) {
+				$link = $text = $content = undef;
+				next;
+			}
+			if ($debug) {
+				print STDERR "debug: content2 pic $img link $link text $_\n";
+				die "pas de text\n" if (!$_);
+			} else {
+				print ($img ? "pic:$img " : "");
+				print "$_\nhttp://www.youtube.com$link\n";
+			}
+			$link = $text = $content = undef;
+		}
+	} elsif ($content == 3) {
+		if (/yt-lockup2-content.*title="(.+?)"/) {
+			$_ = $1;
+			$img = "http:$img" if ($img =~ /^\/\//);
+			if ($debug) {
+				print STDERR "debug: content3 pic $img link $link text $_\n";
+			} else {
+				print ($img ? "pic:$img " : "");
+				print "$_\nhttp://www.youtube.com$link\n";
+			}
 			$link = $text = $content = undef;
 		}
 	}

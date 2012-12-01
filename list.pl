@@ -485,11 +485,16 @@ sub read_list {
 			if (-x "flux/$b") {
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 				print "name $name,$serv,$flav,$audio,$video mode_flux $mode_flux base_flux $base_flux\n";
+				if ($base_flux =~ /result:/ && $base_flux !~ /result:.*\// &&
+					$serv =~ /http/) {
+					$serv = ""; # Sinon on ne peut plus revenir avec la flèche
+					# gauche !!!
+				}
 				if (!$mode_flux && $base_flux !~ /\//) {
 					# pas de mode (list ou direct)
 					$serv = "";
 					$base_flux =~ s/^(.+?)\/.+/$1/;
-				} else {
+				} elsif ($serv !~ /^(http|mms)/) {
 					# reconstitue le vrai serv à partir de base_flux
 					$base_flux =~ /(.+?)\/(.+)/;
 					$serv = $2;
@@ -525,7 +530,7 @@ sub read_list {
 				chomp ($name,$service);
 				$name =~ s/^pic:(.+?) //;
 				my $pic = $1;
-				if ($pic =~ /.+\/(.+?)\/default.jpg/) {
+				if ($pic =~ /.+\/(.+?)\/.*?default.jpg/) {
 					# Youtube
 					my $file = "cache/$1_yt.jpg";
 					if (!-f $file) {
@@ -802,7 +807,7 @@ sub load_file2 {
 	    # Gestion des pls supprimée, mplayer semble les gérer
 	    # très bien lui même.
 		my $old = $serv;
-	    $serv = get_mms($serv) if ($serv =~ /^http/);
+	    $serv = get_mms($serv) if ($serv =~ /^http/ && $serv !~ /o-o---preferred/);
 		print "get_mms $old -> $serv\n";
 		if ($serv) {
 			print "flux: loadfile $serv from $serv\n";
@@ -1217,11 +1222,13 @@ while (1) {
 			print "list: source pour lancement $source\n";
 			if (!$base_flux) {
 				$base_flux = $name;
+				$base_flux =~ s/pic:.+? //;
 				$mode_flux = "";
 				print "base_flux = $name\n";
 				read_list();
 			} elsif ($mode_flux eq "list" || $serv !~ /\/\//) {
 				$base_flux .= "/$name";
+				$base_flux =~ s/pic:.+? //;
 				read_list();
 			} else {
 				print "lecture flux: load_file2 $serv\n";
