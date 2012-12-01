@@ -366,7 +366,7 @@ sub check_eof {
 			send_cmd_list("nextchan");
 		}
 		if ($length && $pos/$length<0.9 &&
-			$source =~ /(Fichiers|livetv|Enregist)/ &&
+			$source =~ /(Fichiers|livetv|Enregist|flux)/ &&
 			($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
 			print "filter: take bookmark pos $pos for name $serv\n";
 			$bookmarks{$serv} = $pos;
