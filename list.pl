@@ -480,13 +480,20 @@ sub read_list {
 		} else {
 			my $b = $base_flux;
 			if ($b =~ /\//) {
-				$b =~ s/(.+?)\/.+/$1/;
+				$b =~ s/(.+?)\/(.+)/$1/;
 			}
 			if (-x "flux/$b") {
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-				if (!$mode_flux) {
+				print "name $name,$serv,$flav,$audio,$video mode_flux $mode_flux base_flux $base_flux\n";
+				if (!$mode_flux && $base_flux !~ /\//) {
+					# pas de mode (list ou direct)
 					$serv = "";
 					$base_flux =~ s/^(.+?)\/.+/$1/;
+				} else {
+					# reconstitue le vrai serv à partir de base_flux
+					$base_flux =~ /(.+?)\/(.+)/;
+					$serv = $2;
+					print "reconstitution serv = $serv\n";
 				}
 				if ($serv eq "Recherche") {
 					delete $ENV{WINDOWID};
@@ -710,7 +717,7 @@ sub run_mplayer2 {
 	my $pwd;
 	chomp ($pwd = `pwd`);
 	my $quiet = "";
-	if ($src =~ /(flux|cd)/) {
+	if ($src =~ /cd/) {
 		$quiet = "-quiet";
 		if ($name =~ /mms/ || $src =~ /youtube/) {
 			$cache = 1000;

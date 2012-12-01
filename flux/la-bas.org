@@ -1,0 +1,61 @@
+#!/usr/bin/perl
+
+use Time::Local;
+
+my $arg = shift @ARGV;
+my ($y,$m,$d) = split(/\//,$arg);
+
+my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =
+localtime(time);
+$year += 1900;
+$mon++;
+
+if (!$y) { # pas encore de jour,on est toujours en mode list
+	print "list\n";
+	if (!$y) {
+		for (my $n=$year; $n>=1987; $n--) {
+			print "$n\n$n\n";
+		}
+		exit(0);
+	}
+}
+if (!$m) {
+	print "list\n";
+	my $start;
+	if ($year == $y) { # année courante
+		$start = $mon;
+	} else {
+		$start = 12;
+	}
+	for (my $n=$start; $n>=1; $n--) {
+		$n = sprintf("%02d",$n);
+		print "$n\n$n\n";
+	}
+	exit(0);
+}
+
+if (!$d) {
+	print "direct\n";
+	my $start;
+	if ($year == $y && $mon == $m) { # année courante
+		$start = $mday;
+	} else {
+		$start = 31;
+	}
+	for (my $n=$start; $n>=1; $n--) {
+		$n = sprintf("%02d",$n);
+		my $time;
+		eval {
+			$time = timelocal(0,0,12,$n,$m-1,$y-1900);
+			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =
+			localtime($time);
+		};
+		if (!$@ && $wday >= 1 && $wday <= 5) {
+			print "$n\nhttp://www.la-bas.org/m3u/".sprintf("%d%02d%02d.m3u",$y %
+				100,$m,$n),"\n";
+		}
+	}
+	exit(0);
+}
+
+
