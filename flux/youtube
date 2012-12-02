@@ -3,6 +3,8 @@
 use LWP::Simple;
 use strict;
 
+binmode STDERR,":utf8";
+binmode STDOUT,":utf8";
 my $str = shift @ARGV;
 my $debug = 0; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
@@ -19,6 +21,7 @@ $str =~ s/ /\+/g;
 if ($debug && !$str) {
 	# Mode debug : on lit à partir de stdin, passer une page sauvée de youtube
 	# de préférence
+	binmode STDIN,":utf8";
 	@_ = <>;
 	$_ = join("",@_);
 } else {
@@ -65,7 +68,7 @@ if ($str =~ /^http/) {
 my ($name,$url);
 my %list = ();
 my $content = 0;
-my ($link,$text,$img);
+my ($link,$text,$img,$data_text,$data_link);
 foreach (split /\n/) {
 	s/\&\#(..)\;/chr($1)/ge;
 	print "debug:$_\n" if ($dump);
@@ -94,11 +97,32 @@ foreach (split /\n/) {
 #		} elsif ($debug) {
 #			print STDERR "debug: failed to recognize image $truc (ident clip-inner\n";
 	} 
+	if (/data-context-item-title="(.+?)"/) {
+		$data_text = $1;
+	} elsif (/data-sessionlink.*href="(.+?)"/) {
+		$data_link = $1;
+		$data_link = "" if ($data_link !~ /watch/);
+	}
 	if (/data-thumb="\/\/(.+?)"/) {
 		my $truc = "http://$1";
 		if ($truc =~ /jpg$/) {
 			$img = $truc;
-			print STDERR "debug: img = $truc (ident data-thumb)\n" if ($debug);
+			if ($data_link && $data_text) {
+				if ($debug) {
+					print STDERR "debug: data pic $img link $data_link text $data_text\n";
+				} else {
+					print ($img ? "pic:$img " : "");
+					if (!utf8::valid($data_text)) {
+						die "problème $data_text\n";
+					}
+					print $data_text;
+					open(F,">>broken");
+					print F "$data_text\n";
+					close(F);
+					print "\nhttp://www.youtube.com$data_link\n";
+				}
+			}
+			$data_link = $data_text = "";
 #		} elsif ($debug) {
 #			print STDERR "debug: failed to recognize image $truc (ident data-thumb\n";
 		}
@@ -112,30 +136,8 @@ foreach (split /\n/) {
 			$img = undef;
 			$content = 0;
 		}
-	} elsif ($content == 2) {
-		# Un peu + dur, des liens sur plusieurs lignes, c'est ce qui s'affiche
-		# sans recherche...
-		if (/href="(\/.+?)"/) {
-			$link = $1;
-		} elsif ($link && /\>/) {
-			$text = 1;
-		} elsif ($text) {
-			s/^[ \t]+//;
-			if (!$_) {
-				$link = $text = $content = undef;
-				next;
-			}
-			if ($debug) {
-				print STDERR "debug: content2 pic $img link $link text $_\n";
-				die "pas de text\n" if (!$_);
-			} else {
-				print ($img ? "pic:$img " : "");
-				print "$_\nhttp://www.youtube.com$link\n";
-			}
-			$link = $text = $content = undef;
-		}
 	} elsif ($content == 3) {
-		if (/yt-lockup2-content.*title="(.+?)"/) {
+		if (/yt-lockup2-title.*title="(.+?)"/) {
 			$_ = $1;
 			$img = "http:$img" if ($img =~ /^\/\//);
 			if ($debug) {
@@ -144,7 +146,7 @@ foreach (split /\n/) {
 				print ($img ? "pic:$img " : "");
 				print "$_\nhttp://www.youtube.com$link\n";
 			}
-			$link = $text = $content = undef;
+			$link = $content = undef;
 		}
 	}
 }
