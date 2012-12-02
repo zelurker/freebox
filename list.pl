@@ -62,6 +62,10 @@ if (open(F,"<current")) {
 	close(F);
 }
 my ($chan,$source,$serv,$flav) = @_;
+# Si base_flux contient une recherche + quelque chose d'autre, tronque à la
+# recherche. On ne peut pas restaurer l'url d'une vidéo précise, il vaut mieux
+# retourner sur la recherche
+$source =~ s/result:(.+?)\/.+/result:$1/; 
 $source =~ s/\/(.+)//;
 my $base_flux = $1;
 chomp ($chan,$source,$serv,$flav);
@@ -459,15 +463,15 @@ sub read_list {
 		unshift @list,[[$num++,"Tri par $conf{$tri}","tri par"]];
 #		@list = reverse @list;
 	} elsif ($source eq "flux") {
-		if (open(F,"<current")) {
-			@_ = <F>;
-			close(F);
+# 		if (open(F,"<current")) {
+# 			@_ = <F>;
+# 			close(F);
 # 			if ($_[2] =~ /^cd/) {
 # 				# c'est un flux provoqué par le cd -> ne rien faire
 # 				$source = "cd";
 # 				return;
 # 			}
-		}
+# 		}
 		my $num = 1;
 		if (!$base_flux) {
 			@list = ();
@@ -489,6 +493,7 @@ sub read_list {
 					$serv =~ /http/) {
 					$serv = ""; # Sinon on ne peut plus revenir avec la flèche
 					# gauche !!!
+					print "reset serv\n";
 				}
 				if (!$mode_flux && $base_flux !~ /\//) {
 					# pas de mode (list ou direct)
@@ -530,6 +535,8 @@ sub read_list {
 				chomp ($name,$service);
 				$name =~ s/^pic:(.+?) //;
 				my $pic = $1;
+				$name =~ s/&#39;/'/g;
+				Encode::from_to($name, "utf-8", "iso-8859-15");
 				if ($pic =~ /.+\/(.+?)\/.*?default.jpg/) {
 					# Youtube
 					my $file = "cache/$1_yt.jpg";
@@ -540,6 +547,8 @@ sub read_list {
 						}
 					}
 					$name = "pic:$file ".decode_entities($name);
+				} else {
+					$name = decode_entities($name);
 				}
 
 				push @list,[[$num++,$name,$service]];
@@ -722,23 +731,21 @@ sub run_mplayer2 {
 	my $pwd;
 	chomp ($pwd = `pwd`);
 	my $quiet = "";
+	if ($name =~ /mms/ || $src =~ /youtube/) {
+		$cache = 1000;
+	}
 	if ($src =~ /cd/) {
 		$quiet = "-quiet";
-		if ($name =~ /mms/ || $src =~ /youtube/) {
-			$cache = 1000;
-		}
-		if ($src =~ /cd/) {
-			if (open(F,"</proc/sys/dev/cdrom/info")) {
-				while (<F>) {
-					chomp;
-					if (/drive name:[ \t]+(.+)/) {
-						$cd = $1;
-						last;
-					}
+		if (open(F,"</proc/sys/dev/cdrom/info")) {
+			while (<F>) {
+				chomp;
+				if (/drive name:[ \t]+(.+)/) {
+					$cd = $1;
+					last;
 				}
-				close(F);
-				print "cd drive : $cd\n";
 			}
+			close(F);
+			print "cd drive : $cd\n";
 		}
 		if ($name =~ /cddb/) {
 			$player = "mplayer";
@@ -962,7 +969,7 @@ while (1) {
 		next;
 	}
 	again:
-	print "list: commande reçue après again : $cmd\n";
+	# print "list: commande reçue après again : $cmd\n";
 	if (-f "list_coords" && $cmd eq "clear") {
 		clear("list_coords");
 		clear("info_coords");
