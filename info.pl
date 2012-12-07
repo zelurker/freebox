@@ -113,6 +113,7 @@ sub read_stream_info {
 	# de chaine, genre une radio et une chaine de télé qui ont le même
 	# nom... Pour l'instant pas d'idée sur comment éviter ça...
 	my ($cur,$last,$info) = get_stream_info();
+	$cur = "" if (!$cur); # Evite le warning de manip d'undef
 	$cur =~ s/pic:(http.+?) //;
 	my $pic = $1;
 	if ($pic) {
