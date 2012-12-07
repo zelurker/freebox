@@ -24,6 +24,7 @@ if ($debug && !$str) {
 	binmode STDIN,":utf8";
 	@_ = <>;
 	$_ = join("",@_);
+	$str = "http";
 } else {
 	if ($str && $str !~ /^http/) {
 		$_ = get "http://www.youtube.com/results?search_query=$str&oq=$str";
@@ -56,7 +57,10 @@ if ($str =~ /^http/) {
 			$u =~ s/generate_204/videoplayback/g;
 			$u =~ s/\\u(....)/chr(hex($1))/ge;
 			$q =~ s/,.+//;
-			next if ($u !~ /preferred/);
+			if ($u !~ /youtube/ && $debug) {
+				print STDERR "debug: rejecting url $u\n";
+			}
+			next if ($u !~ /youtube/);
 			next if ($q eq $last);
 			$last = $q;
 			print "$title $q\n$u&signature=$s\n";
@@ -99,11 +103,13 @@ foreach (split /\n/) {
 	} 
 	if (/data-context-item-title="(.+?)"/) {
 		$data_text = $1;
-	} elsif (/data-sessionlink.*href="(.+?)"/) {
+		print STDERR "debug: data_text = $data_text\n" if ($debug);
+	} elsif (/data-sessionlink.*href="(.+?)"/ || /href="(.+?)".*data-sessionlink/) {
 		$data_link = $1;
 		$data_link = "" if ($data_link !~ /watch/);
+		print STDERR "debug: data_link = $data_link\n" if ($debug);
 	}
-	if (/data-thumb="\/\/(.+?)"/) {
+	if (/data-thumb="\/\/(.+?)"/ || /yt-thumb-clip-inner"><img src="\/\/(.+?)"/) {
 		my $truc = "http://$1";
 		if ($truc =~ /jpg$/) {
 			$img = $truc;
@@ -116,9 +122,6 @@ foreach (split /\n/) {
 						die "problème $data_text\n";
 					}
 					print $data_text;
-					open(F,">>broken");
-					print F "$data_text\n";
-					close(F);
 					print "\nhttp://www.youtube.com$data_link\n";
 				}
 			}

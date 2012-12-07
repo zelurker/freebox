@@ -814,7 +814,7 @@ sub load_file2 {
 	    # Gestion des pls supprimée, mplayer semble les gérer
 	    # très bien lui même.
 		my $old = $serv;
-	    $serv = get_mms($serv) if ($serv =~ /^http/ && $serv !~ /o-o---preferred/);
+	    $serv = get_mms($serv) if ($serv =~ /^http/ && $serv !~ /youtube/);
 		print "get_mms $old -> $serv\n";
 		if ($serv) {
 			print "flux: loadfile $serv from $serv\n";
