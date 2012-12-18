@@ -364,7 +364,16 @@ sub check_eof {
 		if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
 			print "filter: envoi nextchan exit $exit\n";
 			send_cmd_list("nextchan");
+		} elsif ($source =~ /(dvb|freebox)/) {
+			if (-f "player1.pid") {
+				my $pid = `cat player1.pid`;
+				chomp $pid;
+				print "pid2 à tuer $pid.\n";
+				kill "TERM",$pid;
+				unlink "player1.pid";
+			}
 		}
+
 		if ($length && $pos/$length<0.9 &&
 			$source =~ /(Fichiers|livetv|Enregist|flux)/ &&
 			($exit =~ /ID_EXIT=QUIT/ || !$exit)) {

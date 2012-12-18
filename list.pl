@@ -670,16 +670,6 @@ sub reset_current {
 	}
 }
 
-sub kill_player1 {
-	if (-f "player1.pid") {
-		my $pid = `cat player1.pid`;
-		chomp $pid;
-		print "pid2 à tuer $pid.\n";
-		kill "TERM",$pid;
-		unlink "player1.pid";
-	}
-}
-
 sub mount_dvd() {
 	if (open(F,"</proc/sys/dev/cdrom/info")) {
 		while (<F>) {
@@ -809,7 +799,6 @@ sub load_file2 {
 		return;
 	}
 	send_command("pause\n");
-	kill_player1();
 	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac|ts)$/i) {
 	    # Gestion des pls supprimée, mplayer semble les gérer
 	    # très bien lui même.
@@ -1215,7 +1204,6 @@ while (1) {
 				}
 				print "list: exec $serv\n";
 				send_command("pause\n");
-				kill_player1();
 				system("$serv");
 				reset_current();
 				send_command("pause\n");
