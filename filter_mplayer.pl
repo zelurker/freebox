@@ -33,27 +33,6 @@ $browser->default_header(
 );
 
 our ($pid_mplayer,$length);
-if (@ARGV) {
-	# Lancement de mplayer à partir de filter
-	socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
-	||  die "socketpair: $!";
-
-	CHILD->autoflush(1);
-	PARENT->autoflush(1);
-	$pid_mplayer = fork();
-	if ($pid_mplayer == 0) {
-		close CHILD;
-		open(STDIN, "<&PARENT") || die "can't dup stdin to parent";
-		# close(STDIN);
-		open(STDOUT, ">&PARENT") || die "can't dup stdout to parent";
-		open(STDERR, ">&PARENT") || die "can't dup stderr";
-		exec(@ARGV);
-	}
-} else {
-	*CHILD = *STDIN;
-}
-@ARGV = ();
-close(PARENT);
 	
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Deepcopy = 1;
@@ -374,7 +353,7 @@ sub check_eof {
 			}
 		}
 
-		if ($length && $pos/$length<0.9 &&
+		if ($length && $pos/$length<0.9 && $length > 300 &&
 			$source =~ /(Fichiers|livetv|Enregist|flux)/ &&
 			($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
 			print "filter: take bookmark pos $pos for name $serv\n";
@@ -426,6 +405,29 @@ sub update_codec_info {
 
 $SIG{TERM} = \&check_eof;
 my $rin = "";
+
+# Lancement du prog en paramètre
+if (@ARGV) {
+	# Lancement de mplayer à partir de filter
+	socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
+	||  die "socketpair: $!";
+
+	CHILD->autoflush(1);
+	PARENT->autoflush(1);
+	$pid_mplayer = fork();
+	if ($pid_mplayer == 0) {
+		close CHILD;
+		open(STDIN, "<&PARENT") || die "can't dup stdin to parent";
+		# close(STDIN);
+		open(STDOUT, ">&PARENT") || die "can't dup stdout to parent";
+		open(STDERR, ">&PARENT") || die "can't dup stderr";
+		exec(@ARGV);
+	}
+} else {
+	*CHILD = *STDIN;
+}
+@ARGV = ();
+close(PARENT);
 vec($rin,fileno(CHILD),1) = 1;
 if ($prog && $net) {
 	$time_prog = time()+1;
@@ -434,14 +436,9 @@ if ($prog && $net) {
 my $old_str = "";
 while (1) {
 
-	chomp;
 	my $t = undef;
 	my $t0 = time();
 	$t = $time - $t0 if ($time);
-	if ($t && $t < 0) {
-		handle_images();
-		next;
-	}
 	if ($time_prog && (($t && $time_prog - $t0 < $t) || !$t)) {
 		$t = $time_prog - $t0;
 	}
