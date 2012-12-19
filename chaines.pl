@@ -74,7 +74,7 @@ sub conv_channel {
 		"TV5 Monde" => "TV5MONDE",
 		"France ô" => "France Ô",
 		"france o" => "France Ô",
-		"DirectStar" => "Direct Star",
+		"D17" => "Direct Star",
 		"Télénantes Nantes 7" => "Nantes 7",
 		"NRJ12" => "NRJ 12",
 		"LCP" => "La chaîne parlementaire",
@@ -82,6 +82,8 @@ sub conv_channel {
 		"TEVA" => "Téva",
 		"Equidia live" => "Equidia",
 		"Luxe.TV" => "Luxe TV",
+		"D8" => "Direct 8",
+		"telenantes" => "Télé Nantes",
 	);
 	$channel =~ s/ \(.+\)//;
 	$channel =~ s/ hd$//i;
