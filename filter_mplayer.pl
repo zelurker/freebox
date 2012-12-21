@@ -31,29 +31,15 @@ $browser->default_header(
 		# 'Accept-Charset' => "ISO-8859-15,utf-8"
 	]
 );
-
-our ($pid_mplayer,$length);
-if (@ARGV) {
-	# Lancement de mplayer à partir de filter
-	socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
-	||  die "socketpair: $!";
-
-	CHILD->autoflush(1);
-	PARENT->autoflush(1);
-	$pid_mplayer = fork();
-	if ($pid_mplayer == 0) {
-		close CHILD;
-		open(STDIN, "<&PARENT") || die "can't dup stdin to parent";
-		# close(STDIN);
-		open(STDOUT, ">&PARENT") || die "can't dup stdout to parent";
-		open(STDERR, ">&PARENT") || die "can't dup stderr";
-		exec(@ARGV);
-	}
-} else {
-	*CHILD = *STDIN;
+our $pid_player1;
+if (-f "player1.pid") {
+	# il faut récupérer ce pid au début parce qu'un nouveau peut etre lancé
+	# alors que filter tourne encore
+	$pid_player1 = `cat player1.pid`;
+	chomp $pid_player1;
 }
-@ARGV = ();
-close(PARENT);
+
+our ($pid_mplayer,$length,$start_pos,$sent);
 	
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Deepcopy = 1;
@@ -317,7 +303,7 @@ sub bindings($) {
 sub check_eof {
 	return if ($eof);
 	$eof = 1;
-	print "check_eof: $source\n";
+	print "check_eof: $source exit:$exit\n";
 	unlink("video_size","stream_info");
 	if ($last_image eq "1") {
 	    print "on évite d'effacer le fichier 1\n";
@@ -365,16 +351,16 @@ sub check_eof {
 			print "filter: envoi nextchan exit $exit\n";
 			send_cmd_list("nextchan");
 		} elsif ($source =~ /(dvb|freebox)/) {
-			if (-f "player1.pid") {
-				my $pid = `cat player1.pid`;
+			if ($pid_player1) {
+				print "pid player1 à tuer $pid_player1.\n";
+				kill "TERM",$pid_player1;
+				my $pid= `cat player1.pid`;
 				chomp $pid;
-				print "pid2 à tuer $pid.\n";
-				kill "TERM",$pid;
-				unlink "player1.pid";
+				unlink "player1.pid" if ($pid == $pid_player1);
 			}
 		}
 
-		if ($length && $pos/$length<0.9 &&
+		if ($length && $pos/$length<0.9 && $length > 300 &&
 			$source =~ /(Fichiers|livetv|Enregist|flux)/ &&
 			($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
 			print "filter: take bookmark pos $pos for name $serv\n";
@@ -424,8 +410,35 @@ sub update_codec_info {
 	}
 }
 
+sub run_mplayer {
+	# Lancement de mplayer à partir de filter
+	socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
+	||  die "socketpair: $!";
+
+	CHILD->autoflush(1);
+	PARENT->autoflush(1);
+	$pid_mplayer = fork();
+	if ($pid_mplayer == 0) {
+		close CHILD;
+		open(STDIN, "<&PARENT") || die "can't dup stdin to parent";
+		# close(STDIN);
+		open(STDOUT, ">&PARENT") || die "can't dup stdout to parent";
+		open(STDERR, ">&PARENT") || die "can't dup stderr";
+		exec(@ARGV);
+	}
+}
+
 $SIG{TERM} = \&check_eof;
 my $rin = "";
+
+start:
+# Lancement du prog en paramètre
+if (@ARGV) {
+	run_mplayer();
+} else {
+	*CHILD = *STDIN;
+}
+close(PARENT);
 vec($rin,fileno(CHILD),1) = 1;
 if ($prog && $net) {
 	$time_prog = time()+1;
@@ -434,14 +447,9 @@ if ($prog && $net) {
 my $old_str = "";
 while (1) {
 
-	chomp;
 	my $t = undef;
 	my $t0 = time();
 	$t = $time - $t0 if ($time);
-	if ($t && $t < 0) {
-		handle_images();
-		next;
-	}
 	if ($time_prog && (($t && $time_prog - $t0 < $t) || !$t)) {
 		$t = $time_prog - $t0;
 	}
@@ -658,14 +666,37 @@ while (1) {
 			# check_eof();
 		} elsif (!$stream && /^A:(.+?) V:/) {
 			$pos = $1;
+			$start_pos = $pos if (!defined($start_pos));
+			if ($bookmarks{$serv} && $pos-$start_pos < $bookmarks{$serv} && (!$sent || $pos - $sent >= 0.5)) {
+				send_command("seek $bookmarks{$serv} 2\n");
+				$sent = $pos;
+			}
 		} elsif (/No bind found for key \'(.+)\'/) {
 			bindings($1);
 		}
 	}
 }
+print "filter: exit message : $exit\n";
+if ($source =~ /(dvb|freebox)/ && $exit =~ /EOF/) {
+	print "eof detected for $source pos $pos\n";
+	if ($pid_player1 && -d "/proc/$pid_player1") {
+		my $newpos = $pos-$start_pos;
+		print "player1 toujours là, on boucle: $newpos !\n";
+		$exit = "";
+		if ($newpos > 0) {
+			$bookmarks{$serv} = $newpos;
+		} else {
+			delete $bookmarks{$serv};
+		}	
+		goto start;
+	} else {
+		print "plus de player1, on quitte\n";
+	}
+}
+
 if ($connected) {
 	print "filter: USR2 point2\n";
 	kill "USR2",$pid;
 }
-print "filter: exit message : $exit\n";
+
 check_eof();

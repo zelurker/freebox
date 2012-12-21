@@ -51,6 +51,8 @@ sub send_command {
 		print "send_command : $cmd\n";
 		print F $cmd;
 		close(F);
+	} else {
+		print "send_command $cmd failed on open\n";
 	}
 }
 

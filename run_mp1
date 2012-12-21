@@ -68,6 +68,7 @@ if [ "$src" == "flux" ]; then
 	exit 0
 fi
 if [ -f player1.pid ] && ps -p `cat player1.pid` >& /dev/null; then
+	echo run_mp1: kill player1 `cat player1.pid`
 	kill `cat player1.pid` && rm -f player1.pid
 fi
 ok=0
@@ -121,6 +122,7 @@ while [ "$ok" == "0" ]; do
 	esac
 	pid=$!
 	start=`date +%s`
+	echo run_mp1: création player1.pid: $pid
 	echo $pid > player1.pid
 	tries=0
 	# Laisse au moins 3s au flux pour commencer à arriver
