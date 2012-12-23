@@ -576,13 +576,14 @@ sub req_prog($$) {
 	$response;
 }
 
-sub update_channel($) {
-	my $channel = shift;
+sub update_channel {
+	my ($channel,$offset) = @_;
+	$offset = 0 if (!defined($offset));
 	for (my $n=0; $n<=$#chan; $n++) {
 		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
 		if ($channel eq $name && $num != 254) {
 			print "*** req_prog loop request ***\n";
-			my $response = req_prog(0,$num);
+			my $response = req_prog($offset,$num);
 			last if (!$response->is_success);
 			my $res = $response->content;
 			if ($res && index($program_text,$res) < 0 && $res =~ /$num/) {
@@ -755,6 +756,11 @@ if (!$channel) {
 				print "prevprog: offset $d\n";
 				getListeProgrammes($d);
 				$rtab = $chaines{$last_chan};
+				if ($old == $#$rtab) {
+					print "prevprog: calling update_channel $last_chan,$d\n";
+					update_channel($last_chan,$d);
+					$rtab = $chaines{$channel};
+				}
 				$n += $#$rtab - $old;
 			}
 
@@ -886,13 +892,18 @@ for (my $n=0; $n<=$#$rtab; $n++) {
 	}
 }
 # print "time ",dateheure($time)," start ",dateheure($$rtab[0][3]),"\n";
-if ($time < $$rtab[0][3] && !$read_before) {
+if ($time < $$rtab[0][3]) {
 	print "pas trouvé l'heure ",dateheure($time)," cmp ",dateheure($$rtab[0][3]),", mais on va récupérer le jour d'avant...($channel)\n";
 	my $d = get_prev_offset($rtab);
 	print "offset trouvé pour date précédente : $d\n";
 	getListeProgrammes($d);
 	$read_before = 1;
 	$rtab = $chaines{$channel};
+	if ($time < $$rtab[0][3]) {
+		print "calling update_channel $channel,$d\n";
+		update_channel($channel,$d);
+		$rtab = $chaines{$channel};
+	}
 	goto reprise_nolife;
 } elsif ($read_before) {
 	print "pas trouvé l'heure ",dateheure($time)," cmp ",dateheure($$rtab[0][3]),", on a déjà le jour d'avant...($channel)\n";
