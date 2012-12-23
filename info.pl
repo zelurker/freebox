@@ -843,12 +843,12 @@ if (!$rtab && $channel =~ /^france 3 /) {
 }
 if (!$rtab) {
 	my $name = get_cur_name();
-#	if ($name eq $channel) {
+	if ($name eq $channel) {
 		if (-f "stream_info") {
 			read_stream_info($time,$cmd);
 			goto read_fifo;
 		}
-#	} # $name eq $channel
+	} # $name eq $channel
 }
 if (!$rtab && $net) {
 	update_channel($channel);
@@ -858,7 +858,7 @@ if (!$rtab) {
 	# Pas trouvé la chaine
 	my $out = setup_output("bmovl-src/bmovl","",0);
 	$cmd =~ s/pic:(.+?) //;
-	my $pic = $1 || "";
+	my $pic = $1;
 
 	print $out "$pic\n\n";
 	($sec,$min,$hour) = localtime($time);

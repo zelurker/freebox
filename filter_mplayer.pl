@@ -537,6 +537,11 @@ while (1) {
 				$bitrate =~ s/000$/k/;
 				update_codec_info();
 			}
+		} elsif (/(Audio only|Video: no video)/) {
+			if (!$init) {
+				$init = 1;
+				update_codec_info() if ($bitrate && $codec);
+			}
 		} elsif (/(\d+) x (\d+)/ && $width < 300) {
 			$width = $1; $height = $2; # fallback here if it fails
 		} elsif (/(\d+)x(\d+) =/ && $width < 300) {
@@ -634,10 +639,6 @@ while (1) {
 				}
 			}
 		} elsif (/Starting playback/) {
-			if (!$init) {
-				$init = 1;
-				update_codec_info() if ($bitrate && $codec);
-			}
 			if ($width && $height) {
 				open(F,">video_size") || die "can't write to video_size\n";
 				print "filter: init video $width x $height\n";
