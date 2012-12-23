@@ -21,6 +21,8 @@ use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
 use LWP 5.64;
 
+our @args = @ARGV;
+@ARGV = ();
 my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
 my $browser = LWP::UserAgent->new(keep_alive => 0,
 	agent =>$useragt);
@@ -39,7 +41,7 @@ if (-f "player1.pid") {
 	chomp $pid_player1;
 }
 
-our ($pid_mplayer,$length,$start_pos,$sent);
+our ($pid_mplayer,$length,$start_pos);
 	
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Deepcopy = 1;
@@ -71,7 +73,7 @@ if (!$@ && $net) {
 }
 
 our @cur_images;
-our $pos;
+our ($pos,$last_pos);
 my $last_track;
 my $last_t = 0;
 our $stream = 0;
@@ -420,11 +422,15 @@ sub run_mplayer {
 	$pid_mplayer = fork();
 	if ($pid_mplayer == 0) {
 		close CHILD;
+		if ($bookmarks{$serv}) {
+			print "run_mplayer: bookmark $bookmarks{$serv}\n";
+			push @args,("-ss",$bookmarks{$serv});
+		}
 		open(STDIN, "<&PARENT") || die "can't dup stdin to parent";
 		# close(STDIN);
 		open(STDOUT, ">&PARENT") || die "can't dup stdout to parent";
 		open(STDERR, ">&PARENT") || die "can't dup stderr";
-		exec(@ARGV);
+		exec(@args);
 	}
 }
 
@@ -433,7 +439,7 @@ my $rin = "";
 
 start:
 # Lancement du prog en paramètre
-if (@ARGV) {
+if (@args) {
 	run_mplayer();
 } else {
 	*CHILD = *STDIN;
@@ -644,10 +650,6 @@ while (1) {
 			}
 			$started = 1;
 			send_cmd_prog();
-			if ($bookmarks{$serv}) {
-				print "filter: j'ai un bookmark pour cette vidéo : $bookmarks{$serv}\n";
-				send_command("seek $bookmarks{$serv} 2\n");
-			}
 		} elsif (/End of file/ || /^EOF code/) {
 			print "filter: end of video\n";
 			if ($connected) {
@@ -665,11 +667,12 @@ while (1) {
 			# de fermer précipitement en cas de -idle
 			# check_eof();
 		} elsif (!$stream && /^A:(.+?) V:/) {
+			$last_pos = $pos;
 			$pos = $1;
-			$start_pos = $pos if (!defined($start_pos));
-			if ($bookmarks{$serv} && $pos-$start_pos < $bookmarks{$serv} && (!$sent || $pos - $sent >= 0.5)) {
-				send_command("seek $bookmarks{$serv} 2\n");
-				$sent = $pos;
+			# print STDERR "pos $pos\n";
+			if (!defined($start_pos)) {
+				$start_pos = $pos ;
+				print "start_pos = $start_pos\n";
 			}
 		} elsif (/No bind found for key \'(.+)\'/) {
 			bindings($1);
@@ -680,7 +683,7 @@ print "filter: exit message : $exit\n";
 if ($source =~ /(dvb|freebox)/ && $exit =~ /EOF/) {
 	print "eof detected for $source pos $pos\n";
 	if ($pid_player1 && -d "/proc/$pid_player1") {
-		my $newpos = $pos-$start_pos;
+		my $newpos = $last_pos-$start_pos;
 		print "player1 toujours là, on boucle: $newpos !\n";
 		$exit = "";
 		if ($newpos > 0) {
