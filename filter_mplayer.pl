@@ -21,6 +21,8 @@ use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
 use LWP 5.64;
 
+our @args = @ARGV;
+@ARGV = ();
 my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
 my $browser = LWP::UserAgent->new(keep_alive => 0,
 	agent =>$useragt);
@@ -31,8 +33,15 @@ $browser->default_header(
 		# 'Accept-Charset' => "ISO-8859-15,utf-8"
 	]
 );
+our $pid_player1;
+if (-f "player1.pid") {
+	# il faut récupérer ce pid au début parce qu'un nouveau peut etre lancé
+	# alors que filter tourne encore
+	$pid_player1 = `cat player1.pid`;
+	chomp $pid_player1;
+}
 
-our ($pid_mplayer,$length);
+our ($pid_mplayer,$length,$start_pos);
 	
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Deepcopy = 1;
@@ -64,7 +73,7 @@ if (!$@ && $net) {
 }
 
 our @cur_images;
-our $pos;
+our ($pos,$last_pos);
 my $last_track;
 my $last_t = 0;
 our $stream = 0;
@@ -296,7 +305,7 @@ sub bindings($) {
 sub check_eof {
 	return if ($eof);
 	$eof = 1;
-	print "check_eof: $source\n";
+	print "check_eof: $source exit:$exit\n";
 	unlink("video_size","stream_info");
 	if ($last_image eq "1") {
 	    print "on évite d'effacer le fichier 1\n";
@@ -344,12 +353,12 @@ sub check_eof {
 			print "filter: envoi nextchan exit $exit\n";
 			send_cmd_list("nextchan");
 		} elsif ($source =~ /(dvb|freebox)/) {
-			if (-f "player1.pid") {
-				my $pid = `cat player1.pid`;
+			if ($pid_player1) {
+				print "pid player1 à tuer $pid_player1.\n";
+				kill "TERM",$pid_player1;
+				my $pid= `cat player1.pid`;
 				chomp $pid;
-				print "pid2 à tuer $pid.\n";
-				kill "TERM",$pid;
-				unlink "player1.pid";
+				unlink "player1.pid" if ($pid == $pid_player1);
 			}
 		}
 
@@ -403,11 +412,7 @@ sub update_codec_info {
 	}
 }
 
-$SIG{TERM} = \&check_eof;
-my $rin = "";
-
-# Lancement du prog en paramètre
-if (@ARGV) {
+sub run_mplayer {
 	# Lancement de mplayer à partir de filter
 	socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
 	||  die "socketpair: $!";
@@ -417,16 +422,28 @@ if (@ARGV) {
 	$pid_mplayer = fork();
 	if ($pid_mplayer == 0) {
 		close CHILD;
+		if ($bookmarks{$serv}) {
+			print "run_mplayer: bookmark $bookmarks{$serv}\n";
+			push @args,("-ss",$bookmarks{$serv});
+		}
 		open(STDIN, "<&PARENT") || die "can't dup stdin to parent";
 		# close(STDIN);
 		open(STDOUT, ">&PARENT") || die "can't dup stdout to parent";
 		open(STDERR, ">&PARENT") || die "can't dup stderr";
-		exec(@ARGV);
+		exec(@args);
 	}
+}
+
+$SIG{TERM} = \&check_eof;
+my $rin = "";
+
+start:
+# Lancement du prog en paramètre
+if (@args) {
+	run_mplayer();
 } else {
 	*CHILD = *STDIN;
 }
-@ARGV = ();
 close(PARENT);
 vec($rin,fileno(CHILD),1) = 1;
 if ($prog && $net) {
@@ -519,6 +536,11 @@ while (1) {
 				$bitrate = $1;
 				$bitrate =~ s/000$/k/;
 				update_codec_info();
+			}
+		} elsif (/(Audio only|Video: no video)/) {
+			if (!$init) {
+				$init = 1;
+				update_codec_info() if ($bitrate && $codec);
 			}
 		} elsif (/(\d+) x (\d+)/ && $width < 300) {
 			$width = $1; $height = $2; # fallback here if it fails
@@ -617,10 +639,6 @@ while (1) {
 				}
 			}
 		} elsif (/Starting playback/) {
-			if (!$init) {
-				$init = 1;
-				update_codec_info() if ($bitrate && $codec);
-			}
 			if ($width && $height) {
 				open(F,">video_size") || die "can't write to video_size\n";
 				print "filter: init video $width x $height\n";
@@ -633,10 +651,6 @@ while (1) {
 			}
 			$started = 1;
 			send_cmd_prog();
-			if ($bookmarks{$serv}) {
-				print "filter: j'ai un bookmark pour cette vidéo : $bookmarks{$serv}\n";
-				send_command("seek $bookmarks{$serv} 2\n");
-			}
 		} elsif (/End of file/ || /^EOF code/) {
 			print "filter: end of video\n";
 			if ($connected) {
@@ -654,15 +668,39 @@ while (1) {
 			# de fermer précipitement en cas de -idle
 			# check_eof();
 		} elsif (!$stream && /^A:(.+?) V:/) {
+			$last_pos = $pos;
 			$pos = $1;
+			# print STDERR "pos $pos\n";
+			if (!defined($start_pos)) {
+				$start_pos = $pos ;
+				print "start_pos = $start_pos\n";
+			}
 		} elsif (/No bind found for key \'(.+)\'/) {
 			bindings($1);
 		}
 	}
 }
+print "filter: exit message : $exit\n";
+if ($source =~ /(dvb|freebox)/ && $exit =~ /EOF/) {
+	print "eof detected for $source pos $pos\n";
+	if ($pid_player1 && -d "/proc/$pid_player1") {
+		my $newpos = $last_pos-$start_pos;
+		print "player1 toujours là, on boucle: $newpos !\n";
+		$exit = "";
+		if ($newpos > 0) {
+			$bookmarks{$serv} = $newpos;
+		} else {
+			delete $bookmarks{$serv};
+		}	
+		goto start;
+	} else {
+		print "plus de player1, on quitte\n";
+	}
+}
+
 if ($connected) {
 	print "filter: USR2 point2\n";
 	kill "USR2",$pid;
 }
-print "filter: exit message : $exit\n";
+
 check_eof();
