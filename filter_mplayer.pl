@@ -362,7 +362,7 @@ sub check_eof {
 			}
 		}
 
-		if ($length && $pos/$length<0.9 && $length > 300 &&
+		if ($length && $length>0 && $pos/$length<0.9 && $length > 300 &&
 			$source =~ /(Fichiers|livetv|Enregist|flux)/ &&
 			($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
 			print "filter: take bookmark pos $pos for name $serv\n";
@@ -422,6 +422,7 @@ sub run_mplayer {
 	$pid_mplayer = fork();
 	if ($pid_mplayer == 0) {
 		close CHILD;
+		$args[1] =~ s/ http.+//; # vire le prog si il est encore attaché là !
 		if ($bookmarks{$serv}) {
 			print "run_mplayer: bookmark $bookmarks{$serv}\n";
 			push @args,("-ss",$bookmarks{$serv});
