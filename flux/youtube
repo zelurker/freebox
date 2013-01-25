@@ -3,6 +3,15 @@
 use LWP::Simple;
 use strict;
 
+sub myget {
+	my $url = shift;
+	my ($type,$len) = head($url);
+	if ($type =~ /charset=(.+)/) {
+		print "encoding: $1\n";
+	}
+	return get $url;
+}
+
 binmode STDERR,":utf8";
 binmode STDOUT,":utf8";
 my $str = shift @ARGV;
@@ -27,18 +36,21 @@ if ($debug && !$str) {
 	$str = "http";
 } else {
 	if ($str && $str !~ /^http/) {
-		$_ = get "http://www.youtube.com/results?search_query=$str&oq=$str";
+		$_ = myget( "http://www.youtube.com/results?search_query=$str&oq=$str");
 	} elsif ($str) {
 		print "debug: get $str\n" if ($debug);
-		$_ = get $str;
+		$_ = myget($str);
 	} else {
-		$_ = get "http://www.youtube.com/";
+		$_ = myget("http://www.youtube.com/");
 	}
 }
+if (/encoding="(.+?)"/) {
+	print "encoding: $1\n";
+}
 
-# open(F,">yt.html");
-# print F $_;
-# close(F);
+open(F,">yt.html");
+print F $_;
+close(F);
 if ($str =~ /^http/) {
 	# Extrait les formats vidéos de la page
 	my ($title) = /<title>(.+?)<\/title/;

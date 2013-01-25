@@ -35,6 +35,9 @@ sub get_url {
 my $arg = shift @ARGV;
 if (!$arg) {
 	my $page = get_url("http://www.shoutcast.com/");
+	if ($page =~ /encoding="(.+?)"/) {
+		print "encoding: $1\n";
+	}
 	print "list\n";
 	print "Recherche\nRecherche\n";
 	while ($page =~ s/class="arrowup".+?href="(.+?)">(.+?)<//) {
@@ -65,6 +68,9 @@ if ($arg =~ /^result\:(.+)/) {
 	    ajax => "true",
 	    mode => "listeners",
 	    order => "desc",});
+}
+if ($page =~ /encoding="(.+?)"/) {
+	print "encoding: $1\n";
 }
 print "direct\n";
 

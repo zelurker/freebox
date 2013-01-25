@@ -13,9 +13,12 @@ if ($str =~ s/^result\://) {
 } else { # Ou rien
 	$_ = get "http://dir.xiph.org/";
 }
-open(F,">dump");
-print F $_;
-close(F);
+if (/encoding="(.+?)"/) {
+	print "encoding: $1\n";
+}
+# open(F,">dump");
+# print F $_;
+# close(F);
 print "direct\n";
 print "Recherche\nRecherche\n";
 print "Catégories...\nCatégories\n" if (!$str || $str =~ /result/);

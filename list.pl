@@ -486,6 +486,7 @@ sub read_list {
 			if ($b =~ /\//) {
 				$b =~ s/(.+?)\/(.+)/$1/;
 			}
+			my $encoding = "";
 			if (-x "flux/$b") {
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 				print "name $name,$serv,$flav,$audio,$video mode_flux $mode_flux base_flux $base_flux\n";
@@ -522,6 +523,11 @@ sub read_list {
 				print "list: execution plugin flux $b param $serv base_flux $base_flux\n";
 				open(F,"flux/$b \"$serv\"|");
 				$mode_flux = <F>;
+				if ($mode_flux =~ /encoding/) {
+					$encoding = $mode_flux;
+					print "encoding: $encoding\n";
+					$mode_flux = <F>;
+				}
 				chomp $mode_flux;
 			} else {
 			   	if (!open(F,"<flux/$base_flux")) {
@@ -530,13 +536,19 @@ sub read_list {
 			}
 			@list = ();
 			while (<F>) {
+				if (/encoding:/) {
+					$encoding = $_;
+					print "encoding: $encoding\n";
+					next;
+				}
 				my $name = $_;
 				my $service = <F>;
 				chomp ($name,$service);
 				$name =~ s/^pic:(.+?) //;
 				my $pic = $1;
 				$name =~ s/&#39;/'/g;
-				Encode::from_to($name, "utf-8", "iso-8859-15");
+				Encode::from_to($name, "utf-8", "iso-8859-15")
+				if ($encoding =~ /utf/i);
 				if ($pic =~ /.+\/(.+?)\/.*?default.jpg/) {
 					# Youtube
 					my $file = "cache/$1_yt.jpg";

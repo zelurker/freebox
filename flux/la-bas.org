@@ -10,6 +10,7 @@ localtime(time);
 $year += 1900;
 $mon++;
 
+print "encoding: latin1\n";
 if (!$y) { # pas encore de jour,on est toujours en mode list
 	print "list\n";
 	if (!$y) {
