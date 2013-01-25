@@ -252,6 +252,9 @@ sub read_list {
 	if (!$base_flux) {
 		$found = $conf{"sel_$source"};
 	}
+	if ($source =~ /free/ && !$have_fb) {
+		$source = "menu";
+	}
 	if ($source eq "menu") {
 		@list = ();
 		$base_flux = "";
