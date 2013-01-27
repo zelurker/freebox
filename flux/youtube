@@ -1,15 +1,25 @@
 #!/usr/bin/perl
 
-use LWP::Simple;
+use LWP::UserAgent;
+use HTTP::Cookies;
 use strict;
 
 sub myget {
 	my $url = shift;
-	my ($type,$len) = head($url);
+	my $cookie_jar = HTTP::Cookies->new(
+           file => "$ENV{'HOME'}/lwp_cookies.dat",
+           autosave => 1,
+         ); 
+	my $ua = LWP::UserAgent->new;
+	$ua->timeout(10);
+	$ua->cookie_jar($cookie_jar);
+	my $r = $ua->get($url);
+	my $type = $r->header("Content-type");
+	print STDERR "myget: got type $type\n";
 	if ($type =~ /charset=(.+)/) {
 		print "encoding: $1\n";
 	}
-	return get $url;
+	return $r->content;
 }
 
 binmode STDERR,":utf8";
@@ -55,15 +65,26 @@ if ($str =~ /^http/) {
 	# Extrait les formats vidéos de la page
 	my ($title) = /<title>(.+?)<\/title/;
 	my $last = "";
-	while (s/flashvars=\\?"(.+?)\\?"//) {
+	while (s/\"url_encoded_fmt_stream_map\": \"(.+?)\"//) {
 		my $url = $1;
 		$url =~ s/\\\//\//g;
 		$url =~ s/%(..)/chr(hex($1))/ge;
 		$url =~ s/generate_204/videoplayback/g;
 		$url =~ s/\\u(....)/chr(hex($1))/ge;
 		# print "flashvars $url\n";
-		while ($url =~ s/url=(.+?)&.+?sig=(.+?)&quality=(.+?)&//) {
-			my ($u,$s,$q) = ($1,$2,$3);
+		my ($tag) = $url =~ /^(.+?)\=/;
+#		print STDERR "starting tag $tag\n";
+		while ($url =~ s/($tag=.+?)(,$tag=|$)/$2/) {
+			my $u = $1;
+			$u =~ s/itag=(.+?)(\&|$)//; # itag à dégager, ça provoque un 403 !
+			$u =~ /type=(.+?)(\&|$)/;
+			my $type = $1;
+			$u =~ s/sig=(.+?)(\&|$)//;
+			my $s = $1;
+			$u =~ s/quality=(.+?)(\&|$)//;
+			my $q = $1;
+			$u =~ s/(.*)url=(.+)/$2&$1/;
+			$u =~ s/&$//;
 			$u =~ s/\\\//\//g;
 			while ($u =~ s/%(..)/chr(hex($1))/ge) {}
 			$u =~ s/generate_204/videoplayback/g;
@@ -73,9 +94,9 @@ if ($str =~ /^http/) {
 				print STDERR "debug: rejecting url $u\n";
 			}
 			next if ($u !~ /youtube/);
-			next if ($q eq $last);
 			$last = $q;
-			print "$title $q\n$u&signature=$s\n";
+			print "$title $q $type\n$u&signature=$s\n";
+			# print STDERR "sign for $q: url $u\nsignature=$s\n";
 		}
 		# return $url;
 	}

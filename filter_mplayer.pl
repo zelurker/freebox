@@ -522,7 +522,9 @@ while (1) {
 	}
 	while ($buff =~ s/(.+?)[\n\r]//) {
 		$_ = $1;
-		if (/ID_VIDEO_WIDTH=(.+)/) {
+		if (/^Server returned/) {
+			print "$_\n";
+		} elsif (/ID_VIDEO_WIDTH=(.+)/) {
 			$width = $1;
 		} elsif (/ID_VIDEO_HEIGHT=(.+)/) {
 			$height = $1;
