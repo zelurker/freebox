@@ -27,6 +27,10 @@ sub get_url {
 		$response = $browser->post($url,$post);
 	}
 
+	my $type = $response->header("Content-type");
+	if ($type =~ /charset=(.+)/) {
+		print "encoding: $1\n";
+	}
 	return undef if (!$response->is_success);
 	return undef if ($response->header("Content-type") !~ /text/);
 	$response->content;
