@@ -76,6 +76,7 @@ if ($str =~ /^http/) {
 			}
 			next if ($u !~ /youtube/);
 			$last = $q;
+			$type =~ s/;.+//;
 			print "$title $q $type\n$u&signature=$s\n";
 			# print STDERR "sign for $q: url $u\nsignature=$s\n";
 		}

@@ -787,6 +787,7 @@ sub run_mplayer2 {
 
 	my @list = ("perl","filter_mplayer.pl",$player,$audio,$dvd1,$serv,"-cache",$cache,
 		"-framedrop","-autosync",10,
+		"-fs",1,
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
 		"bmovl=1:0:fifo,screenshot$filter",$dvd2,$dvd3);
@@ -1237,6 +1238,7 @@ while (1) {
 				print "base_flux = $name\n";
 				read_list();
 			} elsif ($mode_flux eq "list" || $serv !~ /\/\//) {
+				$name =~ s/\//-/g;
 				$base_flux .= "/$name";
 				$base_flux =~ s/pic:.+? //;
 				read_list();
