@@ -3,8 +3,8 @@
 use strict;
 require "http.pl";
 
-binmode STDERR,":utf8";
-binmode STDOUT,":utf8";
+binmode STDERR; # ,":utf8";
+binmode STDOUT; # ,":utf8";
 my $str = shift @ARGV;
 my $debug = 0; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
@@ -21,7 +21,7 @@ $str =~ s/ /\+/g;
 if ($debug && !$str) {
 	# Mode debug : on lit à partir de stdin, passer une page sauvée de youtube
 	# de préférence
-	binmode STDIN,":utf8";
+	binmode STDIN; # ,":utf8";
 	@_ = <>;
 	$_ = join("",@_);
 	$str = "http";
