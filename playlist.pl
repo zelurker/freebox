@@ -13,6 +13,24 @@ $browser->default_header(
 	]
 );
 
+our %codage = (
+	'\u00e0' => 'à',
+	'\u00e2' => 'â',
+	'\u00e4' => 'ä',
+	'\u00e7' => 'ç',
+	'\u00e8' => 'è',
+	'\u00e9' => 'é',
+	'\u00ea' => 'ê',
+	'\u00eb' => 'ë',
+	'\u00ee' => 'î',
+	'\u00ef' => 'ï',
+	'\u00f4' => 'ô',
+	'\u00f6' => 'ö',
+	'\u00f9' => 'ù',
+	'\u00fb' => 'û',
+	'\u00fc' => 'ü',
+);
+
 sub handle_prog {
 	my ($prog,$info) = @_;
 	$prog =~ s/ (.+)//;
@@ -22,6 +40,7 @@ sub handle_prog {
 	my $titre = "titre$suffixe";
 	my $album = "album$suffixe";
 	print "filter: prog $prog suffixe $suffixe\n";
+	my ($site) = $prog =~ /^(http:\/\/.+?\/)/;
 	my $response = $browser->get($prog);
 	if (! $response->is_success) {
 		print "filter: pas pu récupérer le prog en $prog\n";
@@ -38,7 +57,38 @@ sub handle_prog {
 		$ft =~ s/ +$//;
 		@tracks = ("$fa : $ft");
 	} elsif ($res =~ s/^\{//) { # format oui fm
+		my $t = time();
 		foreach (split /\],/,$res) {
+			if (!$suffixe && /^"heure_debut/) {
+				# France inter fait ça aussi...
+				my @fields = split(/\,/);
+				my %hash = ();
+				foreach (@fields) {
+					my (@elem) = split(/\:/);
+					$elem[0] =~ s/"//g;
+					$hash{$elem[0]} = splice(@elem,1);
+				}
+				if ($hash{heure_debut} <= $t && $hash{heure_fin} >= $t) {
+# 					foreach (keys %hash) {
+# 						print "$_ -> ",join(",",$hash{$_}),"\n";
+# 					}
+					my $title = $hash{title};
+					foreach (keys %codage) {
+						$title =~ s/\\$_/$codage{$_}/gi;
+					}
+					$title =~ s/^"//;
+					$title =~ s/"$//;
+					my $img = $hash{image};
+					$img =~ s/\\\//\//g;
+					$img =~ s/"//g;
+					$img = "$site$img";
+					$ft = $title;
+					if ($site =~ /franceinter/) {
+						$fa = "France Inter";
+					}
+					push @tracks,("pic:$img $title");
+				}
+			}
 			next if (!(/^"last$suffixe":\[(.+)/));
 			my $c = $1;
 			$c =~ s/^{//;
@@ -104,28 +154,9 @@ sub handle_prog {
 		# Super top : l'encodage utf à la con sur plusieurs caractères
 		# voir la page http://www.eteks.com/tips/tip3.html pour le détail du
 		# codage. Pas trouvé de méthode automatique pour dégager ça...
-		my %codage = (
-			'\u00e0' => 'à',
-			'\u00e2' => 'â',
-			'\u00e4' => 'ä',
-			'\u00e7' => 'ç',
-			'\u00e8' => 'è',
-			'\u00e9' => 'é',
-			'\u00ea' => 'ê',
-			'\u00eb' => 'ë',
-			'\u00ee' => 'î',
-			'\u00ef' => 'ï',
-			'\u00f4' => 'ô',
-			'\u00f6' => 'ö',
-			'\u00f9' => 'ù',
-			'\u00fb' => 'û',
-			'\u00fc' => 'ü',
-		);
 		foreach (keys %codage) {
 			# Ce crétin ne remplace pas le \ dans la source avec la 1ère regexp
-			$res =~ s/$_/$codage{$_}/gi;
-			# donc on est obligé de faire un 2ème tour !
-			$res =~ s/\\$codage{$_}/$codage{$_}/g;
+			$res =~ s/\\$_/$codage{$_}/gi;
 		}
 		if ($res =~ /"songs"\:\[(.+?)\]/) {
 			foreach (split /\},\{/,$1) {
@@ -155,8 +186,15 @@ sub handle_prog {
 			}
 			close(F);
 		}
-		return "$fa : $ft"; # Renvoie la chaine pour google images
+		if ($ft && $fa) {
+			return "$fa : $ft"; # Renvoie la chaine pour google images
+		} elsif ($ft) {
+			return $ft;
+		} else {
+			die "pas de titre à renvoyer dans ft\n";
+		}
 	}
+	print "*** no tracks ***\n";
 	return 0;
 }
 
