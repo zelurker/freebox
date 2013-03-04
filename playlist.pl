@@ -58,11 +58,13 @@ sub handle_prog {
 		@tracks = ("$fa : $ft");
 	} elsif ($res =~ s/^\{//) { # format oui fm
 		my $t = time();
-		foreach (split /\],/,$res) {
-			if (!$suffixe && /^"heure_debut/) {
+		my @list = split(/"theme_functions":\[/,$res);
+		@list = split(/\],/,$res) if (!@list);
+		foreach (@list) {
+			my %hash = ();
+			if (!$suffixe && !/^"last/) {
 				# France inter fait ça aussi...
 				my @fields = split(/\,/);
-				my %hash = ();
 				foreach (@fields) {
 					my (@elem) = split(/\:/);
 					$elem[0] =~ s/"//g;
@@ -89,6 +91,7 @@ sub handle_prog {
 					push @tracks,("pic:$img $title");
 				}
 			}
+
 			next if (!(/^"last$suffixe":\[(.+)/));
 			my $c = $1;
 			$c =~ s/^{//;
