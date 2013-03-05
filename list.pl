@@ -39,6 +39,7 @@ close(F);
 my $numero = "";
 my $time_numero = undef;
 my $last_list = "";
+our $update_pic = 0;
 
 $SIG{PIPE} = sub { print "list: sigpipe ignoré\n" };
 
@@ -538,6 +539,8 @@ sub read_list {
 				}
 			}
 			@list = ();
+			my $found_pic = 0;
+			my @pic = ();
 			while (<F>) {
 				if (/encoding:/) {
 					$encoding = $_;
@@ -556,10 +559,8 @@ sub read_list {
 					# Youtube
 					my $file = "cache/$1_yt.jpg";
 					if (!-f $file) {
-						if (open(G,">$file")) {
-							print G get $pic;
-							close(G);
-						}
+						$found_pic = 1;
+						push @pic,($file,$pic);
 					}
 					$name = "pic:$file ".decode_entities($name);
 				} else {
@@ -567,6 +568,20 @@ sub read_list {
 				}
 
 				push @list,[[$num++,$name,$service]];
+			}
+			if ($found_pic) {
+			    $update_pic = fork();
+				if ($update_pic == 0) {
+					for (my $n=0; $n<=$#pic; $n+=2) {
+						if (open(G,">$pic[$n]")) {
+							print G get $pic[$n+1];
+							close(G);
+							# print "updated pic $pic[$n] from ",$pic[$n+1],"\n";
+							send_cmd_list("refresh");
+						}
+					}
+					exit(0);
+				}
 			}
 			print "list: ".($#list+1)." flux\n";
 			$found = 0 if ($found > $#list);
@@ -935,6 +950,9 @@ sub REAPER {
 			print "player2 quit\n";
 			$pid_player2 = 0;
 			unlink("fifo","fifo_cmd");
+		} elsif ($child == $update_pic) {
+			print "update pic over\n";
+			$update_pic = 0;
 		}
 # 		if (! -f "info_coords") {
 # 			print "plus d'info_coords, bye\n";
@@ -1527,7 +1545,7 @@ while (1) {
 		}
 		$cur .= "\n";
 	}
-	if ($cmd ne "refresh" || $cur ne $last_list) {
+	if ($cmd ne "refresh" || $cur ne $last_list || $update_pic) {
 		if ($source =~ /Fichiers/) {
 			$out = setup_output("fsel");
 		} elsif ($source eq "flux") {
