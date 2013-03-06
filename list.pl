@@ -23,6 +23,7 @@ use File::Glob 'bsd_glob'; # le glob dans perl c'est n'importe quoi !
 require "output.pl";
 require "mms.pl";
 require "chaines.pl";
+require "radios.pl";
 use HTML::Entities;
 
 our $dvd;
@@ -567,7 +568,12 @@ sub read_list {
 					$name = decode_entities($name);
 				}
 
-				push @list,[[$num++,$name,$service]];
+				if ($base_flux eq "stations") {
+					my $pic = get_radio_pic($name);
+					push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
+				} else {
+					push @list,[[$num++,$name,$service]];
+				}
 			}
 			if ($found_pic) {
 			    $update_pic = fork();
@@ -1548,7 +1554,7 @@ while (1) {
 	if ($cmd ne "refresh" || $cur ne $last_list || $update_pic) {
 		if ($source =~ /Fichiers/) {
 			$out = setup_output("fsel");
-		} elsif ($source eq "flux") {
+		} elsif ($source eq "flux" && $base_flux ne "stations") {
 			$out = setup_output("longlist");
 		} else {
 			$out = setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
