@@ -415,6 +415,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 
     char *source,buff[4096],*list[20],status[20];
     int heights[20];
+    char *names[20];
     SDL_Surface *chan[20];
 
     if(argc<4) {
@@ -454,6 +455,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     hlist += 4;
     // 1ère boucle : on stocke les infos...
     while (!feof(stdin) && nb<20) {
+	names[nb] = NULL;
 	if (!myfgets(buff,4096,stdin)) break;
 	if (buff[0] == '*') current = nb;
 	status[nb] = buff[0];
@@ -470,7 +472,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    char *s = strchr(end_nb+4,' ');
 	    if (s) {
 		*s = 0;
-		chan[nb] = IMG_Load(end_nb+4);
+		names[nb] = strdup(end_nb+4);
 		end_nb = s+1;
 	    }
 	} else
@@ -504,14 +506,28 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	}
 	get_size(font,end_nb,&w,&h,larg);
 	heights[nb2] = h; // Hauteur du texte, sans l'image
-	if (chan[nb2] && !longlist && (chan[nb2]->h > h || chan[nb2]->w > larg/4)) {
-	    double ratio = h*1.0/chan[nb2]->h;
-	    double ratio2 = larg/4*1.0/chan[nb2]->w;
-	    if (ratio2 < ratio)
-		ratio = ratio2;
-	    SDL_Surface *s = zoomSurface(chan[nb2],ratio,ratio,SMOOTHING_ON);
-	    SDL_FreeSurface(chan[nb2]);
-	    chan[nb2] = s;
+		// chan[nb] = IMG_Load(end_nb+4);
+		//&& (chan[nb2]->h > h || chan[nb2]->w > larg/4)
+	if (names[nb2] && !longlist ) {
+	    // On essaye d'abord de charger une image pré-dimensionnée
+	    char name[1024];
+	    strcpy(name,names[nb2]);
+	    char *s = strrchr(name,'.');
+	    sprintf(s,"-%d.png",h);
+	    chan[nb2] = IMG_Load(name);
+	    if (!chan[nb2]) chan[nb2] = IMG_Load(names[nb2]);
+	    if (chan[nb2] && (chan[nb2]->h > h || chan[nb2]->w > larg/4)) {
+		double ratio = h*1.0/chan[nb2]->h;
+		double ratio2 = larg/4*1.0/chan[nb2]->w;
+		if (ratio2 < ratio)
+		    ratio = ratio2;
+		SDL_Surface *s = zoomSurface(chan[nb2],ratio,ratio,SMOOTHING_ON);
+		SDL_FreeSurface(chan[nb2]);
+		chan[nb2] = s;
+		png_save_surface(name,s); // On sauve redimensionné !
+	    }
+	    free(names[nb2]);
+	    names[nb2] = NULL;
 	}
 	if (chan[nb2]) {
 	    get_size(font,end_nb,&w,&h,larg-chan[nb2]->w-4);
