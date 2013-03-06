@@ -52,3 +52,6 @@ sub get_radio_pic {
 	$name;
 }
 
+mkdir "radios" if (!-d "radios");
+1;
+
