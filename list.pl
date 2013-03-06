@@ -579,9 +579,9 @@ sub read_list {
 			    $update_pic = fork();
 				if ($update_pic == 0) {
 					for (my $n=0; $n<=$#pic; $n+=2) {
-						if (open(G,">$pic[$n]")) {
-							print G get $pic[$n+1];
-							close(G);
+						if (open(my $f,">$pic[$n]")) {
+							print $f get $pic[$n+1];
+							close($f);
 							# print "updated pic $pic[$n] from ",$pic[$n+1],"\n";
 							send_cmd_list("refresh");
 						}

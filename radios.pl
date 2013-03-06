@@ -38,9 +38,9 @@ sub get_radio_pic {
 			my $response = $browser->get($url);
 
 			if ($response->is_success) {
-				open(F,">$name") || die "can't create channel logo $name\n";
-				print F $response->content;
-				close(F);
+				open(my $f,">$name") || die "can't create channel logo $name\n";
+				print $f $response->content;
+				close($f);
 			} else {
 #				print STDERR "could not get logo from $url\n";
 				$name = "";

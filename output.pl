@@ -22,10 +22,10 @@ sub send_cmd_fifo($$) {
 	my $tries = 1;
 	my $error;
 	do {
-		if (sysopen(F,"$fifo",O_WRONLY|O_NONBLOCK)) {
+		if (sysopen(my $f,"$fifo",O_WRONLY|O_NONBLOCK)) {
 			$error = 0;
-			print F "$cmd\n";
-			close(F);
+			print $f "$cmd\n";
+			close($f);
 		} else {
 			print "filter: send_cmd $fifo $cmd impossible tries=$tries !\n" if ($tries >= 10);
 			$error = 1;
