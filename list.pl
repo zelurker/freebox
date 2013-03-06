@@ -80,6 +80,26 @@ our $found = undef;
 my $mode_flux;
 our %conf;
 
+sub update_pics {
+	my $rpic = shift;
+	if (!@$rpic) {
+		print "update_pics: pas d'images\n";
+		return;
+	}
+	$update_pic = fork();
+	if ($update_pic == 0) {
+		for (my $n=0; $n<=$#$rpic; $n+=2) {
+			if (open(my $f,">$$rpic[$n]")) {
+				print $f get $$rpic[$n+1];
+				close($f);
+				# print "updated pic $$rpic[$n] from ",$$rpic[$n+1],"\n";
+				send_cmd_list("refresh");
+			}
+		}
+		exit(0);
+	}
+}
+
 sub read_conf {
 	if (open(F,"<$ENV{HOME}/.freebox/conf")) {
 		while (<F>) {
@@ -326,6 +346,7 @@ sub read_list {
 		@list = ();
 		my $tv;
 		$tv = 1 if ($source eq "freeboxtv" || $source eq "freebox");
+		my @pic = ();
 		foreach (split(/\n/,$list)) {
 			if (/^#EXTINF:(\d+),(\d+) \- (.+?) *$/) {
 				($num,$name) = ($2,$3);
@@ -363,7 +384,7 @@ sub read_list {
 					(!$tv && $video ne "no-video"));
 
 				$num -= 10000 if (!$tv);
-				my $pic = get_chan_pic($name);
+				my $pic = get_chan_pic($name,\@pic);
 				if ($pic) {
 					print "$pic from $name\n";
 				} else {
@@ -381,6 +402,7 @@ sub read_list {
 				}
 			}
 		}
+		update_pics(\@pic);
 		if (!$tv) {
 			@list = sort { $$a[0][1] cmp $$b[0][1] } @list;
 		}
@@ -540,7 +562,6 @@ sub read_list {
 				}
 			}
 			@list = ();
-			my $found_pic = 0;
 			my @pic = ();
 			while (<F>) {
 				if (/encoding:/) {
@@ -560,7 +581,6 @@ sub read_list {
 					# Youtube
 					my $file = "cache/$1_yt.jpg";
 					if (!-f $file) {
-						$found_pic = 1;
 						push @pic,($file,$pic);
 					}
 					$name = "pic:$file ".decode_entities($name);
@@ -569,25 +589,14 @@ sub read_list {
 				}
 
 				if ($base_flux eq "stations") {
-					my $pic = get_radio_pic($name);
+					my $pic = get_radio_pic($name,\@pic);
 					push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
 				} else {
 					push @list,[[$num++,$name,$service]];
 				}
 			}
-			if ($found_pic) {
-			    $update_pic = fork();
-				if ($update_pic == 0) {
-					for (my $n=0; $n<=$#pic; $n+=2) {
-						if (open(my $f,">$pic[$n]")) {
-							print $f get $pic[$n+1];
-							close($f);
-							# print "updated pic $pic[$n] from ",$pic[$n+1],"\n";
-							send_cmd_list("refresh");
-						}
-					}
-					exit(0);
-				}
+			if (@pic) {
+				update_pics(\@pic);
 			}
 			print "list: ".($#list+1)." flux\n";
 			$found = 0 if ($found > $#list);

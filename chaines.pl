@@ -113,7 +113,7 @@ sub get_browser {
 sub setup_image {
 	# Renvoie un nom de fichier à partir du numéro de chaine
 	# (celui contenu dans liste_chaines renvoyé par télérama).
-	my ($field) = @_;
+	my ($field,$rpic) = @_;
 	my $url = $icons{$field};
 	my $name = "";
 	if ($url) {
@@ -122,17 +122,7 @@ sub setup_image {
 		$name = "chaines/$name";
 		if (! -f $name) {
 #			print STDERR "no channel logo, trying to get it from web\n";
-			my $browser = get_browser();
-			my $response = $browser->get($url);
-
-			if ($response->is_success) {
-				open(my $f,">$name") || die "can't create channel logo $name\n";
-				print $f $response->content;
-				close($f);
-			} else {
-#				print STDERR "could not get logo from $url\n";
-				$name = "";
-			}
+			push @$rpic,($name,$url);
 		}
 	}
 	$name;
@@ -205,7 +195,7 @@ sub getListeChaines($) {
 }
 
 sub get_chan_pic($) {
-	my $name = shift;
+	my ($name,$rpic) = @_;
 	if ($name =~ /^Nolife/) {
 		return setup_image(1500);
 	}
@@ -213,7 +203,7 @@ sub get_chan_pic($) {
 		getListeChaines(have_net());
 	}
 	$name = conv_channel($name);
-	return setup_image($chan{$name});
+	return setup_image($chan{$name},$rpic);
 }
 
 1;
