@@ -466,6 +466,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	if (!fsel && !mode_list) {
 	    num[nb] = atoi(&buff[1]);
 	}
+	chan[nb] = NULL;
 	if (!strncmp(end_nb,"pic:",4)) {
 	    // Extension : si le nom commence par pic:filename
 	    // alors filename est une image (séparation par un espace)
@@ -475,8 +476,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 		names[nb] = strdup(end_nb+4);
 		end_nb = s+1;
 	    }
-	} else
-		chan[nb] = NULL;
+	} 
 	list[nb++] = strdup(end_nb);
     }
     // 2ème tour de boucle : on trouve les dimensions
@@ -526,6 +526,10 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 		chan[nb2] = s;
 		png_save_surface(name,s); // On sauve redimensionné !
 	    }
+	    free(names[nb2]);
+	    names[nb2] = NULL;
+	} else if (names[nb2] && longlist) {// longlist : youtube, load as-is
+	    chan[nb2] = IMG_Load(names[nb2]);
 	    free(names[nb2]);
 	    names[nb2] = NULL;
 	}
