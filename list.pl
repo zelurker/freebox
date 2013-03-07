@@ -1381,8 +1381,7 @@ while (1) {
 			if (!defined($n)) {
 				print $lout "not found $cmd\n";
 			} else {
-				print "cmd info: $source,",join(",",@{$list[$n][$x]}),"\n";
-				print $lout "$source,",join(",",@{$list[$n][$x]}),"\n";
+				print $lout "$source/$base_flux,",join(",",@{$list[$n][$x]}),"\n";
 			}
 		}
 		close($lout);

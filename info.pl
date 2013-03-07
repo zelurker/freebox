@@ -24,6 +24,7 @@ use Data::Dumper;
 require HTTP::Cookies;
 require "output.pl";
 require "chaines.pl";
+require "radios.pl";
 
 our $net = have_net();
 our $have_fb = 0; # have_freebox
@@ -113,17 +114,31 @@ sub read_stream_info {
 	# de chaine, genre une radio et une chaine de télé qui ont le même
 	# nom... Pour l'instant pas d'idée sur comment éviter ça...
 	my ($cur,$last,$info) = get_stream_info();
+	my $source;
+	if (open(F,"<current")) {
+		<F>;
+		$source = <F>;
+		close(F);
+		chomp $source;
+	}
 	$cur = "" if (!$cur); # Evite le warning de manip d'undef
 	$cur =~ s/pic:(http.+?) //;
 	my $pic = $1;
+	my $pics = "";
+	if ($source eq "flux/stations") {
+		$pics = get_radio_pic($cmd);
+		print "stream_info: pic = $pic\n";
+	}
 	if ($pic) {
 		$pic = myget $pic;
 		$last =~ s/pic:(http.+?) //;
+	} else {
+		$pic = "";
 	}
 	if ($info) {
 		my $out = setup_output("bmovl-src/bmovl","",0);
 		if ($out) {
-			print $out ($pic ? "$pic" : "")."\n\n";
+			print $out "$pics\n$pic\n";
 			my ($sec,$min,$hour) = localtime($time);
 
 			print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
@@ -811,6 +826,8 @@ if (!$channel) {
 		clear("info_coords") if (-f "info_coords");
 		clear("list_coords") if (-f "list_coords");
 		my ($src,$num,$name,$service,$flavour,$audio,$video) = split(/\,/,$cmd);
+		my $base;
+		($src,$base) = split(/\//,$src);
 		print "enreg: info returned $src,$num,$name,$service,$flavour,$audio,$video\n";
 		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($$rtab[3]);
 		my $file = "records/".sprintf("%d%02d%02d %02d%02d%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec)." $$rtab[1].ts";
@@ -865,7 +882,11 @@ if (!$rtab) {
 	my $out = setup_output("bmovl-src/bmovl","",0);
 	$cmd =~ s/pic:(.+?) //;
 	my $pic = $1;
-
+	my $src = send_list("info ".lc($cmd));
+	$src =~ s/,.+//;
+	if ($src eq "flux/stations") {
+		$pic = get_radio_pic($cmd);
+	}
 	print $out "$pic\n\n";
 	($sec,$min,$hour) = localtime($time);
 
