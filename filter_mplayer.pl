@@ -630,7 +630,7 @@ while (1) {
 						} elsif (!$images) {
 							print F " - pas de WWW::Google::Images";
 						}
-						print F "\n$artist - $titre ($album) $t2 ".int($t1*100/$t3),"%\n";
+						print F "\n$artist - $titre ($album) $t2 ".($t3>0 ? int($t1*100/$t3) : "-"),"%\n";
 						close(F);
 						send_cmd_prog();
 					}
