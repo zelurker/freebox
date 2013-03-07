@@ -495,7 +495,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     int indicw = w;
     nb2 = 0;
     int larg = maxw-numw-indicw-4*2;
-    while ((hlist+fsize < maxh || nb2 < current) && nb2 < nb) {
+    while (nb2 < nb) {
 	char *end_nb = list[nb2];
 	if (!end_nb) break;
 	int fleche = 0;
@@ -537,7 +537,7 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 	    get_size(font,end_nb,&w,&h,larg-chan[nb2]->w-4);
 	    w += chan[nb2]->w+4;
 	    if (chan[nb2]->h > h) h = chan[nb2]->h;
-	    heights[nb2] = h; // Hauteur du texte, sans l'image
+	    // heights[nb2] = h; // Hauteur du texte, sans l'image
 	}
 //	printf("prévision list: hlist:%d/%d %s from %d\n",hlist,maxh,end_nb,numw+4*2);
 	if (w > wlist) wlist = w;
@@ -558,8 +558,6 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     }
     if (hlist + fsize > maxh)
 	hlist = maxh - fsize;
-    /*	if (hlist > maxh)
-	hlist = maxh; */
 
     SDL_Surface *sf = create_surface(wlist+4*2,hlist+4*2);
 
@@ -570,14 +568,14 @@ static int list(int fifo, int argc, char **argv, int noinfo)
 
     // Détermine start
     int start;
-    for  (start = 0; start < nb; start++) {
+    for  (start = 0; start < current; start++) {
 	int y0 = y;
 	for (n=start; n<nb && y0+fsize < maxh; n++) {
 	    if (chan[n] && y0+chan[n]->h > maxh)
 		break;
 	    y0 += (chan[n] && chan[n]->h>heights[n] ? chan[n]->h : heights[n]);
 	}
-	if (n>current) {
+	if (n>current && y0+fsize < maxh) {
 	    break;
 	}
     }
