@@ -563,6 +563,7 @@ sub read_list {
 			}
 			@list = ();
 			my @pic = ();
+			my $last = undef;
 			while (<F>) {
 				if (/encoding:/) {
 					$encoding = $_;
@@ -572,11 +573,12 @@ sub read_list {
 				my $name = $_;
 				my $service = <F>;
 				chomp ($name,$service);
+				next if ($last && $last eq $name);
+				$last = $name;
 				$name =~ s/^pic:(.+?) //;
 				my $pic = $1;
-				$name =~ s/&#39;/'/g;
-				Encode::from_to($name, "utf-8", "iso-8859-15")
-				if ($encoding =~ /utf/i);
+				Encode::from_to($name, "utf-8", "iso-8859-15") if
+				($encoding =~ /utf/i);
 				if ($pic =~ /.+\/(.+?)\/.*?default.jpg/) {
 					# Youtube
 					my $file = "cache/$1_yt.jpg";
@@ -587,6 +589,7 @@ sub read_list {
 				} else {
 					$name = decode_entities($name);
 				}
+				$name =~ s/&#39;/'/g;
 
 				if ($base_flux eq "stations") {
 					my $pic = get_radio_pic($name,\@pic);
