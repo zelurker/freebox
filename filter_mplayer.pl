@@ -15,7 +15,7 @@ use strict;
 use Socket;
 use Fcntl;
 use POSIX qw(:sys_wait_h);
-require "output.pl";
+use out;
 require "playlist.pl";
 use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
@@ -50,7 +50,7 @@ our $agent;
 my @list;
 our $eof = 0;
 my @duree;
-my $net = have_net();
+my $net = out::have_net();
 my $images = 0;
 our ($connected,$started,$image_info);
 eval {
@@ -206,7 +206,7 @@ sub handle_result {
 				}
 			}
 			print "handle_result: calling image $pic $x $y $w $h\n";
-			send_bmovl("image $pic $x $y $w $h");
+			out::send_bmovl("image $pic $x $y $w $h");
 			exit 0;
 		} else {
 			$bg_pic{$pid} = $name;
@@ -285,18 +285,18 @@ sub bindings($) {
 	}
 
 	if ($cmd =~ /^KP(\d)/) {
-		send_cmd_list($1);
+		out::send_cmd_list($1);
 	} elsif ($cmd =~ /KP_ENTER/) {
 		if (-f "list_coords" || -f "numero_coords") {
-			send_cmd_list("zap1");
+			out::send_cmd_list("zap1");
 		} elsif (-f "info_coords") {
-			send_cmd_info("zap1");
+			out::send_cmd_info("zap1");
 		}
 	} elsif ($cmd eq "KP_INS") {
-		send_cmd_list("0");
+		out::send_cmd_list("0");
 	} elsif ($cmd =~ /^[A-Z]$/ || $cmd =~ /^F\d+$/) {
 		# Touche alphabétique
-		send_cmd_list($cmd);
+		out::send_cmd_list($cmd);
 	} else {
 		print "bindings: touche non reconnue $cmd\n";
 	}
@@ -320,7 +320,7 @@ sub check_eof {
 	}
 	if (!$exit || $exit =~ /ID_SIGNAL.(11|6)/) {
 		print "filter: fait quitter mplayer...\n";
-		send_command("quit\n");
+		out::send_command("quit\n");
 		eval {
 			alarm(3);
 			while (<>) {}
@@ -351,7 +351,7 @@ sub check_eof {
 	if ($started) {
 		if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
 			print "filter: envoi nextchan exit $exit\n";
-			send_cmd_list("nextchan");
+			out::send_cmd_list("nextchan");
 		} elsif ($source =~ /(dvb|freebox)/) {
 			if ($pid_player1) {
 				print "pid player1 à tuer $pid_player1.\n";
@@ -389,7 +389,7 @@ sub send_cmd_prog {
 		$cmd = "prog:long";
 	}
 	$last_cmd_prog = time();
-	send_cmd_info("$cmd $chan") if ($cmd);
+	out::send_cmd_info("$cmd $chan") if ($cmd);
 }
 
 sub update_codec_info {
@@ -607,7 +607,7 @@ while (1) {
 				print "filter: current updated on cdda info\n";
 				$chan = "$titre ($duree[$1])";
 				send_cmd_prog();
-				send_cmd_list("reset_current");
+				out::send_cmd_list("reset_current");
 			}
 			handle_images("$artist - $titre") # ($album)")
 		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
@@ -664,7 +664,7 @@ while (1) {
 				if ($source =~ /Fichiers vidéo/) {
 					delete $bookmarks{$serv};
 					sleep(1);
-					send_cmd_list("list");
+					out::send_cmd_list("list");
 				}
 			}
 			# A priori pas la peine d'envoyer un check_eof ici, ça va éviter

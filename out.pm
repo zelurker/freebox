@@ -1,4 +1,5 @@
 #!/usr/bin/perl
+package out;
 
 # ATTENTION : ce fichier doit rester en latin1, encodage utilisé par les
 # programmes télé
@@ -94,7 +95,7 @@ sub close_fifo {
 	close($out);
 }
 
-sub clear($) {
+sub clear {
 	while (my $name = shift) {
 		if (open(F,"<$name")) {
 			my $coords = <F>;

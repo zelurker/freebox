@@ -20,17 +20,17 @@ use LWP::Simple;
 use Encode;
 use Fcntl;
 use File::Glob 'bsd_glob'; # le glob dans perl c'est n'importe quoi !
-require "output.pl";
+use out;
+use chaines;
 require "mms.pl";
-require "chaines.pl";
 require "radios.pl";
 use HTML::Entities;
 
 our $dvd;
 
-our $net = have_net();
+our $net = out::have_net();
 our $have_fb = 0; # have_freebox
-$have_fb = have_freebox() if ($net);
+$have_fb = out::have_freebox() if ($net);
 our $have_dvb = (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
 our ($l);
 our $pid_player2;
@@ -667,7 +667,7 @@ sub find_name {
 	# comme game one music hd hd $name = conv_channel($name);
 	for (my $n=0; $n<=$#list; $n++) {
 		for (my $x=0; $x<=$#{$list[$n]}; $x++) {
-			if (conv_channel($list[$n][$x][1]) eq $name) {
+			if (chaines::conv_channel($list[$n][$x][1]) eq $name) {
 				return ($n,$x);
 			}
 		}
@@ -847,7 +847,7 @@ sub load_file2 {
 		system("feh \"$serv\"");
 		return;
 	}
-	send_command("pause\n");
+	out::send_command("pause\n");
 	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac|ts)$/i) {
 	    # Gestion des pls supprimée, mplayer semble les gérer
 	    # très bien lui même.
@@ -863,7 +863,7 @@ sub load_file2 {
 	if ($serv) {
 		if ($source !~ /(Fichiers son|cd)/) {
 			print "effacement fichiers coords:$source:\n";
-			clear( "list_coords","info_coords","video_size");
+			out::clear( "list_coords","info_coords","video_size");
 			system("kill -USR2 `cat info.pid`");
 		}
 		open(G,">current");
@@ -925,7 +925,7 @@ sub get_cur_mode {
 sub disp_modes {
 	# Affiche la boite de modes sur la droite
 	# $mode_sel doit déjà être initialisé (éventuellement par get_cur_mode)
-	my $out = setup_output("mode_list");
+	my $out = out::setup_output("mode_list");
 	$mode_opened = 1;
 	my $n=0;
 	print $out "modes\n";
@@ -942,14 +942,14 @@ sub disp_modes {
 }
 
 sub close_mode {
-	clear("mode_coords");
+	out::clear("mode_coords");
 	$mode_opened = 0;
 }
 
 sub close_numero {
 	$time_numero = undef;
 	if (defined($numero)) {
-		clear("numero_coords");
+		out::clear("numero_coords");
 		$numero = undef;
 	}
 }
@@ -1012,10 +1012,10 @@ while (1) {
 	again:
 	# print "list: commande reçue après again : $cmd\n";
 	if (-f "list_coords" && $cmd eq "clear") {
-		clear("list_coords");
-		clear("info_coords");
+		out::clear("list_coords");
+		out::clear("info_coords");
 		close_mode() if ($mode_opened);
-		send_bmovl("image");
+		out::send_bmovl("image");
 		next;
 	} elsif ($cmd eq "refresh") {
 		my $found0 = $found;
@@ -1057,7 +1057,7 @@ while (1) {
 	} elsif ($cmd eq "left") {
 		if ($mode_opened) {
 			close_mode();
-			send_bmovl("image");
+			out::send_bmovl("image");
 			next;
 		}
 		if ($found < $nb_elem || $nb_elem == 0) {
@@ -1255,10 +1255,10 @@ while (1) {
 					print "pas de fichier desktop\n";
 				}
 				print "list: exec $serv\n";
-				send_command("pause\n");
+				out::send_command("pause\n");
 				system("$serv");
 				reset_current();
-				send_command("pause\n");
+				out::send_command("pause\n");
 				unlink("current"); # pour être sûr que la commande zap passera
 				$cmd = "zap1";
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
@@ -1303,10 +1303,10 @@ while (1) {
 				# Si player2 ne démarre pas correctement freebox peut se
 				# retrouver à boucler dessus et la pipe de commande n'est
 				# jamais ouverte dans ce cas là. Il vaut mieux passer par
-				# send_command...
-				send_command("pause\n") if ($pid_player2);
+				# out::send_command...
+				out::send_command("pause\n") if ($pid_player2);
 				system("./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"");
-				send_command("quit\n") if ($pid_player2);
+				out::send_command("quit\n") if ($pid_player2);
 				unlink "fifo_cmd";
 				kill "TERM" => $pid_player2 if ($pid_player2);
 				system("kill -USR2 `cat info.pid`");
@@ -1421,7 +1421,7 @@ while (1) {
 				close_numero();
 				next;
 			} else {
-				clear("numero_coords");
+				out::clear("numero_coords");
 			}
 		}
 
@@ -1429,7 +1429,7 @@ while (1) {
 		close(F);
 		if (!-f "list_coords") {
 			# Si la liste est affichée faut envoyer cette commande à la fin
-			send_bmovl("numero $numero");
+			out::send_bmovl("numero $numero");
 		}
 		for (my $n=0; $n<=$#list; $n++) {
 			my ($num,$name) = @{$list[$n][0]};
@@ -1564,18 +1564,18 @@ while (1) {
 	}
 	if ($cmd ne "refresh" || $cur ne $last_list || $update_pic) {
 		if ($source =~ /Fichiers/) {
-			$out = setup_output("fsel");
+			$out = out::setup_output("fsel");
 		} elsif ($source eq "flux" && $base_flux ne "stations") {
-			$out = setup_output("longlist");
+			$out = out::setup_output("longlist");
 		} else {
-			$out = setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
+			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
 		}
 		print $out $cur;
 		close($out);
 		$last_list = $cur;
 	}
 	if ($cmd =~ /^(\d|backspace)$/i) {
-		send_bmovl("numero $numero");
+		out::send_bmovl("numero $numero");
 	}
 }
 close($l);

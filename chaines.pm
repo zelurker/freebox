@@ -1,9 +1,10 @@
 #!/usr/bin/perl
+package chaines;
 
 use strict;
 use LWP 5.64;
 
-require "output.pl";
+use out;
 
 # channel icons
 # just look for "icones de chaines de television" on google, wikipedia is
