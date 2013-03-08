@@ -18,7 +18,7 @@
 #     REVISION: ---
 #===============================================================================
 
-use progs::telerama;
+use progs::nolife;
 use strict;
 use warnings;
 use out;
@@ -26,23 +26,25 @@ use chaines;
 
 my $browser = chaines::get_browser();
 my $net = out::have_net();
-my $p = progs::telerama->new($net) || die "création prog\n";
-my $sub = $p->get("France 2") || die "récupération prog france 2\n";
+my $p = progs::nolife->new($net) || die "création prog\n";
+my $channel = "nolife";
+my $sub = $p->get($channel) || die "récupération prog nolife\n";
 
 my $n = 1;
-print "Les 45 programmes d'avant (france 2) :\n";
-while ($n < 45 && $sub) {
-	print dateheure($$sub[3])," à ",dateheure($$sub[4])," $$sub[2]\n";
-	if ($$sub[9]) {
-		my $c = chaines::request($$sub[9]);
-		open(F,">image.jpg");
-		print F $c;
-		close(F);
-		system("feh image.jpg");
-		unlink("image.jpg");
-		exit(0);
-	}
-	$sub = $p->prev("France 2");
+my $show = 0;
+print "Les 10 programmes d'avant :\n";
+while ($n < 10 && $sub) {
+	core($sub);
+	$sub = $p->prev($channel);
+	$n++;
+}
+
+$sub = $p->get($channel) || die "récupération prog nolife\n";
+$n = 1;
+print "Les 10 programmes d'après :\n";
+while ($n < 10 && $sub) {
+	core($sub);
+	$sub = $p->next($channel);
 	$n++;
 }
 
@@ -53,5 +55,17 @@ sub dateheure {
 	sprintf("%d/%d/%d %d:%02d",$mday,$mon+1,$year+1900,$hour,$min);
 }
 
-
+sub core {
+	my $sub = shift;
+	print dateheure($$sub[3])," à ",dateheure($$sub[4])," $$sub[2]\n";
+	if ($$sub[9] && !$show) {
+		$show = 1;
+		my $c = chaines::request($$sub[9]);
+		open(F,">image.jpg");
+		print F $c;
+		close(F);
+		system("feh image.jpg");
+		unlink("image.jpg");
+	}
+}
 

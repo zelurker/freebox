@@ -4,7 +4,9 @@ package progs::nolife;
 #
 #         FILE: nolife.pm
 #
-#  DESCRIPTION: 
+#  DESCRIPTION: Ca fait un bon exemple d'héritage de la telerama
+#  Seule méthode surchargée : update. new, next et prev doivent marcher tout
+#  seuls !
 #
 #        FILES: ---
 #         BUGS: ---
@@ -16,19 +18,22 @@ package progs::nolife;
 #     REVISION: ---
 #===============================================================================
 
+use progs::telerama;
+@ISA = ("progs::telerama");
 use strict;
 use warnings;
-use out;
 use Time::Local "timegm_nocheck";
+use Encode;
+use chaines;
  
-sub new {
-	my $class = shift;
-	return bless {},$class;
-}
+my $last_time;
+my $debug = 1;
 
-sub update {
-	print STDERR "updating noair...\n";
-	my $xml = out::request("http://www.nolife-tv.com/noair/noair.xml");
+sub update_noair {
+	return if ($last_time && time()-$last_time < 60);
+	$last_time = time();
+	print STDERR "updating noair...\n" if ($debug);
+	my $xml = chaines::request("http://www.nolife-tv.com/noair/noair.xml");
 	rename "air.xml", "air0.xml";
 	open(F,">air.xml");
 	print F $xml;
@@ -53,23 +58,26 @@ sub get_field {
 	$1;
 }
 
-sub get {
+sub update {
 	my ($p,$channel) = @_;
+	print "nolife: update $channel\n" if ($debug);
 	return undef if (lc($channel) ne "nolife");
 
-	if (!open(F,"<air.xml")) {
-		update();
-		if (!open(F,"<air.xml")) {
+	my $f;
+	update_noair() if (-f "air.xml" && -M "air.xml" >= 1);
+	if (!open($f,"<air.xml")) {
+		update_noair();
+		if (!open($f,"<air.xml")) {
 		   print "can't get noair listing\n";
 		   return undef;
 	   }
 	}
 
 	my $xml = "";
-	while (<F>) {
+	while (<$f>) {
 		$xml .= $_;
 	}
-	close(F);
+	close($f);
 	Encode::from_to($xml, "utf-8", "iso-8859-15");
 	$xml =~ s/½/oe/g;
 	$xml =~ s/\&quot\;/\"/g;
@@ -77,9 +85,10 @@ sub get {
 
 	my ($title,$start,$old_title,$sub,$desc,$old_sub,$old_shot,$shot,
 	$old_cat,$cat);
+	$title = $old_title = "";
 	my $date;
 	my $cut_date = undef;
-	my $rtab = undef;
+	my $rtab = $p->{chaines}->{nolife};
 	$cut_date = $$rtab[0][3] if ($rtab);
 	foreach (split /\n/,$xml) {
 		next if (!/\<slot/);
@@ -130,7 +139,10 @@ sub get {
 	# Test le dernier programme !
 	my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
 		$desc,"","",$old_shot,0,0,get_date($start));
-	\@tab;
+
+	push @$rtab,\@tab;
+	$p->{chaines}->{nolife} = $rtab;
+	$rtab;
 }
 
 1;

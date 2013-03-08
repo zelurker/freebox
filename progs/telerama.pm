@@ -49,13 +49,16 @@ $browser->default_header(
 	]
 );
 
-our (@selected_channels,@chan,%chaines,$net);
-our ($last_chan,$last_prog,$date);
+our (@selected_channels,@chan,$net);
+our ($date);
 our $debug = 0;
+our (%chaines);
 
 sub new {
 	my ($class,$mynet) = @_;
-	my $p = bless {},$class;
+	my $p = bless {
+		chaines => \%chaines,
+	},$class;
 	$p->init_selected_channels($mynet);
 	$net = $mynet;
 	getListeProgrammes(0);
@@ -303,8 +306,8 @@ sub getListeProgrammes {
 	$program_text;
 }
 
-sub update_channel {
-	my ($channel,$offset) = @_;
+sub update {
+	my ($p,$channel,$offset) = @_;
 	$offset = 0 if (!defined($offset));
 	for (my $n=0; $n<=$#chan; $n++) {
 		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
@@ -317,7 +320,7 @@ sub update_channel {
 			if ($res && index($program_text,$res) < 0 && $res =~ /$num/) {
 				$res = parse_prg($res);
 				if (open(F,">>day$offset")) {
-					print "fichier day$offset mis à jour de update_channel\n" if ($debug);
+					print "fichier day$offset mis à jour de update\n" if ($debug);
 					seek(F,0,2); # A la fin
 					print F ':$$$:' if (-s "day$offset");
 					print F join(':$$$:',@$res);
@@ -340,7 +343,7 @@ sub update_channel {
 				}
 			}
 			$res = $chaines{$channel};
-			print "update_channel: returning $res\n" if ($debug);
+			print "update: returning $res\n" if ($debug);
 			return $res;
 		}
 	}
@@ -350,22 +353,21 @@ sub get {
 	my ($p,$channel) = @_;
 	$channel = chaines::conv_channel($channel);
 	my $rtab = $chaines{$channel};
-	$rtab = update_channel($channel) if (!$rtab);
+	$rtab = $p->update($channel) if (!$rtab);
 	if (!$rtab && $channel =~ /^france 3 /) {
 		# On a le cas particulier des chaines régionales fr3 & co...
 		$channel = "france 3";
-		$rtab = update_channel($channel);
+		$rtab = $p->update($channel);
 	}
 	if ($debug && !$rtab) {
 		print "get: rien trouvé pour $channel\n";
 	}
 	return undef if (!$rtab);
 	my $time = time();
-	print "dernier rtab : $$rtab[$#$rtab]\n";
 	if ($time > $$rtab[$#$rtab][4]) {
 		# Si le cache dans chaines{} est trop vieux, on met à jour
 		print "update channel too old\n" if ($debug);
-		update_channel($channel);
+		$p->update($channel);
 		$rtab = $chaines{$channel};
 	}
 	for (my $n=0; $n<=$#$rtab; $n++) {
@@ -374,9 +376,9 @@ sub get {
 		my $end = $$sub[4];
 
 		if ($start <= $time && $time <= $end) {
-			$last_chan = $channel;
-			$last_prog = $n;
-			print "get: on a trouvé, on renvoie $sub\n";
+			$p->{last_chan} = $channel;
+			$p->{last_prog} = $n;
+			print "get: on a trouvé, on renvoie $sub\n" if ($debug);
 			return $sub;
 		}
 	}
@@ -386,20 +388,20 @@ sub get {
 sub next {
 	my ($p,$channel) = @_;
 	$channel = chaines::conv_channel($channel);
-	return if ($channel ne $last_chan);
+	return if ($channel ne $p->{last_chan});
 	my $rtab = $chaines{$channel};
-	if ($last_prog < $#$rtab) {
-		$last_prog++;
-		return $$rtab[$last_prog];
+	if ($p->{last_prog} < $#$rtab) {
+		$p->{last_prog}++;
+		return $$rtab[$p->{last_prog}];
 	}
 	my $offset = get_offset($$rtab[$#$rtab][12])+1;
 	my $old = $#$rtab;
 	print "A récupérer offset $offset\n" if ($debug);
-	update_channel($channel,$offset);
-	$rtab = $chaines{$last_chan};
+	$p->update($channel,$offset);
+	$rtab = $chaines{$p->{last_chan}};
 	if ($old == $#$rtab) {
 		print "next: ça a foiré\n" if ($debug);
-		return $$rtab[$last_prog];
+		return $$rtab[$p->{last_prog}];
 	}
 	return $p->next($channel);
 }
@@ -407,22 +409,22 @@ sub next {
 sub prev {
 	my ($p,$channel) = @_;
 	$channel = chaines::conv_channel($channel);
-	return if ($channel ne $last_chan);
+	return if ($channel ne $p->{last_chan});
 	my $rtab = $chaines{$channel};
-	if ($last_prog > 0) {
-		$last_prog--;
-		return $$rtab[$last_prog];
+	if ($p->{last_prog} > 0) {
+		$p->{last_prog}--;
+		return $$rtab[$p->{last_prog}];
 	}
 	my $offset = get_offset($$rtab[0][12])-1;
 	my $old = $#$rtab;
 	print "A récupérer offset $offset\n" if ($debug);
-	update_channel($channel,$offset);
-	$rtab = $chaines{$last_chan};
+	$p->update($channel,$offset);
+	$rtab = $chaines{$p->{last_chan}};
 	if ($old == $#$rtab) {
 		print "prev: ça a foiré\n" if ($debug);
-		return $$rtab[$last_prog];
+		return $$rtab[$p->{last_prog}];
 	}
-	$last_prog += $#$rtab - $old; # le tableau est trié
+	$p->{last_prog} += $#$rtab - $old; # le tableau est trié
 	return $p->prev($channel);
 }
 

@@ -13,7 +13,6 @@ use warnings;
 use POSIX qw(:sys_wait_h);
 use Time::Local "timelocal_nocheck";
 # use Time::HiRes qw(gettimeofday tv_interval);
-use Encode;
 use Fcntl;
 use Socket;
 
