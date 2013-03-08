@@ -93,7 +93,7 @@ sub update_pics {
 				print $f get $$rpic[$n+1];
 				close($f);
 				# print "updated pic $$rpic[$n] from ",$$rpic[$n+1],"\n";
-				send_cmd_list("refresh");
+				out::send_cmd_list("refresh");
 			}
 		}
 		exit(0);

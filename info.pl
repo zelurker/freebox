@@ -12,6 +12,7 @@ use strict;
 use warnings;
 use POSIX qw(:sys_wait_h);
 use Time::Local "timelocal_nocheck";
+use LWP::Simple;
 # use Time::HiRes qw(gettimeofday tv_interval);
 use Fcntl;
 use Socket;
@@ -21,6 +22,7 @@ require "radios.pl";
 
 use progs::telerama;
 use progs::nolife;
+use progs::finter;
 
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -225,6 +227,7 @@ if ($have_dvb || $have_fb) {
 	push @prog, progs::telerama->new($net);
 }
 push @prog, progs::nolife->new($net);
+push @prog, progs::finter->new($net);
 
 system("rm -f fifo_info && mkfifo fifo_info");
 # read_prg:
@@ -255,6 +258,7 @@ sub disp_duree($) {
 sub disp_prog {
 	my ($sub,$long) = @_;
 	$lastprog = $sub;
+	$last_chan = $$sub[1];
 	my $start = $$sub[3];
 	my $end = $$sub[4];
 	my @date = split('/', $$sub[12]);

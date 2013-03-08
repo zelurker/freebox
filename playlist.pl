@@ -58,39 +58,9 @@ sub handle_prog {
 		@tracks = ("$fa : $ft");
 	} elsif ($res =~ s/^\{//) { # format oui fm
 		my $t = time();
-		my @list = split(/"theme_functions":\[/,$res);
-		@list = split(/\],/,$res) if (!@list);
+		my @list = split(/\],/,$res);
 		foreach (@list) {
 			my %hash = ();
-			if (!$suffixe && !/^"last/) {
-				# France inter fait ça aussi...
-				my @fields = split(/\,/);
-				foreach (@fields) {
-					my (@elem) = split(/\:/);
-					$elem[0] =~ s/"//g;
-					$hash{$elem[0]} = splice(@elem,1);
-				}
-				if ($hash{heure_debut} <= $t && $hash{heure_fin} >= $t) {
-# 					foreach (keys %hash) {
-# 						print "$_ -> ",join(",",$hash{$_}),"\n";
-# 					}
-					my $title = $hash{title};
-					foreach (keys %codage) {
-						$title =~ s/\\$_/$codage{$_}/gi;
-					}
-					$title =~ s/^"//;
-					$title =~ s/"$//;
-					my $img = $hash{image};
-					$img =~ s/\\\//\//g;
-					$img =~ s/"//g;
-					$img = "$site$img";
-					$ft = $title;
-					if ($site =~ /franceinter/) {
-						$fa = "France Inter";
-					}
-					push @tracks,("pic:$img $title");
-				}
-			}
 
 			next if (!(/^"last$suffixe":\[(.+)/));
 			my $c = $1;

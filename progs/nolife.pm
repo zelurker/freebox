@@ -27,7 +27,7 @@ use Encode;
 use chaines;
  
 my $last_time;
-my $debug = 1;
+my $debug = 0;
 
 sub update_noair {
 	return if ($last_time && time()-$last_time < 60);
@@ -64,7 +64,9 @@ sub update {
 	return undef if (lc($channel) ne "nolife");
 
 	my $f;
-	update_noair() if (-f "air.xml" && -M "air.xml" >= 1);
+	# 1/24/2 ça fait 1/2h. Vu que le programme de nolife ne peut pas être
+	# demandé pour une date, on le met à jour jusqu'à 1 fois / 1/2h
+	update_noair() if (-f "air.xml" && -M "air.xml" >= 1/24/2);
 	if (!open($f,"<air.xml")) {
 		update_noair();
 		if (!open($f,"<air.xml")) {
@@ -122,9 +124,18 @@ sub update {
 		}
 		$cat = get_field($_,"type");
 		if ($start && $old_title && $old_title ne $title) {
-			my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
-				$desc,"","",$old_shot,0,0,get_date($start));
-			push @$rtab,\@tab;
+			my $found = 0;
+			foreach (@$rtab) {
+				if ($$_[3] == $start && $$_[4] == $date) {
+					$found = 1;
+					last;
+				}
+			}
+			if (!$found) {
+				my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
+					$desc,"","",$old_shot,0,0,get_date($start));
+				push @$rtab,\@tab;
+			}
 			$start = $date;
 			$desc = "";
 		}

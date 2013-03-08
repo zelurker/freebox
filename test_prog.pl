@@ -18,7 +18,7 @@
 #     REVISION: ---
 #===============================================================================
 
-use progs::nolife;
+use progs::finter;
 use strict;
 use warnings;
 use out;
@@ -26,9 +26,9 @@ use chaines;
 
 my $browser = chaines::get_browser();
 my $net = out::have_net();
-my $p = progs::nolife->new($net) || die "création prog\n";
-my $channel = "nolife";
-my $sub = $p->get($channel) || die "récupération prog nolife\n";
+my $p = progs::finter->new($net) || die "création prog\n";
+my $channel = "france inter";
+my $sub = $p->get($channel) || die "récupération prog finter\n";
 
 my $n = 1;
 my $show = 0;
@@ -39,7 +39,7 @@ while ($n < 10 && $sub) {
 	$n++;
 }
 
-$sub = $p->get($channel) || die "récupération prog nolife\n";
+$sub = $p->get($channel) || die "récupération prog finter\n";
 $n = 1;
 print "Les 10 programmes d'après :\n";
 while ($n < 10 && $sub) {
@@ -57,7 +57,7 @@ sub dateheure {
 
 sub core {
 	my $sub = shift;
-	print dateheure($$sub[3])," à ",dateheure($$sub[4])," $$sub[2]\n";
+	print dateheure($$sub[3])," à ",dateheure($$sub[4])," $$sub[2] desc:$$sub[6]\n";
 	if ($$sub[9] && !$show) {
 		$show = 1;
 		my $c = chaines::request($$sub[9]);

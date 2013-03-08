@@ -402,6 +402,8 @@ sub next {
 	if ($old == $#$rtab) {
 		print "next: ça a foiré\n" if ($debug);
 		return $$rtab[$p->{last_prog}];
+	} elsif ($debug) {
+		print "next: ça a du marcher old = $old new $#$rtab\n";
 	}
 	return $p->next($channel);
 }
