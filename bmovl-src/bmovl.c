@@ -778,6 +778,10 @@ static void read_inputs() {
 	    keys[nb_keys] = SDLK_KP_MINUS;
 	else if (buff[0] == '+')
 	    keys[nb_keys] = SDLK_KP_PLUS;
+	else if (buff[0] == '*')
+	    keys[nb_keys] = SDLK_KP_MULTIPLY;
+	else if (buff[0] == '/')
+	    keys[nb_keys] = SDLK_KP_DIVIDE;
 	else if (buff[1] == 0)
 	    keys[nb_keys] = buff[0]; // touche alphanumérique (1 caractère)
 	else if (!strcasecmp(buff,"UP"))
