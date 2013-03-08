@@ -384,7 +384,7 @@ sub read_list {
 					(!$tv && $video ne "no-video"));
 
 				$num -= 10000 if (!$tv);
-				my $pic = get_chan_pic($name,\@pic);
+				my $pic = chaines::get_chan_pic($name,\@pic);
 				if ($pic) {
 					print "$pic from $name\n";
 				} else {
@@ -417,7 +417,7 @@ sub read_list {
 			my $service = $fields[0];
 			my $name = $service;
 			$name =~ s/\(.+\)//; # name sans le transpondeur
-			my $pic = get_chan_pic($name);
+			my $pic = chaines::get_chan_pic($name);
 			push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
 		}
 		close($f);

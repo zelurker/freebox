@@ -195,13 +195,13 @@ sub getListeChaines($) {
 	return lc($r);
 }
 
-sub get_chan_pic($) {
+sub get_chan_pic {
 	my ($name,$rpic) = @_;
 	if ($name =~ /^Nolife/) {
 		return setup_image(1500);
 	}
 	if (!%chan) {
-		getListeChaines(have_net());
+		getListeChaines(out::have_net());
 	}
 	$name = conv_channel($name);
 	return setup_image($chan{$name},$rpic);
