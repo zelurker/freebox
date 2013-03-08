@@ -36,6 +36,7 @@ our ($channel,$long);
 my $time_refresh = 0;
 our @days = ("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi",
 	"Samedi");
+our ($source,$base_flux);
 
 $SIG{PIPE} = sub { print "info: sigpipe ignoré\n" };
 
@@ -112,18 +113,11 @@ sub read_stream_info {
 	# de chaine, genre une radio et une chaine de télé qui ont le même
 	# nom... Pour l'instant pas d'idée sur comment éviter ça...
 	my ($cur,$last,$info) = get_stream_info();
-	my $source;
-	if (open(F,"<current")) {
-		<F>;
-		$source = <F>;
-		close(F);
-		chomp $source;
-	}
 	$cur = "" if (!$cur); # Evite le warning de manip d'undef
 	$cur =~ s/pic:(http.+?) //;
 	my $pic = $1;
 	my $pics = "";
-	if ($source eq "flux/stations") {
+	if ($source eq "flux" && $base_flux eq "stations") {
 		$pics = get_radio_pic($cmd);
 		print "stream_info: pic = $pic\n";
 	}
@@ -161,21 +155,20 @@ sub REAPER {
 # 			print "plus d'info_coords, bye\n";
 # 			return;
 # 		}
-		print "cache_pic : $#cache_pic\n";
 		for (my $n=0; $n<=$#cache_pic; $n++) {
 			while (!$cache_pic[$n][0]) {
 				print "pas encore de pid pour cache_pic $n\n";
 				sleep(1);
 			}
-			if ($child == $cache_pic[$n][0] && $last_chan eq $cache_pic[$n][1]
+			if ($child == $cache_pic[$n][0] && $last_chan eq $cache_pic[$n][1] &&
 			   	(!$last_long || $last_long eq $cache_pic[$n][2]) &&
 			   	-f "cache/$cache_pic[$n][3]") {
 				# L'image est arrivée, réaffiche le bandeau d'info alors
-				print "repaer found prog $n / $#cache_pic\n";
+				print "*** reapaer found pid $child prog $n / $#cache_pic\n";
 				if (!-f "stream_info") {
 					disp_prog($lastprog,$last_long);
 				} else {
-					read_stream_info(time(),"prog $last_chan");
+					read_stream_info(time(),"$last_chan");
 				}
 				splice @cache_pic,$n,1;
 				last if ($n > $#cache_pic);
@@ -280,7 +273,14 @@ sub disp_prog {
 		$raw = myget $$sub[9]; 
 	}
 	# Check channel logo
-	my $name = ($net ? chaines::setup_image($$sub[0]) : "");
+	my $name = "";
+	if ($net) {
+		if ($source eq "flux" && $base_flux eq "stations") {
+			$name = get_radio_pic($$sub[1]);
+		} else {
+			$name = chaines::setup_image($$sub[0]);
+		}
+	}
 
 	my $out = out::setup_output("bmovl-src/bmovl",$raw,$long);
 
@@ -451,7 +451,7 @@ if (!$channel) {
 		my $nfound;
 		eval {
 			local $SIG{ALRM} = sub { die "alarm\n"; };
-			alarm($delay);
+			alarm($delay) if ($delay);
 			open(F,"<fifo_info") || die "ouverture fifo_info !\n";
 			alarm(0);
 			$nfound = 1;
@@ -532,6 +532,13 @@ if (!$channel) {
 	} elsif ($cmd =~ s/^prog //) {
 		# Note : $long est passé collé à la commande par un :
 		# mais il est séparé avant même l'interprêtation, dès la lecture
+		# Nouvelle syntaxe prog[:long] chaine,source/base_flux
+		# ça devient obligatoire d'avoir la source liée à ça avec toutes les
+		# sources de programmes maintenant
+		$cmd =~ s/,(.+)//;
+		$source = $1;
+		$source =~ s/\/(.+)//;
+		$base_flux = $1;
 		print "info: commande $cmd\n";
 		$channel = $cmd;
 		if (!$long) {

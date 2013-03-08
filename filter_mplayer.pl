@@ -271,7 +271,8 @@ chomp ($chan,$source,$serv,$flav);
 $serv =~ s/ (http.+)//;
 $prog = $1;
 print "filter: prog = $prog\n";
-$source =~ s/\/.+//;
+$source =~ s/\/(.+)//;
+our $base_flux = $1;
 unlink "stream_info";
 my ($width,$height) = ();
 my $exit = "";
@@ -389,7 +390,7 @@ sub send_cmd_prog {
 		$cmd = "prog:long";
 	}
 	$last_cmd_prog = time();
-	out::send_cmd_info("$cmd $chan") if ($cmd);
+	out::send_cmd_info("$cmd $chan,$source/$base_flux") if ($cmd);
 }
 
 sub update_codec_info {

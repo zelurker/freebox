@@ -1338,7 +1338,7 @@ while (1) {
 				print F "not found $arg[1] $arg[2]\n";
 			} else {
 				my ($name) = get_name($list[$n]); # récupère le nom le + court
-				print F "$name\n";
+				print F "$name,$source/$base_flux\n";
 			}
 		}
 		close(F);
@@ -1536,6 +1536,7 @@ while (1) {
 		$cur .= "$source\n";
 	}
 	my $n = $beg-1;
+	my $name_sel;
 	for (my $nb=1; $nb<=$nb_elem; $nb++) {
 		last if (++$n > $#list);
 		my $rtab = $list[$n];
@@ -1557,21 +1558,25 @@ while (1) {
 			die "list split failed\n";
 		}
 		$cur .= sprintf("%3d:%s",$num,($pic ? "pic:$pic " : "").$name);
+		$name_sel = $name if ($n == $found);
 		if ($#$rtab > 0) {
 			$cur .= ">";
 		}
 		$cur .= "\n";
 	}
 	if ($cmd ne "refresh" || $cur ne $last_list || $update_pic) {
+		my $info = 0;
 		if ($source =~ /Fichiers/) {
 			$out = out::setup_output("fsel");
 		} elsif ($source eq "flux" && $base_flux ne "stations") {
 			$out = out::setup_output("longlist");
 		} else {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
+			$info = 1;
 		}
 		print $out $cur;
 		close($out);
+		out::send_cmd_info("prog $name_sel,$source/$base_flux") if ($info);
 		$last_list = $cur;
 	}
 	if ($cmd =~ /^(\d|backspace)$/i) {

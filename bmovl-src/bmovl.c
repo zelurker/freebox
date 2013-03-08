@@ -409,7 +409,7 @@ static int disp_list(SDL_Surface *sf, TTF_Font *font, int x, int y, char *list,
     return dy;
 }
 
-static int list(int fifo, int argc, char **argv, int noinfo)
+static int list(int fifo, int argc, char **argv)
 {
     int width,height;
 
@@ -692,33 +692,13 @@ static int list(int fifo, int argc, char **argv, int noinfo)
     // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
     // apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
     // Pour l'instant le meilleur contournement c'est ça.
-    blit(fifo, sf, x, y, -40, (noinfo ? 0 : 1));
+    blit(fifo, sf, x, y, -40, 1);
     listy = y; listh = sf->h;
 
     // Clean up
 
     int info=0;
-    if (current > -1 && !noinfo) {
-	int tries = 0;
-	while (tries++ < 4 && info <= 0) {
-	    info = open("fifo_info",O_WRONLY|O_NONBLOCK);
-	    if (info <= 0) {
-		struct timeval tv;
-		tv.tv_sec = 0;
-		tv.tv_usec = 100000;
-		select(0,NULL, NULL, NULL, &tv);
-	    }
-	}
-
-	if (info > 0) {
-	    sprintf(buff,"prog:%d %s\n",y+sf->h,list[current]);
-	    write(info,buff,strlen(buff));
-	    close(info);
-	    if (tries > 1) printf("bmovl: %d tries for fifo_info\n",tries);
-	} else
-	    printf("on abandonne fifo_info !\n");
-    } else
-	send_command(fifo,"SHOW\n");
+    send_command(fifo,"SHOW\n");
     free(source);
     SDL_FreeSurface(sf);
     for (n=0; n<nb; n++) {
@@ -1165,10 +1145,10 @@ int main(int argc, char **argv) {
 			!strcmp(cmd,"prev")) {
 		    ret = info(fifo,argc,myargv);
 		} else if (!strcmp(cmd,"list")) {
-		    ret = list(fifo,argc,myargv,0);
+		    ret = list(fifo,argc,myargv);
 		} else if (!strcmp(cmd,"list-noinfo") || !strcmp(cmd,"fsel") ||
 			!strcmp(cmd,"mode_list") || !strcmp(cmd,"longlist")) {
-		    ret = list(fifo,argc,myargv,1);
+		    ret = list(fifo,argc,myargv);
 		} else if (!strcmp(cmd,"CLEAR"))
 		    ret = clear(fifo,argc,myargv);
 		else if (!strcmp(cmd,"ALPHA"))
