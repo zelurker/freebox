@@ -34,7 +34,10 @@ sub get {
 	$last_chan = $channel;
 
 	# Calcule le nombre d'épisodes depuis vendredi 8/3/2013 (2710ème !)
-	my $t0 = timelocal(0,0,12,8,2,113);
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+	my $t0 = timelocal(0,0,12,$mday,$mon,$year);
+	$t0 -= 24*3600 if ($wday == 6);
+	$t0 -= 48*3600 if ($wday == 0 || $wday == 7);
 	$base_flux =~ s/^.+?\///; # Dégage la partie la-bas, ne garde que la date
 	my @t = split(/\//,"$base_flux/$channel");
 	return undef if ($#t < 2);
@@ -43,8 +46,6 @@ sub get {
 	# En fait y a des articles qui s'intercalent en dehors des émissions donc
 	# on ne peut pas déduire directement le numéro de l'article.
 	# Par contre on peut le retrouver en une seule requête
-	# A surveiller la semaine prochaine, l'indexation change probablement
-	# à chaque nouvel article !
 	my $nb_s = int($ecart/7);
 	my $nb = abs($ecart-$nb_s*2);
 	my $index = chaines::request("http://www.la-bas.org/mot.php3?id_mot=63&debut_lb=$nb");

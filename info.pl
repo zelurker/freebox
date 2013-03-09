@@ -165,7 +165,6 @@ sub REAPER {
 			   	(!$last_long || $last_long eq $cache_pic[$n][2]) &&
 			   	-f "cache/$cache_pic[$n][3]") {
 				# L'image est arrivée, réaffiche le bandeau d'info alors
-				print "*** reapaer found pid $child prog $n / $#cache_pic\n";
 				if (!-f "stream_info") {
 					disp_prog($lastprog,$last_long);
 				} else {
