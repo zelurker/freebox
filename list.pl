@@ -1569,6 +1569,7 @@ while (1) {
 		if ($source =~ /Fichiers/) {
 			$out = out::setup_output("fsel");
 		} elsif ($source eq "flux" && $base_flux ne "stations") {
+			$info = 1 if ($base_flux =~ /^la-bas/);
 			$out = out::setup_output("longlist");
 		} else {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
@@ -1576,6 +1577,7 @@ while (1) {
 		}
 		print $out $cur;
 		close($out);
+		print "command prog source $source base_flux $base_flux\n";
 		out::send_cmd_info("prog $name_sel,$source/$base_flux") if ($info);
 		$last_list = $cur;
 	}

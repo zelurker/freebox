@@ -350,14 +350,14 @@ sub update {
 }
 
 sub get {
-	my ($p,$channel) = @_;
+	my ($p,$channel,$source,$base_flux) = @_;
 	$channel = chaines::conv_channel($channel);
 	my $rtab = $chaines{$channel};
-	$rtab = $p->update($channel) if (!$rtab);
+	$rtab = $p->update($channel,$source,$base_flux) if (!$rtab);
 	if (!$rtab && $channel =~ /^france 3 /) {
 		# On a le cas particulier des chaines régionales fr3 & co...
 		$channel = "france 3";
-		$rtab = $p->update($channel);
+		$rtab = $p->update($channel,$source,$base_flux);
 	}
 	if ($debug && !$rtab) {
 		print "get: rien trouvé pour $channel\n";
@@ -367,7 +367,7 @@ sub get {
 	if ($time > $$rtab[$#$rtab][4]) {
 		# Si le cache dans chaines{} est trop vieux, on met à jour
 		print "update channel too old\n" if ($debug);
-		$p->update($channel);
+		$p->update($channel,$source,$base_flux);
 		$rtab = $chaines{$channel};
 	}
 	for (my $n=0; $n<=$#$rtab; $n++) {

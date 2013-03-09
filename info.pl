@@ -23,6 +23,7 @@ require "radios.pl";
 use progs::telerama;
 use progs::nolife;
 use progs::finter;
+use progs::labas;
 
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -210,6 +211,7 @@ sub dateheure {
 sub get_time {
 	# Et là renvoie une heure à partir d'un champ time()
 	my $time = shift;
+	return "-" if (!$time);
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
 	# sprintf("%d/%02d/%02d %02d:%02d:%02d $tz",$year+1900,$mon,$mday,$hour,$min,$sec);
 	sprintf("%02d:%02d:%02d",$hour,$min,$sec);
@@ -221,6 +223,7 @@ if ($have_dvb || $have_fb) {
 }
 push @prog, progs::nolife->new($net);
 push @prog, progs::finter->new($net);
+push @prog, progs::labas->new($net);
 
 system("rm -f fifo_info && mkfifo fifo_info");
 # read_prg:
@@ -259,7 +262,7 @@ sub disp_prog {
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday) = localtime($date);
 	my $time = time();
 	my $reste = undef;
-	if ($time > $start && $time < $end) {
+	if ($start && $time > $start && $time < $end) {
 		$reste = $end-$time;
 	}
 	$start = get_time($start);
@@ -416,12 +419,12 @@ if (!$channel) {
 		}
 		if ($last_chan && defined($lastprog)) {
 			my $ndelay = $$lastprog[4];
-			$ndelay = 0 if ($delay == $time);
+			$ndelay = 0 if ($delay == $time || !$ndelay);
 			# print "delay nextprog : ",get_time($ndelay),"\n";
 			if (!$delay || $ndelay < $delay) {
 				$delay = $ndelay ;
 			}
-			if ($delay < $time) {
+			if (defined($delay) && $delay < $time) {
 				# on obtient un delay négatif ici quand nolife n'a pas
 				# encore les programmes actuels
 				$delay = undef;
@@ -460,7 +463,8 @@ if (!$channel) {
 		$nfound = 0 if ($@);
 
 		$time = time;
-		if ($last_chan && defined($lastprog) && $time >= $$lastprog[4]) {
+		if ($last_chan && defined($lastprog) && $$lastprog[4] &&
+			$time >= $$lastprog[4]) {
 			if (-f "info_coords" && $time - $$lastprog[4] < 5) {
 				disp_prog($lastprog,$last_long);
 			}
@@ -574,7 +578,8 @@ chomp $long if ($long);
 
 my $sub = undef;
 for (my $n=$#prog; $n>=0; $n--) {
-	$sub = $prog[$n]->get($channel);
+	print "info: test reader $n channel $channel source $source base_flux $base_flux\n";
+	$sub = $prog[$n]->get($channel,$source,$base_flux);
 	if ($sub) {
 		print "info: trouvé reader $n\n";
 		$reader = $n;
