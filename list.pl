@@ -1442,7 +1442,7 @@ while (1) {
 		if (!-f "list_coords") {
 			# Si la liste est affichée de toutes façons ça va provoquer une
 			# commande à info, pas la peine de le réveiller
-			send_cmd_info("refresh");
+			out::send_cmd_info("refresh");
 			next;
 		}
 	} elsif ($cmd =~ /^[A-Z]$/) { # alphabétique
