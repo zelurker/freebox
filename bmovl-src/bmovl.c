@@ -158,7 +158,7 @@ static int info(int fifo, int argc, char **argv)
 
 	static int margew,margeh;
 	if (!strcmp(argv[0],"bmovl")) {
-		char *channel,*picture,buff[8192];
+		unsigned char *channel,*picture,buff[8192];
 		if(argc<4) {
 			printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
 			printf("width and height are w/h of MPlayer's screen!\n");
