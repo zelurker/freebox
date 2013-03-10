@@ -1160,11 +1160,6 @@ int main(int argc, char **argv) {
 		else if (!strcmp(cmd,"HIDE"))
 		    send_command(fifo,"HIDE\n");
 
-		if (ret) {
-		    printf("bmovl: command returned %d\n",ret);
-		    /* disconnect(0);
-		    myconnect(0); */
-		}
 	    } else {
 		printf("server: commande ignorée : %s\n",cmd);
 	    }

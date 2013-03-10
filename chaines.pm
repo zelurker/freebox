@@ -139,7 +139,8 @@ sub request {
 		return undef;
 	}
 
-    return $response->content;
+	# Renvoie le type d'abord pour qu'en contexte scalar on obtienne la réponse
+    return ($response->header("Content-type"),$response->content);
 }
 
 sub getListeChaines($) {

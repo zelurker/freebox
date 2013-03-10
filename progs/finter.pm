@@ -41,6 +41,7 @@ our %codage = (
 	'\u00fb' => 'û',
 	'\u00fc' => 'ü',
 	'\u2019' => "'",
+	'\u00c7' => 'Ç',
 );
 
 sub update_prog {
@@ -91,6 +92,7 @@ sub update {
 		print STDERR "\n" if ($debug);
 		my $title = $hash{title};
 		next if (!$title);
+		print "title avant $title\n" if ($debug);
 		foreach (keys %codage) {
 			my $index;
 			do {
@@ -98,6 +100,7 @@ sub update {
 				substr($title,$index,length($_),$codage{$_}) if ($index >= 0);
 			} while ($index >= 0);
 		}
+		print "title après $title\n" if ($debug);
 		my $img = $hash{image};
 		$img = "http://www.franceinter.fr/$img";
 		if ($hash{heure_debut}) {

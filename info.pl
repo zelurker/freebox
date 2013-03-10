@@ -542,7 +542,6 @@ if (!$channel) {
 		$source = $1;
 		$source =~ s/\/(.+)//;
 		$base_flux = $1;
-		print "info: commande $cmd\n";
 		$channel = $cmd;
 		if (!$long) {
 			$start_timer = time+5 
@@ -577,10 +576,8 @@ chomp $long if ($long);
 
 my $sub = undef;
 for (my $n=$#prog; $n>=0; $n--) {
-	print "info: test reader $n channel $channel source $source base_flux $base_flux\n";
 	$sub = $prog[$n]->get($channel,$source,$base_flux);
 	if ($sub) {
-		print "info: trouvé reader $n\n";
 		$reader = $n;
 		last;
 	}
