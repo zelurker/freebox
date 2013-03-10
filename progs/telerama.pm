@@ -383,6 +383,7 @@ sub get {
 		}
 	}
 	print "get: pas trouvé la bonne heure, testé avec $time\n";
+	return $$rtab[$#$rtab];
 }
 
 sub next {
