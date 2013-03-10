@@ -13,7 +13,7 @@ int direct_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y, 
 		char *text, int color, int *indents);
 
-int myfgets(char *buff, int size, FILE *f);
+int myfgets(unsigned char *buff, int size, FILE *f);
 
 SDL_Surface *create_surface(int w, int h);
 

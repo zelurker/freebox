@@ -299,10 +299,10 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
     return h;
 }
 
-int myfgets(char *buff, int size, FILE *f) {
-	char *s = fgets(buff,size,f);
+int myfgets(unsigned char *buff, int size, FILE *f) {
+	char *s = fgets((char*)buff,size,f);
 	if (!s) return 0;
-	int len = strlen(buff);
+	int len = strlen((char*)buff);
 	while (len > 0 && ((unsigned char)(buff[len-1])) < 32)
 		buff[--len] = 0;
 	return len;

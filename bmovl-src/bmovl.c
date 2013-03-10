@@ -158,7 +158,8 @@ static int info(int fifo, int argc, char **argv)
 
 	static int margew,margeh;
 	if (!strcmp(argv[0],"bmovl")) {
-		unsigned char *channel,*picture,buff[8192];
+		char *channel,*picture;
+		unsigned char buff[8192];
 		if(argc<4) {
 			printf("Usage: %s <bmovl fifo> <width> <height> [<max height>]\n", argv[0]);
 			printf("width and height are w/h of MPlayer's screen!\n");
@@ -187,15 +188,15 @@ static int info(int fifo, int argc, char **argv)
 			return -1;
 		}
 		myfgets(buff,8192,stdin);
-		channel = strdup(buff);
+		channel = strdup((char*)buff);
 		myfgets(buff,8192,stdin);
-		picture = strdup(buff);
+		picture = strdup((char*)buff);
 		if (*channel) chan = IMG_Load(channel);
 		if (*picture) pic = IMG_Load(picture);
 		myfgets(buff,8192,stdin);
-		heure = strdup(buff);
+		heure = strdup((char*)buff);
 		myfgets(buff,8192,stdin);
-		title = strdup(buff);
+		title = strdup((char*)buff);
 
 		/* Redimensionnement éventuel */
 		if (chan) {
@@ -210,13 +211,13 @@ static int info(int fifo, int argc, char **argv)
 		    }
 
 		    if (ratio < 1.0) {
-			strcpy(buff,channel);
-			char *p = strrchr(buff,'.');
+			strcpy((char*)buff,channel);
+			char *p = strrchr((char*)buff,'.');
 			sprintf(p,"-%g.png",chan->h*ratio);
-			SDL_Surface *s = IMG_Load(buff);
+			SDL_Surface *s = IMG_Load((char*)buff);
 			if (!s) {
 			    s = zoomSurface(chan,ratio,ratio,SMOOTHING_ON);
-			    png_save_surface(buff,s);
+			    png_save_surface((char*)buff,s);
 			}
 			SDL_FreeSurface(chan);
 			chan = s;
@@ -234,13 +235,13 @@ static int info(int fifo, int argc, char **argv)
 		    }
 
 		    if (ratio < 1.0) {
-			strcpy(buff,picture);
-			char *p = strrchr(buff,'.');
+			strcpy((char*)buff,picture);
+			char *p = strrchr((char*)buff,'.');
 			sprintf(p,"-%g.png",pic->h*ratio);
-			SDL_Surface *s = IMG_Load(buff);
+			SDL_Surface *s = IMG_Load((char*)buff);
 			if (!s) {
 			    s = zoomSurface(pic,ratio,ratio,SMOOTHING_ON);
-			    png_save_surface(buff,s);
+			    png_save_surface((char*)buff,s);
 			}
 			SDL_FreeSurface(pic);
 			pic = s;
@@ -255,11 +256,11 @@ static int info(int fifo, int argc, char **argv)
 		int len = 0;
 		// Carrier returns are included, a loop is mandatory then
 		while (!feof(stdin) && len < 8191) {
-			fgets(&buff[len],8192-len,stdin); // we keep the eol here
+			fgets((char*)&buff[len],8192-len,stdin); // we keep the eol here
 			while (buff[len]) len++;
 		}
 		while (len > 0 && buff[len-1] < 32) buff[--len] = 0; // remove the last one though
-		desc = strdup(buff);
+		desc = strdup((char*)buff);
 
 		TTF_SetFontStyle(font,TTF_STYLE_BOLD);
 		get_size(font,heure,&w,&h,width-4*4); // 1st string : all the width (top)
@@ -413,7 +414,8 @@ static int list(int fifo, int argc, char **argv)
 {
     int width,height;
 
-    char *source,buff[4096],*list[20],status[20];
+    char *source,*list[20],status[20];
+    unsigned char buff[4096]; 
     int heights[20];
     char *names[20];
     SDL_Surface *chan[20];
@@ -439,7 +441,7 @@ static int list(int fifo, int argc, char **argv)
     int num[20];
     int current = -1;
     myfgets(buff,4096,stdin);
-    source = strdup(buff);
+    source = strdup((char*)buff);
     int nb=0,w,h;
     int margew = width/36, margeh=height/36;
     int longlist = !strcmp(argv[0],"longlist");
@@ -459,12 +461,12 @@ static int list(int fifo, int argc, char **argv)
 	if (!myfgets(buff,4096,stdin)) break;
 	if (buff[0] == '*') current = nb;
 	status[nb] = buff[0];
-	char *end_nb = &buff[4];
+	char *end_nb = (char*)&buff[4];
 	while (*end_nb >= '0' && *end_nb <= '9')
 	    end_nb++;
 	*end_nb++ = 0;
 	if (!fsel && !mode_list) {
-	    num[nb] = atoi(&buff[1]);
+	    num[nb] = atoi((char*)&buff[1]);
 	}
 	chan[nb] = NULL;
 	if (!strncmp(end_nb,"pic:",4)) {
@@ -482,8 +484,8 @@ static int list(int fifo, int argc, char **argv)
     // 2ème tour de boucle : on trouve les dimensions
     int nb2;
     if (!fsel && !mode_list) {
-	sprintf(buff,"%d",num[nb-1]);
-	get_size(font,buff,&w,&h,maxw);
+	sprintf((char*)buff,"%d",num[nb-1]);
+	get_size(font,(char*)buff,&w,&h,maxw);
 	numw = w;
 	for (nb2=nb; nb2<20; nb2++) {
 	    list[nb2] = NULL;
@@ -595,14 +597,14 @@ static int list(int fifo, int argc, char **argv)
 	    hidden = 1;
 	}
 	int y0 = y;
-	sprintf(buff,"%d",num[n]);
+	sprintf((char*)buff,"%d",num[n]);
 	if (current == n) {
 	    SDL_Rect r;
 	    r.x = 4; r.y = y; r.w = wlist; r.h = heights[n];
 	    if (chan[n] && chan[n]->h > heights[n]) r.h = chan[n]->h;
 	    SDL_FillRect(sf,&r,fg);
 	    if (!fsel && !mode_list)
-		put_string(sf,font,4,y,buff,bg,NULL); // Numéro
+		put_string(sf,font,4,y,(char*)buff,bg,NULL); // Numéro
 	    int dy;
 	    dy = disp_list(sf,font,x,y,list[n],chan[n],bg,heights[n]);
 	    sely = y+dy/2;
@@ -617,7 +619,7 @@ static int list(int fifo, int argc, char **argv)
 		fg = cyan;
 	    }
 	    if (!fsel && !mode_list)
-		put_string(sf,font,4,y,buff,fg,NULL); // Numéro
+		put_string(sf,font,4,y,(char*)buff,fg,NULL); // Numéro
 	    y += disp_list(sf,font,x,y,list[n],chan[n],fg,heights[n]);
 	    if (status[n] == 'R' || status[n] == 'D') fg = oldfg;
 	}
@@ -1115,7 +1117,7 @@ int main(int argc, char **argv) {
 			return(-1);
 		    }
 		    stdin = fdopen(server,"r");
-		    len = myfgets(buff,2048,stdin); // commande
+		    len = myfgets((unsigned char*)buff,2048,stdin); // commande
 		} else
 		    server = 0;
 		if (sdl_screen) {
@@ -1136,27 +1138,26 @@ int main(int argc, char **argv) {
 	    char *cmd = myargv[0];
 	    s = strrchr(cmd,'/');
 	    if (s) cmd =s+1;
-	    int ret;
 	    // On retente une cxion quand y en a plus, ça mange pas de pain
 	    // if (!fifo) myconnect(1);
 	    if (1) {
 		// commandes connectÃ©es
 		if (!strcmp(cmd,"bmovl") || !strcmp(cmd,"next") ||
 			!strcmp(cmd,"prev")) {
-		    ret = info(fifo,argc,myargv);
+		    info(fifo,argc,myargv);
 		} else if (!strcmp(cmd,"list")) {
-		    ret = list(fifo,argc,myargv);
+		    list(fifo,argc,myargv);
 		} else if (!strcmp(cmd,"list-noinfo") || !strcmp(cmd,"fsel") ||
 			!strcmp(cmd,"mode_list") || !strcmp(cmd,"longlist")) {
-		    ret = list(fifo,argc,myargv);
+		    list(fifo,argc,myargv);
 		} else if (!strcmp(cmd,"CLEAR"))
-		    ret = clear(fifo,argc,myargv);
+		    clear(fifo,argc,myargv);
 		else if (!strcmp(cmd,"ALPHA"))
-		    ret = alpha(fifo,argc,myargv);
+		    alpha(fifo,argc,myargv);
 		else if (!strcmp(cmd,"image"))
-		    ret = image(argc,myargv);
+		    image(argc,myargv);
 		else if (!strcmp(cmd,"numero"))
-		    ret = numero(fifo,argc,myargv);
+		    numero(fifo,argc,myargv);
 		else if (!strcmp(cmd,"HIDE"))
 		    send_command(fifo,"HIDE\n");
 
@@ -1168,4 +1169,5 @@ int main(int argc, char **argv) {
 	}
 	// never reach this point
 	// TTF_Quit();
+	return 0;
 }
