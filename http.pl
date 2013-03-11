@@ -21,7 +21,9 @@ sub myget {
            file => "$ENV{'HOME'}/lwp_cookies.dat",
            autosave => 1,
          ); 
-	my $ua = LWP::UserAgent->new;
+	my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
+	my $ua = LWP::UserAgent->new(keep_alive => 0,
+		agent =>$useragt);
 	$ua->timeout(10);
 	$ua->cookie_jar($cookie_jar);
 	my $r = $ua->get($url);
