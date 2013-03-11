@@ -9,6 +9,7 @@ my $debug = 0;
 
 sub get_mms {
 	my $url = shift;
+	return $url if ($url =~ /(mp4|mp3|avi|mov|asf)$/);
 	my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
 	my $browser = LWP::UserAgent->new(keep_alive => 0,
 		agent =>$useragt);
