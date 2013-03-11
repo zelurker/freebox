@@ -473,7 +473,7 @@ static int list(int fifo, int argc, char **argv)
 	    // Extension : si le nom commence par pic:filename
 	    // alors filename est une image (séparation par un espace)
 	    char *s = strchr(end_nb+4,' ');
-	    if (s) {
+	    if (s && s!=end_nb+4) {
 		*s = 0;
 		names[nb] = strdup(end_nb+4);
 		end_nb = s+1;
