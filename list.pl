@@ -16,7 +16,6 @@
 use strict;
 use Socket;
 use POSIX qw(strftime :sys_wait_h SIGALRM);
-use LWP::Simple;
 use Encode;
 use Fcntl;
 use File::Glob 'bsd_glob'; # le glob dans perl c'est n'importe quoi !
@@ -91,7 +90,9 @@ sub update_pics {
 	if ($update_pic == 0) {
 		for (my $n=0; $n<=$#$rpic; $n+=2) {
 			if (open(my $f,">$$rpic[$n]")) {
-				print $f get $$rpic[$n+1];
+				my ($type,$cont) = chaines::request($$rpic[$n+1]);
+				print "debug: url $$rpic[$n+1] -> type $type\n";
+				print $f $cont;
 				close($f);
 				# print "updated pic $$rpic[$n] from ",$$rpic[$n+1],"\n";
 				out::send_cmd_list("refresh");
@@ -364,7 +365,7 @@ sub read_list {
 				return;
 			}
 		} elsif (!-f "freebox.m3u" || -M "freebox.m3u" >= 1) {
-			$list = get "http://mafreebox.freebox.fr/freeboxtv/playlist.m3u";
+			$list = chaines::request("http://mafreebox.freebox.fr/freeboxtv/playlist.m3u");
 			$list =~ s/ \(standard\)//g;
 			if (!$list) {
 				print "can't get freebox playlist\n";
@@ -535,7 +536,7 @@ sub read_list {
 					# pas de mode (list ou direct)
 					$serv = "";
 					$base_flux =~ s/^(.+?)\/.+/$1/;
-				} elsif ($serv !~ /^(http|mms)/) {
+				} elsif ($serv !~ /(http|mms)/) {
 					# reconstitue le vrai serv à partir de base_flux
 					$base_flux =~ /(.+?)\/(.+)/;
 					$serv = $2;
@@ -567,7 +568,6 @@ sub read_list {
 				$mode_flux = <F>;
 				if ($mode_flux =~ /encoding/) {
 					$encoding = $mode_flux;
-					print "encoding: $encoding\n";
 					$mode_flux = <F>;
 				}
 				chomp $mode_flux;
@@ -604,8 +604,9 @@ sub read_list {
 					} elsif ($pic =~ /.+\/(.+)/) {
 						# Par défaut : nom directement dans cache
 						$file = "cache/$1";
+						print "default pic: $file\n";
 					}
-					if (!-f $file) {
+					if (!-f $file || -z $file) {
 						push @pic,($file,$pic);
 					}
 					$name = "pic:$file ".decode_entities($name);
