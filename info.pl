@@ -120,7 +120,7 @@ sub read_stream_info {
 	my $pics = "";
 	if ($source eq "flux" && $base_flux eq "stations") {
 		$pics = get_radio_pic($cmd);
-		print "stream_info: pic = $pic\n";
+		print "stream_info: radio:$cmd pic = $pic\n";
 	}
 	if ($pic) {
 		$pic = myget $pic;
@@ -165,7 +165,7 @@ sub REAPER {
 			   	(!$last_long || $last_long eq $cache_pic[$n][2]) &&
 			   	-f "cache/$cache_pic[$n][3]") {
 				# L'image est arrivée, réaffiche le bandeau d'info alors
-				if (!-f "stream_info") {
+				if ($lastprog) {
 					disp_prog($lastprog,$last_long);
 				} else {
 					read_stream_info(time(),"$last_chan");
@@ -464,9 +464,11 @@ if (!$channel) {
 		$time = time;
 		if ($last_chan && defined($lastprog) && $$lastprog[4] &&
 			$time >= $$lastprog[4]) {
-			if (-f "info_coords" && $time - $$lastprog[4] < 5) {
-				disp_prog($lastprog,$last_long);
-			}
+#			if (-f "info_coords" && $time - $$lastprog[4] < 5) {
+			my $prg = $prog[$reader]->next($last_chan);
+			print "next reader $reader = $prg last_chan $last_chan\n";
+				disp_prog($prg,(-f "info_coords" ? 1 : 0));
+#			}
 		}
 		handle_records($time);
 		if (-f "list_coords" || -f "numero_coords" && $time-$time_refresh >= 1) {
@@ -582,6 +584,7 @@ for (my $n=$#prog; $n>=0; $n--) {
 		last;
 	}
 }
+$lastprog = undef;
 if (!$sub) {
 	my $name = get_cur_name();
 	if ($name eq chaines::conv_channel($channel)) {

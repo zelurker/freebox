@@ -27,6 +27,7 @@ require "radios.pl";
 use HTML::Entities;
 
 our $dvd;
+our $encoding;
 
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -217,7 +218,7 @@ sub apps_menu {
 			next if ($fields{"onlyshowin"}); # app specific
 			next if (!$fields{"categories"}); # si, si, ça arrive !!!
 			$fields{categories} =~ s/;$//; # supprime éventuel ; à la fin
-            foreach ($lang2,$lang) {
+			foreach ($lang2,$lang) {
 				if ($fields{"name[$_]"}) {
 					$fields{name} = $fields{"name[$_]"}; 
 					Encode::from_to($fields{name}, "utf-8", "iso-8859-15");
@@ -521,7 +522,6 @@ sub read_list {
 			if ($b =~ /\//) {
 				$b =~ s/(.+?)\/(.+)/$1/;
 			}
-			my $encoding = "";
 			if (-x "flux/$b") {
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 				print "name $name,$serv,$flav,$audio,$video mode_flux $mode_flux base_flux $base_flux\n";
@@ -545,6 +545,12 @@ sub read_list {
 					delete $ENV{WINDOWID};
 					$serv = `zenity --entry --text="A chercher (regex)"`;
 					chomp $serv;
+					if ($encoding =~ /utf/i && $ENV{LANG} =~ /(euro|ISO-8859-1)/) {
+						print "encodage utf6\n";
+						Encode::from_to($serv, "iso-8859-15", "utf-8") ;
+					} else {
+						print "encoding $encoding lang $ENV{LANG}\n";
+					}
 					$serv = "result:$serv";
 					$base_flux =~ s/(.+?)\/.+/$1\/$serv/;
 				}
@@ -556,6 +562,7 @@ sub read_list {
 				}
 
 				print "list: execution plugin flux $b param $serv base_flux $base_flux\n";
+				$encoding = "";
 				open(F,"flux/$b \"$serv\"|");
 				$mode_flux = <F>;
 				if ($mode_flux =~ /encoding/) {
@@ -565,7 +572,7 @@ sub read_list {
 				}
 				chomp $mode_flux;
 			} else {
-			   	if (!open(F,"<flux/$base_flux")) {
+				if (!open(F,"<flux/$base_flux")) {
 					return;
 				}
 			}
@@ -583,13 +590,21 @@ sub read_list {
 				chomp ($name,$service);
 				next if ($last && $last eq $name);
 				$last = $name;
-				$name =~ s/^pic:(.+?) //;
-				my $pic = $1;
+				my $pic = undef;
+				if ($name =~ s/^pic:(.+?) //) {
+					$pic = $1;
+				}
 				Encode::from_to($name, "utf-8", "iso-8859-15") if
 				($encoding =~ /utf/i);
-				if ($pic =~ /.+\/(.+?)\/.*?default.jpg/) {
-					# Youtube
-					my $file = "cache/$1_yt.jpg";
+				if ($pic) {
+					my $file;
+					if ($pic =~ /.+\/(.+?)\/.*?default.jpg/) {
+						# Youtube
+						$file = "cache/$1_yt.jpg";
+					} elsif ($pic =~ /.+\/(.+)/) {
+						# Par défaut : nom directement dans cache
+						$file = "cache/$1";
+					}
 					if (!-f $file) {
 						push @pic,($file,$pic);
 					}
@@ -778,7 +793,8 @@ sub run_mplayer2 {
 	my $pwd;
 	chomp ($pwd = `pwd`);
 	my $quiet = "";
-	if ($name =~ /mms/ || $src =~ /youtube/) {
+	if ($name =~ /mms/ || $src =~ /youtube/ || ($serv =~ /:\/\// &&
+		$serv =~ /(mp4|avi|asf|mov)$/)) {
 		$cache = 1000;
 	}
 	if ($src =~ /cd/) {
@@ -1267,7 +1283,7 @@ while (1) {
 				$mode_flux = "";
 				print "base_flux = $name\n";
 				read_list();
-			} elsif ($mode_flux eq "list" || $serv !~ /\/\//) {
+			} elsif ($mode_flux eq "list" || $serv !~ /\/\// || $serv =~ / /) {
 				$name =~ s/\//-/g;
 				$base_flux .= "/$name";
 				$base_flux =~ s/pic:.+? //;
