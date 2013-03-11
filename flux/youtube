@@ -39,9 +39,9 @@ if (/encoding="(.+?)"/) {
 	print "encoding: $1\n";
 }
 
-open(F,">yt.html");
-print F $_;
-close(F);
+# open(F,">yt.html");
+# print F $_;
+# close(F);
 if ($str =~ /^http/) {
 	# Extrait les formats vidéos de la page
 	my ($title) = /<title>(.+?)<\/title/;
