@@ -27,7 +27,7 @@ sub get_mms {
 		my $response = $browser->get($url);
 		return undef if (!$response->is_success);
 		$type = $response->header("Content-type");
-		if ($type =~ /audio/) {
+		if ($type =~ /(audio|video)/) {
 			# audio/xxx est quand même prenable !
 			print "url is not text : $type\n";
 			$browser->max_size(5000);
