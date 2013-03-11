@@ -75,7 +75,7 @@ $chan = lc($chan);
 $source = "freeboxtv" if (!$source);
 # print "list: obtenu chan $chan source $source serv $serv flav $flav\n";
 
-my (@list);
+our (@list);
 our $found = undef;
 my $mode_flux;
 our %conf;
@@ -113,6 +113,7 @@ sub read_conf {
 }
 
 sub save_conf {
+	return if ($base_flux =~ /youtube/);
 	if ($base_flux) {
 		$conf{"sel_$source\_$base_flux"} = $found;
 	} else {
@@ -267,6 +268,57 @@ sub read_freebox {
 	@list = ();
 	$list =~ s/ \(standard\)//g;
 	$list;
+}
+
+sub list_files {
+	@list = ();
+	my ($path,$tri);
+	if ($source eq "Fichiers vidéo") {
+		$path = "video_path";
+		$tri = "tri_video";
+	} elsif ($source eq "dvd") {
+		$path = "dvd_path";
+		$conf{"dvd_path"} = $dvd;
+		$tri = "tri_video";
+	} else {
+		$path = "music_path";
+		$tri = "tri_music";
+	}
+	my $num = 1;
+	my $pat;
+	if (!$conf{$path}) {
+		$conf{$path} = `pwd`;
+		chomp $conf{$path};
+	}
+	if ($conf{$path} eq "/") {
+		$pat = "/*";
+	} else {
+		$pat = "$conf{$path}/*";
+		$pat =~ s/ /\\ /g;
+		$pat =~ s/\[/\\\[/g;
+		$pat =~ s/\]/\\\]/g;
+	}
+	$conf{"$tri"} = "nom" if (!$conf{"$tri"});
+	my @paths = bsd_glob($pat);
+	while ($_ = shift @paths) {
+		my $service = $_;
+		next if (!-e $service); # lien symbolique mort
+		my $name = $service;
+		$name =~ s/.+\///; # Supprime le path du nom
+		if (-d $service) {
+			$name .= "/";
+		}
+		push @list,[[$num++,$name,$service,-M $service]];
+	}
+	unlink "info_coords";
+	if ($conf{$tri} eq "date") {
+		@list = sort { $$a[0][3] <=> $$b[0][3] } @list;
+	}
+	if ($conf{$path} ne "/") {
+		unshift @list,[[$num++,"../",".."]];
+	}
+	unshift @list,[[$num++,"Tri par $conf{$tri}","tri par"]];
+#		@list = reverse @list;
 }
 
 sub read_list {
@@ -444,51 +496,7 @@ sub read_list {
 		}
 		@list = reverse @list;
 	} elsif ($source =~ /^Fichiers/) {
-		@list = ();
-		my ($path,$tri);
-		if ($source eq "Fichiers vidéo") {
-			$path = "video_path";
-			$tri = "tri_video";
-		} else {
-			$path = "music_path";
-			$tri = "tri_music";
-		}
-		print "read_list pour $source\n";
-		my $num = 1;
-		my $pat;
-		if (!$conf{$path}) {
-			$conf{$path} = `pwd`;
-			chomp $conf{$path};
-		}
-		if ($conf{$path} eq "/") {
-			$pat = "/*";
-		} else {
-			$pat = "$conf{$path}/*";
-			$pat =~ s/ /\\ /g;
-			$pat =~ s/\[/\\\[/g;
-			$pat =~ s/\]/\\\]/g;
-		}
-		$conf{"$tri"} = "nom" if (!$conf{"$tri"});
-		my @paths = bsd_glob($pat);
-		while ($_ = shift @paths) {
-			my $service = $_;
-			next if (!-e $service); # lien symbolique mort
-			my $name = $service;
-			$name =~ s/.+\///; # Supprime le path du nom
-			if (-d $service) {
-				$name .= "/";
-			}
-			push @list,[[$num++,$name,$service,-M $service]];
-		}
-		unlink "info_coords";
-		if ($conf{$tri} eq "date") {
-			@list = sort { $$a[0][3] <=> $$b[0][3] } @list;
-		}
-		if ($conf{$path} ne "/") {
-			unshift @list,[[$num++,"../",".."]];
-		}
-		unshift @list,[[$num++,"Tri par $conf{$tri}","tri par"]];
-#		@list = reverse @list;
+		list_files();
 	} elsif ($source eq "flux") {
 # 		if (open(F,"<current")) {
 # 			@_ = <F>;
@@ -719,8 +727,8 @@ sub reset_current {
 }
 
 sub mount_dvd() {
-	if (open(F,"</proc/sys/dev/cdrom/info")) {
-		while (<F>) {
+	if (open(my $f,"</proc/sys/dev/cdrom/info")) {
+		while (<$f>) {
 			chomp;
 			if (/drive name:[ \t]*(.+)/) {
 				$dvd = "/dev/$1";
@@ -728,25 +736,26 @@ sub mount_dvd() {
 				last;
 			}
 		}
-		close(F);
+		close($f);
 	} else {
 		print "Can't get dvd drive, assuming /dev/dvd\n";
 		$dvd = "/dev/dvd";
 	}
-	if (open(F,"</proc/mounts")) {
-		while (<F>) {
+	if (open(my $f,"</proc/mounts")) {
+		while (<$f>) {
 			my ($dev,$mnt) = split(/ /);
 			if ($dev eq "$dvd") {
 				$dvd = $mnt;
-				close(F);
+				close($f);
 				return;
 			}
 		}
 	}
 	close(F);
 	system("mount $dvd");
-	if (open(F,"</proc/mounts")) {
-		while (<F>) {
+	my $f;
+	if (open($f,"</proc/mounts")) {
+		while (<$f>) {
 			my ($dev,$mnt) = split(/ /);
 			if ($dev eq "$dvd") {
 				$dvd = $mnt;
@@ -754,7 +763,7 @@ sub mount_dvd() {
 			}
 		}
 	}
-	close(F);
+	close($f);
 }
 
 sub run_mplayer2 {
@@ -818,13 +827,15 @@ sub run_mplayer2 {
 		}
 	}
 
-	my @list = ("perl","filter_mplayer.pl",$player,$audio,$dvd1,$serv,"-cache",$cache,
+	my @list = ("perl","filter_mplayer.pl",$player,$audio,$dvd1,$serv,
 		"-framedrop","-autosync",10,
 		"-fs",
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
 		"bmovl=1:0:fifo,screenshot$filter",$dvd2,$dvd3);
 	push @list,("-cdrom-device","/dev/$cd") if ($cd);
+	# fichier local (commence par /) -> pas de cache !
+	push @list,("-cache",$cache) if ($serv !~ /^\//);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
 		if (!$list[$n]) {
@@ -1190,42 +1201,25 @@ while (1) {
 			}
 		} elsif ($source eq "dvd") {
 			mount_dvd();
-			if ($name eq "eject") {
+			if ($base_flux eq "dvd") {
+				next if (exec_file($name,$serv,$audio,$video));
+			} elsif ($name eq "eject") {
 				system("eject $dvd");
+				next;	
 			} else {
-				load_file2("dvd","dvd",$name);
+				if (-d "$dvd/VIDEO_TS" || -d "$dvd/video_ts") {
+					load_file2("dvd","dvd",$name);
+					next;	
+				} else {
+					$base_flux = "dvd";
+					list_files();
+				}
 			}
-			next;	
 		} elsif ($source =~ /^(livetv|Enregistrements)$/) {
 			load_file2($name,$serv,$flav,$audio,$video);
 			next;
 		} elsif ($source =~ /^Fichiers/) {
-			my $path = ($source eq "Fichiers vidéo" ? "video_path" : "music_path");
-			if ($serv eq "tri par") {
-				$conf{tri_video} = ($conf{tri_video} eq "nom" ? "date" : "nom");
-				read_list();
-			} elsif ($name =~ /\/$/) { # Répertoire
-				my $old;
-				if ($serv eq "..") {
-					$conf{$path} =~ s/^(.*)\/(.+)/$1/;
-					$old = "$2/";
-					$conf{$path} = "/" if (!$conf{$path});
-				} else {
-					$conf{$path} = $serv;
-				}
-				my $n;
-				read_list();
-				for ($n=0; $n<=$#list; $n++) {
-					my ($name) = get_name($list[$n]);
-					if ($name eq $old) {
-						$found = $n;
-						last;
-					}
-				}
-			} else {
-				load_file2($name,$serv,$flav,$audio,$video);
-				next;
-			}
+			exec_file($name,$serv,$audio,$video);
 		} elsif ($source eq "apps") {
 			my ($name,$serv) = get_name($list[$found]);
 			if (!$serv) {
@@ -1588,3 +1582,41 @@ while (1) {
 close($l);
 print "list à la fin input vide\n";
 
+sub exec_file {
+	# Retour : 0 si la liste a changé, 1 autrement (next)
+	my ($name,$serv,$audio,$video) = @_;
+	my $path;
+	if ($source eq "Fichiers vidéo") {
+		$path = "video_path";
+	} elsif ($source =~ /audio/) {
+		$path = "music_path";
+	} elsif ($source eq "dvd") {
+		$path = "dvd_path";
+	}
+	if ($serv eq "tri par") {
+		$conf{tri_video} = ($conf{tri_video} eq "nom" ? "date" : "nom");
+		read_list();
+	} elsif ($name =~ /\/$/) { # Répertoire
+		my $old;
+		if ($serv eq "..") {
+			$conf{$path} =~ s/^(.*)\/(.+)/$1/;
+			$old = "$2/";
+			$conf{$path} = "/" if (!$conf{$path});
+		} else {
+			$conf{$path} = $serv;
+		}
+		my $n;
+		read_list();
+		for ($n=0; $n<=$#list; $n++) {
+			my ($name) = get_name($list[$n]);
+			if ($name eq $old) {
+				$found = $n;
+				last;
+			}
+		}
+	} else {
+		load_file2($name,$serv,$flav,$audio,$video);
+		return 1;
+	}
+	return 0;
+}
