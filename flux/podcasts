@@ -1,0 +1,190 @@
+#!/usr/bin/perl
+
+use strict;
+use Date::Parse;
+# xml::simple est vraiment obligatoire ici, format xml trop variable
+use XML::Simple;
+use Data::Dumper;
+require "http.pl";
+
+# C'est un peu long pour un plugin mais c'est + simple que celui de youtube
+# (jusqu'ici en tous cas !). En gros :
+# 1ère partie : détection du type de requête à faire, exactement comme
+# youtube, mais faire un module pour ça ne serait pas très pratique
+# 2 - décodage du xml des podcasts avec xml::simple
+# 3 - décodage de l'html de podcasters.fr
+
+my $f;
+my @abo;
+my $fpod = "$ENV{HOME}/.freebox/podcasts";
+if (open($f,"<$fpod")) {
+	@abo = <$f>;
+	close($f);
+	chomp @abo;
+}
+binmode STDERR; # ,":utf8";
+binmode STDOUT, ":iso8859-15"; # ,":utf8";
+my $str = shift @ARGV;
+my $debug = 0; # infos
+my $dump = 0;  # dump toute l'entrée ligne par ligne
+$str =~ s/^result\://;
+if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
+	my $title = $1;
+	$str = $2;
+	push @abo,$title;
+	push @abo,$2;
+	if (open($f,">$fpod")) {
+		print $f join("\n",@abo);
+		close($f);
+	}
+}
+if ($str =~ /http/) {
+	print STDERR "str $str sending direct\n";
+	print "direct\n";
+} else {
+	print STDERR "str $str sending list\n";
+	print "list\n";
+}
+print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
+print "Abonnements\nAbonnements\n" if (@abo);
+if ($str eq "Abonnements") {
+	print "encoding: utf-8\n";
+	print join("\n",@abo);
+	exit(0);
+}
+$str =~ s/ /\+/g;
+if ($debug && !$str) {
+	binmode STDIN; # ,":utf8";
+	@_ = <>;
+	$_ = join("",@_);
+	$str = "http";
+	print STDERR "debug mode, input from stdin\n";
+} else {
+	if ($str && $str !~ /^http/) {
+		print STDERR "requête de recherche sur $str\n"; # if ($debug);
+		$_ = myget( "http://www.podcasters.fr/podcast-recherche-pour/$str.html");
+	} elsif ($str) {
+		print STDERR "debug: get $str\n" if ($debug);
+		$_ = myget($str);
+	} else {
+		print STDERR "requête directe\n" if ($debug);
+		$_ = myget("http://www.podcasters.fr/");
+	}
+}
+
+my $encoding = "";
+if (/encoding="(.+?)"/) {
+	print "encoding: $1\n";
+	$encoding = $1;
+}
+open($f,">pod");
+print $f $_;
+close($f);
+
+my $content = 0;
+my ($link,$title,$desc,$img,$date);
+if (/^<\?xml/) {
+	# Normalement on devrait pas avoir à faire ça, mais y a xml::simple qui
+	# fait du découdage partiel très foireux quand le source est utf8 et
+	# que la locale n'est pas utf8 !
+	if ($encoding =~ /utf/i) {
+		binmode STDOUT, ":utf8";
+	} else {
+		binmode STDOUT, ":encoding(iso8859-15)" if ($ENV{LANG} =~
+		/(euro|ISO-8859-1)/);
+	}
+	s/\xe2\x80\x99/'/gs;
+	print STDERR "décodage xml\n" if ($debug);
+	# fichier xml podcast
+	my $found = 0;
+	foreach (@abo) {
+		if ($_ eq $str) {
+			$found = 1;
+			last;
+		}
+	}	
+	print STDERR "trouvé abonnement\n" if ($found && $debug);
+
+	s/\r//gm;
+	my $ref = XMLin($_);
+	if (!$found) {
+		my $title = $ref->{channel}->{title};
+		print "S'abonner\n$title $str\n";
+	}
+
+	my $item = $ref->{channel}->{item};
+	foreach (@$item) {
+		print $_->{title};
+		my $desc = $_->{description} || $_->{"itunes:subtitle"};
+		if (ref($desc) eq "HASH") {
+			if (!keys %$desc) {
+				$desc = "";
+			} else {
+				die Dumper($desc);
+			}
+		}
+		$desc =~ s/\n/ /gs;
+		$desc =~ s/\r//g;
+		print " - $desc" if ($desc);
+		my $date = $_->{pubDate};
+		$date = str2time($date) if ($date !~ /^\d+$/);
+		print " le ".get_date($date) if ($date);
+		print "\n",$_->{enclosure}->{url},"\n";
+	}
+	exit(0);
+}
+
+s/\r//g;
+s/ +/ /gs;
+s/\x00//gs;
+foreach (split /\n/) {
+	s/^ +//;
+	if (/<li class="active/ || /<div class="recommendationbox_odd/) {
+		print STDERR "content = 1\n" if ($debug);
+		$content = 1;
+	} elsif (/<div class="podcast_listing_content/) {
+		$content = 2; # Description, format vraiment bizarre !
+	} elsif ((/<\/ul/ || /<\/div/ || /<\/li/) && $content) {
+		if (/<\/li/) {
+			$content = 1;
+		} else {
+			$content = 0;
+		}
+		if ($link && $title && $desc) {
+			$img = "http://www.podcasters.fr$img" if ($img =~ /^\//);
+			print "pic:$img " if ($img);
+			$link =~ s/^.+-(\d+).html/$1.html/;
+			$link = "http://www.podcasters.fr/podcast_url$link";
+			print "$title - $desc\n$link\n";
+			($link,$title,$desc,$img) = ();
+		} elsif ($debug) {
+			print STDERR "content = 0, link = $link, title=$title, desc=$desc, img=$img.\n";
+		}
+	} elsif ($content && /<a href="(.+?)" target=".+?" title="(.+?)"><img class=".+?" src="$/) {
+		$link = $1;
+		$title = $2;
+		$content = 4;
+		print STDERR "content = 4\n" if ($debug);
+	} elsif ($content && /<a href="(.+?)" target=".+?" title="(.+?)"><img class=".+?" src="(.+?)"/) {
+		$link = $1;
+		$title = $2;
+		$img = $3;
+	} elsif ($content && /(<br \/>|\/span)/) {
+		$content = 3;
+		$desc = "";
+	} elsif ($content == 3) {
+		$desc .= $_;
+	} elsif ($content == 4 && /^"/) {
+		$content = 1;
+	} elsif ($content == 4 && $_ && $_ ne " ") {
+		$img = $_;
+		print STDERR "img = $_ (content 4) len ",length($_),"\n" if ($debug);
+	}
+}
+
+sub get_date {
+	my $time = shift;
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time); 
+	sprintf("%d/%02d/%02d, %02d:%02d",$mday,$mon+1,$year+1900,$hour,$min);
+}
+
