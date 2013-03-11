@@ -38,6 +38,7 @@ sub update_noair {
 	open(F,">air.xml");
 	print F $xml;
 	close(F);
+	return 1;
 }
 
 sub conv_date {
@@ -64,9 +65,6 @@ sub update {
 	return undef if (lc($channel) ne "nolife");
 
 	my $f;
-	# 1/24/2 ça fait 1/2h. Vu que le programme de nolife ne peut pas être
-	# demandé pour une date, on le met à jour jusqu'à 1 fois / 1/2h
-	update_noair() if (-f "air.xml" && -M "air.xml" >= 1/24/2);
 	if (!open($f,"<air.xml")) {
 		update_noair();
 		if (!open($f,"<air.xml")) {
@@ -145,6 +143,14 @@ sub update {
 			$desc .= "$d";
 			my $d = get_field($_,"detail");
 			$desc .= " $d" if ($d);
+		}
+	}
+	if ($date < time()) {
+		# programme périmé !
+		# Apparemment le nouveau programme de nolife s'étend sur une 20aine
+		# de jours, donc là on peut forcer une update
+		if (update_noair()) {
+			return $p->get($channel);
 		}
 	}
 	# Test le dernier programme !
