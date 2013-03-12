@@ -113,7 +113,19 @@ if (/^<\?xml/) {
 	}
 
 	my $item = $ref->{channel}->{item};
-	foreach (@$item) {
+	# Vu que certains podcasts n'arrivent pas dans l'ordre, trie par date
+	my @item = sort { my $c = $a->{pubDate}; my $d = $b->{pubDate};
+	# print "avant $c et $d\n";
+	if ($c !~ /^\d+$/) {
+		$c =~ s/Mars/Mar/;
+		$d =~ s/Mars/Mar/;
+		$c = str2time($c);
+		$d = str2time($d);
+	}
+	# print "tri $c et $d\n";
+	$d <=> $c;
+	} @$item;
+	foreach (@item) {
 		print $_->{title};
 		my $desc = $_->{description} || $_->{"itunes:subtitle"};
 		if (ref($desc) eq "HASH") {
@@ -139,7 +151,7 @@ s/ +/ /gs;
 s/\x00//gs;
 foreach (split /\n/) {
 	s/^ +//;
-	if (/<li class="active/ || /<div class="recommendationbox_odd/) {
+	if (/<li class="active/ || /<div class="recommendationbox/) {
 		print STDERR "content = 1\n" if ($debug);
 		$content = 1;
 	} elsif (/<div class="podcast_listing_content/) {
