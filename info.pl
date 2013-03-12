@@ -295,6 +295,12 @@ sub disp_prog {
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
 	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
 	out::close_fifo($out);
+	if (!$long) {
+		$start_timer = time+5 
+	} else {
+		$start_timer = 0;
+	}
+	$last_long = $long;
 }
 
 sub send_list {
@@ -466,7 +472,6 @@ if (!$channel) {
 			$time >= $$lastprog[4]) {
 #			if (-f "info_coords" && $time - $$lastprog[4] < 5) {
 			my $prg = $prog[$reader]->next($last_chan);
-			print "next reader $reader = $prg last_chan $last_chan\n";
 				disp_prog($prg,(-f "info_coords" ? 1 : 0));
 #			}
 		}
@@ -501,30 +506,22 @@ if (!$channel) {
 		out::clear("info_coords");
 		goto read_fifo;
 	} elsif ($cmd eq "nextprog" || $cmd eq "right") {
-		disp_prog($prog[$reader]->next($last_chan),$last_long);
-		$start_timer = 0;
+		disp_prog($prog[$reader]->next($last_chan),1);
 		goto read_fifo;
 	} elsif ($cmd eq "prevprog" || $cmd eq "left") {
-		disp_prog($prog[$reader]->prev($last_chan),$last_long);
-		$start_timer = 0;
+		disp_prog($prog[$reader]->prev($last_chan),1);
 		goto read_fifo;
 	} elsif ($cmd =~ /^(next|prev)$/) {
 	    # Ces commandes sont juste passées à bmovl sans rien changer
 	    # mais en passant par ici ça permet de réinitialiser le timeout
 	    # de fondu, plutôt pratique...
 		out::send_bmovl($cmd);
-		$start_timer = 0;
 	    goto read_fifo;
 	} elsif ($cmd =~ /^(up|down)$/) {
 		$cmd = send_list(($cmd eq "up" ? "next" : "prev")." $last_chan");
 		$channel = $cmd;
 		print "got channel :$channel.\n";
 		$long = $last_long;
-		if (!$long) {
-			$start_timer = time+5 
-		} else {
-			$start_timer = 0;
-		}
 	} elsif ($cmd eq "zap1") {
 		if (open(F,">fifo_list")) {
 			print F "zap2 $last_chan\n";
@@ -532,7 +529,6 @@ if (!$channel) {
 		} else {
 			print "can't talk to fifo_list\n";
 		}
-		$start_timer = 0;
 		goto read_fifo;
 	} elsif ($cmd =~ s/^prog //) {
 		# Note : $long est passé collé à la commande par un :
@@ -545,11 +541,6 @@ if (!$channel) {
 		$source =~ s/\/(.+)//;
 		$base_flux = $1;
 		$channel = $cmd;
-		if (!$long) {
-			$start_timer = time+5 
-		} else {
-			$start_timer = 0;
-		}
 	} elsif ($cmd eq "record") {
 		$cmd = send_list("info ".lc($$lastprog[1]));
 		out::clear("info_coords") if (-f "info_coords");
@@ -616,7 +607,6 @@ if (!$sub) {
 }
 
 my $read_after = undef;
-$last_long = $long;
 disp_prog($sub,$long);
 goto read_fifo;
 
