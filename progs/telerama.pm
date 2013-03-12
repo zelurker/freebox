@@ -370,6 +370,8 @@ sub get {
 		$p->update($channel,$source,$base_flux);
 		$rtab = $chaines{$channel};
 	}
+	my $min = 3600*24;
+	my $min_n = $#$rtab;
 	for (my $n=0; $n<=$#$rtab; $n++) {
 		my $sub = $$rtab[$n];
 		my $start = $$sub[3];
@@ -380,10 +382,16 @@ sub get {
 			$p->{last_prog} = $n;
 			print "get: on a trouvé, on renvoie $sub\n" if ($debug);
 			return $sub;
+		} elsif ($start >= $time && $start - $time < $min) {
+			# Certains programmes ont une marge entre la fin d'un prog
+			# et le début du suivant, donc si on ne trouve pas, on renvoie
+			# le prochain à suivre
+			$min = $start - $time;
+			$min_n = $n;
 		}
 	}
 	print "get: pas trouvé la bonne heure, testé avec $time\n";
-	return $$rtab[$#$rtab];
+	return $$rtab[$min_n];
 }
 
 sub next {
