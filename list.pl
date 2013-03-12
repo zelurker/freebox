@@ -1277,14 +1277,15 @@ while (1) {
 				goto again;
 			}
 		} elsif ($source =~ /^(flux|cd)/) {
-			print "list: source pour lancement $source\n";
+#			print "list: serv $serv source pour lancement $source/$base_flux mode_flux $mode_flux\n";
 			if (!$base_flux) {
 				$base_flux = $name;
 				$base_flux =~ s/pic:.+? //;
 				$mode_flux = "";
 				print "base_flux = $name\n";
 				read_list();
-			} elsif ($mode_flux eq "list" || $serv !~ /\/\// || $serv =~ / /) {
+			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// || $serv =~ / /) 
+				&& $mode_flux)) {
 				$name =~ s/\//-/g;
 				$base_flux .= "/$name";
 				$base_flux =~ s/pic:.+? //;
