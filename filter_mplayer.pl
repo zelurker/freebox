@@ -611,7 +611,7 @@ while (1) {
 				out::send_cmd_list("reset_current");
 			}
 			handle_images("$artist - $titre") # ($album)")
-		} elsif (!$stream && /^A:[ \t]+(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
+		} elsif (!$stream && /^A:[ \t]*(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
 			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
 			$pos = $t1; # bookmark (podcast...)
 			if (($last_t == 6 && $t1 > $last_t) || ($last_t != 6 && abs($t1 - $last_t) >= 1)) {
