@@ -853,7 +853,7 @@ sub run_mplayer2 {
 	push @list,("-cdrom-device","/dev/$cd") if ($cd);
 	# fichier local (commence par /) -> pas de cache !
 	push @list,("-cache",$cache) if ($serv !~ /^\//);
-	push @list,("-ac","ffmp3,-mpg123");
+	push @list,("-ac","ffmp3,-mpg123") if ($serv =~ /mp3$/);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
 		if (!$list[$n]) {
