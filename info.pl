@@ -94,6 +94,7 @@ sub myget {
 		my $pid = fork();
 		if ($pid) {
 			push @cache_pic,[$pid,$last_chan,$last_long,$name];
+			return $name;
 		} else {
 			$raw = get $url || print STDERR "can't get image $name\n";
 			if ($raw) {
@@ -105,7 +106,6 @@ sub myget {
 			exit(0);
 		}
 	}
-	$raw;
 }
 
 sub read_stream_info {
@@ -536,7 +536,7 @@ if (!$channel) {
 		# Nouvelle syntaxe prog[:long] chaine,source/base_flux
 		# ça devient obligatoire d'avoir la source liée à ça avec toutes les
 		# sources de programmes maintenant
-		$cmd =~ s/,(.+)//;
+		$cmd =~ s/§(.+)//;
 		$source = $1;
 		$source =~ s/\/(.+)//;
 		$base_flux = $1;

@@ -390,22 +390,23 @@ sub send_cmd_prog {
 		$cmd = "prog:long";
 	}
 	$last_cmd_prog = time();
-	out::send_cmd_info("$cmd $chan,$source/$base_flux") if ($cmd);
+	out::send_cmd_info("$cmd $chan§$source/$base_flux") if ($cmd);
 }
 
 sub update_codec_info {
+	my $f;
 	if ($codec && $bitrate && $init) {
 		my $info = "";
-		if (open(F,"<stream_info")) {
-			while (<F>) {
+		if (open($f,"<stream_info")) {
+			while (<$f>) {
 				$info .= $_;
 			}
 		}
-		close(F);
-		if (open(F,">stream_info")) {
-			print F "$codec $bitrate\n";
-			print F $info if ($info);
-			close(F);
+		close($f);
+		if (open($f,">stream_info")) {
+			print $f "$codec $bitrate\n";
+			print $f $info if ($info);
+			close($f);
 			send_cmd_prog();
 		} else {
 			print "impossible de créer stream_info !\n";
