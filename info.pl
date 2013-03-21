@@ -301,6 +301,7 @@ sub disp_prog {
 		$start_timer = 0;
 	}
 	$last_long = $long;
+#	print "last_long = $last_long from disp_prog\n";
 }
 
 sub send_list {
@@ -424,9 +425,9 @@ if (!$channel) {
 		}
 		if ($last_chan && defined($lastprog)) {
 			my $ndelay = $$lastprog[4];
-			$ndelay = 0 if ($delay == $time || !$ndelay);
+			$ndelay = 0 if ($ndelay <= $time);
 			# print "delay nextprog : ",get_time($ndelay),"\n";
-			if (!$delay || $ndelay < $delay) {
+			if (!$delay || ($ndelay && $ndelay < $delay)) {
 				$delay = $ndelay ;
 			}
 			if (defined($delay) && $delay < $time) {
@@ -469,10 +470,10 @@ if (!$channel) {
 
 		$time = time;
 		if ($last_chan && defined($lastprog) && $$lastprog[4] &&
-			$time >= $$lastprog[4]) {
+			$time >= $$lastprog[4] && $time - $$lastprog[4]<=5) {
 #			if (-f "info_coords" && $time - $$lastprog[4] < 5) {
 			my $prg = $prog[$reader]->next($last_chan);
-				disp_prog($prg,(-f "info_coords" ? 1 : 0));
+				disp_prog($prg,$last_long);
 #			}
 		}
 		handle_records($time);
