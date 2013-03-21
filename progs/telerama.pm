@@ -397,8 +397,9 @@ sub get {
 sub next {
 	my ($p,$channel) = @_;
 	$channel = chaines::conv_channel($channel);
-	return if ($channel ne $p->{last_chan});
+	return if (!$p->{last_chan} || $channel ne $p->{last_chan});
 	my $rtab = $chaines{$channel};
+	return if (!$rtab);
 	if ($p->{last_prog} < $#$rtab) {
 		$p->{last_prog}++;
 		return $$rtab[$p->{last_prog}];
@@ -420,7 +421,7 @@ sub next {
 sub prev {
 	my ($p,$channel) = @_;
 	$channel = chaines::conv_channel($channel);
-	return if ($channel ne $p->{last_chan});
+	return if (!$p->{last_chan} || $channel ne $p->{last_chan});
 	my $rtab = $chaines{$channel};
 	if ($p->{last_prog} > 0) {
 		$p->{last_prog}--;
