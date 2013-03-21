@@ -45,7 +45,7 @@ our %codage = (
 );
 
 sub update_prog {
-	my $prog = chaines::request("http://www.franceinter.fr/sites/default/files/rf_player/player-direct.json");
+	my $prog = chaines::request("http://www.franceinter.fr/sites/default/files/rf_player/player-direct.json?_=".(time()*1000));
 	return if (!$prog);
 	open(my $f,">finter");
 	return if (!$f);
