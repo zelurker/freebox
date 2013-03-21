@@ -1,5 +1,36 @@
 #!/bin/sh
 
+if ! [ -f bmovl-src/bmovl ]; then
+	cd bmovl-src && make && cd -
+fi
+if ! [ -d livetv ]; then
+	mkdir livetv
+fi
+if ! [ -d cache ]; then
+	mkdir cache
+fi
+if ! [ -f Vera.ttf ]; then
+	vera=`locate Vera.ttf`
+	if "$vera" != ""; then
+		ln -s "$vera"
+	else
+		echo "on va essayer de récupérer Vera.ttf d'internet"
+		if wget -O vera.zip "http://img.dafont.com/dl/?f=bitstream_vera_sans" && unzip vera.zip Vera.ttf && rm -f vera.zip; then
+			echo "installation ok"
+		else
+			echo Dommage, trouvez Vera.ttf et mettez la dans ce répertoire !
+			exit 1
+		fi
+	fi
+fi
+if ! perl -c info.pl; then
+	echo problèmes avec votre install de perl, dsl !
+	exit 1
+fi
+if ! perl -c list.pl; then
+	echo problèmes avec votre install de perl, dsl !
+	exit 1
+fi
 ulimit -c unlimited
 find cache/ -mtime +3 -delete
 find livetv/ -mtime +1 -delete
