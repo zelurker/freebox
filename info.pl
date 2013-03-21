@@ -506,10 +506,10 @@ if (!$channel) {
 		out::clear("info_coords");
 		goto read_fifo;
 	} elsif ($cmd eq "nextprog" || $cmd eq "right") {
-		disp_prog($prog[$reader]->next($last_chan),1);
+		disp_prog($prog[$reader]->next($last_chan),$last_long);
 		goto read_fifo;
 	} elsif ($cmd eq "prevprog" || $cmd eq "left") {
-		disp_prog($prog[$reader]->prev($last_chan),1);
+		disp_prog($prog[$reader]->prev($last_chan),$last_long);
 		goto read_fifo;
 	} elsif ($cmd =~ /^(next|prev)$/) {
 	    # Ces commandes sont juste passées à bmovl sans rien changer

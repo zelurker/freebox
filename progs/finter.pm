@@ -42,6 +42,7 @@ our %codage = (
 	'\u00fc' => 'ü',
 	'\u2019' => "'",
 	'\u00c7' => 'Ç',
+	'\u20ac' => 'euros',
 );
 
 sub update_prog {
