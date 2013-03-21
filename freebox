@@ -3,6 +3,11 @@
 if ! [ -f bmovl-src/bmovl ]; then
 	cd bmovl-src && make && cd -
 fi
+if ! [ -f bmovl-src/bmovl ]; then
+	echo compilation bmovl impossible
+	echo vérifiez que vous avez make, gcc, sdl-dev et sdl_image-dev minimum
+	exit 1
+fi
 if ! [ -d livetv ]; then
 	mkdir livetv
 fi
