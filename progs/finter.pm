@@ -61,6 +61,18 @@ sub get_date {
 	sprintf("%d/%02d/%02d",$mday,$mon+1,$year+1900);
 }
 
+sub decode_str {
+	my $title = shift;
+	foreach (keys %codage) {
+		my $index;
+		do {
+			$index = index($title,$_);
+			substr($title,$index,length($_),$codage{$_}) if ($index >= 0);
+		} while ($index >= 0);
+	}
+	$title;
+}
+
 sub update {
 	my ($p,$channel) = @_;
 	return undef if (lc($channel) ne "france inter"); 
@@ -74,7 +86,12 @@ sub update {
 		$res = join("\n",<$f>);
 		close($f);
 	}
+	# On récupère l'heure de création du fichier, correspond à la desc étendue
+	my $time = time() - (-M "finter")*24*3600;
 	my @list = split(/"theme_functions":\[/,$res);
+	# La description étendue n'a l'air dispo que pour le programme en cours !
+	my ($cur_desc) = $res =~ /p class=\\"desc\\">(.+?)</;
+	$cur_desc = decode_str($cur_desc);
 	my $rtab = $p->{chaines}->{"france inter"};
 	my $inserted = 0;
 	foreach (@list) {
@@ -87,21 +104,24 @@ sub update {
 			next if (!$key);
 			s/(^"|"$)//g;
 			s/\\\//\//g;
+			if (/^\{/) {
+				s/(^\{|\})//g;
+				@_ = split(/\:/);
+				my $s = "";
+				foreach (@_) {
+					s/(^"|"$)//g;
+					next if (/^\d+$/);
+					$s .= ", " if ($s);
+					$s .= $_;
+				}
+				$_ = $s;
+			}
 			print STDERR "$key = $_\n" if ($debug);
-			$hash{$key} = $_;
+			$hash{$key} = decode_str($_);
 		}
 		print STDERR "\n" if ($debug);
 		my $title = $hash{title};
 		next if (!$title);
-		print "title avant $title\n" if ($debug);
-		foreach (keys %codage) {
-			my $index;
-			do {
-				$index = index($title,$_);
-				substr($title,$index,length($_),$codage{$_}) if ($index >= 0);
-			} while ($index >= 0);
-		}
-		print "title après $title\n" if ($debug);
 		my $img = $hash{image};
 		$img = "http://www.franceinter.fr/$img";
 		if ($hash{heure_debut}) {
@@ -116,13 +136,17 @@ sub update {
 				$inserted = 1;
 				my @tab = (undef, "France Inter", $title, $hash{heure_debut}, 
 					$hash{heure_fin}, "",
-					"", # desc
+					($hash{heure_debut}<$time && $hash{heure_fin} > $time ?
+						$cur_desc : ""), # desc
 					"","",$img,0,0,get_date($hash{heure_debut}));
+				if ($hash{personnes}) {
+					$tab[6] .= " ($hash{personnes})";
+				}
 				push @$rtab,\@tab;
 			}
 		} elsif ($inserted) {
 			# met à jour la description
-			$$rtab[$#$rtab][6] = $title;
+			$$rtab[$#$rtab][6] = $title if (!$$rtab[$#$rtab][6]);
 		}
 	}
 	$p->{chaines}->{"france inter"} = $rtab;
