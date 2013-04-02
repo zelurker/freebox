@@ -353,11 +353,11 @@ sub get {
 	my ($p,$channel,$source,$base_flux) = @_;
 	$channel = chaines::conv_channel($channel);
 	my $rtab = $chaines{$channel};
-	$rtab = $p->update($channel,$source,$base_flux) if (!$rtab);
+	$rtab = $p->update($channel) if (!$rtab);
 	if (!$rtab && $channel =~ /^france 3 /) {
 		# On a le cas particulier des chaines régionales fr3 & co...
 		$channel = "france 3";
-		$rtab = $p->update($channel,$source,$base_flux);
+		$rtab = $p->update($channel);
 	}
 	if ($debug && !$rtab) {
 		print "get: rien trouvé pour $channel\n";
@@ -367,11 +367,17 @@ sub get {
 	if ($time > $$rtab[$#$rtab][4]) {
 		# Si le cache dans chaines{} est trop vieux, on met à jour
 		print "update channel too old\n" if ($debug);
-		$p->update($channel,$source,$base_flux);
+		$p->update($channel);
 		$rtab = $chaines{$channel};
 	}
 	my $min = 3600*24;
 	my $min_n = $#$rtab;
+	if ($$rtab[0][3] > $time) {
+		# Heure de début du 1er prog dans le futur -> récupérer l'offset d'avant
+		my $offset = get_offset($$rtab[0][12])-1;
+		$p->update($channel,$offset);
+	}
+
 	for (my $n=0; $n<=$#$rtab; $n++) {
 		my $sub = $$rtab[$n];
 		my $start = $$sub[3];
