@@ -465,16 +465,18 @@ sub read_list {
 		open($f,"<$ENV{HOME}/.mplayer/channels.conf") || die "can't open channels.conf\n";
 		@list = ();
 		my $num = 1;
+		my @pic = ();
 		while (<$f>) {
 			chomp;
 			my @fields = split(/\:/);
 			my $service = $fields[0];
 			my $name = $service;
 			$name =~ s/\(.+\)//; # name sans le transpondeur
-			my $pic = chaines::get_chan_pic($name);
+			my $pic = chaines::get_chan_pic($name,\@pic);
 			push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
 		}
 		close($f);
+		update_pics(\@pic);
 	} elsif ($source =~ /^(livetv|Enregistrements)$/) {
 		@list = ();
 		my $num = 1;
@@ -823,12 +825,15 @@ sub run_mplayer2 {
 			}
 			$cache = 5000;
 		} elsif ($src =~ /(freeboxtv|dvb)/) {
-			# Chaines de télé : mplayer2 ne met pas à jour les indexes
-			# dynamiquement, on ne peut revenir en arrière avec lui on se
-			# retrouve au début de la vidéo, donc il faut absolument mplayer
-			# ici
-			$filter = ",kerndeint";
-			$player = "mplayer";
+			# Réglage pour les chaines HD :
+			# l'entrelacement est off par défaut, bouffe trop de temps cpu
+			# la touche D doit théoriquement le remettre, pas sûr que ça marche sur
+			# mplayer2, à tester vraiment.
+			# mplayer2 est nettement + rapide que mplayer pour la hd, donc on le prend
+			# avec mplayer il faut obligatoirement passer -demuxer lavf pour les chaines tnt hd
+			# A tester aussi : est-ce que l'index du fichier est bien mis à jour en temps réel ?
+			# $filter = ",kerndeint";
+			$player = "mplayer2";
 		}
 	}
 	my ($dvd1,$dvd2,$dvd3);
@@ -845,16 +850,20 @@ sub run_mplayer2 {
 	}
 
 	my @list = ("perl","filter_mplayer.pl",$player,$audio,$dvd1,$serv,
-		"-framedrop","-autosync",10,
+		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
+		"-framedrop","-nocorrect-pts", "-autosync",10,
 		"-fs",
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
 		"bmovl=1:0:fifo,screenshot$filter",$dvd2,$dvd3);
 	push @list,("-cdrom-device","/dev/$cd") if ($cd);
 	# fichier local (commence par /) -> pas de cache !
-	push @list,("-cache",$cache) if ($serv !~ /^\//);
+	# Eviter le cache sur la hd en local donne une sacrée amélioration !
+	push @list,("-cache",$cache) if ($serv !~ /^(\/|livetv|records)/);
 	# hr-mp3-seek : lent, surtout quand on revient en arrière, mais 
 	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/);
+	# L'option obligatoire pour mplayer avec la tnt hd
+	push @list,("-demuxer","lavf") if ($src =~ /(freeboxtv|dvb)/);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
 		if (!$list[$n]) {
