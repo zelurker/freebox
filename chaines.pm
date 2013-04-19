@@ -6,9 +6,8 @@ use LWP 5.64;
 
 use out;
 
-# channel icons
-# just look for "icones de chaines de television" on google, wikipedia is
-# very good at it. Here are some, there are more...
+# Icones des chaines, merci google
+# Le numéro est le numéro récupéré dans liste_chaines
 our %icons = (
 	1 => "http://upload.wikimedia.org/wikipedia/fr/thumb/6/60/Logo_TF1.svg/421px-Logo_TF1.svg.png",
 	2 => "http://upload.wikimedia.org/wikipedia/fr/thumb/0/02/Logo_France_2.svg/80px-Logo_France_2.svg.png",
@@ -56,6 +55,12 @@ our %icons = (
 	268 => "http://upload.wikimedia.org/wikipedia/fr/thumb/c/c7/Fashion_TV_Logo.png/300px-Fashion_TV_Logo.png",
 	288 => "http://upload.wikimedia.org/wikipedia/fr/thumb/c/ce/FRANCE24.svg/100px-FRANCE24.svg.png",
 	294 => "http://upload.wikimedia.org/wikipedia/fr/thumb/6/67/IDF1.png/100px-IDF1.png",
+	4131 => "http://img.over-blog.com/550x300/1/59/49/25/TF1/HD1/HD1-logo.jpg",
+	4132 => "http://www.mytivi.fr/wp-content/uploads/2012/12/l%C3%A9quipe-21.jpg",
+	4133 => "http://thumb.info2tele.com/wp-content/uploads//2012/11/20121115-logo-6ter-info2tele.jpg",
+	4134 => "http://upload.wikimedia.org/wikipedia/fr/archive/f/fe/20121119164338!Num%C3%A9ro_23_logo.png",
+	4135 => "http://upload.wikimedia.org/wikipedia/fr/e/ed/RMC_D%C3%A9couverte_logo_2012.png",
+	4136 => "https://upload.wikimedia.org/wikipedia/fr/thumb/1/1f/Ch%C3%A9rie_25_logo.svg/605px-Ch%C3%A9rie_25_logo.svg.png",	
 	1500 => "http://upload.wikimedia.org/wikipedia/fr/thumb/3/3f/Logo_nolife.svg/208px-Logo_nolife.svg.png",
 );
 
@@ -85,9 +90,11 @@ sub conv_channel {
 		"Luxe.TV" => "Luxe TV",
 		"D8" => "Direct 8",
 		"telenantes" => "Télé Nantes",
+		"NUMERO 23" => "Numéro 23",
+		"RMC DECOUVERTE" => "RMC Découverte",
 	);
 	$channel =~ s/ \(.+\)//;
-	$channel =~ s/ hd$//i;
+	$channel =~ s/ ?hd$//i;
 	$channel =~ s/ sat$//i;
 	$channel =~ s/^Télénantes //;
 	$channel =~ s/ *$//;
