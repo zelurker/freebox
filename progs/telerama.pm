@@ -57,11 +57,10 @@ our (%chaines);
 sub new {
 	my ($class,$mynet) = @_;
 	my $p = bless {
-		chaines => \%chaines,
+		chaines => (),
 	},$class;
 	$p->init_selected_channels($mynet);
 	$net = $mynet;
-	getListeProgrammes(0);
 	$p;
 }
 
@@ -309,6 +308,10 @@ sub getListeProgrammes {
 sub update {
 	my ($p,$channel,$offset) = @_;
 	$offset = 0 if (!defined($offset));
+	if (!%chaines) {
+		getListeProgrammes(0);
+		$p->{chaines} = \%chaines;
+	}
 	for (my $n=0; $n<=$#chan; $n++) {
 		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
 		if ($channel eq $name && $num != 254) {
@@ -316,7 +319,7 @@ sub update {
 			my $response = req_prog($offset,$num);
 			last if (!$response->is_success);
 			my $res = $response->content;
-			my $program_text = ($chaines{$channel} ? join('$$$',$chaines{$channel}) : "");
+			my $program_text = ($p->{chaines}->{$channel} ? join('$$$',$p->{chaines}->{$channel}) : "");
 			if ($res && index($program_text,$res) < 0 && $res =~ /$num/) {
 				$res = parse_prg($res);
 				if (open(F,">>day$offset")) {
@@ -342,7 +345,7 @@ sub update {
 					exit(1);
 				}
 			}
-			$res = $chaines{$channel};
+			$res = $p->{chaines}->{$channel};
 			print "update: returning $res\n" if ($debug);
 			return $res;
 		}
@@ -352,7 +355,7 @@ sub update {
 sub get {
 	my ($p,$channel,$source,$base_flux) = @_;
 	$channel = chaines::conv_channel($channel);
-	my $rtab = $chaines{$channel};
+	my $rtab = $p->{chaines}->{$channel};
 	$rtab = $p->update($channel) if (!$rtab);
 	if (!$rtab && $channel =~ /^france 3 /) {
 		# On a le cas particulier des chaines régionales fr3 & co...
@@ -368,7 +371,7 @@ sub get {
 		# Si le cache dans chaines{} est trop vieux, on met à jour
 		print "update channel too old\n" if ($debug);
 		$p->update($channel);
-		$rtab = $chaines{$channel};
+		$rtab = $p->{chaines}->{$channel};
 	}
 	my $min = 3600*24;
 	my $min_n = $#$rtab;
@@ -404,7 +407,7 @@ sub next {
 	my ($p,$channel) = @_;
 	$channel = chaines::conv_channel($channel);
 	return if (!$p->{last_chan} || $channel ne $p->{last_chan});
-	my $rtab = $chaines{$channel};
+	my $rtab = $p->{chaines}->{$channel};
 	return if (!$rtab);
 	if ($p->{last_prog} < $#$rtab) {
 		$p->{last_prog}++;
@@ -414,7 +417,7 @@ sub next {
 	my $old = $#$rtab;
 	print "A récupérer offset $offset\n" if ($debug);
 	$p->update($channel,$offset);
-	$rtab = $chaines{$p->{last_chan}};
+	$rtab = $p->{chaines}->{$p->{last_chan}};
 	if ($old == $#$rtab) {
 		print "next: ça a foiré\n" if ($debug);
 		return $$rtab[$p->{last_prog}];
@@ -428,7 +431,7 @@ sub prev {
 	my ($p,$channel) = @_;
 	$channel = chaines::conv_channel($channel);
 	return if (!$p->{last_chan} || $channel ne $p->{last_chan});
-	my $rtab = $chaines{$channel};
+	my $rtab = $p->{chaines}->{$channel};
 	if ($p->{last_prog} > 0) {
 		$p->{last_prog}--;
 		return $$rtab[$p->{last_prog}];
@@ -437,7 +440,7 @@ sub prev {
 	my $old = $#$rtab;
 	print "A récupérer offset $offset\n" if ($debug);
 	$p->update($channel,$offset);
-	$rtab = $chaines{$p->{last_chan}};
+	$rtab = $p->{chaines}->{$p->{last_chan}};
 	if ($old == $#$rtab) {
 		print "prev: ça a foiré\n" if ($debug);
 		return $$rtab[$p->{last_prog}];
