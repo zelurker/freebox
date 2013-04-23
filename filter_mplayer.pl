@@ -21,6 +21,11 @@ use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
 use LWP 5.64;
 
+open(F,"<desktop");
+my $desk_w = <F>;
+my $desk_h = <F>;
+close(F);
+chomp($desk_w,$desk_h);
 our @args = @ARGV;
 @ARGV = ();
 my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
@@ -137,11 +142,7 @@ sub handle_result {
 	}
 	if ($image = $result->next()) {
 		print "handle_result: next\n";
-		open(F,"<desktop");
-		my $w = <F>;
-		my $h = <F>;
-		close(F);
-		chomp($w,$h);
+		my ($w,$h) = ($desk_w,$desk_h);
 		my ($x,$y) = ($w/36,$h/36);
 		$w -= $x; $h -= $y;
 		if (open(F,"<list_coords")) {
@@ -320,28 +321,7 @@ sub check_eof {
 		}
 	}
 	if (!$exit || $exit =~ /ID_SIGNAL.(11|6)/) {
-		print "filter: fait quitter mplayer...\n";
-		out::send_command("quit\n");
-		eval {
-			alarm(3);
-			while (<>) {}
-			alarm(0);
-		};
-		if ($@) {
-			# On va tacher de récupérer le bon pid !
-			if ($pid_mplayer) {
-				kill "TERM", $pid_mplayer;
-				# $exit .= "ID_EXIT=QUIT ";
-			}
-		}
-		sleep(1);
-		# Evidemment ça impose d'avoir /proc mais ça simplifie !
-		if (-f "/proc/$pid_mplayer/cmdline") {
-			print "filter: mplayer pid=$pid_mplayer, on kille -9 !\n";
-			kill "KILL", $pid_mplayer;
-		} else {
-			print "filter: mplayer parti proprement !\n";
-		}
+		quit_mplayer();
 	}
 	if ($exit) {
 		open(F,">id") || die "can't write to id\n";
@@ -378,6 +358,31 @@ sub check_eof {
 }
 
 our $last_cmd_prog = 0;
+
+sub quit_mplayer {
+	print "filter: fait quitter mplayer...\n";
+	out::send_command("quit\n");
+	eval {
+		alarm(3);
+		while (<>) {}
+		alarm(0);
+	};
+	if ($@) {
+		# On va tacher de récupérer le bon pid !
+		if ($pid_mplayer) {
+			kill "TERM", $pid_mplayer;
+			# $exit .= "ID_EXIT=QUIT ";
+		}
+	}
+	sleep(1);
+	# Evidemment ça impose d'avoir /proc mais ça simplifie !
+	if (-f "/proc/$pid_mplayer/cmdline") {
+		print "filter: mplayer pid=$pid_mplayer, on kille -9 !\n";
+		kill "KILL", $pid_mplayer;
+	} else {
+		print "filter: mplayer parti proprement !\n";
+	}
+}
 
 sub send_cmd_prog {
 	# -f info_coords détecte si le bandeau d'infos est déjà affiché, dans
@@ -421,6 +426,7 @@ sub run_mplayer {
 
 	CHILD->autoflush(1);
 	PARENT->autoflush(1);
+	print "run_mplayer: args = @args\n";
 	$pid_mplayer = fork();
 	if ($pid_mplayer == 0) {
 		close CHILD;
@@ -672,9 +678,13 @@ while (1) {
 			# A priori pas la peine d'envoyer un check_eof ici, ça va éviter
 			# de fermer précipitement en cas de -idle
 			# check_eof();
-		} elsif (!$stream && /^A:(.+?) V:/) {
+		} elsif (!$stream && /^A:(.+?) V:.*A-V: (.+?) c/) {
 			$last_pos = $pos;
 			$pos = $1;
+			my $delay = abs($2);
+			if ($delay > 1) {
+				print STDERR "filter: delay = $delay\n";
+			}
 			# print STDERR "pos $pos\n";
 			if (!defined($start_pos)) {
 				$start_pos = $pos ;
