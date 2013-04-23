@@ -851,7 +851,9 @@ sub run_mplayer2 {
 
 	my @list = ("perl","filter_mplayer.pl",$player,$audio,$dvd1,$serv,
 		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
-		"-framedrop","-nocorrect-pts", "-autosync",10,
+		# Apparemment options interdites avec vdpau, sinon on perd la synchro !
+		#	"-framedrop","-nocorrect-pts",
+	   	"-autosync",10,
 		"-fs",
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
@@ -1170,7 +1172,7 @@ while (1) {
 			unlink "rejets/$source" && rename("rejets/$source.0","rejets/$source");
 		}
 	} elsif ($cmd eq "reject") {
-		if ($source =~ /^(Enregistrements|livetv)/) {
+		if ($source =~ /^(Fichiers|Enregistrements|livetv)/) {
 			my $file = $list[$found][0][2];
 			print "fichier à effacer $file\n";
 			unlink $file;
