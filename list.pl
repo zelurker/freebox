@@ -1,17 +1,7 @@
 #!/usr/bin/perl
 
-# Gestion de la liste de chaines
+# Gestion des listes
 # Accepte les commandes par une fifo : fifo_list
-# commandes reconnues :
-# down, up, right, left : déplacement dans la liste
-# name service flavour : renvoie le nom de la chaine sur la fifo
-# next/prev service flavour : renvoie le nom de la chaine suivante/précédente
-# zap1 : zappe sur la chaine sélectionnée dans la liste
-# zap2 : même chose mais en passant le nom de la chaine
-# clear : efface la liste et le cadre d'info éventuel
-# list : affiche la liste
-# switch_mode : change de mode
-# reset_current : resynchronise la liste après une màj du fichier current
 
 use strict;
 use Socket;
@@ -1250,7 +1240,7 @@ while (1) {
 			load_file2($name,$serv,$flav,$audio,$video);
 			next;
 		} elsif ($source =~ /^Fichiers/) {
-			exec_file($name,$serv,$audio,$video);
+			next if exec_file($name,$serv,$audio,$video);
 		} elsif ($source eq "apps") {
 			my ($name,$serv) = get_name($list[$found]);
 			if (!$serv) {
@@ -1507,7 +1497,24 @@ while (1) {
 	} elsif ($cmd eq "nextchan") {
 		reset_current() if (! -f "list_coords");
 		$found++;
-		$found = $#list if ($found > $#list);
+		if ($found > $#list) {
+			if ($source =~ /^Fichiers /) {
+				$found = 1; # Pointe sur ..
+				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+				exec_file($name,$serv,$audio,$video);
+				goto again;
+			} else {
+				$found = 0;
+			}
+		}
+		if ($source =~ /^Fichiers /) {
+			my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+			if ($name =~ /\/$/) { # Répertoire
+				exec_file($name,$serv,$audio,$video);
+				$found = 1; # On se place au début...
+				goto again; # et on y retourne !
+			}
+		}
 		$cmd = "zap1";
 		goto again;
 	} elsif ($cmd eq "prevchan") {
