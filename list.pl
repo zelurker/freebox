@@ -1071,6 +1071,7 @@ while (1) {
 		}
 		$found++;
 		close_numero();
+		next if (! -f "list_coords");
 	} elsif ($cmd eq "up") {
 		if ($mode_opened) {
 			$mode_sel--;
@@ -1349,6 +1350,7 @@ while (1) {
 			}
 			next;
 		}
+		next if (! -f "list_coords");
 	} elsif ($cmd =~ /^name /) {
 		my @arg = split(/ /,$cmd);
 		if ($#arg < 2 && $source =~ /freebox/) {
