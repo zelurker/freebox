@@ -1619,7 +1619,7 @@ sub exec_file {
 	my $path;
 	if ($source eq "Fichiers vidéo") {
 		$path = "video_path";
-	} elsif ($source =~ /audio/) {
+	} elsif ($source =~ / son/) {
 		$path = "music_path";
 	} elsif ($source eq "dvd") {
 		$path = "dvd_path";
