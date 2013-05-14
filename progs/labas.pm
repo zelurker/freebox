@@ -33,22 +33,47 @@ sub get {
 	return \@tab if ($last_chan && $last_chan eq $channel);
 	$last_chan = $channel;
 
-	# Calcule le nombre d'épisodes depuis vendredi 8/3/2013 (2710ème !)
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my $t0 = timelocal(0,0,12,$mday,$mon,$year);
+	$t0 -= 24*3600 if ($hour < 15); # Si on est avant l'heure de diffusion
 	$t0 -= 24*3600 if ($wday == 6);
 	$t0 -= 48*3600 if ($wday == 0 || $wday == 7);
 	$base_flux =~ s/^.+?\///; # Dégage la partie la-bas, ne garde que la date
 	my @t = split(/\//,"$base_flux/$channel");
 	return undef if ($#t < 2);
 	my $t = timelocal(0,0,12,$channel,$t[1]-1,$t[0]-1900);
-	my $ecart = ($t - $t0) / (24*3600);
+	if ($t > $t0) {
+		# Dans le futur ?!!
+		@tab = (undef, "la-bas.org", "-",
+			undef, # début
+			undef, "", # fin
+			"Pas encore d'info", # desc
+			"","",
+			"", # img
+			0,0,
+			"$channel/$t[1]/$t[0]");
+		return \@tab;
+	}
+	my $ecart = 0;
+	while ($t < $t0) {
+		# calcule le nombre de jours d'émission (ecart)
+		# C'est merdique parce que ça revient à calculer le nombre de jours
+		# travaillés, il devrait y avoir une fonction pour ça dans le module
+		# date, y a peut-être un module quelconque qui fait ça mais bon... !
+		my ($sec,$min,$hour,$mday,$mon,$year,$wday) = localtime($t);
+		if ($wday == 5) { # vendredi
+			$t += 3*24*3600;
+		} else {
+			$t += 24*3600;
+		}
+		$ecart++;
+	}
+
+	print STDERR "écart calculé $ecart à partir de $base_flux/$channel\n";
 	# En fait y a des articles qui s'intercalent en dehors des émissions donc
 	# on ne peut pas déduire directement le numéro de l'article.
 	# Par contre on peut le retrouver en une seule requête
-	my $nb_s = int($ecart/7);
-	my $nb = abs($ecart-$nb_s*2);
-	my $index = chaines::request("http://www.la-bas.org/mot.php3?id_mot=63&debut_lb=$nb");
+	my $index = chaines::request("http://www.la-bas.org/mot.php3?id_mot=63&debut_lb=$ecart");
 	$index =~ /Micro.gif.+?article=(.+?)"/;
 	$ecart = $1;
 	
