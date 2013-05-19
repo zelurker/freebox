@@ -35,7 +35,7 @@ sub get {
 
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my $t0 = timelocal(0,0,12,$mday,$mon,$year);
-	$t0 -= 24*3600 if ($hour < 15); # Si on est avant l'heure de diffusion
+	$t0 -= 24*3600 if ($hour < 15 && ($wday >= 1 && $wday <= 5)); # Si on est avant l'heure de diffusion
 	$t0 -= 24*3600 if ($wday == 6);
 	$t0 -= 48*3600 if ($wday == 0 || $wday == 7);
 	$base_flux =~ s/^.+?\///; # Dégage la partie la-bas, ne garde que la date
