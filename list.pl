@@ -57,7 +57,7 @@ my ($chan,$source,$serv,$flav) = @_;
 # Si base_flux contient une recherche + quelque chose d'autre, tronque à la
 # recherche. On ne peut pas restaurer l'url d'une vidéo précise, il vaut mieux
 # retourner sur la recherche
-$source =~ s/result:(.+?)\/.+/result:$1/; 
+$source =~ s/result:(.+?)\/.+/result:$1/;
 $source =~ s/\/(.+)//;
 my $base_flux = $1;
 chomp ($chan,$source,$serv,$flav);
@@ -211,7 +211,7 @@ sub apps_menu {
 			$fields{categories} =~ s/;$//; # supprime éventuel ; à la fin
 			foreach ($lang2,$lang) {
 				if ($fields{"name[$_]"}) {
-					$fields{name} = $fields{"name[$_]"}; 
+					$fields{name} = $fields{"name[$_]"};
 					Encode::from_to($fields{name}, "utf-8", "iso-8859-15");
 				}
 			}
@@ -331,7 +331,7 @@ sub read_list {
 	} elsif ($source eq "apps") {
 		apps_menu();
 	} elsif ($source eq "cd") {
-		cd_menu();	
+		cd_menu();
 	} elsif ($source eq "dvd") {
 		@list = ([[1,"mplayer"]],
 		[[2,"vlc"]],
@@ -805,7 +805,7 @@ sub run_mplayer2 {
 		}
 		if ($name =~ /cddb/) {
 			$player = "mplayer";
-		}	   
+		}
 		$serv =~ s/ http.+//; # Stations de radio, vire l'url du prog
 	} else {
 		$audio = "-aid $audio " if ($audio);
@@ -852,7 +852,7 @@ sub run_mplayer2 {
 	# fichier local (commence par /) -> pas de cache !
 	# Eviter le cache sur la hd en local donne une sacrée amélioration !
 	push @list,("-cache",$cache) if ($serv !~ /^(\/|livetv|records)/);
-	# hr-mp3-seek : lent, surtout quand on revient en arrière, mais 
+	# hr-mp3-seek : lent, surtout quand on revient en arrière, mais
 	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/);
 	# L'option obligatoire pour mplayer avec la tnt hd
 	push @list,("-demuxer","lavf") if ($src =~ /(freeboxtv|dvb)/);
@@ -1093,7 +1093,7 @@ while (1) {
 			next;
 		}
 		if ($found < $nb_elem || $nb_elem == 0) {
-			if ($source =~ "flux" && $base_flux) { 
+			if ($source =~ "flux" && $base_flux) {
 				if ($base_flux =~ /\//) {
 					$base_flux =~ s/(.+)\/.+/$1/;
 					if ($base_flux =~ /\//) {
@@ -1185,7 +1185,7 @@ while (1) {
 				}
 				close(G);
 			}
-					
+
 			if (!$mode_opened) {
 				foreach (@{$list[$found]}) {
 					my ($num,$name,$service,$flavour,$audio,$video) = @{$_};
@@ -1210,8 +1210,8 @@ while (1) {
 			($found) = find_name($cmd);
 		}
 		close_numero();
-		save_conf();
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+		save_conf() if ($serv ne "..");
 		$mode_opened = 0 if ($mode_opened);
 		if ($source eq "menu") {
 			$source = $name;
@@ -1226,11 +1226,11 @@ while (1) {
 				next if (exec_file($name,$serv,$audio,$video));
 			} elsif ($name eq "eject") {
 				system("eject $dvd");
-				next;	
+				next;
 			} else {
 				if (-d "$dvd/VIDEO_TS" || -d "$dvd/video_ts") {
 					load_file2("dvd","dvd",$name);
-					next;	
+					next;
 				} else {
 					$base_flux = "dvd";
 					list_files();
@@ -1288,7 +1288,7 @@ while (1) {
 				$mode_flux = "";
 				print "base_flux = $name\n";
 				read_list();
-			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// || $serv =~ / /) 
+			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// || $serv =~ / /)
 				&& $mode_flux)) {
 				$name =~ s/\//-/g;
 				$base_flux .= "/$name";
@@ -1377,12 +1377,12 @@ while (1) {
 				if ($next) {
 					my $next = $n+1;
 					$next = 0 if ($next > $#list);
-					($name) =get_name($list[$next]); 
+					($name) =get_name($list[$next]);
 					print "next: got $name from $next\n";
 				} else {
 					my $prev = $n-1;
 					$prev = $#list if ($prev < 0);
-					($name) =get_name($list[$prev]); 
+					($name) =get_name($list[$prev]);
 				}
 				print $lout "$name\n";
 			}
@@ -1476,7 +1476,7 @@ while (1) {
 				last if (ord(uc($name)) >= $cmd);
 			}
 		}
-			
+
 		if ($found > $#list) {
 			# not found
 			$found = $old;
