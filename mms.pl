@@ -27,7 +27,7 @@ sub get_mms {
 		my $response = $browser->get($url);
 		return undef if (!$response->is_success);
 		$type = $response->header("Content-type");
-		if ($type =~ /(audio|video)/) {
+		if ($type =~ /(audio|video)/ && $type !~ /charset/) {
 			# audio/xxx est quand même prenable !
 			print "url is not text : $type\n";
 			$browser->max_size(5000);
@@ -59,7 +59,7 @@ sub get_mms {
 			return $_ if (/^http/);
 		}
 		print "could not find url in m3u $page from $url\n";
-		exit(1);
+		return undef;
 	} elsif ($page =~ /^\[playlist/) {
 		foreach (split /\r?\n/,$page) {
 			return $1 if (/^File\d*\=(http.+)/);

@@ -642,7 +642,8 @@ sub get_name {
 			}
 		}
 	}
-	return ($$sel[1],$$sel[2],$$sel[3],$$sel[4],$$sel[5]);
+	#return ($$sel[1],$$sel[2],$$sel[3],$$sel[4],$$sel[5]);
+	return @$sel[1..$#$sel];
 }
 
 sub find_channel {
@@ -698,6 +699,7 @@ sub switch_mode {
 	$found = 0 if ($found > $#modes);
 	$source = $modes[$found];
 	print "switch_mode: source = $source\n";
+	$base_flux = undef;
 	read_list();
 }
 
@@ -786,7 +788,7 @@ sub run_mplayer2 {
 	my $pwd;
 	chomp ($pwd = `pwd`);
 	my $quiet = "";
-	if ($name =~ /mms/ || $src =~ /youtube/ || ($serv =~ /:\/\// &&
+	if ($serv =~ /(mms|rtmp|rtsp)/ || $src =~ /youtube/ || ($serv =~ /:\/\// &&
 		$serv =~ /(mp4|avi|asf|mov)$/)) {
 		$cache = 1000;
 	}
@@ -879,6 +881,57 @@ sub load_file2 {
 		return;
 	}
 	out::send_command("pause\n");
+	if ($serv =~ /m3u$/) {
+		my $old_base = $base_flux;
+		$base_flux .= "/$name";
+		my $tv = ($name =~ /TV/i);
+		my $radio = ($name =~ /radio/i);
+		if (!$tv && !$radio) {
+			$tv = ($base_flux =~ /tv/i);
+			$radio = ($base_flux =~ /radio/i);
+		}
+		print "m3u base_flux $base_flux serv $serv name $name\n";
+		my ($type,$cont) = chaines::request($serv);
+		print "$cont\n";
+		Encode::from_to($cont, "utf-8", "iso-8859-15") if ($type =~ /utf/);
+		my @old = @list;
+		if ($cont =~ /^#EXTM3U/) {
+			@list = ();
+		} else {
+			$serv = $cont;
+			$cont = undef;
+			$base_flux = $old_base;
+		}
+		my $num = 1;
+		my $name = "";
+		my @pic = ();
+		foreach (split /\n/,$cont) {
+			next if (/^\#EXTM3U/);
+			s/\r//; # pour ête sûr !
+			if (/^#EXTINF:\-?\d*\,(.+)/ || /^#EXTINF:(.+)/) {
+				$name = $1;
+			} elsif ($name) {
+				$serv = $_;
+				my $pic = undef;
+				if ($tv) {
+					$pic = chaines::get_chan_pic($name,\@pic);
+				} elsif ($radio) {
+					$pic = get_radio_pic($name,\@pic);
+				}
+				print "push $num,$name,$serv (tv $tv radio $radio)\n";
+				my @cur = ($num++,$name,$serv,undef,undef,undef,undef,$pic);
+				push @list,[\@cur];
+				$name = undef;
+			}
+		}
+		if ($#list == 0) { # 1 seule entrée dans le m3u
+			@list = @old;
+			$cont = undef;
+			$base_flux = $old_base;
+			# $serv va juste être passé à la suite...
+		}
+		return if ($cont);
+	}
 	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac|ts)$/i) {
 	    # Gestion des pls supprimée, mplayer semble les gérer
 	    # très bien lui même.
@@ -1211,6 +1264,7 @@ while (1) {
 		}
 		close_numero();
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+		print "serv $serv name $name source $source base $base_flux.\n";
 		save_conf() if ($serv ne "..");
 		$mode_opened = 0 if ($mode_opened);
 		if ($source eq "menu") {
@@ -1571,10 +1625,12 @@ while (1) {
 	}
 	my $n = $beg-1;
 	my $name_sel;
+	my $have_pic = undef;
 	for (my $nb=1; $nb<=$nb_elem; $nb++) {
 		last if (++$n > $#list);
 		my $rtab = $list[$n];
 		my ($num,$name,$service,$flavour,$audio,$video,$red,$pic) = @{$$rtab[0]};
+		$have_pic = 1 if ($pic);
 		if ($n == $found) {
 			$cur .= "*";
 		} elsif ($red) {
@@ -1602,7 +1658,7 @@ while (1) {
 		my $info = 0;
 		if ($source =~ /Fichiers/) {
 			$out = out::setup_output("fsel");
-		} elsif ($source eq "flux" && $base_flux ne "stations") {
+		} elsif ($source eq "flux" && $base_flux ne "stations" && !$have_pic) {
 			$info = 1 if ($base_flux =~ /^la-bas/);
 			$out = out::setup_output("longlist");
 		} else {
