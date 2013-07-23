@@ -60,7 +60,7 @@ our %icons = (
 	4133 => "http://thumb.info2tele.com/wp-content/uploads//2012/11/20121115-logo-6ter-info2tele.jpg",
 	4134 => "http://upload.wikimedia.org/wikipedia/fr/archive/f/fe/20121119164338!Num%C3%A9ro_23_logo.png",
 	4135 => "http://upload.wikimedia.org/wikipedia/fr/e/ed/RMC_D%C3%A9couverte_logo_2012.png",
-	4136 => "https://upload.wikimedia.org/wikipedia/fr/thumb/1/1f/Ch%C3%A9rie_25_logo.svg/605px-Ch%C3%A9rie_25_logo.svg.png",	
+	4136 => "https://upload.wikimedia.org/wikipedia/fr/thumb/1/1f/Ch%C3%A9rie_25_logo.svg/605px-Ch%C3%A9rie_25_logo.svg.png",
 	1500 => "http://upload.wikimedia.org/wikipedia/fr/thumb/3/3f/Logo_nolife.svg/208px-Logo_nolife.svg.png",
 );
 
@@ -143,7 +143,7 @@ sub request {
 
 	if (!$response->is_success) {
 		print "$url error: ",$response->status_line,"\n";
-		return undef;
+		return ($response->status_line,undef);
 	}
 
 	# Renvoie le type d'abord pour qu'en contexte scalar on obtienne la réponse
@@ -165,7 +165,7 @@ sub getListeChaines($) {
 
 			# Ce truc est un peu particulier
 			# comme la requète impose d'avoir un useragent iphone et que je ne veux
-			# pas ramener 
+			# pas ramener
 			$r = request($url);
 			if ($r) {
 				if (open(F,">liste_chaines")) {
