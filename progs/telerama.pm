@@ -4,13 +4,13 @@ package progs::telerama;
 #
 #         FILE: telerama.pm
 #
-#  DESCRIPTION: 
+#  DESCRIPTION:
 #
 #        FILES: ---
 #         BUGS: ---
 #        NOTES: ---
 #       AUTHOR: Emmanuel Anne (), emmanuel.anne@gmail.com
-# ORGANIZATION: 
+# ORGANIZATION:
 #      VERSION: 1.0
 #      CREATED: 05/03/2013 12:52:52
 #     REVISION: ---
@@ -25,11 +25,11 @@ use Time::Local "timelocal_nocheck","timegm_nocheck";
 use chaines;
 require HTTP::Cookies;
 our $VERSION = '0.1';
- 
+
 # my @def_chan = ("France 2", "France 3", "France 4", "Arte", "TV5MONDE",
-# "Direct 8", "TMC", "NT1", "NRJ 12", 
+# "Direct 8", "TMC", "NT1", "NRJ 12",
 # "France 5", "NRJ Hits",
-# "Game One", "Canal+", 
+# "Game One", "Canal+",
 # );
 my @def_chan = ();
 my $site_addr = "guidetv-iphone.telerama.fr";
@@ -114,7 +114,7 @@ sub parse_prg($) {
 	# Attention la valeur retournée est un tableau de chaines
 	# prévu pour être renvoyé dans les fichiers day*. Il faut relire chaines{}
 	# après ça si on veut récupérer le tableau à 2 dimensions des programmes
-	my ($program_text) = @_;	
+	my ($program_text) = @_;
 	$program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
 	my @fields = split(/\:\$\$\$\:/,$program_text);
 	if (!@fields) {
@@ -285,7 +285,7 @@ sub getListeProgrammes {
 		}
 	}
 	if ($debug) {
-		print scalar localtime," récupération $url\n"; 
+		print scalar localtime," récupération $url\n";
 
 		print "*** req_prog from getlisteprogrammes ***\n";
 	}
@@ -321,7 +321,13 @@ sub update {
 			my $res = $response->content;
 			my $program_text = ($p->{chaines}->{$channel} ? join('$$$',$p->{chaines}->{$channel}) : "");
 			if ($res && index($program_text,$res) < 0 && $res =~ /$num/) {
-				$res = parse_prg($res);
+				my $res0 = parse_prg($res);
+				if (!$res0) {
+					print "could not parse req_prg: $res\n";
+					last;
+				} else {
+					$res = $res0;
+				}
 				if (open(F,">>day$offset")) {
 					print "fichier day$offset mis à jour de update\n" if ($debug);
 					seek(F,0,2); # A la fin
