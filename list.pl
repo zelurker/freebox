@@ -873,14 +873,14 @@ sub load_file2 {
 	# Même chose que load_file mais en + radical, ce coup là on kille le player
 	# pour redémarrer à froid sur le nouveau fichier. Obligatoire quand on vient
 	# d'une source non vidéo vers une source vidéo par exemple.
+	# retourne 1 si on a lancé un lecteur, 0 si on a juste modifié la liste
 	my ($name,$serv,$flav,$audio,$video) = @_;
 	my $prog;
 	$prog = $1 if ($serv =~ s/ (http.+)//);
 	if ($serv =~ /(jpe?g|png|gif|bmp)$/i) {
 		system("feh \"$serv\"");
-		return;
+		return 1;
 	}
-	out::send_command("pause\n");
 	if ($serv =~ /m3u$/) {
 		my $old_base = $base_flux;
 		$base_flux .= "/$name";
@@ -892,7 +892,11 @@ sub load_file2 {
 		}
 		print "m3u base_flux $base_flux serv $serv name $name\n";
 		my ($type,$cont) = chaines::request($serv);
-		print "$cont\n";
+		if (!$cont) {
+			my @cur = (1,$type);
+			@list = [\@cur];
+			return 0;
+		}
 		Encode::from_to($cont, "utf-8", "iso-8859-15") if ($type =~ /utf/);
 		my @old = @list;
 		if ($cont =~ /^#EXTM3U/) {
@@ -930,7 +934,7 @@ sub load_file2 {
 			$base_flux = $old_base;
 			# $serv va juste être passé à la suite...
 		}
-		return if ($cont);
+		return 0 if ($cont);
 	}
 	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac|ts)$/i) {
 	    # Gestion des pls supprimée, mplayer semble les gérer
@@ -950,6 +954,7 @@ sub load_file2 {
 			out::clear( "list_coords","info_coords","video_size");
 			system("kill -USR2 `cat info.pid`");
 		}
+		out::send_command("pause\n");
 		open(G,">current");
 		my $src = $source; # ($source eq "cd" ? "flux" : $source);
 		$src .= "/$base_flux" if ($base_flux);
@@ -979,7 +984,9 @@ sub load_file2 {
 		if ($pid_player2 == 0) {
 			run_mplayer2($name,$src,$serv,$flav,$audio,$video);
 		}
+		return 1;
 	}
+	return 0;
 }
 
 sub get_cur_mode {
@@ -1283,16 +1290,14 @@ while (1) {
 				next;
 			} else {
 				if (-d "$dvd/VIDEO_TS" || -d "$dvd/video_ts") {
-					load_file2("dvd","dvd",$name);
-					next;
+					next if (load_file2("dvd","dvd",$name));
 				} else {
 					$base_flux = "dvd";
 					list_files();
 				}
 			}
 		} elsif ($source =~ /^(livetv|Enregistrements)$/) {
-			load_file2($name,$serv,$flav,$audio,$video);
-			next;
+			next if (load_file2($name,$serv,$flav,$audio,$video));
 		} elsif ($source =~ /^Fichiers/) {
 			next if exec_file($name,$serv,$audio,$video);
 		} elsif ($source eq "apps") {
@@ -1350,8 +1355,7 @@ while (1) {
 				read_list();
 			} else {
 				print "lecture flux: load_file2 $serv\n";
-				load_file2($name,$serv,$flav,$audio,$video);
-				next;
+				next if (load_file2($name,$serv,$flav,$audio,$video));
 			}
 		} else {
 			# cas freeboxtv/dvb/radios freebox
