@@ -1,6 +1,6 @@
-#!/usr/bin/perl 
+#!/usr/bin/perl
 
-# Commandes supportées 
+# Commandes supportées
 # prog "nom de la chaine"
 # nextprog
 # prevprog
@@ -236,7 +236,7 @@ system("rm -f fifo_info && mkfifo fifo_info");
 # read_prg:
 my $nb_days = 1;
 my $cmd;
-debut: 
+debut:
 my $last_hour = 0;
 
 read_fifo:
@@ -279,7 +279,7 @@ sub disp_prog {
 		my $name = $$sub[9];
 		$name =~ s/^.+\///;
 
-		$raw = myget $$sub[9]; 
+		$raw = myget $$sub[9];
 	}
 	# Check channel logo
 	my $name = "";
@@ -444,7 +444,7 @@ if (!$channel) {
 			}
 		}
 
-		if ($start_timer && # $start_timer > $time && 
+		if ($start_timer && # $start_timer > $time &&
 			(!$delay || $start_timer < $delay)) {
 			$delay = $start_timer;
 			# print "delay start_timer : ",get_time($delay),"\n";
@@ -609,6 +609,7 @@ if (!$sub) {
 
 	print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
 	out::close_fifo($out);
+	$start_timer = $time+5 if ($start_timer < $time);
 	$last_chan = $channel;
 	goto read_fifo;
 }
