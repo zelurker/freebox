@@ -40,6 +40,7 @@ our @days = ("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi",
 our ($source,$base_flux);
 
 $SIG{PIPE} = sub { print "info: sigpipe ignoré\n" };
+my $start_timer = 0;
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
@@ -137,6 +138,13 @@ sub read_stream_info {
 			print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
 			print $out "Dernier morceau : $last\n" if ($last);
 			out::close_fifo($out);
+			if (!$long) {
+				$start_timer = $time+5 if ($start_timer < $time);
+				print "init start_timer $start_timer / $time\n";
+			} else {
+				$start_timer = 0;
+				print "reset start_timer\n";
+			}
 		}
 		$last_chan = $channel;
 	}
@@ -231,7 +239,6 @@ my $cmd;
 debut: 
 my $last_hour = 0;
 
-my $start_timer = 0;
 read_fifo:
 my $read_before = undef;
 ($channel,$long) = ();
@@ -296,7 +303,7 @@ sub disp_prog {
 	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
 	out::close_fifo($out);
 	if (!$long) {
-		$start_timer = time+5 
+		$start_timer = $time+5 if ($start_timer < $time);
 	} else {
 		$start_timer = 0;
 	}
@@ -501,7 +508,6 @@ if (!$channel) {
 		}
 	} while (!$cmd);
 	#$timer_start = [gettimeofday];
-	$time = time();
 # 	print "info: reçu cmd $cmd\n";
 	if ($cmd eq "clear") {
 		out::clear("info_coords");
