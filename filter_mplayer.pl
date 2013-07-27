@@ -699,7 +699,8 @@ print "filter: exit message : $exit\n";
 if ($source =~ /(dvb|freebox)/ && $exit =~ /EOF/) {
 	print "eof detected for $source pos $pos\n";
 	if ($pid_player1 && -d "/proc/$pid_player1") {
-		my $newpos = $last_pos-$start_pos;
+		# my $newpos = $last_pos-$start_pos - 15;
+		my $newpos = $last_pos - 5;
 		print "player1 toujours là, on boucle: $newpos !\n";
 		$exit = "";
 		if ($newpos > 0) {
