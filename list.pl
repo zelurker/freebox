@@ -1596,6 +1596,20 @@ while (1) {
 		print "list: commande inconnue :$cmd!\n";
 		next;
 	}
+	if ($source =~ /Fichiers/ && @list) {
+		# Si on est sur une liste de fichiers, relit le répertoire à chaque
+		# fois
+		my ($old) = get_name($list[$found]);
+		read_list();
+		for (my $n=0; $n<=$#list; $n++) {
+			my ($name) = get_name($list[$n]);
+			if ($name eq $old) {
+				$found = $n;
+				last;
+			}
+		}
+	}
+
 	if ($cmd eq "refresh") {
 		if ($time_numero && time() >= $time_numero) {
 			if ($cmd !~ /^zap/ && $numero) {
