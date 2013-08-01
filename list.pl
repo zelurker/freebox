@@ -15,6 +15,10 @@ require "mms.pl";
 require "radios.pl";
 use HTML::Entities;
 
+our ($inotify,$watch);
+use Linux::Inotify2;
+$inotify = new Linux::Inotify2;
+$inotify->blocking(0);
 our $dvd;
 our $encoding;
 
@@ -276,6 +280,9 @@ sub list_files {
 		$path = "music_path";
 		$tri = "tri_music";
 	}
+	if ($watch) {
+		$watch->cancel;
+	}
 	my $num = 1;
 	my $pat;
 	if (!$conf{$path}) {
@@ -310,6 +317,26 @@ sub list_files {
 		unshift @list,[[$num++,"../",".."]];
 	}
 	unshift @list,[[$num++,"Tri par $conf{$tri}","tri par"]];
+	if ($inotify) {
+		print "adding watch for $conf{$path}\n";
+		$watch = $inotify->watch($conf{$path},IN_MODIFY|IN_CREATE|IN_DELETE,
+			,sub {
+				my $e = shift;
+				print "*** inotify update $e->{w}{name}\n";
+				my ($old) = get_name($list[$found]);
+				read_list();
+				for (my $n=0; $n<=$#list; $n++) {
+					my ($name) = get_name($list[$n]);
+					if ($name eq $old) {
+						$found = $n;
+						last;
+					}
+				}
+			});
+		print "got watch $watch\n";
+	} else {
+		print "no inotify\n";
+	}
 #		@list = reverse @list;
 }
 
@@ -1100,6 +1127,7 @@ while (1) {
 		}
 		next;
 	}
+	$inotify->poll if ($inotify);
 	again:
 	# print "list: commande reçue après again : $cmd\n";
 	if (-f "list_coords" && $cmd eq "clear") {
@@ -1110,7 +1138,7 @@ while (1) {
 		next;
 	} elsif ($cmd eq "refresh") {
 		my $found0 = $found;
-		read_list() if ($source eq "Enregistrements");
+		read_list() if (!$inotify && $source eq "Enregistrements");
 		$found = $found0;
 	} elsif ($cmd eq "down") {
 		if ($mode_opened) {
@@ -1596,7 +1624,7 @@ while (1) {
 		print "list: commande inconnue :$cmd!\n";
 		next;
 	}
-	if ($source =~ /Fichiers/ && @list) {
+	if ($source =~ /Fichiers/ && @list && !$inotify) {
 		# Si on est sur une liste de fichiers, relit le répertoire à chaque
 		# fois
 		my ($old) = get_name($list[$found]);
