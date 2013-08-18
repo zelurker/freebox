@@ -47,7 +47,7 @@ if (-f "player1.pid") {
 }
 
 our ($pid_mplayer,$length,$start_pos);
-	
+
 $Data::Dumper::Indent = 0;
 $Data::Dumper::Deepcopy = 1;
 our %ipc;
@@ -267,7 +267,7 @@ if (open(F,"<current")) {
 	@_ = <F>;
 	close(F);
 }
-our ($chan,$source,$serv,$flav,,,$name) = @_;
+our ($chan,$source,$serv,$flav,$audio,$video,$name) = @_;
 chomp ($chan,$source,$serv,$flav);
 $serv =~ s/ (http.+)//;
 $prog = $1;
@@ -495,7 +495,7 @@ while (1) {
 					$diff = 1;
 				}
 				close(F);
-			} 
+			}
 			if ($diff) {
 				print "send_cmd_prog got str $str\n";
 				send_cmd_prog();
@@ -604,7 +604,7 @@ while (1) {
 		} elsif (/Album: (.+)/i || /ID_CDDB_INFO_ALBUM=(.+)/) {
 			$album = $1;
 		} elsif (/ID_CDDA_TRACK=(\d+)/) {
-			next if ($last_track && $last_track == $1); 
+			next if ($last_track && $last_track == $1);
 			$last_track = $1;
 			$titre = $list[$1];
 			print "filter: cddb: on prend titre = $titre artist $artist\n";
@@ -698,7 +698,22 @@ while (1) {
 print "filter: exit message : $exit\n";
 if ($source =~ /(dvb|freebox)/ && $exit =~ /EOF/) {
 	print "eof detected for $source pos $pos\n";
-	if ($pid_player1 && -d "/proc/$pid_player1") {
+	if (!-d "/proc/$pid_player1") {
+		print "plus de player1, on va tenter de relancer...\n";
+		unlink "player1.pid";
+		system("./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"");
+		my $f;
+		if (open($f,"<player1.pid")) {
+			$pid_player1 = <$f>;
+			chomp $pid_player1;
+			close($f);
+			print "player1 relancé, pid $pid_player1.\n";
+		} else {
+			print "pas de player1.pid... !\n";
+		}
+	}
+
+	if ($pid_player1 && -f "player1.pid" && -d "/proc/$pid_player1") {
 		# my $newpos = $last_pos-$start_pos - 15;
 		my $newpos = $last_pos - 5;
 		print "player1 toujours là, on boucle: $newpos !\n";
@@ -707,7 +722,7 @@ if ($source =~ /(dvb|freebox)/ && $exit =~ /EOF/) {
 			$bookmarks{$serv} = $newpos;
 		} else {
 			delete $bookmarks{$serv};
-		}	
+		}
 		goto start;
 	} else {
 		print "plus de player1, on quitte\n";
