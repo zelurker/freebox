@@ -44,13 +44,8 @@ my $start_timer = 0;
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
-	if (open(F,"<current")) {
-		my $name = <F>;
-		chomp $name;
-		close(F);
-		return lc($name);
-	}
-	undef;
+	my ($name) = get_current();
+	return lc($name);
 }
 
 sub get_stream_info {

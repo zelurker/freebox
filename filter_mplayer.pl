@@ -263,12 +263,7 @@ open(F,"<info.pid") || die "can't open info.pid !\n";
 $pid = <F>;
 chomp $pid;
 close(F);
-if (open(F,"<current")) {
-	@_ = <F>;
-	close(F);
-}
-our ($chan,$source,$serv,$flav,$audio,$video,$name) = @_;
-chomp ($chan,$source,$serv,$flav);
+our ($chan,$source,$serv,$flav,$audio,$video,$name) = get_current();
 $serv =~ s/ (http.+)//;
 $prog = $1;
 print "filter: prog = $prog\n";
@@ -701,6 +696,7 @@ if ($source =~ /(dvb|freebox)/ && $exit =~ /EOF/) {
 	if (!-d "/proc/$pid_player1") {
 		print "plus de player1, on va tenter de relancer...\n";
 		unlink "player1.pid";
+		print "./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"\n";
 		system("./run_mp1 \"$serv\" $flav $audio $video \"$source\" \"$name\"");
 		my $f;
 		if (open($f,"<player1.pid")) {

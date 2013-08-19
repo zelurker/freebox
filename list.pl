@@ -53,11 +53,7 @@ if (!$have_fb || !$have_dvb) {
 
 my ($mode_opened,$mode_sel);
 
-if (open(F,"<current")) {
-	@_ = <F>;
-	close(F);
-}
-my ($chan,$source,$serv,$flav) = @_;
+my ($chan,$source,$serv,$flav) = get_current();
 # Si base_flux contient une recherche + quelque chose d'autre, tronque à la
 # recherche. On ne peut pas restaurer l'url d'une vidéo précise, il vaut mieux
 # retourner sur la recherche
@@ -519,15 +515,6 @@ sub read_list {
 	} elsif ($source =~ /^Fichiers/) {
 		list_files();
 	} elsif ($source eq "flux") {
-# 		if (open(F,"<current")) {
-# 			@_ = <F>;
-# 			close(F);
-# 			if ($_[2] =~ /^cd/) {
-# 				# c'est un flux provoqué par le cd -> ne rien faire
-# 				$source = "cd";
-# 				return;
-# 			}
-# 		}
 		my $num = 1;
 		if (!$base_flux) {
 			@list = ();
@@ -733,11 +720,8 @@ sub switch_mode {
 sub reset_current {
 	# replace tout sur current
 	my $f;
-	if (open($f,"<current")) {
-		my $name  = <$f>;
-		my $src = <$f>;
-		close($f);
-		chomp($name, $src);
+	my ($name,$src) = get_current();
+	if ($name) {
 		$src =~ s/\/(.+)//;
 		if ($1 && $base_flux ne $1) {
 			$base_flux = $1;
@@ -1018,18 +1002,11 @@ sub load_file2 {
 
 sub get_cur_mode {
 	# Détermine si on est sur la chaine qui passe, un bazar
-	if (open(F,"<current")) {
-		<F>; # nom
-		my $src = <F>;
-		chomp $src;
+	my (undef,$src,$serv,$flav) = get_current();
+	if ($src) {
 		if ($src ne "freeboxtv") {
-			close(F);
 			return 0; # Toujours le 1er mode sur une chaine différente
 		}
-		my $serv = <F>;
-		my $flav = <F>;
-		chomp ($serv,$flav);
-		close(F);
 		for (my $n=0; $n<=$#{$list[$found]}; $n++) {
 			my ($num,$name,$service,$flavour,$audio,$video,$red) = @{$list[$found][$n]};
 			if ($service == $serv && $flavour eq $flav) {

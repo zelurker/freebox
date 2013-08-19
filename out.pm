@@ -129,15 +129,22 @@ sub alpha {
 	}
 }
 
+sub get_current {
+	my $f;
+	if (open($f,"<current")) {
+		@_ = <$f>;
+		close($f);
+	}
+	foreach (@_) {
+		chomp;
+		$_ = 0 if (!$_);
+	}
+	@_;
+}
+
 sub setup_output {
 	my ($prog,$pic,$long) = @_;
-	@_ = ();
-	if (open(F,"<current")) {
-		@_ = <F>;
-		close(F);
-	}
-	my ($chan,$source,$serv,$flav) = @_;
-	chomp $source;
+	my ($chan,$source,$serv,$flav) = get_current();
 	$source =~ s/\/.+//;
 	my ($width,$height);
 	my $out;
