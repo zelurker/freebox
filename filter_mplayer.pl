@@ -263,7 +263,7 @@ open(F,"<info.pid") || die "can't open info.pid !\n";
 $pid = <F>;
 chomp $pid;
 close(F);
-our ($chan,$source,$serv,$flav,$audio,$video,$name) = get_current();
+our ($chan,$source,$serv,$flav,$audio,$video,$name) = out::get_current();
 $serv =~ s/ (http.+)//;
 $prog = $1;
 print "filter: prog = $prog\n";

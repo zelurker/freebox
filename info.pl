@@ -44,7 +44,7 @@ my $start_timer = 0;
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
-	my ($name) = get_current();
+	my ($name) = out::get_current();
 	return lc($name);
 }
 

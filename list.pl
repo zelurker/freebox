@@ -53,7 +53,7 @@ if (!$have_fb || !$have_dvb) {
 
 my ($mode_opened,$mode_sel);
 
-my ($chan,$source,$serv,$flav) = get_current();
+my ($chan,$source,$serv,$flav) = out::get_current();
 # Si base_flux contient une recherche + quelque chose d'autre, tronque à la
 # recherche. On ne peut pas restaurer l'url d'une vidéo précise, il vaut mieux
 # retourner sur la recherche
@@ -720,7 +720,7 @@ sub switch_mode {
 sub reset_current {
 	# replace tout sur current
 	my $f;
-	my ($name,$src) = get_current();
+	my ($name,$src) = out::get_current();
 	if ($name) {
 		$src =~ s/\/(.+)//;
 		if ($1 && $base_flux ne $1) {
@@ -1002,7 +1002,7 @@ sub load_file2 {
 
 sub get_cur_mode {
 	# Détermine si on est sur la chaine qui passe, un bazar
-	my (undef,$src,$serv,$flav) = get_current();
+	my (undef,$src,$serv,$flav) = out::get_current();
 	if ($src) {
 		if ($src ne "freeboxtv") {
 			return 0; # Toujours le 1er mode sur une chaine différente
