@@ -8,6 +8,7 @@ use strict;
 use Fcntl;
 use Socket;
 use POSIX qw(SIGALRM);
+use Net::Ping;
 
 sub send_bmovl {
 	my $cmd = shift;
@@ -64,7 +65,8 @@ sub have_net {
 			POSIX::SigAction->new(sub { die "alarm" }))
 			or die "Error setting SIGALRM handler: $!\n";
 		alarm(4);
-		my @addresses = gethostbyname("www.google.fr")   or die "Can't resolve : $!\n";
+		my $p = Net::Ping->new();
+		$p->ping("www.google.fr") || die "plus de google.fr !\n";
 	};
 	alarm(0);
 	$net = 0 if ($@);
