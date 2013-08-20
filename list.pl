@@ -902,7 +902,19 @@ sub load_file2 {
 			$radio = ($base_flux =~ /radio/i);
 		}
 		print "m3u base_flux $base_flux serv $serv name $name\n";
-		my ($type,$cont) = chaines::request($serv);
+		my ($type,$cont);
+		if ($serv =~ /http/) {
+			($type,$cont) = chaines::request($serv);
+		} else {
+			my $f;
+			if (open($f,"<$serv")) {
+				while (<$f>) {
+					$cont .= $_;
+				}
+				close($f);
+				$serv =~ s/^(.+\/).+?$/$1/; # ne garde que le répertoire
+			}
+		}
 		if (!$cont) {
 			my @cur = (1,$type);
 			@list = [\@cur];
@@ -913,8 +925,6 @@ sub load_file2 {
 		if ($cont =~ /^#EXTM3U/) {
 			@list = ();
 		} else {
-			$serv = $cont;
-			$cont = undef;
 			$base_flux = $old_base;
 		}
 		my $num = 1;
@@ -925,6 +935,8 @@ sub load_file2 {
 			s/\r//; # pour ête sûr !
 			if (/^#EXTINF:\-?\d*\,(.+)/ || /^#EXTINF:(.+)/) {
 				$name = $1;
+			} elsif (/^#/) {
+				next;
 			} elsif ($name) {
 				$serv = $_;
 				my $pic = undef;
@@ -937,6 +949,14 @@ sub load_file2 {
 				my @cur = ($num++,$name,$serv,undef,undef,undef,undef,$pic);
 				push @list,[\@cur];
 				$name = undef;
+			} elsif (-f "$serv$_") { # liste de fichiers locaux
+				$serv .= $_;   # prend juste le 1er et sort !
+				for ($found=0; $found<=$#list; $found++) {
+					my ($name) = get_name($list[$found]);
+					last if ($name eq $_);
+				}
+				$cont = undef;
+				last;
 			}
 		}
 		if ($#list == 0) { # 1 seule entrée dans le m3u
