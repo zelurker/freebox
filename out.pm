@@ -65,8 +65,11 @@ sub have_net {
 			POSIX::SigAction->new(sub { die "alarm" }))
 			or die "Error setting SIGALRM handler: $!\n";
 		alarm(4);
-		my $p = Net::Ping->new();
-		$p->ping("www.google.fr") || die "plus de google.fr !\n";
+		my $p = new Net::Ping("tcp",2);
+		$p->port_number(80);
+		# On passe l'ip pour éviter une résolution, ils doivent pas changer
+		# souvent de toutes façons
+		die "plus de google\n" if (!$p->ping("173.194.78.94"));
 	};
 	alarm(0);
 	$net = 0 if ($@);
