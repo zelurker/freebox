@@ -957,6 +957,8 @@ sub load_file2 {
 				}
 				$cont = undef;
 				last;
+			} else {
+				$serv = $_;
 			}
 		}
 		if ($#list == 0) { # 1 seule entrée dans le m3u
@@ -965,7 +967,7 @@ sub load_file2 {
 			$base_flux = $old_base;
 			# $serv va juste être passé à la suite...
 		}
-		return 0 if ($cont);
+		return 0 if ($cont && $serv =~ /m3u$/);
 	}
 	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac|ts)$/i) {
 	    # Gestion des pls supprimée, mplayer semble les gérer
