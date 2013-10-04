@@ -25,7 +25,7 @@ our %icons = (
 	14 => "http://upload.wikimedia.org/wikipedia/en/thumb/a/a8/LCP-Public_Senat.png/200px-LCP-Public_Senat.png",
 	15 => "http://upload.wikimedia.org/wikipedia/fr/thumb/d/d4/BFM_TV_2004.jpg/120px-BFM_TV_2004.jpg",
 	16 => "http://upload.wikimedia.org/wikipedia/fr/thumb/6/6e/I-tele_2008_logo.svg/78px-I-tele_2008_logo.svg.png",
-	17 => "http://upload.wikimedia.org/wikipedia/fr/a/a6/Direct_Star_logo.png",
+	17 => "http://upload.wikimedia.org/wikipedia/fr/thumb/a/a9/D17_%282012-%29.png/593px-D17_%282012-%29.png",
 	18 => "http://upload.wikimedia.org/wikipedia/en/thumb/a/a1/Gulli_Logo.png/200px-Gulli_Logo.png",
 	20 => "http://upload.wikimedia.org/wikipedia/fr/thumb/6/6c/13eme_rue_Universal.svg/100px-13eme_rue_Universal.svg.png",
 	23 => "http://upload.wikimedia.org/wikipedia/commons/8/8f/Logo_AB1_2011.gif",
@@ -128,7 +128,7 @@ sub setup_image {
 		($name) = $url =~ /.+\/(.+)/;
 #		print STDERR "channel name $name from $url\n";
 		$name = "chaines/$name";
-		if (! -f $name) {
+		if (! -f $name || -z $name) {
 #			print STDERR "no channel logo, trying to get it from web\n";
 			push @$rpic,($name,$url);
 		}
