@@ -594,9 +594,9 @@ if (!$sub) {
 	my $out = out::setup_output("bmovl-src/bmovl","",0);
 	$cmd =~ s/pic:(.+?) //;
 	my $pic = $1;
-	my $src = send_list("info ".lc($cmd));
-	$src =~ s/,.+//;
-	if ($src eq "flux/stations") {
+#	my $src = send_list("info ".lc($cmd));
+#	$src =~ s/,.+//;
+	if ($source eq "flux/stations") {
 		$pic = get_radio_pic($cmd);
 	}
 	print $out "$pic\n\n";
