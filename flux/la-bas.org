@@ -51,7 +51,10 @@ if (!$d) {
 			($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =
 			localtime($time);
 		};
-		if (!$@ && $wday >= 1 && $wday <= 5) {
+		my $end_week = 5;
+		# Plus de vendredi en 2013, ça reviendra peut-être + tard...
+		$end_week = 4 if (($y == 2013 && $m >= 9) || $y > 2013);
+		if (!$@ && $wday >= 1 && $wday <= $end_week) {
 			print "$n\nhttp://www.la-bas.org/m3u/".sprintf("%d%02d%02d.m3u",$y %
 				100,$m,$n),"\n";
 		}

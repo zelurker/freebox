@@ -12,7 +12,7 @@ package progs::labas;
 #         BUGS: ---
 #        NOTES: ---
 #       AUTHOR: Emmanuel Anne (), emmanuel.anne@gmail.com
-# ORGANIZATION: 
+# ORGANIZATION:
 #      VERSION: 1.0
 #      CREATED: 09/03/2013 00:53:47
 #     REVISION: ---
@@ -23,7 +23,7 @@ use warnings;
 use Time::Local qw(timelocal);
 use progs::telerama;
 @progs::labas::ISA = ("progs::telerama");
- 
+
 our @tab;
 our $last_chan;
 
@@ -35,14 +35,19 @@ sub get {
 
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my $t0 = timelocal(0,0,12,$mday,$mon,$year);
-	$t0 -= 24*3600 if ($hour < 15 && ($wday >= 1 && $wday <= 5)); # Si on est avant l'heure de diffusion
-	$t0 -= 24*3600 if ($wday == 6);
-	$t0 -= 48*3600 if ($wday == 0 || $wday == 7);
+	my $end_week = 5;
+	# Plus de vendredi en 2013, ça reviendra peut-être + tard...
+	$end_week = 4 if (($year == 113 && $mon >= 8) || $year > 113);
+	$t0 -= 24*3600 if ($hour < 15 && ($wday >= 1 && $wday <= $end_week)); # Si on est avant l'heure de diffusion
+	($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime($t0);
+	$wday = 7 if ($wday == 0);
+	$t0 -= 24*($wday-$end_week)*3600 if ($wday > $end_week);
 	$base_flux =~ s/^.+?\///; # Dégage la partie la-bas, ne garde que la date
 	my @t = split(/\//,"$base_flux/$channel");
-	return undef if ($#t < 2);
+	return undef if ($#t < 2); # pas encore une date complète
 	my $t = timelocal(0,0,12,$channel,$t[1]-1,$t[0]-1900);
 	if ($t > $t0) {
+		print "t > t0\n";
 		# Dans le futur ?!!
 		@tab = (undef, "la-bas.org", "-",
 			undef, # début
@@ -61,8 +66,9 @@ sub get {
 		# travaillés, il devrait y avoir une fonction pour ça dans le module
 		# date, y a peut-être un module quelconque qui fait ça mais bon... !
 		my ($sec,$min,$hour,$mday,$mon,$year,$wday) = localtime($t);
-		if ($wday == 5) { # vendredi
-			$t += 3*24*3600;
+		print "$t < $t0 $mday/".($mon+1)."/".($year+1900)."\n";
+		if ($wday == $end_week) {
+			$t += (7-$end_week+1)*24*3600;
 		} else {
 			$t += 24*3600;
 		}
@@ -76,7 +82,7 @@ sub get {
 	my $index = chaines::request("http://www.la-bas.org/mot.php3?id_mot=63&debut_lb=$ecart");
 	$index =~ /Micro.gif.+?article=(.+?)"/;
 	$ecart = $1;
-	
+
 	my $prog = chaines::request("http://www.la-bas.org/article.php3?id_article=$ecart");
 	$prog =~ s/\&\#8217\;/'/g;
 	$prog =~ s/\&nbsp\;/ /g;
