@@ -80,7 +80,6 @@ sub conv_channel {
 		"TV5 Monde" => "TV5MONDE",
 		"France ô" => "France Ô",
 		"france o" => "France Ô",
-		"D17" => "Direct Star",
 		"Télénantes Nantes 7" => "Nantes 7",
 		"NRJ12" => "NRJ 12",
 		"LCP" => "La chaîne parlementaire",
