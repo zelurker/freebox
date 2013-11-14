@@ -14,7 +14,9 @@ use chaines;
 require "mms.pl";
 require "radios.pl";
 use HTML::Entities;
+no utf8;
 
+our $latin = ($ENV{LANG} !~ /UTF/i);
 our ($inotify,$watch);
 use Linux::Inotify2;
 $inotify = new Linux::Inotify2;
@@ -298,10 +300,20 @@ sub list_files {
 	while ($_ = shift @paths) {
 		my $service = $_;
 		next if (!-e $service); # lien symbolique mort
+
 		my $name = $service;
 		$name =~ s/.+\///; # Supprime le path du nom
 		if (-d $service) {
 			$name .= "/";
+		}
+		# On aimerait bien utiliser is_utf8 ici, sauf qu'en fait si le flag
+		# utf8 de perl n'est pas positionné sur la chaine ça renvoie toujours
+		# faux, donc aucun intérêt. A priori y a toujours un caractère 0xc3
+		# devant les accents classiques français, j'ai pas tout vérifié donc
+		# pas sûr que ça marche partout, mais j'ai pas trouvé non plus de
+		# détection générique utf8. Pour l'instant ça marche en tous cas !
+		if ($latin && $name =~ /\xc3/) {
+			Encode::from_to($name, "utf-8", "iso-8859-15");
 		}
 		push @list,[[$num++,$name,$service,-M $service]];
 	}
@@ -552,7 +564,7 @@ sub read_list {
 					delete $ENV{WINDOWID};
 					$serv = `zenity --entry --text="A chercher (regex)"`;
 					chomp $serv;
-					if ($encoding =~ /utf/i && $ENV{LANG} =~ /(euro|ISO-8859-1)/) {
+					if ($encoding =~ /utf/i && $latin) {
 						print "encodage utf6\n";
 						Encode::from_to($serv, "iso-8859-15", "utf-8") ;
 					} else {
