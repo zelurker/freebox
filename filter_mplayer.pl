@@ -27,6 +27,7 @@ my $desk_h = <F>;
 close(F);
 chomp($desk_w,$desk_h);
 our @args = @ARGV;
+our $start_time;
 @ARGV = ();
 my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
 my $browser = LWP::UserAgent->new(keep_alive => 0,
@@ -221,7 +222,7 @@ sub handle_images {
 	my $cur = shift;
 	$cur = $old_titre if (!$cur);
 	$old_titre = $cur;
-	print "handle_image: $cur.\n";
+	print "handle_image: $cur net $net.\n";
 	return if (!$net);
 	if (!@cur_images || $cur_images[0] ne $cur) {
 		print "handle_image: reset search\n";
@@ -418,6 +419,7 @@ sub run_mplayer {
 	# Lancement de mplayer à partir de filter
 	socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
 	||  die "socketpair: $!";
+	$start_time = time();
 
 	CHILD->autoflush(1);
 	PARENT->autoflush(1);
@@ -441,6 +443,10 @@ sub run_mplayer {
 $SIG{TERM} = \&check_eof;
 my $rin = "";
 
+if ($source =~ /^(dvb|freebox)/) {
+	delete $bookmarks{$serv};
+	print "clear bookmark source $source\n";
+}
 start:
 # Lancement du prog en paramètre
 if (@args) {
@@ -711,7 +717,29 @@ if ($source =~ /(dvb|freebox)/ && $exit =~ /EOF/) {
 
 	if ($pid_player1 && -f "player1.pid" && -d "/proc/$pid_player1") {
 		# my $newpos = $last_pos-$start_pos - 15;
-		my $newpos = $last_pos - 5;
+		my $newpos = $last_pos - 7;
+		if (time() - $start_time < 3) {
+			print "Moins de 3s depuis le lancement, on attend...\n";
+			my $size = (-s $args[1]);
+			print "taille init $size\n";
+			$size += 1024*1024;
+			my $wait = 0;
+			while (-s $args[1] < $size && -d "/proc/$pid_player1" && $wait < 10) {
+				sleep(1);
+				$wait++;
+			}
+			if ($wait == 10 || !(-d "/proc/$pid_player1")) {
+				print "wait $wait\n";
+				if (!-d "/proc/$pid_player1") {
+					print "plus de player1\n" 
+				} else {
+					print "on kille player1\n";
+					kill "TERM",$pid_player1;
+				}
+				print "et on arrête les frais\n";
+				exit(0);
+			}
+		}
 		print "player1 toujours là, on boucle: $newpos !\n";
 		$exit = "";
 		if ($newpos > 0) {
