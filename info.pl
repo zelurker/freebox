@@ -425,19 +425,22 @@ if (!$channel) {
 		if (-f "list_coords" || -f "numero_coords") {
 			$delay = $time+3;
 		}
-		if ($last_chan && defined($lastprog)) {
-			my $ndelay = $$lastprog[4];
-			$ndelay = 0 if ($ndelay <= $time);
-			# print "delay nextprog : ",get_time($ndelay),"\n";
-			if (!$delay || ($ndelay && $ndelay < $delay)) {
-				$delay = $ndelay ;
-			}
-			if (defined($delay) && $delay < $time) {
-				# on obtient un delay négatif ici quand nolife n'a pas
-				# encore les programmes actuels
-				$delay = undef;
-			}
-		}
+		# Pour afficher le bandeau du prochain programme en auto, on désactive
+		# c'est + gênant qu'autre chose surtout à cause des imprécisions de
+		# certaines chaines... !
+#		if ($last_chan && defined($lastprog)) {
+#			my $ndelay = $$lastprog[4];
+#			$ndelay = 0 if ($ndelay <= $time);
+#			# print "delay nextprog : ",get_time($ndelay),"\n";
+#			if (!$delay || ($ndelay && $ndelay < $delay)) {
+#				$delay = $ndelay ;
+#			}
+#			if (defined($delay) && $delay < $time) {
+#				# on obtient un delay négatif ici quand nolife n'a pas
+#				# encore les programmes actuels
+#				$delay = undef;
+#			}
+#		}
 
 		if ($start_timer && # $start_timer > $time &&
 			(!$delay || $start_timer < $delay)) {
