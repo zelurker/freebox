@@ -510,6 +510,9 @@ if (!$channel) {
 	if ($cmd eq "clear") {
 		out::clear("info_coords");
 		goto read_fifo;
+	} elsif ($cmd eq "time") {
+		out::send_command("osd_show_property_text ".get_time(time())." 3000\n");
+		goto read_fifo;
 	} elsif ($cmd eq "nextprog" || $cmd eq "right") {
 		disp_prog($prog[$reader]->next($last_chan),$last_long);
 		goto read_fifo;
