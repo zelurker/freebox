@@ -4,8 +4,10 @@ package images;
 
 use WWW::Mechanize;
 use URI::URL;
+use Encode;
 
 our $debug = 0;
+our $latin = ($ENV{LANG} !~ /UTF/i);
 
 sub find_around($$$) {
 	# Essaye de trouver l'image après la chaine f dans le contenu s
@@ -14,6 +16,23 @@ sub find_around($$$) {
 	my ($base) = $s =~ /base href="(.+?)"/;
 	$base = $url if (!$base);
 	$base =~ s/^(.+\/).+/$1/;
+	if ($s =~ /charset=UTF-8/i) {
+		$s =~ s/\xe2\x80\x99/'/g; # l'apostrophe à la con de windoze
+		my $i;
+		do {
+			$i = index($s,chr(8217));
+			if ($i>0) {
+				substr($s,$i,1) = "'";
+			}
+		} while ($i > 0);
+		Encode::_utf8_off($s);
+		Encode::from_to($s, "utf-8", "iso-8859-15");
+		$s =~ s/\xa0/ /g; # Supprime les espaces insécables !!!
+		$s =~ s/\&\#8217\;/'/g; # et enfin la version html de l'apostrophe !!!
+		open(F,">decoded");
+		print F $s;
+		close(F);
+	}
 	print "base $base\n" if ($debug);
 	my $pos = 0;
 	while ($pos >= 0) {
@@ -37,7 +56,8 @@ sub find_around($$$) {
 						last;
 					}
 				}
-				if ($name =~ /^(a|\!\-\-|table|tr|td|br|div|p|h\d)$/i) {
+				print "found tag $name\n" if ($debug);
+				if ($name =~ /^(a|b|em|\!\-\-|table|tr|td|br|div|span|p|h\d)$/i) {
 					$pos = $tag;
 					redo;
 				}
@@ -51,6 +71,7 @@ sub find_around($$$) {
 		}
 	}
 	# La même chose, mais en cherchant l'img avant la chaine
+	print "find_around: 2nd loop\n" if ($debug);
 	$pos = 0;
 	while ($pos >= 0) {
 		$pos = index($s,$f,$pos+1);
@@ -74,7 +95,8 @@ sub find_around($$$) {
 						last;
 					}
 				}
-				if ($name =~ /^(a|\!\-\-|table|tr|td|br|div|p|h\d)$/i) {
+				print "found tag $name\n" if ($debug);
+				if ($name =~ /^(a|b|em|\!\-\-|table|tr|td|br|span|div|p|h\d)$/i) {
 					$tpos = $tag-length($name)-2;
 					redo;
 				}
@@ -114,6 +136,7 @@ sub search {
 	@tab = ();
 	$mech->agent_alias("Linux Mozilla");
 	$mech->timeout(10);
+	$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 
 # $mech->get("https://www.google.fr/search?hl=fr&site=imghp&tbm=isch&source=hp&biw=1240&bih=502&q=chien");
 # my $pwd = `pwd`;
@@ -146,6 +169,7 @@ sub search {
 		$url =~ s/%(..)/chr(hex($1))/ge;
 		my $alt = $br[2];
 		$alt =~ s/<\/?b>//g;
+		$alt =~ s/\&\#(..)\;/chr($1)/ge;
 		eval {
 			$mech->get($url);
 		};
@@ -154,6 +178,7 @@ sub search {
 		eval {
 			$l = $mech->find_image(alt_regex => qr/$alt/);
 		};
+		print "alt $alt\n" if ($debug);
 		if ($@) {
 			$l = $mech->find_image(alt => $alt);
 		}
@@ -168,12 +193,13 @@ sub search {
 		if ($l) {
 			$self->save($mech,$l->url_abs);
 		} else {
-			# $mech->save_content("content.html");
+			$mech->save_content("content.html") if ($debug);
 			# my $l = $mech->images();
 # 		for (my $n=0; $n<=$#$l; $n++) {
 # 			print "link $n: url ",$$l[$n]->url," name ",$$l[$n]->name," alt ",$$l[$n]->alt," base ",$$l[$n]->base,"\n";
 # 		}
 			print "pas got l $l\n" if ($debug);
+			# exit(0) if (debug);
 		}
 	}
 	$self;

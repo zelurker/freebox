@@ -208,8 +208,10 @@ sub handle_result {
 		} else {
 			$bg_pic{$pid} = $name;
 		}
+		$time = time()+25;
 	} else {
 		print "handle_result: fin de liste!\n";
+		$time = 0;
 	}
 }
 
@@ -238,6 +240,7 @@ sub handle_images {
 		my $pid = fork();
 		if ($pid) {
 			$ipc{$pid} = $id;
+			$time = 0;
 		} else {
 			$cur =~ s/û/u/g; # Pour une raison inconnue allergie !
 			my $result = $agent->search($cur);
@@ -251,7 +254,6 @@ sub handle_images {
 		my $result = $cur_images[1];
 		handle_result($result);
 	}
-	$time = time()+25;
 }
 
 my $pid;
