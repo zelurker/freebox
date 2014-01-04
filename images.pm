@@ -146,7 +146,10 @@ sub search {
 		$url =~ s/%(..)/chr(hex($1))/ge;
 		my $alt = $br[2];
 		$alt =~ s/<\/?b>//g;
-		$mech->get($url);
+		eval {
+			$mech->get($url);
+		};
+		next if ($@); # timeout
 		my $l;
 		eval {
 			$l = $mech->find_image(alt_regex => qr/$alt/);
