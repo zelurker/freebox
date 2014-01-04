@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo time > fifo_info
+
