@@ -20,6 +20,7 @@ require "playlist.pl";
 use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
 use LWP 5.64;
+use images;
 
 open(F,"<desktop");
 my $desk_w = <F>;
@@ -59,16 +60,10 @@ my @duree;
 my $net = out::have_net();
 my $images = 0;
 our ($connected,$started,$image_info);
-eval {
-	require WWW::Google::Images;
-	WWW::Google::Images->import();
-};
 if (!$@ && $net) {
 	# google images dispo si pas d'erreur
 	$images = 1;
-	$agent = WWW::Google::Images->new(
-		server => 'images.google.com',
-	);
+	$agent = images->new();
 }
 eval {
 	require Image::Info;
@@ -166,7 +161,7 @@ sub handle_result {
 		}
 
 		my ($pic);
-		my $url = $image->content_url();
+		my $url = $image;
 		my $ext = $url;
 		$ext =~ s/.+\.//;
 		$ext = substr($ext,0,3); # On ne garde que les 3 1ers caractères !
@@ -245,7 +240,7 @@ sub handle_images {
 			$ipc{$pid} = $id;
 		} else {
 			$cur =~ s/û/u/g; # Pour une raison inconnue allergie !
-			my $result = $agent->search($cur, limit => 20);
+			my $result = $agent->search($cur);
 			my $dump = Data::Dumper->Dump([$result],[qw(result)]);
 			shmwrite($id,$dump,0,length($dump)) || die "shmwrite\n";
 			exit(0);
@@ -731,7 +726,7 @@ if ($source =~ /(dvb|freebox)/ && $exit =~ /EOF/) {
 			if ($wait == 10 || !(-d "/proc/$pid_player1")) {
 				print "wait $wait\n";
 				if (!-d "/proc/$pid_player1") {
-					print "plus de player1\n" 
+					print "plus de player1\n"
 				} else {
 					print "on kille player1\n";
 					kill "TERM",$pid_player1;
