@@ -21,6 +21,18 @@ use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
 use LWP 5.64;
 use images;
+use Encode;
+
+our $latin = ($ENV{LANG} !~ /UTF/i);
+
+sub utf($) {
+	my $str = shift;
+	if ($latin && $str =~ /\xc3/) {
+		# Tentative de détection de l'utf8, pas du tout sûr de marcher !
+		Encode::from_to($str, "utf-8", "iso-8859-15");
+	}
+	$str;
+}
 
 open(F,"<desktop");
 my $desk_w = <F>;
@@ -567,6 +579,7 @@ while (1) {
 				my ($name,$val) = ($1,$2);
 				if ($name eq "StreamTitle" && $val) {
 					$val =~ s/\.\.\. Telech.+//; # vire les pubs de hotmix
+					$val = utf($val);
 					$info .= "$val ";
 					$titre = $val;
 					if (!$net) {
@@ -592,15 +605,15 @@ while (1) {
 				$titre = $old_titre;
 			}
 		} elsif (/Title: (.+)/i) {
-			$titre = $1;
+			$titre = utf($1);
 		} elsif (/Artist: (.+)/i || /ID_CDDB_INFO_ARTIST=(.+)/) {
-			$artist = $1;
+			$artist = utf($1);
 		} elsif (/ID_CDDB_INFO_TRACK_(\d+)_NAME=(.+)/) {
-			$list[$1] = ($list[$1] ? $list[$1] : "").$2;
+			$list[$1] = ($list[$1] ? $list[$1] : "").utf($2);
 		} elsif (/ID_CDDB_INFO_TRACK_(\d+)_MSF=(.+)/) {
 			$duree[$1] = $2;
 		} elsif (/Album: (.+)/i || /ID_CDDB_INFO_ALBUM=(.+)/) {
-			$album = $1;
+			$album = utf($1);
 		} elsif (/ID_CDDA_TRACK=(\d+)/) {
 			next if ($last_track && $last_track == $1);
 			$last_track = $1;
