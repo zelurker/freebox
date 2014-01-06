@@ -3,7 +3,6 @@
 package images;
 
 use WWW::Mechanize;
-use URI::URL;
 use Encode;
 
 our $debug = 0;
@@ -121,15 +120,6 @@ sub save($$) {
 #	$mech->back();
 }
 
-sub next {
-	my $self = shift;
-	my $url = shift @{$self->{tab}};
-	if (ref($url) eq "URI::URL") {
-		return $url->abs;
-	}
-	$url;
-}
-
 sub search {
 	my ($self,$q) = @_;
 	my $mech = WWW::Mechanize->new();
@@ -152,6 +142,33 @@ sub search {
 			bih => 722,
 		}
 	);
+	$self->{mech} = $mech;
+	$mech->images;
+}
+
+sub save_vignettes {
+	# A appeler après un appel à search pour sauver les vignettes trouvées
+	my $self = shift;
+	my $mech = $self->{mech};
+	foreach (@{$mech->{images}}) {
+		my $url = $_->url_abs;
+		if ($url =~ /tbn\:(.+)/) {
+			my $name = "cache/$1.jpg";
+			if (-f $name) {
+				print "already in cache $name\n";
+				utime(undef,undef,$name);
+				next;
+			}
+			print "saving $name\n";
+			$mech->get($url);
+			$mech->save_content($name);
+		}
+	}
+}
+
+sub big_pictures {
+	my $self = shift;
+	my $mech = $self->{mech};
 	my $c = $mech->content;
 	while ($c =~ s/<td style="width.+?>(.+?)<\/td//) {
 		# Franchement google nous complique incroyablement la vie en supprimant
@@ -202,7 +219,7 @@ sub search {
 			# exit(0) if (debug);
 		}
 	}
-	$self;
+	$self->{tab};
 }
 
 sub new {

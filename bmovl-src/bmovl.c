@@ -103,7 +103,7 @@ static TTF_Font *open_font(int fsize) {
     return font;
 }
 
-int image(int argc, char **argv);
+static int image(int argc, char **argv);
 
 static void clear_rect(SDL_Surface *sf,int x, int y, int *indents)
 {
@@ -756,8 +756,8 @@ static void read_inputs() {
 	*c = 0;
 	if (nb_keys == nb_alloc) {
 	    nb_alloc += 10;
-	    keys = realloc(keys,sizeof(int)*nb_alloc);
-	    command = realloc(command,sizeof(char*)*nb_alloc);
+	    keys = (int*)realloc(keys,sizeof(int)*nb_alloc);
+	    command = (char**)realloc(command,sizeof(char*)*nb_alloc);
 	}
 	/* Ces 2 là (+ et -) doivent etre placées en 1er parce que c'est les
 	 * seules dont les codes ascii ne sont pas interpretés directement */
@@ -940,7 +940,86 @@ static void handle_event(SDL_Event *event) {
     }
 }
 
-int image(int argc, char **argv) {
+static void get_free_coords(int &x, int &y, int &w, int &h) {
+    int infoy=0;
+    x = sdl_screen->w/36;
+    y = sdl_screen->h/36;
+    FILE *f;
+    f = fopen("list_coords","r");
+    if (f) {
+	int oldx,oldy,oldw,oldh,oldsel;
+	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
+	fclose(f);
+	x = oldx + oldw;
+    }
+    f = fopen("mode_coords","r");
+    if (f) {
+	int oldx,oldy,oldw,oldh,oldsel;
+	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
+	fclose(f);
+	y = oldy + oldh;
+    }
+    f = fopen("info_coords","r");
+    if (f) {
+	int oldx,oldy,oldw,oldh;
+	fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	fclose(f);
+	infoy = oldy;
+    }
+    int maxy = (infoy ? infoy : sdl_screen->h-sdl_screen->h/36);
+    w = sdl_screen->w - sdl_screen->w/36 - x;
+    h = maxy - y;
+}
+
+static int vignettes(int argc, char **argv) {
+    if (!sdl_screen) {
+	printf("vignettes appelé sans sdl_screen !\n");
+	return(1);
+    }
+    FILE *f = fopen("vignettes","r");
+    if (!f) {
+	printf("vignettes: pas de fichier vignettes\n");
+	return(1);
+    }
+    int x,y,w,h;
+    get_free_coords(x,y,w,h);
+    int x0 = x,maxh=0,y0 = y,h0 = h;
+    SDL_Rect r = {x,y,w,h};
+    SDL_FillRect(sdl_screen,&r,0);
+    while (!feof(f)) {
+	char buf[1024];
+	buf[0] = 0;
+	myfgets((unsigned char*)buf,1024,f);
+	buf[1023] = 0;
+	char *s = strstr(buf,"tbn:");
+	if (!s) continue;
+	char fn[FILENAME_MAX];
+	sprintf(fn,"cache/%s.jpg",s+4);
+	SDL_Surface *pic = IMG_Load(fn);
+	if (!pic) {
+	    printf("vignettes: couldn't load %s\n",fn);
+	    continue;
+	}
+	if (x+pic->w > x0+w) {
+	    x = x0;
+	    y += maxh;
+	    h -= maxh;
+	    maxh = 0;
+	}
+	if (pic->w <= w && pic->h <= h) {
+	    SDL_Rect dst;
+	    dst.x = x; dst.y = y;
+	    SDL_BlitSurface(pic,NULL,sdl_screen,&dst);
+	    x += pic->w;
+	    if (pic->h > maxh) maxh = pic->h;
+	}
+	SDL_FreeSurface(pic);
+    }
+    SDL_UpdateRect(sdl_screen,x0,y0,w,h0);
+    return 0;
+}
+
+static int image(int argc, char **argv) {
     static int lastx,lasty,lastw,lasth;
     if (argc != 6 && argc != 1) {
 	printf("image: argc = %d\n",argc);
@@ -972,38 +1051,11 @@ int image(int argc, char **argv) {
 	}
     }
     if (!pic) {
-	printf("image: peut pas charger %s\n",bmp);
-	return(1);
+	return vignettes(0,NULL);
     }
     int x,y,w,h;
-    int infoy=0;
-    x = sdl_screen->w/36;
-    y = sdl_screen->h/36;
-    FILE *f;
-    if (!f) f = fopen("list_coords","r");
-    if (f) {
-	int oldx,oldy,oldw,oldh,oldsel;
-	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
-	fclose(f);
-	x = oldx + oldw;
-    }
-    f = fopen("mode_coords","r");
-    if (f) {
-	int oldx,oldy,oldw,oldh,oldsel;
-	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
-	fclose(f);
-	y = oldy + oldh;
-    }
-    f = fopen("info_coords","r");
-    if (f) {
-	int oldx,oldy,oldw,oldh;
-	fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
-	fclose(f);
-	infoy = oldy;
-    }
-    int maxy = (infoy ? infoy : sdl_screen->h-sdl_screen->h/36);
-    w = sdl_screen->w - sdl_screen->w/36 - x;
-    h = maxy - y;
+    get_free_coords(x,y,w,h);
+    int maxy = h+y;
     if (bmp == bg_pic && lastx == x && lasty == y && lastw == w && lasth == h){
 	// Rien à mettre à jour
 	return 0;
@@ -1167,6 +1219,8 @@ int main(int argc, char **argv) {
 		    alpha(fifo,argc,myargv);
 		else if (!strcmp(cmd,"image"))
 		    image(argc,myargv);
+		else if (!strcmp(cmd,"vignettes"))
+		    vignettes(argc,myargv);
 		else if (!strcmp(cmd,"numero"))
 		    numero(fifo,argc,myargv);
 		else if (!strcmp(cmd,"HIDE"))

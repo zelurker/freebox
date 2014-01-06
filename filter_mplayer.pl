@@ -22,8 +22,10 @@ use Data::Dumper;
 use LWP 5.64;
 use images;
 use Encode;
+use URI::URL;
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
+our $has_vignettes = undef;
 
 sub utf($) {
 	my $str = shift;
@@ -122,14 +124,19 @@ sub REAPER {
 			delete $bg_pic{$child};
 		} elsif ($ipc{$child}) {
 			my $id = $ipc{$child};
-			my $dump;
-			shmread($id,$dump,0,180000) || die "shmread: $!";
-			my $result;
-			$dump =~ s/\000+//;
-			eval($dump);
-			handle_result($result);
-			push @cur_images,$result;
-			shmctl($id, IPC_RMID, 0)        || die "shmctl: $!";
+			if ($id eq "vignettes") {
+				$has_vignettes = 1;
+				out::send_bmovl("vignettes");
+			} else {
+				my $dump;
+				shmread($id,$dump,0,180000) || die "shmread: $!";
+				my $result;
+				$dump =~ s/\000+//;
+				eval($dump);
+				handle_result($result);
+				push @cur_images,$result;
+				shmctl($id, IPC_RMID, 0)        || die "shmctl: $!";
+			}
 			delete $ipc{$child};
 		} elsif ($pid_mplayer == $child) {
 			print "filter: mplayer has just quit !\n";
@@ -148,7 +155,11 @@ sub handle_result {
 		print "handle_result sans result ???\n";
 		return;
 	}
-	if ($image = $result->next()) {
+	if ($image = shift @$result) {
+		if (ref($image) eq "URI::URL") {
+			print "got an image = URI::URL\n";
+			$image = $image->abs;
+		}
 		print "handle_result: next\n";
 		my ($w,$h) = ($desk_w,$desk_h);
 		my ($x,$y) = ($w/36,$h/36);
@@ -223,6 +234,7 @@ sub handle_result {
 		$time = time()+25;
 	} else {
 		print "handle_result: fin de liste!\n";
+		out::send_bmovl("vignettes") if ($has_vignettes);
 		$time = 0;
 	}
 }
@@ -249,18 +261,33 @@ sub handle_images {
 		@cur_images = ($cur);
 		my $size = 200000;
 		my $id = shmget(IPC_PRIVATE, $size, S_IRUSR | S_IWUSR) || die "shmget $!\n";
+		$cur =~ s/û/u/g; # Pour une raison inconnue allergie !
+		my $res = $agent->search($cur);
+		open(F,">vignettes");
+		foreach (@$res) {
+			print F $_->url_abs,"\n";
+		}
+		close(F);
 		my $pid = fork();
 		if ($pid) {
 			$ipc{$pid} = $id;
 			$time = 0;
 		} else {
-			$cur =~ s/û/u/g; # Pour une raison inconnue allergie !
-			my $result = $agent->search($cur);
+			my $result = $agent->big_pictures();
 			my $dump = Data::Dumper->Dump([$result],[qw(result)]);
 			shmwrite($id,$dump,0,length($dump)) || die "shmwrite\n";
 			exit(0);
 		}
-
+		$pid = fork();
+		if ($pid) {
+			$ipc{$pid} = "vignettes";
+		} else {
+			# La sauvegarde des vignettes devrait être + rapide, je sais pas ce
+			# que fiche WWW::Mechanize mais je crois pas que c la faute de perl
+			# ici. En tous cas faut un fork pour que ça soit utilisable.
+			$agent->save_vignettes();
+			exit(0);
+		}
 	} else {
 		print "handle_image calling handle_result\n";
 		my $result = $cur_images[1];
@@ -312,6 +339,7 @@ sub bindings($) {
 sub check_eof {
 	return if ($eof);
 	$eof = 1;
+	unlink "vignettes" if ($has_vignettes);
 	print "check_eof: $source exit:$exit\n";
 	unlink("video_size","stream_info");
 	if ($last_image eq "1") {

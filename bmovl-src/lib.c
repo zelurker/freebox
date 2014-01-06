@@ -84,7 +84,7 @@ void init_video() {
 	exit(2);
     }
     get_video_info();
-    sdl_screen = SDL_SetVideoMode( desktop_w,desktop_h, 
+    sdl_screen = SDL_SetVideoMode( desktop_w,desktop_h,
 	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT /* |SDL_FULLSCREEN */ );
     SDL_ShowCursor(SDL_DISABLE);
     FILE *f = fopen("desktop","w");
@@ -118,13 +118,13 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear)
     } else {
 	char str[100];
 	int  nbytes;
-	unsigned char *bitmap = bmp->pixels;
+	unsigned char *bitmap = (unsigned char *)bmp->pixels;
 	int width = bmp->w;
 	int height = bmp->h;
-	
+
 	sprintf(str, "RGBA32 %d %d %d %d %d %d\n",
 	        width, height, xpos, ypos, alpha, clear);
-	
+
 	if(DEBUG) printf("Sending %s", str);
 
 	write_select(fifo, str, strlen(str));
@@ -211,7 +211,7 @@ int direct_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 	ret = tf->h;
     }
     SDL_FreeSurface(tf);
-    return ret; 
+    return ret;
 }
 
 int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
@@ -268,7 +268,7 @@ int put_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
 			if (white)
 			    *white = 0;
 		    }
-		} while (myw > maxw && white); 
+		} while (myw > maxw && white);
 
 		// we have a substring that can be displayed here...
 		int ht = direct_string(sf,font,x,y,beg,color);
