@@ -73,18 +73,11 @@ our $eof = 0;
 my @duree;
 my $net = out::have_net();
 my $images = 0;
-our ($connected,$started,$image_info);
+our ($connected,$started);
 if (!$@ && $net) {
 	# google images dispo si pas d'erreur
 	$images = 1;
 	$agent = images->new();
-}
-eval {
-	require Image::Info;
-	Image::Info->import(qw(image_info dim));
-};
-if (!$@ && $net) {
-	$image_info = 1;
 }
 
 our @cur_images;
@@ -103,7 +96,6 @@ our $album;
 our $old_titre = "";
 our $time;
 our $time_prog;
-our $last_image;
 my $buff = "";
 our %bg_pic;
 
@@ -118,8 +110,6 @@ sub REAPER {
 			if (!-f $bg_pic{$child}) {
 				my $result = $cur_images[1];
 				handle_result($result);
-			} else {
-				$last_image = $bg_pic{$child};
 			}
 			delete $bg_pic{$child};
 		} elsif ($ipc{$child}) {
@@ -155,81 +145,63 @@ sub handle_result {
 		print "handle_result sans result ???\n";
 		return;
 	}
-	if ($image = shift @$result) {
-		if (ref($image) eq "URI::URL") {
-			print "got an image = URI::URL\n";
-			$image = $image->abs;
+	while (1) {
+		$image = shift @$result;
+		if ($image->{w} >= 320 || !$image) {
+			last;
+		} else {
+			print "image trop petite, on passe...\n";
 		}
-		print "handle_result: next\n";
-		my ($w,$h) = ($desk_w,$desk_h);
-		my ($x,$y) = ($w/36,$h/36);
-		$w -= $x; $h -= $y;
-		if (open(F,"<list_coords")) {
-			my $coords = <F>;
-			my ($aw,$ah,$ax,$ay) = split(/ /,$coords);
-			$x = $ax+$aw;
-			$y = $ay;
-			$w -= $x;
-			close(F);
-		}
-		if ($w <= 10) {
-			print "handle_result : on aurait w=$w, on annule\n";
-			return;
-		}
-		if (open(F,"<info_coords")) {
-			my $coords = <F>;
-			close(F);
-			my ($aw,$ah,$ax,$ay) = split(/ /,$coords);
-			$h = $ay-$y;
-		}
+	}
+	if ($image) {
+		my $name = "cache/".$image->{tbnid};
+		$name =~ s/://;
+		$image = $image->{imgurl};
 
 		my ($pic);
 		my $url = $image;
 		my $ext = $url;
 		$ext =~ s/.+\.//;
 		$ext = substr($ext,0,3); # On ne garde que les 3 1ers caractères !
-		my $name = "image.$ext";
-		unlink $name;
-		my $pid = fork();
-		if ($pid == 0) {
-			my $referer = $url;
-			$referer =~ s/(.+)\/.+?$/$1\//;
-			print "get image $url, referer $referer\n";
-			my $res = $browser->get($url,"Referer" => $referer,":content_file" => $name);
-			$pic = $name;
-			if (!$res->is_success) {
-				print "filter: erreur get ",$res->status_line,"\n";
-				exit 0;
-			}
-			my $ftype = `file $pic`;
-			chomp $ftype;
-			if ($ftype =~ /gzip/) {
-				print "gzip content detected\n";
-				rename($pic,"$pic.gz");
-				system("gunzip $pic.gz");
-				$ftype = `file $pic`;
-				chomp $ftype;
-				exit(1);
-			}
-			if ($ftype =~ /error/i || $ftype =~ /HTML/) {
-				unlink "$pic";
-				print "filter: type image $ftype\n";
-				exit 0;
-			}
-			if ($image_info) {
-				my $info = image_info($pic);
-				my ($w,$h) = dim($info);
-				if ($w < 320) {
-					print "image trop petite, on passe à la suite !\n";
-					unlink $pic;
+		$name .= ".$ext";
+		if (-f $name) {
+			utime(undef,undef,$name);
+			print "handle_result: using cache $name\n";
+			out::send_bmovl("image $name");
+		} else {
+			print "handle_result: fork pour récupérer $name from $url\n";
+			my $pid = fork();
+			if ($pid == 0) {
+				my $referer = $url;
+				$referer =~ s/(.+)\/.+?$/$1\//;
+				print "get image $url, referer $referer\n";
+				my $res = $browser->get($url,"Referer" => $referer,":content_file" => $name);
+				$pic = $name;
+				if (!$res->is_success) {
+					print "filter: erreur get ",$res->status_line,"\n";
 					exit 0;
 				}
+				my $ftype = `file $pic`;
+				chomp $ftype;
+				if ($ftype =~ /gzip/) {
+					print "gzip content detected\n";
+					rename($pic,"$pic.gz");
+					system("gunzip $pic.gz");
+					$ftype = `file $pic`;
+					chomp $ftype;
+					exit(1);
+				}
+				if ($ftype =~ /error/i || $ftype =~ /HTML/) {
+					unlink "$pic";
+					print "filter: type image $ftype\n";
+					exit 0;
+				}
+				print "handle_result: calling image $pic\n";
+				out::send_bmovl("image $pic");
+				exit 0;
+			} else {
+				$bg_pic{$pid} = $name;
 			}
-			print "handle_result: calling image $pic $x $y $w $h\n";
-			out::send_bmovl("image $pic $x $y $w $h");
-			exit 0;
-		} else {
-			$bg_pic{$pid} = $name;
 		}
 		$time = time()+25;
 	} else {
@@ -250,12 +222,6 @@ sub handle_images {
 		# Reset de la recherche précédente si pas finie !
 		if ($cur_images[1]) {
 			my $result = $cur_images[1];
-			while ($result->next()) {}
-			if ($last_image eq "1") {
-				print "on évite d'effacer le fichier 1 (2)\n";
-			} else {
-				unlink $last_image if ($last_image);
-			}
 		}
 
 		@cur_images = ($cur);
@@ -265,29 +231,12 @@ sub handle_images {
 		my $res = $agent->search($cur);
 		open(F,">vignettes");
 		foreach (@$res) {
-			print F $_->url_abs,"\n";
+			print F $_,"\n";
 		}
 		close(F);
-		my $pid = fork();
-		if ($pid) {
-			$ipc{$pid} = $id;
-			$time = 0;
-		} else {
-			my $result = $agent->big_pictures();
-			my $dump = Data::Dumper->Dump([$result],[qw(result)]);
-			shmwrite($id,$dump,0,length($dump)) || die "shmwrite\n";
-			exit(0);
-		}
-		$pid = fork();
-		if ($pid) {
-			$ipc{$pid} = "vignettes";
-		} else {
-			# La sauvegarde des vignettes devrait être + rapide, je sais pas ce
-			# que fiche WWW::Mechanize mais je crois pas que c la faute de perl
-			# ici. En tous cas faut un fork pour que ça soit utilisable.
-			$agent->save_vignettes();
-			exit(0);
-		}
+		my $result = $agent->{tab};
+		push @cur_images,$result;
+		handle_result($result);
 	} else {
 		print "handle_image calling handle_result\n";
 		my $result = $cur_images[1];
@@ -342,11 +291,6 @@ sub check_eof {
 	unlink "vignettes" if ($has_vignettes);
 	print "check_eof: $source exit:$exit\n";
 	unlink("video_size","stream_info");
-	if ($last_image eq "1") {
-	    print "on évite d'effacer le fichier 1\n";
-	} else {
-	    unlink $last_image if ($last_image);
-	}
 	if (!$stream && -f "info_coords") {
 		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
 			print F "clear\n";

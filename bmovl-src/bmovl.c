@@ -1015,13 +1015,14 @@ static int vignettes(int argc, char **argv) {
 	}
 	SDL_FreeSurface(pic);
     }
+    fclose(f);
     SDL_UpdateRect(sdl_screen,x0,y0,w,h0);
     return 0;
 }
 
 static int image(int argc, char **argv) {
     static int lastx,lasty,lastw,lasth;
-    if (argc != 6 && argc != 1) {
+    if (argc != 2 && argc != 1) {
 	printf("image: argc = %d\n",argc);
 	return(1);
     }
