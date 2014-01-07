@@ -983,7 +983,7 @@ static int vignettes(int argc, char **argv) {
     }
     int x,y,w,h;
     get_free_coords(x,y,w,h);
-    int x0 = x,maxh=0,y0 = y,h0 = h;
+    int x0 = x,maxh=0;
     SDL_Rect r = {x,y,w,h};
     SDL_FillRect(sdl_screen,&r,0);
     while (!feof(f)) {
@@ -991,13 +991,9 @@ static int vignettes(int argc, char **argv) {
 	buf[0] = 0;
 	myfgets((unsigned char*)buf,1024,f);
 	buf[1023] = 0;
-	char *s = strstr(buf,"tbn:");
-	if (!s) continue;
-	char fn[FILENAME_MAX];
-	sprintf(fn,"cache/%s.jpg",s+4);
-	SDL_Surface *pic = IMG_Load(fn);
+	SDL_Surface *pic = IMG_Load(buf);
 	if (!pic) {
-	    printf("vignettes: couldn't load %s\n",fn);
+	    printf("vignettes: couldn't load %s\n",buf);
 	    continue;
 	}
 	if (x+pic->w > x0+w) {
@@ -1016,7 +1012,7 @@ static int vignettes(int argc, char **argv) {
 	SDL_FreeSurface(pic);
     }
     fclose(f);
-    SDL_UpdateRect(sdl_screen,x0,y0,w,h0);
+    SDL_UpdateRects(sdl_screen,1,&r);
     return 0;
 }
 

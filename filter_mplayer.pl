@@ -114,19 +114,14 @@ sub REAPER {
 			delete $bg_pic{$child};
 		} elsif ($ipc{$child}) {
 			my $id = $ipc{$child};
-			if ($id eq "vignettes") {
-				$has_vignettes = 1;
-				out::send_bmovl("vignettes");
-			} else {
-				my $dump;
-				shmread($id,$dump,0,180000) || die "shmread: $!";
-				my $result;
-				$dump =~ s/\000+//;
-				eval($dump);
-				handle_result($result);
-				push @cur_images,$result;
-				shmctl($id, IPC_RMID, 0)        || die "shmctl: $!";
-			}
+			my $dump;
+			shmread($id,$dump,0,180000) || die "shmread: $!";
+			my $result;
+			$dump =~ s/\000+//;
+			eval($dump);
+			handle_result($result);
+			push @cur_images,$result;
+			shmctl($id, IPC_RMID, 0)        || die "shmctl: $!";
 			delete $ipc{$child};
 		} elsif ($pid_mplayer == $child) {
 			print "filter: mplayer has just quit !\n";
@@ -234,6 +229,8 @@ sub handle_images {
 			print F $_,"\n";
 		}
 		close(F);
+		$has_vignettes = 1;
+		out::send_bmovl("vignettes") if ($has_vignettes);
 		my $result = $agent->{tab};
 		push @cur_images,$result;
 		handle_result($result);

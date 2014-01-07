@@ -8,17 +8,6 @@ use MIME::Base64;
 use strict;
 
 our $debug = 1;
-our $latin = ($ENV{LANG} !~ /UTF/i);
-
-sub save($$) {
-	my ($self,$mech,$url) = @_;
-	push @{$self->{tab}},$url;
-	print "saving $url\n" if ($debug);
-
-#	$mech->get( $url);
-#	$mech->save_content(sprintf("img%02d.jpg",$nb++));
-#	$mech->back();
-}
 
 sub search {
 	my ($self,$q) = @_;
