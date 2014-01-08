@@ -248,7 +248,7 @@ chomp $pid;
 close(F);
 our ($chan,$source,$serv,$flav,$audio,$video,$name) = out::get_current();
 $serv =~ s/ (http.+)//;
-$prog = $1;
+$prog = $1 if ($source !~ /youtube/);
 print "filter: prog = $prog\n";
 $source =~ s/\/(.+)//;
 our $base_flux = $1;

@@ -834,6 +834,9 @@ sub run_mplayer2 {
 		$serv =~ s/ http.+//; # Stations de radio, vire l'url du prog
 	} else {
 		$audio = "-aid $audio " if ($audio);
+		if ($src =~ /youtube/ && $serv =~ s/ (http.+)//) {
+			$audio = $1;
+		}
 		if ($src =~ /Fichiers vidéo/) {
 			if ($name =~ /(mpg|ts)$/) {
 				$filter = ",kerndeint";
@@ -864,7 +867,7 @@ sub run_mplayer2 {
 		}
 	}
 
-	my @list = ("perl","filter_mplayer.pl",$player,$audio,$dvd1,$serv,
+	my @list = ("perl","filter_mplayer.pl",$player,$dvd1,$serv,
 		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
 		# Apparemment options interdites avec vdpau, sinon on perd la synchro !
 		#	"-framedrop","-nocorrect-pts",
@@ -873,10 +876,24 @@ sub run_mplayer2 {
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
 		"bmovl=1:0:fifo,screenshot$filter",$dvd2,$dvd3);
+	if ($audio) {
+		if ($src =~ /youtube/) {
+			push @list,("-audiofile",$audio);
+		} else {
+			push @list,$audio;
+		}
+	}
 	push @list,("-cdrom-device","/dev/$cd") if ($cd);
 	# fichier local (commence par /) -> pas de cache !
 	# Eviter le cache sur la hd en local donne une sacrée amélioration !
-	push @list,("-cache",$cache) if ($serv !~ /^(\/|livetv|records)/);
+	if ($src =~ /youtube/ && $audio) {
+		# Pour les adaptive fmts de youtube
+		# vaut mieux désactiver le cache sinon le délai
+		# initial avant que ça commence est vraiment trop long
+		push @list,("-nocache");
+	} else {
+		push @list,("-cache",$cache) if ($serv !~ /^(\/|livetv|records)/);
+	}
 	# hr-mp3-seek : lent, surtout quand on revient en arrière, mais
 	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/);
 	# L'option obligatoire pour mplayer avec la tnt hd
@@ -1386,7 +1403,7 @@ while (1) {
 				$mode_flux = "";
 				print "base_flux = $name\n";
 				read_list();
-			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// || $serv =~ / /)
+			} elsif ($mode_flux eq "list" || (($serv !~ /\/\//)
 				&& $mode_flux)) {
 				$name =~ s/\//-/g;
 				$base_flux .= "/$name";

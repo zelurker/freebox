@@ -1,9 +1,9 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 #===============================================================================
 #
 #         FILE: http.pl
 #
-#        USAGE: ./http.pl  
+#        USAGE: ./http.pl
 #
 #  DESCRIPTION: Module http pour les plugins
 #
@@ -20,8 +20,9 @@ sub myget {
 	my $cookie_jar = HTTP::Cookies->new(
            file => "$ENV{'HOME'}/lwp_cookies.dat",
            autosave => 1,
-         ); 
-	my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
+         );
+		 # my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
+	my $useragt = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71";
 	my $ua = LWP::UserAgent->new(keep_alive => 0,
 		agent =>$useragt);
 	$ua->timeout(10);
