@@ -1,0 +1,133 @@
+commit 711862a2de227e5fbb37b450ad765ad613f0be28
+Author: Emmanuel Anne <emmanuel.anne@gmail.com>
+Date:   Mon May 28 20:20:20 2012 +0200
+
+    force channels=2 for faad
+    
+    Well I just have a video stream which clearly has 2 channels when only 1 is
+    detected (game one music hd), so this fixes it, even if it's not ideal.
+
+diff --git a/libmpcodecs/ad_faad.c b/libmpcodecs/ad_faad.c
+index be074d9..3598f0e 100644
+--- a/libmpcodecs/ad_faad.c
++++ b/libmpcodecs/ad_faad.c
+@@ -178,6 +178,7 @@ static int init(sh_audio_t *sh)
+     sh->channels = faac_channels == 7 ? 8 : faac_channels;
+     if (opts->audio_output_channels <= 2)
+         sh->channels = faac_channels > 1 ? 2 : 1;
++    if (sh->channels == 1) sh->channels = 2;
+     sh->samplerate = faac_samplerate;
+     sh->samplesize=2;
+     //sh->o_bps = sh->samplesize*faac_channels*faac_samplerate;
+
+commit d66173ead209682358ccc73f5375a8d13553a4e2
+Author: Emmanuel Anne <emmanuel.anne@gmail.com>
+Date:   Sun May 13 16:42:28 2012 +0200
+
+    allow minimum panscan = -1
+
+diff --git a/command.c b/command.c
+index ae79669..664f4cb 100644
+--- a/command.c
++++ b/command.c
+@@ -1288,8 +1288,8 @@ static int mp_property_panscan(m_option_t *prop, int action, void *arg,
+         vo_panscan += (arg ? *(float *) arg : 0.1);
+         if (vo_panscan > 1)
+             vo_panscan = 1;
+-        else if (vo_panscan < 0)
+-            vo_panscan = 0;
++        else if (vo_panscan < -1)
++            vo_panscan = -1;
+         vo_control(mpctx->video_out, VOCTRL_SET_PANSCAN, NULL);
+         return M_PROPERTY_OK;
+     default:
+
+commit 552dbbcce1a331edd5747d999c29251240ecee3e
+Author: Emmanuel Anne <emmanuel.anne@gmail.com>
+Date:   Sun May 13 16:40:51 2012 +0200
+
+    patch bmovl to work with non standard sizes
+
+diff --git a/libmpcodecs/vf_bmovl.c b/libmpcodecs/vf_bmovl.c
+index da5dc97..fa73b2a 100644
+--- a/libmpcodecs/vf_bmovl.c
++++ b/libmpcodecs/vf_bmovl.c
+@@ -220,11 +220,13 @@ put_image(struct vf_instance *vf, mp_image_t* mpi, double pts){
+ 	int xpos=0, ypos=0, pos=0;
+ 	unsigned char red=0, green=0, blue=0;
+ 	mp_image_t* dmpi;
++	static int halfw;
+ 
++	/* get dmpi aligned as mpi */
+     dmpi = vf_get_image(vf->next, mpi->imgfmt, MP_IMGTYPE_TEMP,
+-						MP_IMGFLAG_ACCEPT_STRIDE | MP_IMGFLAG_PREFER_ALIGNED_STRIDE,
+-						mpi->w, mpi->h);
+-
++						MP_IMGFLAG_ACCEPT_ALIGNED_STRIDE  | MP_IMGFLAG_PREFER_ALIGNED_STRIDE ,
++						mpi->w, mpi->height);
++  
+     memcpy_pic( dmpi->planes[0], mpi->planes[0], mpi->width, mpi->height, dmpi->stride[0], mpi->stride[0] );
+     memcpy_pic( dmpi->planes[1], mpi->planes[1], mpi->chroma_width, mpi->chroma_height, dmpi->stride[1], mpi->stride[1] );
+     memcpy_pic( dmpi->planes[2], mpi->planes[2], mpi->chroma_width, mpi->chroma_height, dmpi->stride[2], mpi->stride[2] );
+@@ -345,6 +347,7 @@ put_image(struct vf_instance *vf, mp_image_t* mpi, double pts){
+ 				}
+ 				return vf_next_put_image(vf, dmpi, pts);
+ 			}
++			halfw = vf->priv->w/2;
+ 
+ 			for( buf_y=0 ; (buf_y < imgh) && (buf_y < (vf->priv->h-imgy)) ; buf_y++ ) {
+ 			    for( buf_x=0 ; (buf_x < (imgw*pxsz)) && (buf_x < ((vf->priv->w+imgx)*pxsz)) ; buf_x += pxsz ) {
+@@ -388,7 +391,7 @@ put_image(struct vf_instance *vf, mp_image_t* mpi, double pts){
+ 						vf->priv->bitmap.oa[pos] = alpha;
+ 						vf->priv->bitmap.a[pos]  = INRANGE((alpha+imgalpha),0,255);
+ 						if((buf_y%2) && ((buf_x/pxsz)%2)) {
+-							pos = ( ((buf_y+imgy)/2) * dmpi->stride[1] ) + (((buf_x/pxsz)+imgx)/2);
++							pos = ( ((buf_y+imgy)/2) * halfw ) + (((buf_x/pxsz)+imgx)/2);
+ 							vf->priv->bitmap.u[pos] = rgb2u(red,green,blue);
+ 							vf->priv->bitmap.v[pos] = rgb2v(red,green,blue);
+ 						}
+@@ -420,34 +423,37 @@ put_image(struct vf_instance *vf, mp_image_t* mpi, double pts){
+ 	} else { // Blit the bitmap to the videoscreen, pixel for pixel
+ 	    for( ypos=vf->priv->y1 ; ypos < vf->priv->y2 ; ypos++ ) {
+ 	        for ( xpos=vf->priv->x1 ; xpos < vf->priv->x2 ; xpos++ ) {
++				int pos0 = (ypos * vf->priv->w) + xpos;
+ 				pos = (ypos * dmpi->stride[0]) + xpos;
+ 
+-				int alpha = vf->priv->bitmap.a[pos];
++				int alpha = vf->priv->bitmap.a[pos0];
+ 
+ 				if (alpha == 0) continue; // Completly transparent pixel
+ 
+ 				if (alpha == 255) {	// Opaque pixel
+-					dmpi->planes[0][pos] = vf->priv->bitmap.y[pos];
++					dmpi->planes[0][pos] = vf->priv->bitmap.y[pos0];
+ 					if ((ypos%2) && (xpos%2)) {
+ 						pos = ( (ypos/2) * dmpi->stride[1] ) + (xpos/2);
+-						dmpi->planes[1][pos] = vf->priv->bitmap.u[pos];
+-						dmpi->planes[2][pos] = vf->priv->bitmap.v[pos];
++						pos0 = ( (ypos/2) * halfw ) + (xpos/2);
++						dmpi->planes[1][pos] = vf->priv->bitmap.u[pos0];
++						dmpi->planes[2][pos] = vf->priv->bitmap.v[pos0];
+ 					}
+ 				} else { // Alphablended pixel
+ 					dmpi->planes[0][pos] =
+ 						((255 - alpha) * (int)dmpi->planes[0][pos] +
+-						alpha * (int)vf->priv->bitmap.y[pos]) >> 8;
++						alpha * (int)vf->priv->bitmap.y[pos0]) >> 8;
+ 
+ 					if ((ypos%2) && (xpos%2)) {
+ 						pos = ( (ypos/2) * dmpi->stride[1] ) + (xpos/2);
++						pos0 = ( (ypos/2) * halfw ) + (xpos/2);
+ 
+ 						dmpi->planes[1][pos] =
+ 							((255 - alpha) * (int)dmpi->planes[1][pos] +
+-							alpha * (int)vf->priv->bitmap.u[pos]) >> 8;
++							alpha * (int)vf->priv->bitmap.u[pos0]) >> 8;
+ 
+ 						dmpi->planes[2][pos] =
+ 							((255 - alpha) * (int)dmpi->planes[2][pos] +
+-							alpha * (int)vf->priv->bitmap.v[pos]) >> 8;
++							alpha * (int)vf->priv->bitmap.v[pos0]) >> 8;
+ 					}
+ 			    }
+ 			} // for xpos
