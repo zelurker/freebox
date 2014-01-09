@@ -205,6 +205,7 @@ int direct_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
     dest.x = x; dest.y = y;
     SDL_Color *col = (SDL_Color*)&color; // dirty hack !
     SDL_Surface *tf = TTF_RenderText_Solid(font,text,*col);
+    if (!tf) return 0;
     int ret = 0;
     if (y + tf->h <= maxh) {
 	SDL_BlitSurface(tf,NULL,sf,&dest);
