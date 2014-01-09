@@ -183,6 +183,7 @@ sub handle_tag {
 				# L'encodage de la signature est en fonction da la longueur de s
 				# problème : je ne connais pas toutes les longueurs possibles
 				# ça a changé 1 fois en 2 jours, y en a probablement d'autres
+				print STDERR "s $args{s}\n" if ($debug);
 				if (length($args{s}) == 88) {
 					my $pre = substr($args{s},0,1);
 					$s = substr(delete $args{s},1);
@@ -207,6 +208,17 @@ sub handle_tag {
 					substr($s,26,1) = $post;
 					substr($s,56,1) = substr($s,81,1);
 					substr($s,81,1) = "";
+				} elsif (length($args{s}) == 82) {
+					$s = delete $args{s};
+					my $pre = substr($s,0,1);
+					my $old = $s = substr($s,1);
+					substr($s,14,1) = substr($s,36,1);
+					substr($s,36,1) = substr($s,0,1);
+					substr($s,0,1) = substr($old,14,1);
+					substr($s,2,1) = $pre;
+					substr($s,41,1) = substr($s,80,1);
+					substr($s,80,1) = substr($old,41,1);
+					substr($s,50,1) = substr($old,2,1);
 				}
 				print STDERR "sig2: $s (",length($s),")\n" if ($debug);
 			}
