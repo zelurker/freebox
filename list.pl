@@ -542,6 +542,19 @@ sub read_list {
 				$b =~ s/(.+?)\/(.+)/$1/;
 			}
 			if (-x "flux/$b") {
+
+				# Ok, ça peut être valable d'expliquer les retours des plugins
+				# executables :
+				# si ça commence par http ou mms -> lien direct
+				# Si c'est Recherche, traité en interne, base_flux est reseté
+				# et vaut plugin/result:ce qu'on cherche
+				# Si ça commence par un +, base_flux est aussi reseté et
+				# contient ce qui suit le +
+				# Si y a un espace dans ce qui est retourné c'est pris pour
+				# une liste, sauf pour youtube (youtube passe le flux audio de
+				# cette façon).
+				# Un peu bordelique tout ça, mais bon, ça marche pas mal...
+
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 				print "name $name,$serv,$flav,$audio,$video mode_flux $mode_flux base_flux $base_flux\n";
 				if ($base_flux =~ /result:/ && $base_flux !~ /result:.*\// &&
@@ -549,16 +562,6 @@ sub read_list {
 					$serv = ""; # Sinon on ne peut plus revenir avec la flèche
 					# gauche !!!
 					print "reset serv\n";
-				}
-				if (!$mode_flux && $base_flux !~ /\//) {
-					# pas de mode (list ou direct)
-					$serv = "";
-					$base_flux =~ s/^(.+?)\/.+/$1/;
-				} elsif ($serv !~ /(http|mms)/) {
-					# reconstitue le vrai serv à partir de base_flux
-					$base_flux =~ /(.+?)\/(.+)/;
-					$serv = $2;
-					print "reconstitution serv = $serv\n";
 				}
 				if ($serv eq "Recherche") {
 					delete $ENV{WINDOWID};
@@ -571,7 +574,19 @@ sub read_list {
 						print "encoding $encoding lang $ENV{LANG}\n";
 					}
 					$serv = "result:$serv";
-					$base_flux =~ s/(.+?)\/.+/$1\/$serv/;
+					$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
+				} elsif ($serv =~ /^\+/) { # commence par + -> reset base_flux
+					$serv =~ s/^.//; # Supprime le + !
+					$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
+				} elsif (!$mode_flux && $base_flux !~ /\//) {
+					# pas de mode (list ou direct)
+					$serv = "";
+					$base_flux =~ s/^(.+?)\/.+/$1/;
+				} elsif ($serv !~ /^(http|mms)/) {
+					# reconstitue le vrai serv à partir de base_flux
+					$base_flux =~ /(.+?)\/(.+)/;
+					$serv = $2;
+					print "reconstitution serv = $serv\n";
 				}
 				if (!$serv && $base_flux =~ /\/result\:(.+)/) {
 					# Quand on relance freebox, get_name ne peut pas avoir la
@@ -619,6 +634,12 @@ sub read_list {
 					if ($pic =~ /.+\/(.+?)\/.*?default.jpg/) {
 						# Youtube
 						$file = "cache/$1_yt.jpg";
+					} elsif ($pic =~ /^http.+\/(.+?)/) {
+						$base_flux =~ /^.+\/(.+)/;
+						my $serv = $1;
+						$serv =~ s/ /_/g;
+						$file = "cache/$serv$1";
+						print STDERR "cache $file\n";
 					} elsif ($pic =~ /.+\/(.+)/) {
 						# Par défaut : nom directement dans cache
 						$file = "cache/$1";
@@ -1214,6 +1235,11 @@ while (1) {
 					$base_flux =~ s/(.+)\/.+/$1/;
 					if ($base_flux =~ /\//) {
 						$mode_flux = "list";
+						my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+						# Remet le "bon" service dans la liste
+						$base_flux =~ /.+\/(.+)/;
+						$serv = $1;
+						$list[$found] = [[$name,$serv,$flav,$audio,$video]];
 					} else {
 						$mode_flux = "";
 					}

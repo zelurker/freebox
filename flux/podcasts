@@ -27,7 +27,7 @@ if (open($f,"<$fpod")) {
 binmode STDERR; # ,":utf8";
 binmode STDOUT, ":iso8859-15"; # ,":utf8";
 my $str = shift @ARGV;
-my $debug = 0; # infos
+my $debug = 1; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
 print STDERR "podcasts: reçu $str\n";
@@ -49,7 +49,7 @@ if ($str =~ /http/) {
 	print "list\n";
 }
 print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
-print "Abonnements\nAbonnements\n" if (@abo);
+print "Abonnements\n+Abonnements\n" if (@abo);
 if ($str eq "Abonnements") {
 	print join("\n",@abo);
 	exit(0);
@@ -135,8 +135,14 @@ if (/^<\?xml/ || /^<rss xml/ || $type eq "application/xml") {
 	$d <=> $c;
 	} @$item;
 	foreach (@item) {
+		# A priori ça ne semble pas être une bonne idée de coller l'image ici
+		# j'ai jamais vu ces images changer pour chaque épisode et généralement
+		# elles sont assez grosses donc elles seront mieux dans le bandeau
+		# d'info. Je laisse quand même le code en commentaire au cas où...
+		# my $img = $_->{"media:thumbnail"}->{url};
+		# print "pic:$img " if ($img && $nb++ <= 10);
 		print $_->{title};
-		my $desc = $_->{description} || $_->{"itunes:subtitle"};
+		my $desc = $_->{"itunes:subtitle"};
 		if (ref($desc) eq "HASH") {
 			if (!keys %$desc) {
 				$desc = "";
