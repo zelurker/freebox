@@ -142,10 +142,11 @@ sub handle_result {
 	}
 	while (1) {
 		$image = shift @$result;
+		last if (!$image);
 		if ($image->{w} >= 320 || !$image) {
 			last;
 		} else {
-			print "image trop petite, on passe...\n";
+			print "image trop petite (",$image->{w},"), on passe... reste $#$result\n";
 		}
 	}
 	if ($image) {
