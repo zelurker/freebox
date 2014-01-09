@@ -24,6 +24,7 @@ use progs::telerama;
 use progs::nolife;
 use progs::finter;
 use progs::labas;
+use progs::podcasts;
 
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -81,7 +82,7 @@ sub myget {
 	my $name = $url;
 	my $raw = undef;
 	$name =~ s/^.+\///;
-	if (-f "cache/$name") {
+	if (-f "cache/$name" && !-z "cache/$name") {
 		my $size = -s "cache/$name";
 		utime(undef,undef,"cache/$name");
 		return "cache/$name";
@@ -205,7 +206,7 @@ my $date = sprintf("%02d/%02d/%d",$mday,$mon+1,$year+1900);
 
 sub dateheure {
 	# Affiche une date à partir d'un champ time()
-	my $_ = shift;
+	$_ = shift;
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($_);
 	sprintf("%d/%d/%d %d:%02d",$mday,$mon+1,$year+1900,$hour,$min);
 }
@@ -226,6 +227,7 @@ if ($have_dvb || $have_fb) {
 push @prog, progs::nolife->new($net);
 push @prog, progs::finter->new($net);
 push @prog, progs::labas->new($net);
+push @prog, progs::podcasts->new($net);
 
 system("rm -f fifo_info && mkfifo fifo_info");
 # read_prg:

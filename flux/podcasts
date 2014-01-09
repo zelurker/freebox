@@ -30,7 +30,6 @@ my $str = shift @ARGV;
 my $debug = 1; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
-print STDERR "podcasts: reçu $str\n";
 if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 	my $title = $1;
 	$str = $2;
@@ -73,7 +72,7 @@ if ($debug && !$str) {
 		$r = $mech->submit_form(
 			form_number => 1,
 			fields      => {
-				q => "podcast $str xml",
+				q => "podcast $str filetype:xml",
 			}
 		);
 	} elsif ($str) {
@@ -84,14 +83,13 @@ if ($debug && !$str) {
 }
 
 my $encoding = "";
-open($f,">pod");
-print $f $_;
-close($f);
 
 my $content = 0;
 my ($link,$title,$desc,$img,$date);
 my $type = $r->header("content-type") if ($r);
 if (/^<\?xml/ || /^<rss xml/ || $type eq "application/xml") {
+	# Sauver le fichier pour l'information programmes (prog/podcasts.pm)
+	$mech->save_content("pod");
 	# Normalement on devrait pas avoir à faire ça, mais y a xml::simple qui
 	# fait du découdage partiel très foireux quand le source est utf8 et
 	# que la locale n'est pas utf8 !
@@ -142,23 +140,22 @@ if (/^<\?xml/ || /^<rss xml/ || $type eq "application/xml") {
 		# my $img = $_->{"media:thumbnail"}->{url};
 		# print "pic:$img " if ($img && $nb++ <= 10);
 		print $_->{title};
-		my $desc = $_->{"itunes:subtitle"};
-		if (ref($desc) eq "HASH") {
-			if (!keys %$desc) {
-				$desc = "";
-			} else {
-				die Dumper($desc);
-			}
-		}
-		$desc =~ s/\n/ /gs;
-		$desc =~ s/\r//g;
-		print " - $desc" if ($desc);
+# 		my $desc = $_->{"itunes:subtitle"};
+# 		if (ref($desc) eq "HASH") {
+# 			if (!keys %$desc) {
+# 				$desc = "";
+# 			} else {
+# 				die Dumper($desc);
+# 			}
+# 		}
+# 		$desc =~ s/\n/ /gs;
+# 		$desc =~ s/\r//g;
+# 		print " - $desc" if ($desc);
 		my $date = $_->{pubDate};
 		$date = str2time($date) if ($date !~ /^\d+$/);
 		print " le ".get_date($date) if ($date);
 		print "\n",$_->{enclosure}->{url},"\n";
 	}
-	exit(0);
 }
 
 foreach ($mech->links) {

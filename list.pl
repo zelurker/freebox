@@ -1759,7 +1759,7 @@ while (1) {
 		if ($source =~ /Fichiers/) {
 			$out = out::setup_output("fsel");
 		} elsif ($source eq "flux" && $base_flux ne "stations" && !$have_pic) {
-			$info = 1 if ($base_flux =~ /^la-bas/);
+			$info = 1 if ($base_flux =~ /^(la-bas|podcasts)/);
 			$out = out::setup_output("longlist");
 		} else {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));

@@ -39,6 +39,7 @@ fi
 ulimit -c unlimited
 find cache/ -mtime +3 -delete
 find livetv/ -mtime +1 -delete
+rm -f pod
 if ! [ -f info_pl.pid ]; then
 	perl info.pl &
 fi
