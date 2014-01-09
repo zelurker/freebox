@@ -1403,8 +1403,8 @@ while (1) {
 				$mode_flux = "";
 				print "base_flux = $name\n";
 				read_list();
-			} elsif ($mode_flux eq "list" || (($serv !~ /\/\//)
-				&& $mode_flux)) {
+			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// ||
+					($serv =~ / / && $source !~ /youtube/)) && $mode_flux)) {
 				$name =~ s/\//-/g;
 				$base_flux .= "/$name";
 				$base_flux =~ s/pic:.+? //;
