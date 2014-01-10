@@ -219,7 +219,13 @@ sub handle_tag {
 					substr($s,41,1) = substr($s,80,1);
 					substr($s,80,1) = substr($old,41,1);
 					substr($s,50,1) = substr($old,2,1);
+				} elsif (length($args{s}) == 83) {
+					my $old = $s = delete $args{s};
+					substr($s,0,1) = substr($s,43,1);
+					substr($s,43,1) = substr($old,0,1);
+					substr($s,81) = "";
 				}
+				$s = undef if (length($s) != 81);
 				print STDERR "sig2: $s (",length($s),")\n" if ($debug);
 			}
 			my $q = delete $args{quality};
