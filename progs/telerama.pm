@@ -17,7 +17,6 @@ package progs::telerama;
 #===============================================================================
 
 use strict;
-use warnings;
 use LWP;
 use Data::Dumper;
 use POSIX qw(strftime);

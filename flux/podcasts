@@ -90,15 +90,17 @@ my ($link,$title,$desc,$img,$date);
 print STDERR "*** type $type\n";
 if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 	# Sauver le fichier pour l'information programmes (prog/podcasts.pm)
-	$mech->save_content("pod");
-	# Normalement on devrait pas avoir à faire ça, mais y a xml::simple qui
-	# fait du découdage partiel très foireux quand le source est utf8 et
-	# que la locale n'est pas utf8 !
-	if ($encoding =~ /utf/i) {
-		binmode STDOUT, ":utf8";
-	} else {
-		binmode STDOUT, ":encoding(iso8859-15)" if ($ENV{LANG} =~
-		/(euro|ISO-8859-1)/);
+	# Normalement LWP détecte tout seul l'encodage des caractères et fait la
+	# conversion (en fonction de la locale ou prend en default latin1 ?)
+	# Sauf que des fois le serveur en face n'envoie pas de header avec l'
+	# encodage et dans ce cas là la détection foire, et là on se retrouve
+	# avec un fichier utf8 alors que normalement il est latin1.
+	# On ne peut pas avoir de changement à ce niveau là, un xml est toujours
+	# en utf8 sinon le parser foire, donc on sauve en désactivant explicitement
+	# le décodage pour éviter tout problème.
+	if ($r && open(F,">pod")) {
+		print F $r->decoded_content(charset => "none");
+		close(F);
 	}
 	s/\xe2\x80\x99/'/gs;
 	s/(&[^a])/&amp;/g;

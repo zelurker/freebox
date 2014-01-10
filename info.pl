@@ -82,23 +82,35 @@ sub myget {
 	my $name = $url;
 	my $raw = undef;
 	$name =~ s/^.+\///;
+	if ($base_flux) {
+		$name = $base_flux."_$name";
+		print "*** for img $name from $base_flux\n";
+		$name =~ s/\//_/g;
+		$name =~ s/ /_/g;
+		# Vaut mieux éviter les accents ici au cas où perl a la superbe idée
+		# d'encoder en utf8, dans ce cas là bmovl n'a aucune chance de retrouver
+		# l'image !
+		$name =~ s/[éèêë]/e/g;
+		$name =~ s/à/a/g;
+		$name =~ s/ù/u/g;
+	}
 	if (-f "cache/$name" && !-z "cache/$name") {
 		my $size = -s "cache/$name";
 		utime(undef,undef,"cache/$name");
 		return "cache/$name";
 	} else {
-		print "cache: geting $url\n";
 		my $pid = fork();
 		if ($pid) {
 			push @cache_pic,[$pid,$last_chan,$last_long,$name];
 			return $name;
 		} else {
-			$raw = get $url || print STDERR "can't get image $name\n";
-			if ($raw) {
+			if ($raw = get $url) {
 				if (open(F,">cache/$name")) {
 					syswrite(F,$raw,length($raw));
 					close(F);
 				}
+			} else {
+				print "couldn't get image $url\n";
 			}
 			exit(0);
 		}
