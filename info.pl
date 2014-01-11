@@ -614,8 +614,6 @@ if (!$sub) {
 			read_stream_info($time,$cmd);
 			goto read_fifo;
 		}
-	} else {# $name eq $channel
-		print "stream: $name ne $channel\n";
 	}
 }
 if (!$sub) {
