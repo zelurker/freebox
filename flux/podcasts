@@ -186,14 +186,29 @@ sub parse_index_radio_france {
 sub parse_radio_france {
 	s/\r//g;
 	s/\n//g;
-	while (s/^.+?<div class="index">//) {
-		s/([\dh]+)//;
+	while (s/^.*?<div class="index">(.+?)<div class="index"/<div class="index"/) {
+		my $cont = $1;
+		$cont =~ s/([\dh]+)//;
 		my $heure = $1;
-		s/<img src="(.+?)" alt="(.+?)"//;
-		print "pic:$1 $heure : $2\n";
-		s/<a href="(http.+?)" title="Abonnement par RSS"//;
-		print "$1\n";
-
+		$cont =~ s/<img src="(.+?)" alt="(.+?)"//;
+		my $leg = "pic:$1 $heure : $2";
+		if ($cont =~ s/<a href="(http[^"]+?)" title="Abonnement par RSS"//) {
+			print "$leg\n$1\n";
+		}
+	}
+	while (s/^.*?<li class="views-row(.+?)<li class="views-row/<div class="views-row/) {
+		my $cont = $1;
+		my $leg;
+		if ($cont =~ s/<img src="([^"]+)"//) {
+			$leg = "pic:$1 ";
+		} else {
+			last;
+		}
+		$cont =~ s/<a href=".+?">(.+?)<\/a>//;
+		$leg .= "$1";
+		if ($cont =~ s/<input type="text" id="rss-link" class="[^"]+" value="(.+?)"//) {
+			print "$leg\n$1\n";
+		}
 	}
 	exit(0);
 }
