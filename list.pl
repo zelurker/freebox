@@ -1143,6 +1143,7 @@ sub REAPER {
 			unlink("fifo","fifo_cmd");
 		} elsif ($child == $update_pic) {
 			print "update pic over\n";
+			disp_list();
 			$update_pic = 0;
 		}
 # 		if (! -f "info_coords") {
@@ -1170,18 +1171,23 @@ while (1) {
 	} else {
 		$cmd = undef;
 	}
-	if (defined($l)) {
-		$cmd = <$l>;
-		chomp $cmd;
-	}
-	if (!defined($cmd)) {
-		close($l) if (defined($l));
-		open($l,"<fifo_list");
-		if (!defined($l)) {
-			print "list: open fifo_list failed !!!\n";
+	# Il faut coller ça dans un eval sinon on est presque sûr d'avoir un couac
+	# pendant la récupération de beaucoup d'images (fin du process -> sig child
+	# -> interrompt la lecture fifo -> fermeture !
+	eval {
+		if (defined($l)) {
+			$cmd = <$l>;
+			chomp $cmd;
 		}
-		next;
-	}
+		if (!defined($cmd)) {
+			close($l) if (defined($l));
+			open($l,"<fifo_list");
+			if (!defined($l)) {
+				print "list: open fifo_list failed !!!\n";
+			}
+			next;
+		}
+	};
 	$inotify->poll if ($inotify);
 	again:
 	# print "list: commande reçue après again : $cmd\n";
@@ -1708,6 +1714,51 @@ while (1) {
 		}
 		next if (! -f "list_coords");
 	}
+	disp_list();
+}
+close($l);
+print "list à la fin input vide\n";
+
+sub exec_file {
+	# Retour : 0 si la liste a changé, 1 autrement (next)
+	my ($name,$serv,$audio,$video) = @_;
+	my $path;
+	if ($source eq "Fichiers vidéo") {
+		$path = "video_path";
+	} elsif ($source =~ / son/) {
+		$path = "music_path";
+	} elsif ($source eq "dvd") {
+		$path = "dvd_path";
+	}
+	if ($serv eq "tri par") {
+		$conf{tri_video} = ($conf{tri_video} eq "nom" ? "date" : "nom");
+		read_list();
+	} elsif ($name =~ /\/$/) { # Répertoire
+		my $old;
+		if ($serv eq "..") {
+			$conf{$path} =~ s/^(.*)\/(.+)/$1/;
+			$old = "$2/";
+			$conf{$path} = "/" if (!$conf{$path});
+		} else {
+			$conf{$path} = $serv;
+		}
+		my $n;
+		read_list();
+		for ($n=0; $n<=$#list; $n++) {
+			my ($name) = get_name($list[$n]);
+			if ($name eq $old) {
+				$found = $n;
+				last;
+			}
+		}
+	} else {
+		load_file2($name,$serv,$flav,$audio,$video);
+		return 1;
+	}
+	return 0;
+}
+
+sub disp_list {
 	$nb_elem = 16;
 	$nb_elem = $#list+1 if ($nb_elem > $#list);
 
@@ -1780,45 +1831,4 @@ while (1) {
 	if ($cmd =~ /^(\d|backspace)$/i) {
 		out::send_bmovl("numero $numero");
 	}
-}
-close($l);
-print "list à la fin input vide\n";
-
-sub exec_file {
-	# Retour : 0 si la liste a changé, 1 autrement (next)
-	my ($name,$serv,$audio,$video) = @_;
-	my $path;
-	if ($source eq "Fichiers vidéo") {
-		$path = "video_path";
-	} elsif ($source =~ / son/) {
-		$path = "music_path";
-	} elsif ($source eq "dvd") {
-		$path = "dvd_path";
-	}
-	if ($serv eq "tri par") {
-		$conf{tri_video} = ($conf{tri_video} eq "nom" ? "date" : "nom");
-		read_list();
-	} elsif ($name =~ /\/$/) { # Répertoire
-		my $old;
-		if ($serv eq "..") {
-			$conf{$path} =~ s/^(.*)\/(.+)/$1/;
-			$old = "$2/";
-			$conf{$path} = "/" if (!$conf{$path});
-		} else {
-			$conf{$path} = $serv;
-		}
-		my $n;
-		read_list();
-		for ($n=0; $n<=$#list; $n++) {
-			my ($name) = get_name($list[$n]);
-			if ($name eq $old) {
-				$found = $n;
-				last;
-			}
-		}
-	} else {
-		load_file2($name,$serv,$flav,$audio,$video);
-		return 1;
-	}
-	return 0;
 }
