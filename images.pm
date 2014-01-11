@@ -7,7 +7,7 @@ use Encode;
 use MIME::Base64;
 use strict;
 
-our $debug = 1;
+our $debug = 0;
 
 sub search {
 	my ($self,$q) = @_;
@@ -42,10 +42,11 @@ sub search {
 	my $c = $mech->content;
 	$mech->save_content("page.html");
 	my @vignette = ();
-	while ($c =~ s/a href="([^"]+?)" class="?rg_l//) {
+	while ($c =~ s/a href="([^"]+?)"[^>]* class="?rg_l//) {
 		my $link = $1;
 		my @args = split(/&amp;/,$link);
 		my %args;
+		print "found link $link\n" if ($debug);
 		foreach (@args) {
 			my ($name,$val) = split(/=/);
 			$args{$name} = $val;
