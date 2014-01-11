@@ -27,7 +27,7 @@ if (open($f,"<$fpod")) {
 binmode STDERR; # ,":utf8";
 binmode STDOUT, ":iso8859-15"; # ,":utf8";
 my $str = shift @ARGV;
-my $debug = 1; # infos
+my $debug = 0; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
 if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
@@ -40,7 +40,7 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 		close($f);
 	}
 }
-if ($str =~ /http/) {
+if ($str =~ /http/ && $str !~ /^prog/) {
 	print STDERR "str $str sending direct\n";
 	print "direct\n";
 } else {
@@ -66,7 +66,9 @@ if ($debug && !$str) {
 	$str = "http";
 	print STDERR "debug mode, input from stdin\n";
 } else {
-	if ($str && $str !~ /^http/) {
+	if ($str =~ /^prog.:(.+)/) {
+		$mech->get($1);
+	} elsif ($str && $str !~ /^http/) {
 		print STDERR "requête de recherche sur $str\n"; # if ($debug);
 		$mech->get("https://www.google.fr/");
 		$r = $mech->submit_form(
@@ -78,9 +80,16 @@ if ($debug && !$str) {
 	} elsif ($str) {
 		print STDERR "debug: get $str\n" if ($debug);
 		$r = $mech->get($str);
+	} elsif (!$str) {
+		print "Podcasts Radio France\n+prog1:http://www.radiofrance.fr/espace-pro/podcast-radio-france\n";
 	}
 	$_ = $mech->content;
 	$type = $r->header("content-type") if ($r);
+	if ($str =~ /^prog1/) {
+		parse_index_radio_france();
+	} elsif ($str =~ /^prog2/) {
+		parse_radio_france();
+	}
 }
 
 my $encoding = "";
@@ -143,17 +152,6 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 		# my $img = $_->{"media:thumbnail"}->{url};
 		# print "pic:$img " if ($img && $nb++ <= 10);
 		print $_->{title};
-# 		my $desc = $_->{"itunes:subtitle"};
-# 		if (ref($desc) eq "HASH") {
-# 			if (!keys %$desc) {
-# 				$desc = "";
-# 			} else {
-# 				die Dumper($desc);
-# 			}
-# 		}
-# 		$desc =~ s/\n/ /gs;
-# 		$desc =~ s/\r//g;
-# 		print " - $desc" if ($desc);
 		my $date = $_->{pubDate};
 		$date = str2time($date) if ($date !~ /^\d+$/);
 		print " le ".get_date($date) if ($date);
@@ -176,3 +174,26 @@ sub get_date {
 	sprintf("%d/%02d/%02d, %02d:%02d",$mday,$mon+1,$year+1900,$hour,$min);
 }
 
+sub parse_index_radio_france {
+	s/\r//g;
+	s/\n//g;
+	while (s/^.+?<a title="([^"]+)" href="(http[^"]+)" target="_blank"><img class="img-float-left" src="([^"]+)"//) {
+		print "pic:http://www.radiofrance.fr$3 $1\n+prog2:$2\n";
+	}
+	exit(0);
+}
+
+sub parse_radio_france {
+	s/\r//g;
+	s/\n//g;
+	while (s/^.+?<div class="index">//) {
+		s/([\dh]+)//;
+		my $heure = $1;
+		s/<img src="(.+?)" alt="(.+?)"//;
+		print "pic:$1 $heure : $2\n";
+		s/<a href="(http.+?)" title="Abonnement par RSS"//;
+		print "$1\n";
+
+	}
+	exit(0);
+}

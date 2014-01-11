@@ -577,12 +577,17 @@ sub read_list {
 					$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
 				} elsif ($serv =~ /^\+/) { # commence par + -> reset base_flux
 					$serv =~ s/^.//; # Supprime le + !
-					$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
+					if ($serv !~ /http/) {
+						$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
+					} else {
+						$base_flux =~ s/^(.+?)\/.+$/$1/;
+					}
+					print "après simplification base_flux $base_flux\n";
 				} elsif (!$mode_flux && $base_flux !~ /\//) {
 					# pas de mode (list ou direct)
 					$serv = "";
 					$base_flux =~ s/^(.+?)\/.+/$1/;
-				} elsif ($serv !~ /^(http|mms)/) {
+				} elsif ($serv !~ /^(http|mms|prog)/) {
 					# reconstitue le vrai serv à partir de base_flux
 					$base_flux =~ /(.+?)\/(.+)/;
 					$serv = $2;
@@ -634,11 +639,12 @@ sub read_list {
 					if ($pic =~ /.+\/(.+?)\/.*?default.jpg/) {
 						# Youtube
 						$file = "cache/$1_yt.jpg";
-					} elsif ($pic =~ /^http.+\/(.+?)/) {
+					} elsif ($pic =~ /^http.+\/(.+)/) {
+						$file = $1;
 						$base_flux =~ /^.+\/(.+)/;
 						my $serv = $1;
 						$serv =~ s/ /_/g;
-						$file = "cache/$serv$1";
+						$file = "cache/$serv$file";
 						print STDERR "cache $file\n";
 					} elsif ($pic =~ /.+\/(.+)/) {
 						# Par défaut : nom directement dans cache
