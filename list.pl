@@ -587,7 +587,7 @@ sub read_list {
 					# pas de mode (list ou direct)
 					$serv = "";
 					$base_flux =~ s/^(.+?)\/.+/$1/;
-				} elsif ($serv !~ /^(http|mms|prog)/) {
+				} elsif ($serv !~ /^(http|mms|prog)/ && $base_flux !~ /podcasts/) {
 					# reconstitue le vrai serv à partir de base_flux
 					$base_flux =~ /(.+?)\/(.+)/;
 					$serv = $2;

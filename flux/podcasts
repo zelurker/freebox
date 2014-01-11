@@ -6,6 +6,7 @@ use Date::Parse;
 use XML::Simple;
 use Data::Dumper;
 use WWW::Mechanize;
+use HTML::Entities;
 
 # Refonte complète, on abandonne podcasters qui est pourri finalement
 # et on ne va garder que des résultats google pour les recherches...
@@ -40,16 +41,8 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 		close($f);
 	}
 }
-if ($str =~ /http/ && $str !~ /^prog/) {
-	print STDERR "str $str sending direct\n";
-	print "direct\n";
-} else {
-	print STDERR "str $str sending list\n";
-	print "list\n";
-}
-print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
-print "Abonnements\n+Abonnements\n" if (@abo);
 if ($str eq "Abonnements") {
+	header("list");
 	print join("\n",@abo);
 	exit(0);
 }
@@ -81,14 +74,21 @@ if ($debug && !$str) {
 		print STDERR "debug: get $str\n" if ($debug);
 		$r = $mech->get($str);
 	} elsif (!$str) {
+		header("list");
 		print "Podcasts Radio France\n+prog1:http://www.radiofrance.fr/espace-pro/podcast-radio-france\n";
+		exit(0);
 	}
 	$_ = $mech->content;
 	$type = $r->header("content-type") if ($r);
-	if ($str =~ /^prog1/) {
-		parse_index_radio_france();
-	} elsif ($str =~ /^prog2/) {
-		parse_radio_france();
+	if ($str =~ /^prog/) {
+		header("list");
+		if ($str =~ /^prog1/) {
+			parse_index_radio_france();
+		} elsif ($str =~ /^prog2/) {
+			parse_france_inter();
+		} elsif ($str =~ /^prog3/) {
+			parse_franceinfo();
+		}
 	}
 }
 
@@ -98,6 +98,7 @@ my $content = 0;
 my ($link,$title,$desc,$img,$date);
 print STDERR "*** type $type\n";
 if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
+	header("direct");
 	# Sauver le fichier pour l'information programmes (prog/podcasts.pm)
 	# Normalement LWP détecte tout seul l'encodage des caractères et fait la
 	# conversion (en fonction de la locale ou prend en default latin1 ?)
@@ -127,7 +128,7 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 	s/\r//gm;
 	my $ref = XMLin($_);
 	if (!$found) {
-		my $title = $ref->{channel}->{title};
+		my $title = decode_entities($ref->{channel}->{title});
 		print "S'abonner\n$title $str\n";
 	}
 
@@ -159,12 +160,25 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 	}
 }
 
-foreach ($mech->links) {
-	my $u = $_->url;
-	if ($u =~ /url.q=(http.+?)&/) {
-		$u = $1;
+# Ici on interprête le résultat de la recherche...
+header("list");
+my $u = $mech->uri;
+if ($u =~ /google\./) {
+	foreach ($mech->links) {
+		my $u = $_->url;
+		if ($u =~ /url.q=(http.+?)&/) {
+			$u = $1;
+			print $_->text,"\n$u\n";
+		}
+	}
+} else {
+	my ($host) = $u =~ /https?:\/\/(.+?)\//;
+	print STDERR "host for filtering $host\n";
+	foreach ($mech->links) {
+		my $u = $_->url;
+		next if ($u =~ /$host/);
+		next if ($u !~ /^http/ || $u !~ /xml$/);
 		print $_->text,"\n$u\n";
-		print STDERR "text: ",$_->text," url $u\n";
 	}
 }
 
@@ -178,12 +192,19 @@ sub parse_index_radio_france {
 	s/\r//g;
 	s/\n//g;
 	while (s/^.+?<a title="([^"]+)" href="(http[^"]+)" target="_blank"><img class="img-float-left" src="([^"]+)"//) {
-		print "pic:http://www.radiofrance.fr$3 $1\n+prog2:$2\n";
+		my ($text,$url,$pic) = ($1,$2,$3);
+		my $prg;
+		if ($url =~ /franceinter/) {
+			$prg = "prog2";
+		} elsif ($url =~ /franceinfo/) {
+			$prg = "prog3";
+		}
+		print "pic:http://www.radiofrance.fr$pic $text\n+$prg:$url\n" if ($prg);
 	}
 	exit(0);
 }
 
-sub parse_radio_france {
+sub parse_france_inter {
 	s/\r//g;
 	s/\n//g;
 	while (s/^.*?<div class="index">(.+?)<div class="index"/<div class="index"/) {
@@ -196,6 +217,12 @@ sub parse_radio_france {
 			print "$leg\n$1\n";
 		}
 	}
+	exit(0);
+}
+
+sub parse_franceinfo {
+	s/\r//g;
+	s/\n//g;
 	while (s/^.*?<li class="views-row(.+?)<li class="views-row/<div class="views-row/) {
 		my $cont = $1;
 		my $leg;
@@ -211,4 +238,11 @@ sub parse_radio_france {
 		}
 	}
 	exit(0);
+}
+
+sub header {
+	my $msg = shift;
+	print "$msg\n";
+	print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
+	print "Abonnements\n+Abonnements\n" if (@abo);
 }

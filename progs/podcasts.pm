@@ -21,7 +21,12 @@ sub mydecode {
 	my $desc = shift;
 	$desc =~ s/<.+?>//g; # vire tous les tags html
 	$desc = decode_entities($desc);
-	Encode::from_to($desc,"utf-8","iso-8859-15");
+	eval {
+		Encode::from_to($desc,"utf-8","iso-8859-15");
+	};
+	if ($@) {
+		print "super connard encore tout pété déocdage utf: $@\n";
+	}
 	$desc;
 }
 
