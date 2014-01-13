@@ -7,6 +7,7 @@ use XML::Simple;
 use Data::Dumper;
 use WWW::Mechanize;
 use HTML::Entities;
+use POSIX qw(:sys_wait_h );
 
 # Refonte complète, on abandonne podcasters qui est pourri finalement
 # et on ne va garder que des résultats google pour les recherches...
@@ -40,10 +41,51 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 		print $f join("\n",@abo);
 		close($f);
 	}
-}
-if ($str eq "Abonnements") {
+	exit(0);
+} elsif ($str eq "Abonnements") {
 	header("list");
 	print join("\n",@abo);
+	exit(0);
+} elsif ($str =~ s/^get,(\d+):(.+)/$2/) {
+	# Lien download
+	my $size = $1;
+	mkdir "podcasts";
+	my ($file) = $str =~ /.+\/(.+)/;
+	$file = "podcasts/$file";
+	if (!-f "$file" || -s $file != $size) {
+		print STDERR "lien get: taille != $size\n";
+		$SIG{CHLD} = \&REAPER;
+		my $pid = fork();
+		if (!$pid) {
+			# Génération du fichier info
+			# pas terrible de relire pod ici, mais je ne vois pas d'autre moyen
+			# à priori...
+			open(F,"<pod");
+			@_ = <F>;
+			close(F);
+			$_ = join("\n",@_);
+			my $ref = XMLin($_);
+			my $item = $ref->{channel}->{item};
+			foreach (@$item) {
+				if ($_->{enclosure}->{url} eq $str) {
+					open(F,">$file.info");
+					my $img = $ref->{"channel"}->{image}->{url};
+					print F ($img ? "pic:$img " : ""),$_->{title},"\n",$_->{"itunes:subtitle"},"\n";
+					print F $_->{description},"\n";
+					close(F);
+					last;
+				}
+			}
+			exec("wget","-q","-N","-O",$file,$str);
+		} else {
+			my $n = 1;
+			my $dest = ($file =~ /mp3$/ ? 40*1024 : 2048*1024);
+			while ($n++ < 10 && -s $file < $dest) {
+				sleep(1);
+			}
+		}
+	}
+	print "$file\n"; # Renvoie le nom du fichier à list.pl
 	exit(0);
 }
 $str =~ s/ /\+/g;
@@ -156,8 +198,9 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 		my $date = $_->{pubDate};
 		$date = str2time($date) if ($date !~ /^\d+$/);
 		print " le ".get_date($date) if ($date);
-		print "\n",$_->{enclosure}->{url},"\n";
+		print "\nget,",$_->{enclosure}->{length},":",$_->{enclosure}->{url},"\n";
 	}
+	exit(0);
 }
 
 # Ici on interprête le résultat de la recherche...
@@ -246,3 +289,11 @@ sub header {
 	print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
 	print "Abonnements\n+Abonnements\n" if (@abo);
 }
+
+sub REAPER {
+	my $child;
+	$SIG{CHLD} = \&REAPER;
+	while (($child = waitpid(-1,WNOHANG)) > 0) {
+	}
+}
+

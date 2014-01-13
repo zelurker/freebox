@@ -829,6 +829,19 @@ sub mount_dvd() {
 sub run_mplayer2 {
 	my ($name,$src,$serv,$flav,$audio,$video) = @_;
 	$l = undef; # Ne ferme pas ça dans le fils !!!
+	if ($serv =~ /^get,\d+:.+/) {
+		# lien get : download géré par le plugin
+		print "lien get détecté: $serv\n";
+		my ($b) = $base_flux =~ /(.+?)\/.+/;
+		print "b reconst: $b\n";
+		if (-x "flux/$b") {
+			open(F,"flux/$b \"$serv\"|");
+			$serv = <F>;
+			chomp $serv;
+			print "Récupéré le lien $serv à partir de flux/$b\n";
+			close(F);
+		}
+	}
 	unlink "fifo_cmd","fifo";
 	system("mkfifo fifo_cmd fifo");
 	my $player = "mplayer2";
