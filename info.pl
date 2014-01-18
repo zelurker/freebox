@@ -497,13 +497,13 @@ if (!$channel) {
 		$nfound = 0 if ($@);
 
 		$time = time;
-		if ($last_chan && defined($lastprog) && $$lastprog[4] &&
-			$time >= $$lastprog[4] && $time - $$lastprog[4]<=5) {
-#			if (-f "info_coords" && $time - $$lastprog[4] < 5) {
-			my $prg = $prog[$reader]->next($last_chan);
-				disp_prog($prg,$last_long);
-#			}
-		}
+#		if ($last_chan && defined($lastprog) && $$lastprog[4] &&
+#			$time >= $$lastprog[4] && $time - $$lastprog[4]<=5) {
+##			if (-f "info_coords" && $time - $$lastprog[4] < 5) {
+#			my $prg = $prog[$reader]->next($last_chan);
+#			disp_prog($prg,$last_long);
+##			}
+#		}
 		handle_records($time);
 		if (-f "list_coords" || -f "numero_coords" && $time-$time_refresh >= 1) {
 			$time_refresh = $time;
