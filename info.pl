@@ -582,10 +582,33 @@ if (!$channel) {
 		print "enreg: info returned $src,$num,$name,$service,$flavour,$audio,$video\n";
 		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($$lastprog[3]);
 		my $file = "records/".sprintf("%d%02d%02d %02d%02d%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec)." $$lastprog[1].ts";
-		my @cur = ($$lastprog[3],$$lastprog[4],$service,$flavour,$audio,$video,$src,$file);
-		print "info pour enregistrement : ",dateheure($$lastprog[3])," ",dateheure($$lastprog[4])," ",$$lastprog[1]," serv $service flav $flavour audio $audio video $video src $src\n";
-		push @records,\@cur;
-		@records = sort { $$a[0] <=> $$b[0] } @records;
+		my $delay = `zenity --entry --entry-text=0 --text="Delai supplémentaire avant et après en minutes"`;
+		chomp $delay;
+		$delay = 0 if (!$delay);
+		$delay *= 60;
+		my $added = undef;
+		foreach (@records) {
+			if ($_[1] >= $$lastprog[3]-$delay && $service eq $_[2] &&
+				$src eq $_[6]) {
+				# fusion
+				$_[1] = $$lastprog[4]+$delay;
+				$added = 1;
+				last;
+			}
+		}
+		if (!$added) {
+			my @cur = ($$lastprog[3]-$delay,$$lastprog[4]+$delay,$service,$flavour,$audio,$video,$src,$file);
+			print "info pour enregistrement : ",dateheure($$lastprog[3])," ",dateheure($$lastprog[4])," ",$$lastprog[1]," serv $service flav $flavour audio $audio video $video src $src\n";
+			push @records,\@cur;
+			@records = sort { $$a[0] <=> $$b[0] } @records;
+			open(F,">$file.info");
+			print F ($$lastprog[9] ? "pic:$$lastprog[9] " : "");
+			print F $$lastprog[2],"\n"; # title
+			print F $$lastprog[1],"\n"; # channel name = subtitle
+			print F $$lastprog[6],"\n"; # description
+			print F $$lastprog[7],"\n"; # details
+			close(F);
+		}
 		save_recordings();
 		mkdir "records" if (! -d "records");
 		goto read_fifo;
