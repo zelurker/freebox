@@ -386,7 +386,9 @@ sub handle_records {
 			}
 			my $service = $$_[2];
 			my $flavour = $$_[3];
-			print "début enregistrement ",dateheure($$_[0])," à ",dateheure($$_[1])," src $$_[6]\n";
+			my $tab = $_;
+			print "début enregistrement ",dateheure($$tab[0])," à ",dateheure($$tab[1])," src $$tab[6]\n";
+			$_ = $tab;
 			if ($$_[6] =~ /(freebox|dvb)/) {
 				my $pid = fork();
 				if ($pid == 0) {
@@ -465,7 +467,7 @@ if (!$channel) {
 #			}
 #		}
 
-		if ($start_timer && # $start_timer > $time &&
+		if ($start_timer && $start_timer > $time &&
 			(!$delay || $start_timer < $delay)) {
 			$delay = $start_timer;
 			# print "delay start_timer : ",get_time($delay),"\n";
@@ -473,17 +475,19 @@ if (!$channel) {
 		foreach (@records) {
 			if ($$_[0] > $time && (!$delay || $$_[0] < $delay)) {
 				$delay = $$_[0];
-				# print "delay début enreg : ",get_time($delay),"\n";
+				# print "info: delay début enreg : ",get_time($delay),"\n";
 			}
 			if ($$_[1] > $time && (!$delay || $$_[1] < $delay)) {
 				$delay = $$_[1];
-				# print "delay fin enreg : ",get_time($delay),"\n";
+				# print "info: delay fin enreg : ",get_time($delay),"\n";
 			}
 		}
 		$delay -= $time if ($delay);
+		$delay = 1 if ($delay <= 0);
 		if ((-f "list_coords" || -f "numero_coords") && $delay && $delay > 1) {
 			$delay = 1;
 		}
+		# print "info: delay $delay\n";
 
 		my $nfound;
 		eval {
@@ -588,10 +592,10 @@ if (!$channel) {
 		$delay *= 60;
 		my $added = undef;
 		foreach (@records) {
-			if ($_[1] >= $$lastprog[3]-$delay && $service eq $_[2] &&
-				$src eq $_[6]) {
+			if ($$_[1] >= $$lastprog[3]-$delay && $service eq $$_[2] &&
+				$src eq $$_[6]) {
 				# fusion
-				$_[1] = $$lastprog[4]+$delay;
+				$$_[1] = $$lastprog[4]+$delay;
 				$added = 1;
 				last;
 			}
