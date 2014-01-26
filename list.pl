@@ -1794,7 +1794,6 @@ sub disp_list {
 		$cur .= "$source\n";
 	}
 	my $n = $beg-1;
-	my $name_sel;
 	my $have_pic = undef;
 	for (my $nb=1; $nb<=$nb_elem; $nb++) {
 		last if (++$n > $#list);
@@ -1818,7 +1817,6 @@ sub disp_list {
 			die "list split failed\n";
 		}
 		$cur .= sprintf("%3d:%s",$num,($pic ? "pic:$pic " : "").$name);
-		$name_sel = $name if ($n == $found);
 		if ($#$rtab > 0) {
 			$cur .= ">";
 		}
@@ -1838,7 +1836,13 @@ sub disp_list {
 		print $out $cur;
 		close($out);
 		print "command prog source $source base_flux $base_flux\n";
-		out::send_cmd_info("prog $name_sel§$source/$base_flux") if ($info);
+		my $rtab = $list[$found];
+		my ($num,$name,$service,$flavour,$audio,$video,$red,$pic) = @{$$rtab[0]};
+		if ($source =~ /(Enregistrement|livetv)/) {
+			out::send_cmd_info("prog $service§$source/$base_flux") if ($info);
+		} else {
+			out::send_cmd_info("prog $name§$source/$base_flux") if ($info);
+		}
 		$last_list = $cur;
 	}
 	if ($cmd =~ /^(\d|backspace)$/i) {

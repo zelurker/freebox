@@ -25,6 +25,7 @@ use progs::nolife;
 use progs::finter;
 use progs::labas;
 use progs::podcasts;
+use progs::files;
 
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -240,6 +241,7 @@ push @prog, progs::nolife->new($net);
 push @prog, progs::finter->new($net);
 push @prog, progs::labas->new($net);
 push @prog, progs::podcasts->new($net);
+push @prog, progs::files->new($net);
 
 system("rm -f fifo_info && mkfifo fifo_info");
 # read_prg:
