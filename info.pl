@@ -362,15 +362,12 @@ sub handle_records {
 	return if (!@records);
 	for (my $n=0; $n<=$#records; $n++) {
 		if ($time > $records[$n][1]) {
-			print "enregistrement expiré\n";
+			print "enregistrement expiré (de ",dateheure($records[$n][0])," à ",dateheure($records[$n][1]),")\n";
 			splice @records,$n,1;
+			save_recordings();
 			last if ($n > $#records);
 			redo;
 		}
-	}
-	if (!@records) {
-		save_recordings();
-		return;
 	}
 
 	foreach (@records) {
