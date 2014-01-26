@@ -14,7 +14,6 @@ use chaines;
 require "mms.pl";
 require "radios.pl";
 use HTML::Entities;
-no utf8;
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our ($inotify,$watch);
@@ -635,22 +634,7 @@ sub read_list {
 				Encode::from_to($name, "utf-8", "iso-8859-15") if
 				($encoding =~ /utf/i);
 				if ($pic) {
-					my $file;
-					if ($pic =~ /.+\/(.+?)\/.*?default.jpg/) {
-						# Youtube
-						$file = "cache/$1_yt.jpg";
-					} elsif ($pic =~ /^http.+\/(.+)/) {
-						$file = $1;
-						$base_flux =~ /^.+\/(.+)/;
-						my $serv = $1;
-						$serv =~ s/ /_/g;
-						$file = "cache/$serv$file";
-						print STDERR "cache $file\n";
-					} elsif ($pic =~ /.+\/(.+)/) {
-						# Par défaut : nom directement dans cache
-						$file = "cache/$1";
-						print "default pic: $file\n";
-					}
+					my $file = out::get_cache($pic);
 					if (!-f $file || -z $file) {
 						push @pic,($file,$pic);
 					}

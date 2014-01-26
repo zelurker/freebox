@@ -9,6 +9,7 @@ use Fcntl;
 use Socket;
 use POSIX qw(SIGALRM);
 use Net::Ping;
+use File::Path qw(make_path);
 
 sub send_bmovl {
 	my $cmd = shift;
@@ -214,6 +215,24 @@ sub have_freebox {
 	$net;
 }
 
+sub get_cache($) {
+	my $pic = shift;
+	my $file;
+	if ($pic =~ /^https?\:\/\/(.+\/)(.+)/) {
+		# on cache dans nom_du_serveur/path/file c'est le mieux
+		my $base = $1;
+		$file = $2;
+		$base = "cache/$base";
+		make_path($base);
+		$file = $base.$file;
+		print STDERR "cache $file\n";
+	} elsif ($pic =~ /.+\/(.+)/) {
+		# Par défaut : nom directement dans cache
+		$file = "cache/$1";
+		print "default pic: $file\n";
+	}
+	$file;
+}
 
 1;
 

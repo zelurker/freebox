@@ -36,6 +36,10 @@ if ! perl -c list.pl; then
 	echo problèmes avec votre install de perl, dsl !
 	exit 1
 fi
+if ! type wget > /dev/null 2> /dev/null; then
+	echo install wget
+	exit 1
+fi
 ulimit -c unlimited
 find cache/ -mtime +3 -delete
 find livetv/ -mtime +1 -delete

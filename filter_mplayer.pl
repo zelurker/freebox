@@ -733,9 +733,5 @@ if ($source =~ /(dvb|freebox)/ && $exit =~ /EOF/) {
 	}
 }
 
-if ($connected) {
-	print "filter: USR2 point2\n";
-	kill "USR2",$pid;
-}
-
+kill "USR2",$pid if ($connected);
 check_eof();

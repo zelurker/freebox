@@ -80,25 +80,11 @@ sub get_stream_info {
 sub myget {
 	# un get avec cache
 	my $url = shift;
-	my $name = $url;
+	my $name = out::get_cache($url);
 	my $raw = undef;
-	$name =~ s/^.+\///;
-	if ($base_flux) {
-		$name = $base_flux."_$name";
-		print "*** for img $name from $base_flux\n";
-		$name =~ s/\//_/g;
-		$name =~ s/ /_/g;
-		# Vaut mieux éviter les accents ici au cas où perl a la superbe idée
-		# d'encoder en utf8, dans ce cas là bmovl n'a aucune chance de retrouver
-		# l'image !
-		$name =~ s/[éèêë]/e/g;
-		$name =~ s/à/a/g;
-		$name =~ s/ù/u/g;
-	}
-	if (-f "cache/$name" && !-z "cache/$name") {
-		my $size = -s "cache/$name";
-		utime(undef,undef,"cache/$name");
-		return "cache/$name";
+	if (-f $name && !-z $name) {
+		utime(undef,undef,$name);
+		return $name;
 	} else {
 		my $pid = fork();
 		if ($pid) {
@@ -106,7 +92,7 @@ sub myget {
 			return $name;
 		} else {
 			if ($raw = get $url) {
-				if (open(F,">cache/$name")) {
+				if (open(F,">$name")) {
 					syswrite(F,$raw,length($raw));
 					close(F);
 				}
@@ -180,7 +166,7 @@ sub REAPER {
 			}
 			if ($child == $cache_pic[$n][0] && $last_chan eq $cache_pic[$n][1] &&
 			   	(!$last_long || $last_long eq $cache_pic[$n][2]) &&
-			   	-f "cache/$cache_pic[$n][3]") {
+			   	-f $cache_pic[$n][3]) {
 				# L'image est arrivée, réaffiche le bandeau d'info alors
 				if ($lastprog) {
 					disp_prog($lastprog,$last_long);
@@ -274,7 +260,7 @@ sub disp_prog {
 	$last_chan = $$sub[1];
 	my $start = $$sub[3];
 	my $end = $$sub[4];
-	my @date = split('/', $$sub[12]);
+	my @date = ($$sub[12] ? split('/', $$sub[12]) : "");
 	my $date = timelocal_nocheck(0,0,12,$date[0],$date[1]-1,$date[2]-1900);
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday) = localtime($date);
 	my $time = time();
