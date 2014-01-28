@@ -1318,6 +1318,7 @@ while (1) {
 			my $file = $list[$found][0][2];
 			print "fichier à effacer $file\n";
 			unlink $file;
+			unlink "$file.info";
 		} elsif (open(F,">rejets/$source.0")) {
 			if (open(G,"<rejets/$source")) {
 				while (<G>) {
@@ -1820,12 +1821,14 @@ sub disp_list {
 		print $out $cur;
 		close($out);
 		print "command prog source $source base_flux $base_flux\n";
-		my $rtab = $list[$found];
-		my ($num,$name,$service,$flavour,$audio,$video,$red,$pic) = @{$$rtab[0]};
-		if ($source =~ /(Enregistrement|livetv)/) {
-			out::send_cmd_info("prog $service§$source/$base_flux") if ($info);
-		} else {
-			out::send_cmd_info("prog $name§$source/$base_flux") if ($info);
+		if ($found < $#list) {
+			my $rtab = $list[$found];
+			my ($num,$name,$service,$flavour,$audio,$video,$red,$pic) = @{$$rtab[0]};
+			if ($source =~ /(Enregistrement|livetv)/) {
+				out::send_cmd_info("prog $service§$source/$base_flux") if ($info);
+			} else {
+				out::send_cmd_info("prog $name§$source/$base_flux") if ($info);
+			}
 		}
 		$last_list = $cur;
 	}
