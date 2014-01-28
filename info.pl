@@ -302,7 +302,7 @@ sub disp_prog {
 		$cur =~ s/^.+\(\) //; # vire les infos vides d'auteurs/pistes
 		print "*** info: got $cur,$last,$info.\n";
 
-		print $out "($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec)," - $cur";
+		print $out " ($info)";
 	}
 	print $out "\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
