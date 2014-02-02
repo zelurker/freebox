@@ -256,6 +256,10 @@ sub disp_duree($) {
 
 sub disp_prog {
 	my ($sub,$long) = @_;
+	if (!$sub) {
+		print "info: disp_prog sans sub !\n";
+		return;
+	}
 	$lastprog = $sub;
 	$last_chan = $$sub[1];
 	my $start = $$sub[3];
