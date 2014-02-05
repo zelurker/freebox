@@ -42,6 +42,7 @@ if ! type wget > /dev/null 2> /dev/null; then
 fi
 ulimit -c unlimited
 find cache/ -mtime +3 -delete
+find podcasts/ -mtime +7 -delete
 find livetv/ -mtime +1 -delete
 rm -f pod
 if ! [ -f info_pl.pid ] || ! ( ps -p `cat info_pl.pid` >& /dev/null ); then
