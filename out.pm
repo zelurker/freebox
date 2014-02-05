@@ -48,6 +48,25 @@ sub send_cmd_info($) {
 	send_cmd_fifo("fifo_info",$cmd);
 }
 
+sub send_list {
+	# envoie une commande à fifo_list et récupère la réponse
+	my $cmd = shift;
+	out::send_cmd_list($cmd);
+	print "send_list: sent $cmd\n";
+	$cmd = undef;
+	if (open(F,"<reply_list")) {
+		while (<F>) {
+			chomp;
+			$cmd = $_;
+		}
+		close(F);
+	} else {
+		print "can't read from fifo_list\n";
+	}
+	print "send_list: got $cmd\n";
+	$cmd;
+}
+
 sub send_command {
 	my $cmd = shift;
 	if (sysopen(F,"fifo_cmd",O_WRONLY|O_NONBLOCK)) {

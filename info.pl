@@ -14,8 +14,7 @@ use POSIX qw(:sys_wait_h);
 use Time::Local "timelocal_nocheck";
 use LWP::Simple;
 # use Time::HiRes qw(gettimeofday tv_interval);
-use Fcntl;
-use Socket;
+use records;
 
 use out;
 require "radios.pl";
@@ -32,6 +31,7 @@ our $have_fb = 0; # have_freebox
 $have_fb = out::have_freebox() if ($net);
 our $have_dvb = (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
 our $reader;
+my $recordings = records->new();
 
 our @cache_pic;
 our ($lastprog,$last_chan,$last_long);
@@ -187,28 +187,12 @@ $SIG{TERM} = sub { unlink "info_pl.pid"; unlink "fifo_info"; exit(0); };
 # Constants
 #
 
-my @records = ();
-if (open(F,"<recordings")) {
-	while (<F>) {
-		chomp;
-		push @records,[split(/\,/)];
-	}
-	close(F);
-}
-
 open(F,">info_pl.pid");
 print F "$$\n";
 close(F);
 
 my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
 my $date = sprintf("%02d/%02d/%d",$mday,$mon+1,$year+1900);
-
-sub dateheure {
-	# Affiche une date à partir d'un champ time()
-	$_ = shift;
-	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($_);
-	sprintf("%d/%d/%d %d:%02d",$mday,$mon+1,$year+1900,$hour,$min);
-}
 
 sub get_time {
 	# Et là renvoie une heure à partir d'un champ time()
@@ -321,115 +305,6 @@ sub disp_prog {
 #	print "last_long = $last_long from disp_prog\n";
 }
 
-sub send_list {
-	# envoie une commande à fifo_list et récupère la réponse
-	my $cmd = shift;
-	out::send_cmd_list($cmd);
-	print "send_list: sent $cmd\n";
-	$cmd = undef;
-	if (open(F,"<reply_list")) {
-		while (<F>) {
-			chomp;
-			$cmd = $_;
-		}
-		close(F);
-	} else {
-		print "can't read from fifo_list\n";
-	}
-	print "send_list: got $cmd\n";
-	$cmd;
-}
-
-sub save_recordings {
-	open(F,">recordings");
-	foreach (@records) {
-		print F join(",",@$_),"\n";
-	}
-	close(F);
-}
-
-sub handle_records {
-	my $time = shift;
-	my $finished = 0;
-	return if (!@records);
-	for (my $n=0; $n<=$#records; $n++) {
-		if ($time > $records[$n][1]) {
-			print "enregistrement expiré (de ",dateheure($records[$n][0])," à ",dateheure($records[$n][1]),")\n";
-			splice @records,$n,1;
-			save_recordings();
-			last if ($n > $#records);
-			redo;
-		}
-	}
-
-	foreach (@records) {
-
-		if ($time >= $$_[0] && !$$_[8]) {
-			# Début d'un enregistrement
-			my $audio2 = $$_[4];
-			my $name = $$_[7];
-			if ($audio2) {
-				open(G,">$name.audio");
-				print G $audio2;
-				close(G);
-			}
-			my $service = $$_[2];
-			my $flavour = $$_[3];
-			my $tab = $_;
-			print "début enregistrement ",dateheure($$tab[0])," à ",dateheure($$tab[1])," src $$tab[6]\n";
-			$_ = $tab;
-			if ($$_[6] =~ /(freebox|dvb)/) {
-				my $pid = fork();
-				if ($pid == 0) {
-					# Ce crétin de mplayer a un port par défaut pour le rtsp et
-					# ne vérifie rien.  Ou plutôt si, mais seulement une fois
-					# que l' ouverture a foiré, du coup dumpstream ne marche
-					# pas sans -rtsp-port quand on a une autre cxion rtsp
-					# active. Donc faut trouver le 1er port libre,
-					# on commence à 9000.
-					if ($$_[6] =~ /freebox/) {
-						my $proto = getprotobyname('tcp');
-						socket(Server, PF_INET, SOCK_STREAM, $proto) || die "socket $!";
-						setsockopt(Server, SOL_SOCKET, SO_REUSEADDR,pack("l", 1));
-						my $port = 9000;
-						while (!bind(Server, sockaddr_in($port, INADDR_ANY))) {
-							print "port $port in use\n";
-							$port++;
-						}
-						print "port $port libre\n";
-						close(Server);
-						print "enregistrement freebox: exec('mplayer', '-rtsp-port',$port,'-dumpfile',$name,'-really-quiet', '-dumpstream','rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour')\n";
-						exec("mplayer", "-rtsp-port",$port,"-dumpfile",$name,"-really-quiet", "-dumpstream","rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour");
-					} else {
-						# if ($$_[6] eq "dvb") {
-						print "Enregistrement dvb: exec('mplayer', '-dumpfile',$name,'-really-quiet', '-dumpstream','dvb://$service')\n";
-						exec("mplayer", "-dumpfile",$name,"-really-quiet", "-dumpstream","dvb://$service");
-					}
-				} else {
-					push @$_,$pid;
-					save_recordings();
-					print "pid to kill $$_[8]\n";
-				}
-			}
-		} elsif ($time >= $$_[1] && $$_[8]) {
-			print "kill pid $$_[8]\n";
-			kill 15,$$_[8];
-			$$_[8] = $$_[0] = $$_[1] = 0;
-			$finished = 1;
-		}
-	}
-	if ($finished) {
-		for (my $n=0; $n<=$#records; $n++) {
-			if ($records[$n][0] == 0 && $records[$n][8] == 0) {
-				splice @records,$n,1;
-				last if ($n > $#records);
-				redo;
-			}
-		}
-		save_recordings();
-	}
-}
-
 if (!$channel) {
 	$cmd = "";
 	do {
@@ -461,16 +336,8 @@ if (!$channel) {
 			$delay = $start_timer;
 			# print "delay start_timer : ",get_time($delay),"\n";
 		}
-		foreach (@records) {
-			if ($$_[0] > $time && (!$delay || $$_[0] < $delay)) {
-				$delay = $$_[0];
-				# print "info: delay début enreg : ",get_time($delay),"\n";
-			}
-			if ($$_[1] > $time && (!$delay || $$_[1] < $delay)) {
-				$delay = $$_[1];
-				# print "info: delay fin enreg : ",get_time($delay),"\n";
-			}
-		}
+		$delay = $recordings->get_delay($time,$delay);
+
 		$delay -= $time if ($delay);
 		$delay = 1 if ($delay <= 0);
 		if ((-f "list_coords" || -f "numero_coords") && $delay && $delay > 1) {
@@ -497,7 +364,7 @@ if (!$channel) {
 #			disp_prog($prg,$last_long);
 ##			}
 #		}
-		handle_records($time);
+		$recordings->handle($time);
 		if (-f "list_coords" || -f "numero_coords" && $time-$time_refresh >= 1) {
 			$time_refresh = $time;
 			out::send_cmd_list("refresh");
@@ -542,7 +409,7 @@ if (!$channel) {
 		out::send_bmovl($cmd);
 	    goto read_fifo;
 	} elsif ($cmd =~ /^(up|down)$/) {
-		$cmd = send_list(($cmd eq "up" ? "next" : "prev")." $last_chan");
+		$cmd = out::send_list(($cmd eq "up" ? "next" : "prev")." $last_chan");
 		$channel = $cmd;
 		print "got channel :$channel.\n";
 		$long = $last_long;
@@ -566,44 +433,9 @@ if (!$channel) {
 		$base_flux = $1;
 		$channel = $cmd;
 	} elsif ($cmd eq "record") {
-		$cmd = send_list("info ".lc($$lastprog[1]));
 		out::clear("info_coords") if (-f "info_coords");
 		out::clear("list_coords") if (-f "list_coords");
-		my ($src,$num,$name,$service,$flavour,$audio,$video) = split(/\,/,$cmd);
-		my $base;
-		($src,$base) = split(/\//,$src);
-		print "enreg: info returned $src,$num,$name,$service,$flavour,$audio,$video\n";
-		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($$lastprog[3]);
-		my $file = "records/".sprintf("%d%02d%02d %02d%02d%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec)." $$lastprog[1].ts";
-		my $delay = `zenity --entry --entry-text=0 --text="Delai supplémentaire avant et après en minutes"`;
-		chomp $delay;
-		$delay = 0 if (!$delay);
-		$delay *= 60;
-		my $added = undef;
-		foreach (@records) {
-			if ($$_[1] >= $$lastprog[3]-$delay && $service eq $$_[2] &&
-				$src eq $$_[6]) {
-				# fusion
-				$$_[1] = $$lastprog[4]+$delay;
-				$added = 1;
-				last;
-			}
-		}
-		if (!$added) {
-			my @cur = ($$lastprog[3]-$delay,$$lastprog[4]+$delay,$service,$flavour,$audio,$video,$src,$file);
-			print "info pour enregistrement : ",dateheure($$lastprog[3])," ",dateheure($$lastprog[4])," ",$$lastprog[1]," serv $service flav $flavour audio $audio video $video src $src\n";
-			push @records,\@cur;
-			@records = sort { $$a[0] <=> $$b[0] } @records;
-			open(F,">$file.info");
-			print F ($$lastprog[9] ? "pic:$$lastprog[9] " : "");
-			print F $$lastprog[2],"\n"; # title
-			print F $$lastprog[1],"\n"; # channel name = subtitle
-			print F $$lastprog[6],"\n"; # description
-			print F $$lastprog[7],"\n"; # details
-			close(F);
-		}
-		save_recordings();
-		mkdir "records" if (! -d "records");
+		$recordings->add($lastprog);
 		goto read_fifo;
 	} else {
 		print "info: commande inconnue $cmd\n";
@@ -637,7 +469,7 @@ if (!$sub) {
 	my $out = out::setup_output("bmovl-src/bmovl","",0);
 	$cmd =~ s/pic:(.+?) //;
 	my $pic = $1;
-#	my $src = send_list("info ".lc($cmd));
+#	my $src = out::send_list("info ".lc($cmd));
 #	$src =~ s/,.+//;
 	if ($source eq "flux/stations") {
 		$pic = get_radio_pic($cmd);
