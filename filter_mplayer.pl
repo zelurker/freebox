@@ -318,7 +318,14 @@ sub check_eof {
 			}
 		}
 
-		if ($length && $length>0 && $pos/$length<0.9 && $length > 300 &&
+		if ($length && $length>0 && ($pos-$start_pos)/$length<0.9 && $length > 300 &&
+			# problème des bookmarks sur les ts (flux livetv tnt ou freebox :
+			# l'index des temps est mort et ne commence pas à 0. On peut mettre - $start_pos
+			# pour compenser, mais ça devient faux quand on commence la lecture à un bookmark
+			# à ce moment là start_pos = le bookmark.
+			# Pour compliquer encore, y a que mplayer2 qui arrive à gérer le -ss avec un ts
+			# A priori le seul moyen d'éviter que le bookmark ne soit jamais effacé est d'inclure un système
+			# qui vire les bookmarks sur des fichiers qui n'existent plus...
 			$source =~ /(Fichiers|livetv|Enregist|flux)/ &&
 			($exit =~ /ID_EXIT=QUIT/ || !$exit)) {
 			print "filter: take bookmark pos $pos for name $serv\n";
