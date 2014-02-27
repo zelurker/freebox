@@ -76,10 +76,10 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 					last;
 				}
 			}
-			exec("wget","-q","-N","-O",$file,$str);
+			exec("wget","-q","-c","-N","-O",$file,$str);
 		} else {
 			my $n = 1;
-			my $dest = ($file =~ /mp3$/ ? 40*1024 : 2048*1024);
+			my $dest = ($file =~ /mp3$/ ? 40*1024 : 7*1024*1024);
 			while ($n++ < 10 && -s $file < $dest) {
 				sleep(1);
 			}
