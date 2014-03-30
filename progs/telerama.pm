@@ -154,7 +154,17 @@ sub parse_prg($) {
 		my $old = $_;
 		my @sub = split(/\$\$\$/);
 		my $chan = lc($sub[1]);
-		if (!$date_offset || $sub[12] ne $date) {
+		my ($hour,$min,$sec) = split(/\:/,$sub[3]);
+		if (1) { # !$date_offset || $sub[12] ne $date) {
+			# Correction gravement inefficace des changements d'heure (été)
+			# le jour du changement d'heure, le date_offset varie dans la
+			# journée vu qu'ils ne font pas le changement à minuit mais vers
+			# 3h du mat. Du coup si on veut des heures fiables, il faut
+			# recalculer le time_offset en fonction de l'heure demandée
+			# 364 jours sur 365 ça ne sert absolument à rien, ça fait une
+			# surcharge non négligeable, mais bon, comme ça on devrait avoir
+			# la paix avec ces foutus changements d'heures (ça aurait été
+			# bien qu'ils mettent un champ heure universelle quand même...).
 			$date = $sub[12];
 			if (!$date) {
 				print "*** format de fichier programmes incorrect, on va essayer de corriger\n";
@@ -164,9 +174,8 @@ sub parse_prg($) {
 			my ($mday,$mon,$year) = split(/\//,$sub[12]);
 			$mon--;
 			$year -= 1900;
-			$date_offset = timelocal_nocheck(0,0,0,$mday,$mon,$year);
+			$date_offset = timelocal_nocheck(0,0,$hour,$mday,$mon,$year)-($hour*3600);
 		}
-		my ($hour,$min,$sec) = split(/\:/,$sub[3]);
 		my $start = $date_offset + $sec + 60*$min + 3600*$hour;
 		if ($sub[9]) {
 			my @date = split(/\//,$sub[12]);
