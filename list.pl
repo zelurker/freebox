@@ -213,7 +213,7 @@ sub apps_menu {
 			foreach ($lang2,$lang) {
 				if ($fields{"name[$_]"}) {
 					$fields{name} = $fields{"name[$_]"};
-					Encode::from_to($fields{name}, "utf-8", "iso-8859-15");
+					Encode::from_to($fields{name}, "utf-8", "iso-8859-1");
 				}
 			}
 			push @{$apps{$fields{categories}}},[$fields{name},$fields{icon},$fields{exec}];
@@ -312,7 +312,7 @@ sub list_files {
 		# pas sûr que ça marche partout, mais j'ai pas trouvé non plus de
 		# détection générique utf8. Pour l'instant ça marche en tous cas !
 		if ($latin && $name =~ /\xc3/) {
-			Encode::from_to($name, "utf-8", "iso-8859-15");
+			Encode::from_to($name, "utf-8", "iso-8859-1");
 		}
 		push @list,[[$num++,$name,$service,-M $service]];
 	}
@@ -417,7 +417,7 @@ sub read_list {
 			close(F);
 		}
 
-		Encode::from_to($list, "utf-8", "iso-8859-15") if ($list !~ /débit/);
+		Encode::from_to($list, "utf-8", "iso-8859-1") if ($list !~ /débit/);
 
 		my ($num,$name,$service,$flavour,$audio,$video);
 		my $last_num = undef;
@@ -568,7 +568,7 @@ sub read_list {
 					chomp $serv;
 					if ($encoding =~ /utf/i && $latin) {
 						print "encodage utf6\n";
-						Encode::from_to($serv, "iso-8859-15", "utf-8") ;
+						Encode::from_to($serv, "iso-8859-1", "utf-8") ;
 					} else {
 						print "encoding $encoding lang $ENV{LANG}\n";
 					}
@@ -631,7 +631,7 @@ sub read_list {
 				if ($name =~ s/^pic:(.+?) //) {
 					$pic = $1;
 				}
-				Encode::from_to($name, "utf-8", "iso-8859-15") if
+				Encode::from_to($name, "utf-8", "iso-8859-1") if
 				($encoding =~ /utf/i);
 				if ($pic) {
 					my $file = out::get_cache($pic);
@@ -973,7 +973,7 @@ sub load_file2 {
 			@list = [\@cur];
 			return 0;
 		}
-		Encode::from_to($cont, "utf-8", "iso-8859-15") if ($type =~ /utf/);
+		Encode::from_to($cont, "utf-8", "iso-8859-1") if ($type =~ /utf/);
 		my @old = @list;
 		if ($cont =~ /^#EXTM3U/) {
 			@list = ();
@@ -1423,13 +1423,6 @@ while (1) {
 				print "list: exec $serv\n";
 				out::send_command("pause\n");
 				system("$serv");
-				reset_current();
-				out::send_command("pause\n");
-				unlink("current"); # pour être sûr que la commande zap passera
-				$cmd = "zap1";
-				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-				print "would zap to $name,$serv,$flav,$audio,$video\n";
-				goto again;
 			}
 		} elsif ($source =~ /^(flux|cd)/) {
 #			print "list: serv $serv source pour lancement $source/$base_flux mode_flux $mode_flux\n";
