@@ -42,7 +42,8 @@ sub search {
 	my $c = $mech->content;
 	$mech->save_content("page.html");
 	my @vignette = ();
-	while ($c =~ s/a href="([^"]+?)"[^>]* class="?rg_l//) {
+	while ($c =~ s/a href="([^"]+?)"[^>]* class="?rg_l// ||
+		$c =~ s/a class="?rg_l" href="([^"]+?)"//) {
 		my $link = $1;
 		my @args = split(/&amp;/,$link);
 		my %args;
