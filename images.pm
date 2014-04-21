@@ -46,6 +46,9 @@ sub search {
 		$c =~ s/a class="?rg_l" href="([^"]+?)"//) {
 		my $link = $1;
 		my @args = split(/&amp;/,$link);
+		$args[0] =~ s/^.+\?//; # Récupère le 1er argument
+		# il doit probablement y avoir une fonction dans libwww pour faire ça
+		# + directement, mais bon... !
 		my %args;
 		print "found link $link\n" if ($debug);
 		foreach (@args) {
@@ -55,8 +58,8 @@ sub search {
 		push @tab,\%args; # on garde tout, pourquoi se priver ?!!!
 
 		# Bonus : on recherche la vignette
-		if (!$args{tbnid}) {
-			print "pas de tbnid, j'ai :\n";
+		if (!$args{tbnid} || !$args{imgurl}) {
+			print "pas de tbnid ou d'imgurl, j'ai :\n";
 			foreach (keys %args) {
 				print "$_: $args{$_}\n";
 			}
