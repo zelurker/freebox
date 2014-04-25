@@ -808,7 +808,9 @@ static void read_inputs() {
 	    printf("touche inconnue %s commande %s\n",buff,c+1);
 	    continue;
 	}
-	command[nb_keys++] = strdup(c+1);
+	c++;
+	while (*c == ' ' || *c == 9) c++; // passe les tabs et espaces
+	command[nb_keys++] = strdup(c);
     }
     fclose(f);
 }
@@ -883,7 +885,8 @@ static void handle_event(SDL_Event *event) {
 	n=nb_keys; // skip the loop
     else {
 	for (n=0; n<nb_keys; n++) {
-	    if (input == keys[n]) {
+	    if (input == keys[n] && command[n][0] != '{') {
+		// Evite les commandes style {dvdnav}
 		printf("touche trouvée, commande %s\n",command[n]);
 		if (!strncmp(command[n],"run",3))
 		    system(&command[n][4]);
