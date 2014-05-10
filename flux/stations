@@ -16,24 +16,16 @@ Atlantis FM
 http://www.radioatlantis.fr:8000/listen.pls
 Beaub Fm
 http://gisv3.tv-radio.com/station/beaub/beaub.m3u
-Ben Ben Radio
-http://benbenradio2.free.fr/benbenradio2.m3u
 BFM
 http://vipicecast.yacast.net/bfm
 Bide et Musique
 http://www.bide-et-musique.com/playlist-hq.m3u
 C9 Radio
 http://streaming.c9radio.eu/listen.m3u
-CambosFM
-http://radio-cambos.hopto.org:9000/listen.pls
-Capytol
-http://live140.impek.com:8020
 Classic 21 64k aac
 http://classic21.ice.rtbf.be/classic21-64.aac
 Classic 21 128k mp3
 http://classic21.ice.rtbf.be/classic21-128.mp3
-Clube Brazil
-http://www.clubebrasil.fr/wmphq.m3u
 Cocktail FM
 http://91.121.62.121:7450
 Demoiselle FM
@@ -82,8 +74,6 @@ Fun Radio
 http://streaming.radio.funradio.fr:80/fun-1-44-96
 Generation Disco Funk
 http://www.generationdiscofunk.com/v3/pls/stream02/hd.m3u
-Graffiti Urban Radio
-http://www.urban-radio.com/128.m3u
 Hit West
 http://broadcast.infomaniak.ch/hitwest-high.mp3
 Hot Mix Radio - 80
@@ -108,8 +98,6 @@ Kiss FM
 http://gisv3.tv-radio.com/station/kissfm-mp3/kissfm-mp3-128k.m3u
 La Grosse Radio
 http://www.lagrosseradio.com/son/stream/192.m3u
-La Grosse Radio Rock
-http://hd.lagrosseradio.info:8192/;stream.nsv
 Radio M Montpelier
 http://live.francra.org:8000/Radio-M-Montelimar?type=flash
 La Grosse Radio Metal
@@ -126,8 +114,6 @@ M2 Radio - Chillout
 http://www.m2radio.fr/pls/m2chillout_winamp.m3u
 M2 Radio - Digital
 http://www.m2radio.fr/pls/m2digital_winamp.m3u
-M2 Radio - Discovery
-http://www.m2radio.fr/pls/m2discovery_winamp.m3u
 M2 Radio - Love
 http://www.m2radio.fr/pls/m2love_winamp.m3u
 M2 Radio - Mix
@@ -160,26 +146,12 @@ MFM Culte 80 90
 http://mfm-wr3.ice.infomaniak.ch/mfm-wr2-128.mp3 http://mfmradio.fr/winradio/prog1.xml
 MFM Lady
 http://mfm-wr3.ice.infomaniak.ch/mfm-wr1-128.mp3 http://mfmradio.fr/winradio/prog4.xml
-Nostalgie
-http://95.81.147.3/nostalgie/all/nos_113812.mp3
 Nostalgie stars 80
 http://95.81.146.7/4983/nrj_145215.mp3
 Nostalgie 100 légendes
 http://95.81.146.7/3725/nrj_3725.mp3
 Nostalgie Ciné tubes
 http://95.81.146.7/3719/nrj_3719.mp3
-NRJ
-http://95.81.147.3/nrj/all/nrj_113225.mp3
-NRJ Hits
-http://95.81.147.3/nrj_hits/all/nrj_150726.mp3
-NRJ Lounge
-http://mp3.live.tv-radio.com/nrj_lounge/all/nrj_151750.mp3
-NRJ Music Awards
-http://mp3.live.tv-radio.com/3394/nrj_music_awards/nrj_122236.mp3
-NRJ Pop
-http://95.81.147.3/nrj_pop/all/nrj_151240.mp3
-NTI
-http://www.tv-radio.com/station/nti-mp3/nti-mp3-128k.m3u
 Oui FM
 http://ouifm.ice.infomaniak.ch/ouifm-high.mp3 http://rock.ouifm.fr/dynamic-menu.json
 Oui FM Alternatif
@@ -190,12 +162,8 @@ Oui FM Blues
 http://ouifm4.ice.infomaniak.ch/ouifm4.aac http://rock.ouifm.fr/dynamic-menu.json _blues
 Oui FM Indé
 http://ouifm5.ice.infomaniak.ch/ouifm5.aac http://rock.ouifm.fr/dynamic-menu.json _inde
-Oui FM DJ Zebra
-http://ouifm5.ice.infomaniak.ch/ouifm6-128.mp3 http://rock.ouifm.fr/dynamic-menu.json _djzebra
 Oxyradio
 http://oxyradio.net:8000/hd.ogg
-Pacifique FM
-http://stream.canal44.be:9512
 Paris One Club
 http://www.paris-one.com/pls/radio.pls
 Paris One Reverse
@@ -216,8 +184,6 @@ Puls Radio - Version 9.0
 http://www.pulsradio.com/pls/pulsV90-adsl.m3u
 Puls Radio - Version Trance
 http://www.pulsradio.com/pls/pulstrance-adsl.m3u
-Radio activ' 101.9
-http://www.radio-activ.com:8000/listen.mp3
 Radio Alpine Meilleure
 http://91.121.62.121:8310
 Radio Béton !
@@ -230,8 +196,6 @@ Radio Côte d'Amour
 http://95.81.147.10/4771/rad_153645.mp3
 R'courchevel
 http://live76.laradiostation.fr:8888/listen.pls
-Radio Imagine
-http://213.186.61.62:7900/listen.pls
 Radio Intensite
 http://radiointensite.free.fr/live128.m3u
 Radio Junior
@@ -242,16 +206,10 @@ Radio RDL
 http://91.121.62.121:8300/listen.pls
 Radio TeenTall
 http://www.radioteentaal.com/masala128.m3u
-RBI FM
-http://82.165.135.210:8000/
 RDM - Lorraine
 http://213.186.61.62:7070/listen.pls
 RFM
 http://vipicecast.yacast.net/rfm_128
-RFM Collector
-http://vipicecast.yacast.net/rfm_webradio06
-RFM Night Fever
-http://vipicecast.yacast.net/rfm_webradio02
 RST
 http://213.186.61.62:8700/listen.pls
 RTL
@@ -266,5 +224,3 @@ Top Music
 http://players.creacast.com/creacast/topmusic/playlist.m3u
 Virgin Radio
 http://vipicecast.yacast.net/virginradio_128
-Ze Radio
-http://188.165.156.99:8000/
