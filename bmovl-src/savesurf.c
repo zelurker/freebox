@@ -26,6 +26,7 @@
 #include <SDL/SDL.h>
 #include <SDL/SDL_image.h>
 #include <png.h>
+#include <SDL_endian.h>
 
 
 static int png_colortype_from_surface(SDL_Surface *surface)
@@ -57,6 +58,11 @@ int png_save_surface(char *filename, SDL_Surface *surf)
 	png_infop info_ptr;
 	int i, colortype;
 	png_bytep *row_pointers;
+	printf("png_save_surface shifts %d %d %d %d\n",
+		surf->format->Rshift,
+		surf->format->Gshift,
+		surf->format->Bshift,
+		surf->format->Ashift);
 
 	/* Opening output file */
 	fp = fopen(filename, "wb");
@@ -91,6 +97,10 @@ int png_save_surface(char *filename, SDL_Surface *surf)
 	colortype = png_colortype_from_surface(surf);
 	png_set_IHDR(png_ptr, info_ptr, surf->w, surf->h, 8, colortype,	PNG_INTERLACE_NONE, 
 		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+	png_set_swap_alpha(png_ptr);
+	png_set_bgr(png_ptr);
+#endif
 
 	/* Writing the image */
 	png_write_info(png_ptr, info_ptr);
