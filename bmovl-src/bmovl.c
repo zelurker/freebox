@@ -615,18 +615,15 @@ static int list(int fifo, int argc, char **argv)
 	    sely = y+dy/2;
 	    y += dy;
 	} else {
-	    char oldfg;
 	    if (status[n] == 'R') {
-		oldfg = fg;
 		fg = red;
 	    } else if (status[n] == 'D') {
-		oldfg = fg;
 		fg = cyan;
 	    }
 	    if (!fsel && !mode_list)
 		put_string(sf,font,4,y,(char*)buff,fg,NULL); // Numéro
 	    y += disp_list(sf,font,x,y,list[n],chan[n],fg,heights[n]);
-	    if (status[n] == 'R' || status[n] == 'D') fg = oldfg;
+	    if (status[n] == 'R' || status[n] == 'D') fg = get_fg(sf);
 	}
 	if (hidden) {
 	    direct_string(sf,font,xright,y0,">",(current == n ? bg : fg));
