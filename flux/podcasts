@@ -18,6 +18,7 @@ use POSIX qw(:sys_wait_h );
 # youtube, mais faire un module pour ça ne serait pas très pratique
 # 2 - décodage du xml des podcasts avec xml::simple
 
+our $latin = ($ENV{LANG} !~ /UTF/i);
 my $f;
 my @abo;
 my $fpod = "$ENV{HOME}/.freebox/podcasts";
@@ -58,14 +59,21 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 			# Génération du fichier info
 			# pas terrible de relire pod ici, mais je ne vois pas d'autre moyen
 			# à priori...
-			open(F,"<pod");
+			if ($latin) {
+				open(F,"<:encoding(iso-8859-1)","pod") || die "peut pas lire pod\n";
+			} else {
+				open(F,"<pod") || die "peut pas lire pod\n";
+			}
 			@_ = <F>;
 			close(F);
 			$_ = join("\n",@_);
 			my $ref = XMLin($_);
 			my $item = $ref->{channel}->{item};
+			my $found = 0;
 			foreach (@$item) {
 				if ($_->{enclosure}->{url} eq $str) {
+					print STDERR "génération $file.info\n";
+					$found = 1;
 					open(F,">$file.info");
 					my $img = $ref->{"channel"}->{image}->{url};
 					print F ($img ? "pic:$img " : ""),$_->{title},"\n",$_->{"itunes:subtitle"},"\n";
@@ -74,6 +82,10 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 					last;
 				}
 			}
+			if (!$found) {
+				print STDERR "problem, could not find url in pod file !\n";
+			}
+			print STDERR "execution wget -q -c -N -O $file $str\n" if ($debug);
 			exec("wget","-q","-c","-N","-O",$file,$str);
 		} else {
 			my $n = 1;
