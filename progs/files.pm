@@ -1,4 +1,4 @@
-package progs::podcasts;
+package progs::files;
 
 # basé sur podcasts.pm
 
