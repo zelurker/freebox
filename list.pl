@@ -852,7 +852,7 @@ sub run_mplayer2 {
 			close(F);
 			print "cd drive : $cd\n";
 		}
-		if ($name =~ /cddb/) {
+		if ($serv =~ /cddb/) {
 			$player = "mplayer";
 		}
 		$serv =~ s/ http.+//; # Stations de radio, vire l'url du prog
@@ -1814,7 +1814,7 @@ sub disp_list {
 		print $out $cur;
 		close($out);
 		print "command prog source $source base_flux $base_flux\n";
-		if ($found < $#list) {
+		if ($found <= $#list) {
 			my $rtab = $list[$found];
 			my ($num,$name,$service,$flavour,$audio,$video,$red,$pic) = @{$$rtab[0]};
 			if ($source =~ /(Enregistrement|livetv)/) {
