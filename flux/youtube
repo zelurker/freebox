@@ -6,7 +6,7 @@ require "http.pl";
 binmode STDERR; # ,":utf8";
 binmode STDOUT; # ,":utf8";
 my $str = shift @ARGV;
-my $debug = 0; # infos
+my $debug = 1; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
 if ($str =~ /http/) {

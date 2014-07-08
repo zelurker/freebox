@@ -26,8 +26,6 @@ if (open($f,"<$fpod")) {
 	close($f);
 	chomp @abo;
 }
-binmode STDERR; # ,":utf8";
-binmode STDOUT, ":iso8859-15"; # ,":utf8";
 my $str = shift @ARGV;
 my $debug = 0; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
@@ -95,7 +93,6 @@ $mech->timeout(10);
 $mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 my ($r,$type);
 if ($debug && !$str) {
-	binmode STDIN; # ,":utf8";
 	@_ = <>;
 	$_ = join("",@_);
 	$str = "http";
@@ -121,6 +118,19 @@ if ($debug && !$str) {
 		exit(0);
 	}
 	$_ = $mech->content;
+	# Apparemment l'apostrophe windows n'est même pas de l'utf8 standard
+	# ça provoque un sacré merdier, alors on traque les codes étendus ici...
+	for (my $n=1; $n<=length($_); $n++) {
+		my $code = ord(substr($_,$n,1));
+		if ($code > 255) {
+			print STDERR "replace code $code\n";
+			if ($code == 8217) {
+				substr($_,$n,1) = "'";
+			} else {
+				substr($_,$n,1) = ".";
+			}
+		}
+	}
 	$type = $r->header("content-type") if ($r);
 	if ($str =~ /^prog/) {
 		header("list");
@@ -151,7 +161,7 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 	# en utf8 sinon le parser foire, donc on sauve en désactivant explicitement
 	# le décodage pour éviter tout problème.
 	if ($r && open(F,">pod")) {
-		print F $r->decoded_content(charset => "none");
+		print F $_;
 		close(F);
 	}
 	s/\xe2\x80\x99/'/gs;

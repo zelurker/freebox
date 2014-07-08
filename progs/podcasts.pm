@@ -7,31 +7,23 @@ use progs::telerama;
 use XML::Simple;
 use HTML::Entities;
 use Date::Parse;
-use Encode;
-use utf8;
-no utf8;
 
 @progs::podcasts::ISA = ("progs::telerama");
-
-our $debug = 0;
-our @tab;
-our $last_chan;
 
 sub mydecode {
 	my $desc = shift;
 	$desc =~ s/<.+?>//g; # vire tous les tags html
 	$desc = decode_entities($desc);
-	eval {
-		Encode::from_to($desc,"utf-8","iso-8859-15");
-	};
-	if ($@) {
-		print "super connard encore tout pété déocdage utf: $@\n";
-	}
 	$desc;
 }
 
+our $debug = 0;
+our @tab;
+our $last_chan;
+
 sub get {
 	my ($p,$channel,$source,$base_flux) = @_;
+	print "progs/podcats/get chan $channel source $source\n" if ($debug);
 	if (!$debug) {
 		return undef if ($source ne "flux" || $base_flux !~ /^podcasts.*\/(.+)/);
 		my $choice = $1;
@@ -81,7 +73,6 @@ sub get {
 		my $date = $_->{pubDate};
 		$date = str2time($date) if ($date !~ /^\d+$/);
 		$title .= " le ".get_date($date) if ($date);
-		$title = mydecode($title);
 		if ($title eq $channel) {
 			my $desc = mydecode($_->{"description"});
 			$date = get_date($date);
@@ -97,6 +88,8 @@ sub get {
 			return \@tab;
 		}
 	}
+	print STDERR "pas trouvé le prog, cherchait channel $channel\n" if ($debug);
+	return undef;
 }
 
 sub next {
