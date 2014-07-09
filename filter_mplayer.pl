@@ -91,6 +91,14 @@ our $init = 0;
 our $prog;
 our ($codec,$bitrate);
 our $titre = "";
+if (open(F,"<$args[1].info")) {
+	# Si il y a un fichier info pour ce qu'on lit (podcast par exemple)
+	# alors récupère le titre dedans !
+	$titre = <F>;
+	chomp $titre;
+	close(F);
+	$titre =~ s/pic:(http.+?) //;
+}
 our $artist;
 our $album;
 our $old_titre = "";
@@ -584,7 +592,7 @@ while (1) {
 			} else {
 				$titre = $old_titre;
 			}
-		} elsif (/Title: (.+)/i) {
+		} elsif (/Title: (.+)/i && !$titre) {
 			$titre = utf($1);
 		} elsif (/Artist: (.+)/i || /ID_CDDB_INFO_ARTIST=(.+)/) {
 			$artist = utf($1);
