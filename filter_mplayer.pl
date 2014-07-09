@@ -336,6 +336,9 @@ sub check_eof {
 		}
 	}
 	dbmclose %bookmarks;
+	if (-f $args[1]) {
+		utime(undef,undef,$args[1]); # touch sur le fichier pour les podcasts!
+	}
 	exit(0); # au cas où on est là par un signal
 }
 
@@ -409,7 +412,6 @@ sub run_mplayer {
 
 	CHILD->autoflush(1);
 	PARENT->autoflush(1);
-	print "run_mplayer: args = @args\n";
 	$pid_mplayer = fork();
 	if ($pid_mplayer == 0) {
 		close CHILD;
@@ -422,6 +424,7 @@ sub run_mplayer {
 		# close(STDIN);
 		open(STDOUT, ">&PARENT") || die "can't dup stdout to parent";
 		open(STDERR, ">&PARENT") || die "can't dup stderr";
+		print "run_mplayer: args = @args\n";
 		exec(@args);
 	}
 }
@@ -616,7 +619,11 @@ while (1) {
 				}
 				if ($images && $last_t == 0 && ($artist || $titre)) {
 					print "handle_image from timer\n";
-					handle_images("$artist - $titre");
+					if ($artist && $titre) {
+						handle_images("$artist - $titre");
+					} else {
+						handle_images("$titre");
+					}
 				}
 				if (!$last_t || -f "info_coords") {
 					if (open(F,">stream_info")) {
