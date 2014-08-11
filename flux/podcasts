@@ -151,14 +151,16 @@ if ($debug && !$str) {
 	$_ = $mech->content;
 	# Apparemment l'apostrophe windows n'est même pas de l'utf8 standard
 	# ça provoque un sacré merdier, alors on traque les codes étendus ici...
-	for (my $n=1; $n<=length($_); $n++) {
-		my $code = ord(substr($_,$n,1));
-		if ($code > 255) {
-			print STDERR "replace code $code\n";
-			if ($code == 8217) {
-				substr($_,$n,1) = "'";
-			} else {
-				substr($_,$n,1) = ".";
+	if ($latin) {
+		for (my $n=1; $n<=length($_); $n++) {
+			my $code = ord(substr($_,$n,1));
+			if ($code > 255) {
+				print STDERR "replace code $code\n";
+				if ($code == 8217) {
+					substr($_,$n,1) = "'";
+				} else {
+					substr($_,$n,1) = ".";
+				}
 			}
 		}
 	}
@@ -217,16 +219,18 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 
 	my $item = $ref->{channel}->{item};
 	# Vu que certains podcasts n'arrivent pas dans l'ordre, trie par date
-	my @item = sort { my $c = $a->{pubDate}; my $d = $b->{pubDate};
-	# print "avant $c et $d\n";
-	if ($c !~ /^\d+$/) {
-		$c =~ s/Mars/Mar/;
-		$d =~ s/Mars/Mar/;
-		$c = str2time($c);
-		$d = str2time($d);
-	}
-	# print "tri $c et $d\n";
-	$d <=> $c;
+	my @item = sort
+	{
+		my $c = $a->{pubDate}; my $d = $b->{pubDate};
+		# print "avant $c et $d\n";
+		if ($c !~ /^\d+$/) {
+			$c =~ s/Mars/Mar/;
+			$d =~ s/Mars/Mar/;
+			$c = str2time($c);
+			$d = str2time($d);
+		}
+		# print "tri $c et $d\n";
+		$d <=> $c;
 	} @$item;
 	foreach (@item) {
 		# A priori ça ne semble pas être une bonne idée de coller l'image ici

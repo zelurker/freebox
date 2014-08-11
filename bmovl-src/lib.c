@@ -10,6 +10,7 @@
 
 int get_bg(SDL_Surface *sf) { return SDL_MapRGB(sf->format,0x20,0x20,0x70);}
 int get_fg(SDL_Surface *sf) { return SDL_MapRGB(sf->format,0xff,0xff,0xff);}
+static int utf;
 
 SDL_Surface *create_surface(int w, int h)
 {
@@ -35,6 +36,8 @@ SDL_Surface *create_surface(int w, int h)
 	SDL_FillRect(sf,NULL,fg);
 	SDL_Rect r; r.x = r.y = 1; r.w = sf->w - 2; r.h = sf->h-2;
 	SDL_FillRect(sf,&r,bg);
+	char *lang = getenv("LANG");
+	utf = strstr(lang,"UTF") != NULL;
 	return sf;
 }
 
@@ -204,7 +207,11 @@ int direct_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
     int maxh = sf->h-8;
     dest.x = x; dest.y = y;
     SDL_Color *col = (SDL_Color*)&color; // dirty hack !
-    SDL_Surface *tf = TTF_RenderText_Solid(font,text,*col);
+    SDL_Surface *tf;
+    if (utf)
+	tf = TTF_RenderUTF8_Solid(font,text,*col);
+    else
+	tf = TTF_RenderText_Solid(font,text,*col);
     if (!tf) return 0;
     int ret = 0;
     if (y + tf->h <= maxh) {

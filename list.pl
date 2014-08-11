@@ -213,7 +213,7 @@ sub apps_menu {
 			foreach ($lang2,$lang) {
 				if ($fields{"name[$_]"}) {
 					$fields{name} = $fields{"name[$_]"};
-					Encode::from_to($fields{name}, "utf-8", "iso-8859-1");
+					Encode::from_to($fields{name}, "utf-8", "iso-8859-1") if ($latin);
 				}
 			}
 			push @{$apps{$fields{categories}}},[$fields{name},$fields{icon},$fields{exec}];
@@ -312,8 +312,10 @@ sub list_files {
 		# pas sûr que ça marche partout, mais j'ai pas trouvé non plus de
 		# détection générique utf8. Pour l'instant ça marche en tous cas !
 		if ($latin && $name =~ /\xc3/) {
+			die "necode\n";
 			Encode::from_to($name, "utf-8", "iso-8859-1");
 		}
+		print "ajout à la liste $num,$name\n";
 		push @list,[[$num++,$name,$service,-M $service]];
 	}
 	unlink "info_coords";
@@ -417,7 +419,7 @@ sub read_list {
 			close(F);
 		}
 
-		Encode::from_to($list, "utf-8", "iso-8859-1") if ($list !~ /débit/);
+		Encode::from_to($list, "utf-8", "iso-8859-1") if ($latin && $list !~ /débit/);
 
 		my ($num,$name,$service,$flavour,$audio,$video);
 		my $last_num = undef;
@@ -567,7 +569,7 @@ sub read_list {
 					$serv = `zenity --entry --text="A chercher (regex)"`;
 					chomp $serv;
 					if ($encoding =~ /utf/i && $latin) {
-						print "encodage utf6\n";
+						print "encodage utf8\n";
 						Encode::from_to($serv, "iso-8859-1", "utf-8") ;
 					} else {
 						print "encoding $encoding lang $ENV{LANG}\n";
@@ -631,8 +633,8 @@ sub read_list {
 				if ($name =~ s/^pic:(.+?) //) {
 					$pic = $1;
 				}
-				Encode::from_to($name, "utf-8", "iso-8859-1") if
-				($encoding =~ /utf/i);
+				Encode::from_to($name, "utf-8", "iso-8859-1")
+				  if ($latin && $encoding =~ /utf/i);
 				if ($pic) {
 					my $file = out::get_cache($pic);
 					if (!-f $file || -z $file) {
@@ -973,7 +975,7 @@ sub load_file2 {
 			@list = [\@cur];
 			return 0;
 		}
-		Encode::from_to($cont, "utf-8", "iso-8859-1") if ($type =~ /utf/);
+		Encode::from_to($cont, "utf-8", "iso-8859-1") if ($latin && $type =~ /utf/);
 		my @old = @list;
 		if ($cont =~ /^#EXTM3U/) {
 			@list = ();
