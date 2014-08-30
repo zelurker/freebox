@@ -1154,7 +1154,7 @@ sub REAPER {
 
 sub quit {
 	close($l);
-   	unlink "fifo_list","reply_list";
+   	unlink "fifo_list","reply_list","info_list.pid";
    	exit(0);
 }
 

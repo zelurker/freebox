@@ -49,4 +49,13 @@ if ! [ -f info_pl.pid ] || ! ( ps -p `cat info_pl.pid` >& /dev/null ); then
 	perl info.pl &
 fi
 perl list.pl &
-./bmovl-src/bmovl fifo
+if ! ./bmovl-src/bmovl fifo; then
+	cd bmovl-src
+	rm -f bmovl
+	make
+	cd -
+	if ! ./bmovl-src/bmovl fifo; then
+		killall perl
+		echo probleme avec bmovl, vérifiez !
+	fi
+fi
