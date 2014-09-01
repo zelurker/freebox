@@ -344,7 +344,7 @@ sub check_eof {
 		}
 	}
 	dbmclose %bookmarks;
-	if (-f $args[1]) {
+	if (-f $args[1] && $args[1] =~ /^podcast/) {
 		utime(undef,undef,$args[1]); # touch sur le fichier pour les podcasts!
 	}
 	exit(0); # au cas où on est là par un signal
