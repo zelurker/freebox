@@ -19,6 +19,10 @@ use POSIX qw(:sys_wait_h );
 # 2 - décodage du xml des podcasts avec xml::simple
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
+if (!$latin) {
+	binmode(STDOUT, ":utf8");
+	binmode(STDERR, ":utf8");
+}
 my $f;
 my @abo;
 my $fpod = "$ENV{HOME}/.freebox/podcasts";
