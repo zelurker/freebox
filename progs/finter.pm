@@ -10,7 +10,7 @@ package progs::finter;
 #         BUGS: ---
 #        NOTES: ---
 #       AUTHOR: Emmanuel Anne (), emmanuel.anne@gmail.com
-# ORGANIZATION: 
+# ORGANIZATION:
 #      VERSION: 1.0
 #      CREATED: 08/03/2013 18:13:21
 #     REVISION: ---
@@ -46,7 +46,7 @@ our %codage = (
 );
 
 sub update_prog {
-	my $prog = chaines::request("http://www.franceinter.fr/sites/default/files/rf_player/player-direct.json?_=".(time()*1000));
+	my $prog = chaines::request("http://www.franceinter.fr/sites/default/files/lecteur_commun_json/timeline.json");
 	return if (!$prog);
 	open(my $f,">finter");
 	return if (!$f);
@@ -57,7 +57,7 @@ sub update_prog {
 
 sub get_date {
 	my $time = shift;
-	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time); 
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
 	sprintf("%d/%02d/%02d",$mday,$mon+1,$year+1900);
 }
 
@@ -75,7 +75,7 @@ sub decode_str {
 
 sub update {
 	my ($p,$channel) = @_;
-	return undef if (lc($channel) ne "france inter"); 
+	return undef if (lc($channel) ne "france inter");
 
 	my $res;
 	if (!-f "finter" || -M "finter" >= 1/24) {
@@ -88,16 +88,24 @@ sub update {
 	}
 	# On récupère l'heure de création du fichier, correspond à la desc étendue
 	my $time = time() - (-M "finter")*24*3600;
-	my @list = split(/"theme_functions":\[/,$res);
-	# La description étendue n'a l'air dispo que pour le programme en cours !
-	my ($cur_desc) = $res =~ /p class=\\"desc\\">(.+?)</;
-	$cur_desc = decode_str($cur_desc);
+	$res =~ s/^\[//;
+	my @list = split(/\},/,$res);
 	my $rtab = $p->{chaines}->{"france inter"};
 	my $inserted = 0;
 	foreach (@list) {
 		my %hash = ();
 		# France inter fait ça aussi...
 		my @fields = split(/\,"/);
+		# Reconstitution des tableaux [...]
+		for (my $n=0; $n<=$#fields; $n++) {
+			while ($fields[$n] =~ /\[/ && $fields[$n] !~ /\]/) {
+				$fields[$n] .= ",".$fields[$n+1];
+				if ($n == $#fields) {
+					die "error case $fields[$n]\n";
+				}
+				splice @fields,$n+1,1;
+			}
+		}
 		foreach (@fields) {
 			s/^(.+?)"://;
 			my $key = $1;
@@ -120,25 +128,23 @@ sub update {
 			$hash{$key} = decode_str($_);
 		}
 		print STDERR "\n" if ($debug);
-		my $title = $hash{title};
+		my $title = $hash{title_emission};
 		next if (!$title);
-		my $img = $hash{image};
-		$img = "http://www.franceinter.fr/$img";
-		if ($hash{heure_debut}) {
+		my $img = $hash{path_img_emission};
+		if ($hash{debut}) {
 			my $found = 0;
 			foreach (@$rtab) {
-				if ($$_[3] == $hash{heure_debut} && $$_[4] == $hash{heure_fin}) {
+				if ($$_[3] == $hash{debut} && $$_[4] == $hash{fin}) {
 					$found = 1;
 					last;
 				}
 			}
 			if (!$found) {
 				$inserted = 1;
-				my @tab = (undef, "France Inter", $title, $hash{heure_debut}, 
-					$hash{heure_fin}, "",
-					($hash{heure_debut}<$time && $hash{heure_fin} > $time ?
-						$cur_desc : ""), # desc
-					"","",$img,0,0,get_date($hash{heure_debut}));
+				my @tab = (undef, "France Inter", $title, $hash{debut},
+					$hash{fin}, "",
+					$hash{desc_emission}, # desc
+					"","",$img,0,0,get_date($hash{debut}));
 				if ($hash{personnes}) {
 					$tab[6] .= " ($hash{personnes})";
 				}
@@ -153,5 +159,5 @@ sub update {
 	$rtab;
 }
 
-1; 
+1;
 

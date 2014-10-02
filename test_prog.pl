@@ -18,7 +18,8 @@
 #     REVISION: ---
 #===============================================================================
 
-use progs::podcasts;
+# use progs::podcasts;
+use progs::finter;
 use strict;
 use warnings;
 use out;
@@ -27,20 +28,21 @@ use Encode;
 
 my $browser = chaines::get_browser();
 my $net = out::have_net();
-my $p = progs::podcasts->new($net) || die "création prog\n";
+my $p = progs::finter->new($net) || die "création prog\n";
 # my $channel = "Cérémonie des Gamekult Awards 2013";
-my $channel = "Geek Inc HD Podcast 162 : 2014 ! le 6/01/2014, 23:05";
+# my $channel = "Geek Inc HD Podcast 162 : 2014 ! le 6/01/2014, 23:05";
+my $channel = "France inter";
 my $sub = $p->get($channel) || die "die récupération prog finter: $@\n";
 
 my $n = 1;
 my $show = 0;
-print "Les 10 programmes d'avant :\n";
-while ($n < 10 && $sub) {
+# print "Les 10 programmes d'avant :\n";
+while ($n < 2 && $sub) {
 	core($sub);
 	$sub = $p->prev($channel);
 	$n++;
 }
-
+exit(0);
 $sub = $p->get($channel) || die "die récupération prog finter: $@\n";
 $n = 1;
 print "Les 10 programmes d'après :\n";
