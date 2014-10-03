@@ -21,6 +21,7 @@ use warnings;
 use progs::telerama;
 @progs::finter::ISA = ("progs::telerama");
 use chaines;
+use Encode;
 
 my $debug = 0;
 
@@ -70,6 +71,7 @@ sub decode_str {
 			substr($title,$index,length($_),$codage{$_}) if ($index >= 0);
 		} while ($index >= 0);
 	}
+	Encode::from_to($title, "iso-8859-15","utf-8" ) if ($ENV{LANG} =~ /UTF/);
 	$title;
 }
 
