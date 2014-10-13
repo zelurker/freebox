@@ -312,10 +312,13 @@ sub list_files {
 		# pas sûr que ça marche partout, mais j'ai pas trouvé non plus de
 		# détection générique utf8. Pour l'instant ça marche en tous cas !
 		if ($latin && $name =~ /\xc3/) {
-			die "necode\n";
-			Encode::from_to($name, "utf-8", "iso-8859-1");
+			eval {
+				Encode::from_to($name, "utf-8", "iso-8859-1");
+			}; # trop idiot autrement !
+			if ($@) {
+				print "list_files: pb conversion utf $name\n";
+			}
 		}
-		print "ajout à la liste $num,$name\n";
 		push @list,[[$num++,$name,$service,-M $service]];
 	}
 	unlink "info_coords";
@@ -419,7 +422,13 @@ sub read_list {
 			close(F);
 		}
 
-		Encode::from_to($list, "utf-8", "iso-8859-1") if ($latin && $list !~ /débit/);
+		eval {
+			Encode::from_to($list, "utf-8", "iso-8859-1") if ($latin && $list !~ /débit/);
+		};
+
+		if ($@) {
+			print "read_list: pb conversion utf $list\n";
+		}
 
 		my ($num,$name,$service,$flavour,$audio,$video);
 		my $last_num = undef;
@@ -570,7 +579,12 @@ sub read_list {
 					chomp $serv;
 					if ($encoding =~ /utf/i && $latin) {
 						print "encodage utf8\n";
-						Encode::from_to($serv, "iso-8859-1", "utf-8") ;
+						eval {
+							Encode::from_to($serv, "iso-8859-1", "utf-8") ;
+						};
+						if ($@) {
+							print "read_list2: pb conv utf $serv\n";
+						}
 					} else {
 						print "encoding $encoding lang $ENV{LANG}\n";
 					}
@@ -633,8 +647,13 @@ sub read_list {
 				if ($name =~ s/^pic:(.+?) //) {
 					$pic = $1;
 				}
-				Encode::from_to($name, "utf-8", "iso-8859-1")
-				  if ($latin && $encoding =~ /utf/i);
+				eval {
+					Encode::from_to($name, "utf-8", "iso-8859-1")
+					if ($latin && $encoding =~ /utf/i);
+				};
+				if ($@) {
+					print "read_list: pb3 conv utf $name\n";
+				}
 				if ($pic) {
 					my $file = out::get_cache($pic);
 					if (!-f $file || -z $file) {
@@ -975,7 +994,12 @@ sub load_file2 {
 			@list = [\@cur];
 			return 0;
 		}
-		Encode::from_to($cont, "utf-8", "iso-8859-1") if ($latin && $type =~ /utf/);
+		eval {
+			Encode::from_to($cont, "utf-8", "iso-8859-1") if ($latin && $type =~ /utf/);
+		};
+		if ($@) {
+			print "load_file2: pb conv utf $cont\n";
+		}
 		my @old = @list;
 		if ($cont =~ /^#EXTM3U/) {
 			@list = ();
