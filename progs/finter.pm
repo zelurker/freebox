@@ -94,20 +94,34 @@ sub update {
 	my @list = split(/\},/,$res);
 	my $rtab = $p->{chaines}->{"france inter"};
 	my $inserted = 0;
+	my $cont = 0;
+	my @fields;
 	foreach (@list) {
 		my %hash = ();
 		# France inter fait ça aussi...
-		my @fields = split(/\,"/);
+		if ($cont) {
+			# Vraiment pas pratique, ces jsons sont faits pour être
+			# interprêtés séquentiellement, ce que je ne fais pas !
+			my @fields2 = split(/\,"/);
+			@fields = (@fields,@fields2);
+			$cont = 0;
+		} else {
+			@fields = split(/\,"/);
+		}
 		# Reconstitution des tableaux [...]
 		for (my $n=0; $n<=$#fields; $n++) {
 			while ($fields[$n] =~ /\[/ && $fields[$n] !~ /\]/) {
-				$fields[$n] .= ",".$fields[$n+1];
 				if ($n == $#fields) {
-					die "error case $fields[$n]\n";
+					# En bout de list, c'est l'inconvénient...
+					$cont = 1;
+					last;
 				}
+				$fields[$n] .= ",".$fields[$n+1];
 				splice @fields,$n+1,1;
 			}
+			last if ($cont);
 		}
+		next if ($cont);
 		foreach (@fields) {
 			s/^(.+?)"://;
 			my $key = $1;
