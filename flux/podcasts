@@ -82,7 +82,7 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 			if ($latin) {
 				open(F,"<:encoding(iso-8859-1)","pod") || die "peut pas lire pod\n";
 			} else {
-				open(F,"<pod") || die "peut pas lire pod\n";
+				open(F,"<:encoding(utf8)","pod") || die "peut pas lire pod\n";
 			}
 			@_ = <F>;
 			close(F);
