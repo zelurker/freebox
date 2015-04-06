@@ -25,11 +25,12 @@ use progs::finter;
 use progs::labas;
 use progs::podcasts;
 use progs::files;
+use progs::series;
 
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
 $have_fb = out::have_freebox() if ($net);
-our $have_dvb = (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
+our $have_dvb = 1; # (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
 our $reader;
 my $recordings = records->new();
 
@@ -212,6 +213,7 @@ push @prog, progs::finter->new($net);
 push @prog, progs::labas->new($net);
 push @prog, progs::podcasts->new($net);
 push @prog, progs::files->new($net);
+push @prog, progs::series->new($net);
 
 system("rm -f fifo_info && mkfifo fifo_info");
 # read_prg:
@@ -277,6 +279,7 @@ sub disp_prog {
 	}
 
 	my $out = out::setup_output("bmovl-src/bmovl",$raw,$long);
+	binmode($out, ":utf8") if ($source =~ /Fichiers/);
 
 	print $out "$name\n";
 	print $out $raw if ($raw);
