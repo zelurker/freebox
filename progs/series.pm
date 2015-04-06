@@ -19,19 +19,20 @@ sub get {
 	}
 	my ($titre,$saison,$episode) = ($1,$2,$3);
 	$episode =~ s/^0//; # tronque le 0 éventuel de l'épisode, pour allocine
+	$saison =~ s/^0//;
 	my $sum = "";
 	my $img = "";
 	my $cast = "";
 	my $sub;
 
-	if (!-f "$channel.info") {
-		if (!open(F,">$channel.info")) {
-			print STDERR "séries : impossible de créer $channel.info\n";
+	if (!-f "cache/$channel.info") {
+		if (!open(F,">cache/$channel.info")) {
+			print STDERR "séries : impossible de créer cache/$channel.info\n";
 			return undef;
 		}
 		my $mech = WWW::Mechanize->new();
 		$mech->agent_alias("Linux Mozilla");
-		$mech->timeout(10);
+		$mech->timeout(12);
 		$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 		$mech->get("https://www.google.fr/");
 		my $r = $mech->submit_form(
@@ -52,7 +53,7 @@ sub get {
 			}
 		}
 		for (my $page=1; $page<=2; $page++) {
-			print STDERR "page $page\n";
+			print STDERR "url $u page $page\n" if ($debug);
 			# passer ajax avant ?page pour une version text only
 			# mais si on veut les images il faut la totale...
 			eval {
@@ -117,7 +118,7 @@ sub get {
 		}
 		close(F);
 	} else {
-		open(F,"<$channel.info");
+		open(F,"<cache/$channel.info");
 		<F>; # title
 		$sub = <F>;
 		$sum = "";
