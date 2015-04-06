@@ -2,11 +2,8 @@ package progs::series;
 
 use strict;
 use warnings;
-# use utf8;
-use HTML::Entities;
 use progs::telerama;
 use WWW::Mechanize;
-use Encode;
 
 @progs::series::ISA = ("progs::telerama");
 
@@ -46,57 +43,69 @@ sub get {
 		# On récupère le lien du haut du résultat :
 		my $dump = 0;
 		my $actor = 0;
+		my $u;
 		foreach ($mech->links) {
-			my $u = $_->url;
+			$u = $_->url;
 			if ($u =~ /url.q=(http.+?)&/) {
 				$u = $1;
-				print "lien : $_->text soit $u\n";
-				$mech->get($u);
 				last;
 			}
 		}
-		$_ = $mech->content;
-		my $first = 0;
-		foreach (split /\n/,$_) {
-			if (/Ep\. $episode/) {
-				s/\<.+?\>//g;
-				$sum .= decode_entities($_);
-				$dump = 1;
-				next;
-			} elsif ($dump) {
-				if (/\/td/) {
-					$dump = 0;
+		for (my $page=1; $page<=2; $page++) {
+			print STDERR "page $page\n";
+			# passer ajax avant ?page pour une version text only
+			# mais si on veut les images il faut la totale...
+			eval {
+				$mech->get($u."?page=$page");
+			};
+			if ($@) {
+				print STDERR "mechanize error $@\n";
+				return undef;
+			}
+			$_ = $mech->content;
+			my $first = 0;
+			foreach (split /\n/,$_) {
+				if (/Ep\. $episode /) {
+					s/\<.+?\>//g;
+					$sum .= $_;
+					$dump = 1;
 					next;
-				}
-				s/\<.+?\>//g;
-				if ($sum =~ /\w$/) {
-					if (!$first) {
-						$first = 1;
-						$sub = $sum;
-						print STDERR "sub $sub\n";
-						$sum = "";
-					} else {
-						$sum .= "\n";
+				} elsif ($dump) {
+					if (/\/td/) {
+						$dump = 0;
+						next;
+					}
+					s/\<.+?\>//g;
+					if ($sum =~ /\w$/) {
+						if (!$first) {
+							$first = 1;
+							$sub = $sum;
+							print STDERR "sub $sub\n";
+							$sum = "";
+						} else {
+							$sum .= "\n";
+						}
+					}
+					$sum .= $_;
+				} elsif (/itemprop="actor"/) {
+					$actor = 1;
+					next;
+				} elsif ($actor) {
+					if (/\/li/) {
+						$actor = 0;
+						next;
+					}
+					if (/img src='(http.+?)'/) {
+						$img = $1 if (!$img);
+					} elsif (/alt='(.+?)'/) {
+						$cast .= "$1 ";
+					} elsif (/(Rôle .+?)<\//) {
+						$cast .= "$1 ";
 					}
 				}
-				$sum .= $_;
-			} elsif (/itemprop="actor"/) {
-				$actor = 1;
-				next;
-			} elsif ($actor) {
-				if (/\/li/) {
-					$actor = 0;
-					next;
-				}
-				if (/img src='(http.+?)'/) {
-					$img = $1 if (!$img);
-				} elsif (/alt='(.+?)'/) {
-					$cast .= "$1 ";
-				} elsif (/(Rôle .+?)<\//) {
-					$cast .= "$1 ";
-				}
-			}
-		} # foreach
+			} # foreach
+			last if ($sum ne "");
+		}
 		print F "$titre Saison $saison Episode $episode\n$sub\n";
 		if ($img) {
 			print F "img:$img\n";
