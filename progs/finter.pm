@@ -74,7 +74,7 @@ sub decode_str {
 		} while ($index >= 0);
 	}
 		if ($ENV{LANG} =~ /UTF/) {
-			Encode::from_to($title, "iso-8859-15","utf-8",0 );
+			$title = Encode::encode("utf-8",$title);
 		} else {
 			$title = Encode::encode("iso-8859-15",$title );
 		}
@@ -155,6 +155,7 @@ sub update {
 		print STDERR "\n" if ($debug);
 		my $title = $hash{title_emission};
 		next if (!$title);
+		$title = decode_str($title);
 		my $img = $hash{path_img_emission};
 		if ($hash{debut}) {
 			my $found = 0;
@@ -181,7 +182,7 @@ sub update {
 							: "")),
 					"","",$img,0,0,get_date($hash{debut}));
 				if ($hash{personnes}) {
-					$tab[6] .= " (".join(",",@{$hash{personnes}}).")";
+					$tab[6] .= decode_str(" (".join(",",@{$hash{personnes}}).")");
 				}
 				push @$rtab,\@tab;
 			}
