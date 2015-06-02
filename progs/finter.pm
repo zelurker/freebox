@@ -22,8 +22,10 @@ use progs::telerama;
 @progs::finter::ISA = ("progs::telerama");
 use chaines;
 use Encode;
+use Data::Dumper;
+use Cpanel::JSON::XS qw(decode_json);
 
-my $debug = 0;
+my $debug = 1;
 
 our %codage = (
 	'\u00e0' => 'à',
@@ -71,7 +73,11 @@ sub decode_str {
 			substr($title,$index,length($_),$codage{$_}) if ($index >= 0);
 		} while ($index >= 0);
 	}
-	Encode::from_to($title, "iso-8859-15","utf-8" ) if ($ENV{LANG} =~ /UTF/);
+		if ($ENV{LANG} =~ /UTF/) {
+			Encode::from_to($title, "iso-8859-15","utf-8",0 );
+		} else {
+			$title = Encode::encode("iso-8859-15",$title );
+		}
 	$title;
 }
 
@@ -84,65 +90,68 @@ sub update {
 		$res = update_prog();
 	} else {
 		open(my $f,"<finter");
+		# binmode $f; # ,":utf8";
 		return undef if (!$f);
 		$res = join("\n",<$f>);
 		close($f);
 	}
+	my $json = decode_json $res;
+
 	# On récupère l'heure de création du fichier, correspond à la desc étendue
 	my $time = time() - (-M "finter")*24*3600;
-	$res =~ s/^\[//;
-	my @list = split(/\},/,$res);
+# 	$res =~ s/^\[//;
+# 	my @list = split(/\},/,$res);
 	my $rtab = $p->{chaines}->{"france inter"};
 	my $inserted = 0;
 	my $cont = 0;
 	my @fields;
-	foreach (@list) {
-		my %hash = ();
+	foreach (@$json) {
+		my %hash = %$_;
 		# France inter fait ça aussi...
-		if ($cont) {
-			# Vraiment pas pratique, ces jsons sont faits pour être
-			# interprêtés séquentiellement, ce que je ne fais pas !
-			my @fields2 = split(/\,"/);
-			@fields = (@fields,@fields2);
-			$cont = 0;
-		} else {
-			@fields = split(/\,"/);
-		}
-		# Reconstitution des tableaux [...]
-		for (my $n=0; $n<=$#fields; $n++) {
-			while ($fields[$n] =~ /\[/ && $fields[$n] !~ /\]/) {
-				if ($n == $#fields) {
-					# En bout de list, c'est l'inconvénient...
-					$cont = 1;
-					last;
-				}
-				$fields[$n] .= ",".$fields[$n+1];
-				splice @fields,$n+1,1;
-			}
-			last if ($cont);
-		}
-		next if ($cont);
-		foreach (@fields) {
-			s/^(.+?)"://;
-			my $key = $1;
-			next if (!$key);
-			s/(^"|"$)//g;
-			s/\\\//\//g;
-			if (/^\{/) {
-				s/(^\{|\})//g;
-				@_ = split(/\:/);
-				my $s = "";
-				foreach (@_) {
-					s/(^"|"$)//g;
-					next if (/^\d+$/);
-					$s .= ", " if ($s);
-					$s .= $_;
-				}
-				$_ = $s;
-			}
-			print STDERR "$key = $_\n" if ($debug);
-			$hash{$key} = decode_str($_);
-		}
+# 		if ($cont) {
+# 			# Vraiment pas pratique, ces jsons sont faits pour être
+# 			# interprêtés séquentiellement, ce que je ne fais pas !
+# 			my @fields2 = split(/\,"/);
+# 			@fields = (@fields,@fields2);
+# 			$cont = 0;
+# 		} else {
+# 			@fields = split(/\,"/);
+# 		}
+# 		# Reconstitution des tableaux [...]
+# 		for (my $n=0; $n<=$#fields; $n++) {
+# 			while ($fields[$n] =~ /\[/ && $fields[$n] !~ /\]/) {
+# 				if ($n == $#fields) {
+# 					# En bout de list, c'est l'inconvénient...
+# 					$cont = 1;
+# 					last;
+# 				}
+# 				$fields[$n] .= ",".$fields[$n+1];
+# 				splice @fields,$n+1,1;
+# 			}
+# 			last if ($cont);
+# 		}
+# 		next if ($cont);
+# 		foreach (@fields) {
+# 			s/^(.+?)"://;
+# 			my $key = $1;
+# 			next if (!$key);
+# 			s/(^"|"$)//g;
+# 			s/\\\//\//g;
+# 			if (/^\{/) {
+# 				s/(^\{|\})//g;
+# 				@_ = split(/\:/);
+# 				my $s = "";
+# 				foreach (@_) {
+# 					s/(^"|"$)//g;
+# 					next if (/^\d+$/);
+# 					$s .= ", " if ($s);
+# 					$s .= $_;
+# 				}
+# 				$_ = $s;
+# 			}
+# 			print STDERR "$key = $_\n" if ($debug);
+# 			$hash{$key} = decode_str($_);
+# 		}
 		print STDERR "\n" if ($debug);
 		my $title = $hash{title_emission};
 		next if (!$title);
@@ -157,12 +166,22 @@ sub update {
 			}
 			if (!$found) {
 				$inserted = 1;
+
 				my @tab = (undef, "France Inter", $title, $hash{debut},
 					$hash{fin}, "",
-					$hash{desc_emission}, # desc
+					decode_str(
+						($hash{diffusions}[0]->{title} ?
+							$hash{diffusions}[0]->{title}." : " :
+							"").
+						($hash{diffusions}[0]->{desc_emission} ?
+							$hash{diffusions}[0]->{desc_emission}." "
+							: "").
+						($hash{diffusions}[0]->{texte_emission} ?
+							$hash{diffusions}[0]->{texte_emission}
+							: "")),
 					"","",$img,0,0,get_date($hash{debut}));
 				if ($hash{personnes}) {
-					$tab[6] .= " ($hash{personnes})";
+					$tab[6] .= " (".join(",",@{$hash{personnes}}).")";
 				}
 				push @$rtab,\@tab;
 			}
