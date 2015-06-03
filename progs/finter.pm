@@ -24,8 +24,9 @@ use chaines;
 use Encode;
 use Data::Dumper;
 use Cpanel::JSON::XS qw(decode_json);
+use Time::Local "timegm_nocheck";
 
-my $debug = 1;
+my $debug = 0;
 
 our %codage = (
 	'\u00e0' => 'à',
@@ -48,10 +49,22 @@ our %codage = (
 	'\u20ac' => 'euros',
 );
 
-sub update_prog {
-	my $prog = chaines::request("http://www.franceinter.fr/sites/default/files/lecteur_commun_json/timeline.json");
+sub update_prog($) {
+	my $file = shift;
+	my $url = $file;
+	$url =~ s/^f//;
+	if ($file eq "fmusique") {
+		# Bizarrement fmusique attend une date obligatoire à la fin de son json
+		my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
+		my $d = timegm_nocheck(0,0,12,$mday,$mon,$year);
+		$url = "http://www.france$url.fr/sites/default/files/lecteur_commun_json/reecoute-$d.json";
+	} else {
+		$url = "http://www.france$url.fr/sites/default/files/lecteur_commun_json/timeline.json";
+	}
+	my ($status,$prog) = chaines::request($url);
+	print STDERR "update_prog: got status $status, prog $prog\n" if ($debug && $prog);
 	return if (!$prog);
-	open(my $f,">finter");
+	open(my $f,">$file");
 	return if (!$f);
 	print $f $prog;
 	close($f);
@@ -73,23 +86,49 @@ sub decode_str {
 			substr($title,$index,length($_),$codage{$_}) if ($index >= 0);
 		} while ($index >= 0);
 	}
-		if ($ENV{LANG} =~ /UTF/) {
-			$title = Encode::encode("utf-8",$title);
-		} else {
-			$title = Encode::encode("iso-8859-15",$title );
-		}
+	if ($ENV{LANG} =~ /UTF/) {
+		$title = Encode::encode("utf-8",$title);
+	} else {
+		$title = Encode::encode("iso-8859-15",$title );
+	}
+	$title =~ s/[\r\n]//g; # retours chariots à virer aussi !
 	$title;
+}
+
+sub get_desc($) {
+	my $hash = $_;
+	decode_str(
+		($hash->{diffusions}[0]->{title} ?
+			$hash->{diffusions}[0]->{title}." : " :
+			"").
+		($hash->{diffusions}[0]->{desc_emission} ?
+			$hash->{diffusions}[0]->{desc_emission}." "
+			: "").
+		($hash->{diffusions}[0]->{texte_emission} ?
+			$hash->{diffusions}[0]->{texte_emission}
+			: ""));
 }
 
 sub update {
 	my ($p,$channel) = @_;
-	return undef if (lc($channel) ne "france inter");
+	return undef if (lc($channel) !~ /france (inter|culture|musique)/);
 
-	my $res;
-	if (!-f "finter" || -M "finter" >= 1/24) {
-		$res = update_prog();
+	my $file;
+	if ($channel =~ /inter/) {
+		$file = "finter";
+	} elsif ($channel =~ /culture/) {
+		$file = "fculture";
 	} else {
-		open(my $f,"<finter");
+		$file = "fmusique";
+	}
+	my $name = $file;
+	$name =~ s/^f//;
+	$name = "France ".uc(substr($name,0,1)).substr($name,1);
+	my $res;
+	if (!-f $file || -M $file >= 1/24) {
+		$res = update_prog($file);
+	} else {
+		open(my $f,"<$file");
 		# binmode $f; # ,":utf8";
 		return undef if (!$f);
 		$res = join("\n",<$f>);
@@ -98,60 +137,15 @@ sub update {
 	my $json = decode_json $res;
 
 	# On récupère l'heure de création du fichier, correspond à la desc étendue
-	my $time = time() - (-M "finter")*24*3600;
-# 	$res =~ s/^\[//;
-# 	my @list = split(/\},/,$res);
-	my $rtab = $p->{chaines}->{"france inter"};
+	my $time = time() - (-M "$file")*24*3600;
+	my $rtab = $p->{chaines}->{$channel};
 	my $inserted = 0;
 	my $cont = 0;
 	my @fields;
+	$json = $json->{diffusions} if (ref($json) ne "ARRAY");
 	foreach (@$json) {
 		my %hash = %$_;
 		# France inter fait ça aussi...
-# 		if ($cont) {
-# 			# Vraiment pas pratique, ces jsons sont faits pour être
-# 			# interprêtés séquentiellement, ce que je ne fais pas !
-# 			my @fields2 = split(/\,"/);
-# 			@fields = (@fields,@fields2);
-# 			$cont = 0;
-# 		} else {
-# 			@fields = split(/\,"/);
-# 		}
-# 		# Reconstitution des tableaux [...]
-# 		for (my $n=0; $n<=$#fields; $n++) {
-# 			while ($fields[$n] =~ /\[/ && $fields[$n] !~ /\]/) {
-# 				if ($n == $#fields) {
-# 					# En bout de list, c'est l'inconvénient...
-# 					$cont = 1;
-# 					last;
-# 				}
-# 				$fields[$n] .= ",".$fields[$n+1];
-# 				splice @fields,$n+1,1;
-# 			}
-# 			last if ($cont);
-# 		}
-# 		next if ($cont);
-# 		foreach (@fields) {
-# 			s/^(.+?)"://;
-# 			my $key = $1;
-# 			next if (!$key);
-# 			s/(^"|"$)//g;
-# 			s/\\\//\//g;
-# 			if (/^\{/) {
-# 				s/(^\{|\})//g;
-# 				@_ = split(/\:/);
-# 				my $s = "";
-# 				foreach (@_) {
-# 					s/(^"|"$)//g;
-# 					next if (/^\d+$/);
-# 					$s .= ", " if ($s);
-# 					$s .= $_;
-# 				}
-# 				$_ = $s;
-# 			}
-# 			print STDERR "$key = $_\n" if ($debug);
-# 			$hash{$key} = decode_str($_);
-# 		}
 		print STDERR "\n" if ($debug);
 		my $title = $hash{title_emission};
 		next if (!$title);
@@ -168,18 +162,9 @@ sub update {
 			if (!$found) {
 				$inserted = 1;
 
-				my @tab = (undef, "France Inter", $title, $hash{debut},
+				my @tab = (undef, $name, $title, $hash{debut},
 					$hash{fin}, "",
-					decode_str(
-						($hash{diffusions}[0]->{title} ?
-							$hash{diffusions}[0]->{title}." : " :
-							"").
-						($hash{diffusions}[0]->{desc_emission} ?
-							$hash{diffusions}[0]->{desc_emission}." "
-							: "").
-						($hash{diffusions}[0]->{texte_emission} ?
-							$hash{diffusions}[0]->{texte_emission}
-							: "")),
+					get_desc(\%hash),
 					"","",$img,0,0,get_date($hash{debut}));
 				if ($hash{personnes}) {
 					$tab[6] .= decode_str(" (".join(",",@{$hash{personnes}}).")");
@@ -188,10 +173,25 @@ sub update {
 			}
 		} elsif ($inserted) {
 			# met à jour la description
-			$$rtab[$#$rtab][6] = $title if (!$$rtab[$#$rtab][6]);
+			$$rtab[$#$rtab][6] = get_desc(\%hash) if (!$$rtab[$#$rtab][6]);
 		}
 	}
-	$p->{chaines}->{"france inter"} = $rtab;
+	for (my $n=1; $n<$#$rtab; $n++) {
+		if ($$rtab[$n][3] > $$rtab[$n-1][4]+60) { # gros écart entre les progs
+			# Arrive surtout pour france musique en fait...
+			# Sans déconner ce bout de code est absolument horrible, ça montre
+			# le + gros point faible de perl5 : on ne veut qu'insérer un élément
+			# dans un tableau ici. Sauf que si on ne passe pas par chunk alors
+			# la référence vers $$rtab[n] se retrouve dupliquée !
+			my @chunk = @{$$rtab[$n]};
+			splice @$rtab,$n,0,[@chunk];
+			$$rtab[$n][3] = $$rtab[$n-1][4]+60;
+			$$rtab[$n][4] = $$rtab[$n+1][3]-60;
+			$$rtab[$n][2] = "Aucun programme";
+			$$rtab[$n][6] = $$rtab[$n][9] = undef;
+		}
+	}
+	$p->{chaines}->{$channel} = $rtab;
 	$rtab;
 }
 
