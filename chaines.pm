@@ -114,6 +114,7 @@ sub get_browser {
 	my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
 	my $browser = LWP::UserAgent->new(keep_alive => 0,
 		agent =>$useragt);
+    $browser->timeout(10);
 	$browser;
 }
 
@@ -141,7 +142,11 @@ sub request {
     my $response = $browser->get($url);
 
 	if (!$response->is_success) {
-		print "$url error: ",$response->status_line,"\n";
+		print STDERR "$url error: ",$response->status_line,"\n";
+		return ($response->status_line,undef);
+	}
+	if ($response->header("x-died")) {
+		print STDERR "x-died: ",$response->header("x-died"),"\n";
 		return ($response->status_line,undef);
 	}
 
