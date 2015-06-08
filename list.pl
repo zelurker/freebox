@@ -618,6 +618,7 @@ sub read_list {
 				print "list: execution plugin flux $b param $serv base_flux $base_flux\n";
 				$encoding = "";
 				open(F,"flux/$b \"$serv\"|");
+				binmode(F, ":utf8") if ($b =~ /podcasts/);
 				$mode_flux = <F>;
 				if ($mode_flux =~ /encoding/) {
 					$encoding = $mode_flux;

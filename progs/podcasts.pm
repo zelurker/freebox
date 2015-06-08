@@ -35,22 +35,15 @@ sub get {
 	my $ref;
 	eval {
 		if (open(F,"<pod")) {
+			binmode(F,":utf8");
 			@_ = <F>;
 			close(F);
 			$_ = join("",@_);
-			# Franchement, faudrait qu'on m'explique un jour comment un merdier
-			# pareil est possible :
-			# 1) on commence par sauver ce foutu fichier explicitement en utf8
-			# pour éviter les détections foireuses.
-			# 2) quand on arrive ici, le fichier est sensé être lu en binaire
-			# donc avec des codes ascii <= 255, et pourtant certains utf
-			# produisent des wide chars !!! Le seul moyen de l'éviter c'est
-			# d'appeler explictement upgrade ici :
-			utf8::upgrade($_); # ouf !!!
-			# Et entre autres ça signifie qu'il est impossible d'utiliser la
-			# lecture directe du fichier par XMLin, tout ça n'a absolument
-			# aucun sens, un ascii > 255 n'a de sens qu'en utf8 et pourtant
-			# utf8::is_utf8 sur la chaine confirme que ça n'en est pas une !
+			my $char = chr(8217); # apostrophe ?
+			s/$char/\'/g;
+			$char = chr(8230); # apostrophe fermé apparemment, merdier windoze
+			s/$char/\'/g;
+
 		} else {
 			die "pas de fichier pod ???\n";
 		}
