@@ -49,6 +49,11 @@ our %codage = (
 	'\u20ac' => 'euros',
 );
 
+our %fb = (
+	"bleu loire ocean" => "http://www.francebleu.fr/sites/default/files/lecteur_commun_json/timeline-13125.json",
+	"bleu gascogne" => "http://www.francebleu.fr/sites/default/files/lecteur_commun_json/timeline-13113.json",
+);
+
 sub update_prog($) {
 	my $file = shift;
 	my $url = $file;
@@ -58,6 +63,8 @@ sub update_prog($) {
 		my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
 		my $d = timegm_nocheck(0,0,12,$mday,$mon,$year);
 		$url = "http://www.france$url.fr/sites/default/files/lecteur_commun_json/reecoute-$d.json";
+	} elsif ($file =~ /^bleu/) {
+		$url = $fb{$file};
 	} else {
 		$url = "http://www.france$url.fr/sites/default/files/lecteur_commun_json/timeline.json";
 	}
@@ -111,13 +118,17 @@ sub get_desc($) {
 
 sub update {
 	my ($p,$channel) = @_;
-	return undef if (lc($channel) !~ /france (inter|culture|musique)/);
+	return undef if (lc($channel) !~ /france (inter|culture|musique|bleu )/);
 
 	my $file;
 	if ($channel =~ /inter/) {
 		$file = "finter";
 	} elsif ($channel =~ /culture/) {
 		$file = "fculture";
+	} elsif ($channel =~ / bleu loire/) {
+		$file = "bleu loire ocean";
+	} elsif ($channel =~ /bleu gasco/) {
+		$file = "bleu gascogne";
 	} else {
 		$file = "fmusique";
 	}
