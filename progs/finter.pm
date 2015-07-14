@@ -71,7 +71,7 @@ sub update_prog($) {
 	my ($status,$prog) = chaines::request($url);
 	print STDERR "update_prog: got status $status, prog $prog\n" if ($debug && $prog);
 	return if (!$prog);
-	open(my $f,">$file");
+	open(my $f,">cache/$file");
 	return if (!$f);
 	print $f $prog;
 	close($f);
@@ -136,10 +136,10 @@ sub update {
 	$name =~ s/^f//;
 	$name = "France ".uc(substr($name,0,1)).substr($name,1);
 	my $res;
-	if (!-f $file || -M $file >= 1/24) {
+	if (!-f "cache/$file" || -M "cache/$file" >= 1/24) {
 		$res = update_prog($file);
 	} else {
-		open(my $f,"<$file");
+		open(my $f,"<cache/$file");
 		# binmode $f; # ,":utf8";
 		return undef if (!$f);
 		$res = join("\n",<$f>);
