@@ -618,7 +618,6 @@ sub read_list {
 				print "list: execution plugin flux $b param $serv base_flux $base_flux\n";
 				$encoding = "";
 				open(F,"flux/$b \"$serv\"|");
-				binmode(F, ":utf8") if ($b =~ /podcasts/);
 				$mode_flux = <F>;
 				if ($mode_flux =~ /encoding/) {
 					$encoding = $mode_flux;
@@ -874,9 +873,9 @@ sub run_mplayer2 {
 			close(F);
 			print "cd drive : $cd\n";
 		}
-		if ($serv =~ /cddb/) {
+		# if ($serv =~ /cddb/) {
 			$player = "mplayer";
-		}
+			# }
 		$serv =~ s/ http.+//; # Stations de radio, vire l'url du prog
 	} else {
 		$audio = "-aid $audio " if ($audio);
