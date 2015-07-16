@@ -4,10 +4,38 @@ use strict;
 use warnings;
 use progs::telerama;
 use WWW::Mechanize;
+use HTML::Entities;
 
 @progs::series::ISA = ("progs::telerama");
 
-our $debug = 0;
+our $debug = 1;
+
+sub find_actor($) {
+	my $mech = shift;
+	$_ = $mech->content;
+	my $first = 0;
+	my ($actor,$img,$cast);
+	foreach (split /\n/,$_) {
+		if (/itemprop="actor"/ || /div class=".*Actors/) {
+			$actor = 1;
+			next;
+		} elsif ($actor) {
+			if (/\/li/) {
+				$actor = 0;
+				next;
+			}
+			if (/img src='(http.+?)'/) {
+				$img = $1 if (!$img);
+			} elsif (/alt='(.+?)'/) {
+				$cast .= "/ " if ($cast);
+				$cast .= decode_entities("$1 ");
+			} elsif (/(Rôle .+?)<\//) {
+				$cast .= decode_entities("$1 ");
+			}
+		}
+	}
+	return ($cast, $img);
+}
 
 sub get {
 	my ($p,$channel,$source,$base_flux) = @_;
@@ -45,13 +73,17 @@ sub get {
 		my $dump = 0;
 		my $actor = 0;
 		my $u;
-		foreach ($mech->links) {
-			$u = $_->url;
+		$u = $mech->find_link( text_regex => qr/Episodes /);
+#		foreach ($mech->links) {
+			$u = $u->url;
 			if ($u =~ /url.q=(http.+?)&/) {
 				$u = $1;
-				last;
+				# last;
+			} else {
+				print STDERR "series: pas trouvé lien Episodes\n";
+				return undef;
 			}
-		}
+#		}
 		for (my $page=1; $page<=2; $page++) {
 			print STDERR "url $u page $page\n" if ($debug);
 			# passer ajax avant ?page pour une version text only
@@ -88,24 +120,27 @@ sub get {
 						}
 					}
 					$sum .= $_;
-				} elsif (/itemprop="actor"/) {
-					$actor = 1;
-					next;
-				} elsif ($actor) {
-					if (/\/li/) {
-						$actor = 0;
-						next;
-					}
-					if (/img src='(http.+?)'/) {
-						$img = $1 if (!$img);
-					} elsif (/alt='(.+?)'/) {
-						$cast .= "$1 ";
-					} elsif (/(Rôle .+?)<\//) {
-						$cast .= "$1 ";
-					}
 				}
 			} # foreach
+			($cast,$img) = find_actor($mech);
 			last if ($sum ne "");
+		}
+		if (!$cast) {
+			# La page est incroyablement encodée avec des span transformés en
+			# liens par du css, du coup c'est impossible à gérer en utilisant
+			# find_link / follow_link. A priori toutes les urls respectent
+			# qu'il faut insérer /casting dedans pour obtenir le casting, donc
+			# on va faire ça...
+			my $s = $u;
+			$s =~ s/\/saison/\/casting\/saison/;
+			eval {
+				$mech->get($s);
+			};
+			if ($@) {
+				print STDERR "mechanize error geting casting page $@\n";
+			} else {
+				($cast,$img) = find_actor($mech);
+			}
 		}
 		print F "$titre Saison $saison Episode $episode\n$sub\n";
 		if ($img) {
