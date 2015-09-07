@@ -270,7 +270,7 @@ sub disp_prog {
 	}
 	# Check channel logo
 	my $name = "";
-	if ($net) {
+	if ($net && !$raw) { # on n'affiche le logo que si on a rien d'autre
 		if ($source eq "flux" && $base_flux eq "stations") {
 			$name = get_radio_pic($$sub[1]);
 		} else {
