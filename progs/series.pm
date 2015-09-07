@@ -54,7 +54,7 @@ sub get {
 	my $sub;
 
 	if (!-f "cache/$channel.info") {
-		if (!open(F,">cache/$channel.info")) {
+		if (!open(F,">:encoding(utf8)","cache/$channel.info")) {
 			print STDERR "séries : impossible de créer cache/$channel.info\n";
 			return undef;
 		}
@@ -100,7 +100,7 @@ sub get {
 			foreach (split /\n/,$_) {
 				if (/Ep\. $episode /) {
 					s/\<.+?\>//g;
-					$sum .= $_;
+					$sum .= decode_entities($_);
 					$dump = 1;
 					next;
 				} elsif ($dump) {
@@ -119,7 +119,7 @@ sub get {
 							$sum .= "\n";
 						}
 					}
-					$sum .= $_;
+					$sum .= decode_entities($_);
 				}
 			} # foreach
 			($cast,$img) = find_actor($mech);
@@ -153,13 +153,13 @@ sub get {
 		}
 		close(F);
 	} else {
-		open(F,"<cache/$channel.info");
+		open(F,"<:encoding(utf8)","cache/$channel.info");
 		<F>; # title
 		$sub = <F>;
 		$sum = "";
 		chomp $sub;
 		while (<F>) {
-			$sum .= $_;
+			$sum .= decode_entities($_);
 			if ($sum =~ /^img:/) {
 				chomp $sum;
 				$sum =~ /img:(.+)/;
