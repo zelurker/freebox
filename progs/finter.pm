@@ -145,7 +145,14 @@ sub update {
 		$res = join("\n",<$f>);
 		close($f);
 	}
-	my $json = decode_json $res;
+    my $json;
+    eval  {
+        $json = decode_json $res;
+    };
+    if ($@) {
+        print "finter: couille dans le potage au niveau json à partir de $res\n";
+        return undef;
+    }
 
 	# On récupère l'heure de création du fichier, correspond à la desc étendue
 	my $time = time() - (-M "$file")*24*3600;

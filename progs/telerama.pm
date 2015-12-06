@@ -414,7 +414,7 @@ sub get {
 		}
 	}
 	print "get: pas trouvé la bonne heure, testé avec $time\n";
-	return $$rtab[$min_n];
+	return undef;
 }
 
 sub next {
