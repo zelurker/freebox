@@ -18,7 +18,8 @@ sub get {
 	my $title = <F>;
 	my $sub = <F>;
 	my $desc = "";
-	chomp $sub,$desc;
+	chomp $sub;
+	chomp $desc;
 	while (<F>) {
 		$desc .= $_;
 	}
