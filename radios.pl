@@ -1,18 +1,18 @@
-#!/usr/bin/env perl 
+#!/usr/bin/env perl
 #===============================================================================
 #
 #         FILE: radios.pl
 #
-#        USAGE: ./radios.pl  
+#        USAGE: ./radios.pl
 #
-#  DESCRIPTION: 
+#  DESCRIPTION:
 #
 #      OPTIONS: ---
 # REQUIREMENTS: ---
 #         BUGS: ---
 #        NOTES: ---
 #       AUTHOR: Emmanuel Anne (), emmanuel.anne@gmail.com
-# ORGANIZATION: 
+# ORGANIZATION:
 #      VERSION: 1.0
 #      CREATED: 06/03/2013 00:58:04
 #     REVISION: ---
@@ -23,15 +23,19 @@ use warnings;
 
 # Récupérés par google images, voir le script search_radios.pl
 my %icons = (
-"4U Classic Rock" => "http://i.img.co/radio/91/11/1191_290.png",
+"4U Classic Rock" => "http://db.radioline.fr/pictures/radio_959f92357a5d7a67f22b98f45d3ceb7d/logo200.jpg",
 "Accent 4" => "http://www.accent4.com/images/logo_accent4.png",
 "Alouette" => "http://www.myconseils.fr/wp-content/uploads/2011/03/ALOUETTE2.jpg",
 "Alpes 1" => "http://rad.io/images/broadcasts/1417_4.jpeg",
 "Alternantes" => "http://www.alternantesfm.net/images/logo_alternantes_300x170.jpg",
 "Atlantis FM" => "http://1.bp.blogspot.com/_EddTYk9zrag/TSeLNjaFQtI/AAAAAAAAAPg/V-22cLtSdh8/s1600/ATLANTIS%252BRADIO%252BLOGO.jpg",
-"BFM" => "http://www.lesinsurges.com/blog/wp-content/uploads/2012/09/Bfm.jpg",
+"BFM" => "http://cedrda.desertours.netdna-cdn.com/files/2015/03/logoBFMTV.png",
 "Bide et Musique" => "http://www.bide-et-musique.com/images/logo/logo-fondnoir.jpg",
-"C9 Radio" => "http://a1.twimg.com/profile_images/841373176/c9-lite-violet.png",
+"C9 Radio" => "http://www.allzicradio.com/media/radios/c9-radio.jpg",
+"Classic 21 64k aac" => "http://bestradio.fm/uploads/posts/2014-07/thumbs/1405275475_classic-21-radio-online-fm-belgium.jpg",
+"Classic 21 128k mp3" => "http://bestradio.fm/uploads/posts/2014-07/thumbs/1405275475_classic-21-radio-online-fm-belgium.jpg",
+"FG America" => "https://nomadmusicblog.files.wordpress.com/2009/05/radio-fg_logo.jpg",
+"FG Chic" => "http://static.radio.fr/images/broadcasts/97/6a/3171/c175.png",
 "CambosFM" => "http://i.img.co/radio/87/92/19287_145.png",
 "Clube Brazil" => "http://a2.ec-images.myspacecdn.com/images02/115/2553a924daf14c39967bca38bb319345/l.jpg",
 "Cocktail FM" => "http://www.cocktailfm.com/images/logo-cocktailfm.png",
@@ -43,16 +47,19 @@ my %icons = (
 "FG Underground" => "http://radio.fr/images/broadcasts/1578_4.gif",
 "FIP" => "http://www.tv14.net/wp-content/uploads/2010/06/FIP-Radio.jpg",
 "FMC Radio" => "http://rad.io/images/broadcasts/4420_4.gif",
+"France bleu Gascogne" => "http://static.radio.fr/images/broadcasts/73/f9/8373/c175.png",
+"France bleu loire ocean" => "http://static.radio.fr/images/broadcasts/42/d0/7908/c175.png",
 "France Culture" => "http://www.institutfrancais.es/bilbao/adjuntos/logo-france-culture.jpg",
 "France Inter" => "http://www.scholastiquemukasonga.net/home/wp-content/uploads/2012/03/France-inter.jpg",
-"France Musique" => "http://www.radiosnumeriques.com/wp-content/uploads/2012/07/france-musique.jpg",
+"France Musique" => "http://www.francemusique.fr/sites/all/themes/custom/france_musique/logo.png",
 "Frequence 3" => "http://www.leclubradio.com/wp-content/uploads/2012/03/Logo-Frequence3.jpg",
 "Frequence Terre" => "http://www.blog.terracites.fr/wp-content/uploads/2011/05/LogoFrequenceTerre.jpg",
 "Fun Radio" => "http://www.tignes.net/data/fckeditor/Logo-Fun-Radio.jpg",
 "Graffiti Urban Radio" => "http://a4.ec-images.myspacecdn.com/images02/152/5ce85b0e0be249e49d767ca1f43977d0/l.jpg",
 "Hit West" => "http://www.myconseils.fr/wp-content/uploads/2011/10/logo_hit_west.jpg",
-"Hot Mix Radio - 80" => "http://en.lixty.net/upload/stations/100/41174_hot_mix_radio_80.png",
+"Hot Mix Radio - 80" => "http://www.hotmixradio.fr/player/playerhtm/img/picto/new/80.png",
 "Hot Mix Radio - 90" => "http://www.hotmixradio.fr/player/playerhtm/img/picto/new/90s.png",
+"Hot Mix Radio - 100% Hits" => "http://www.hotmixradio.fr/player/playerhtm/img/picto/new/hits.png",
 "Hot Mix Radio - Funky" => "http://en.lixty.net/upload/stations/100/59205_hot_mix_radio_funky.png",
 "Kif Radio" => "http://thc-fungames.e-mengine.com/archiver/www.jammin-unity.be/wp-content/uploads/2010/01/logo_kif_978.jpg",
 "Kiss FM" => "http://www.inspiringbirthstories.com.au/wp-content/uploads/2012/09/kiss_fm.gif",
@@ -60,14 +67,14 @@ my %icons = (
 "La Grosse Radio Rock" => "http://www.lagrosseradio.com/_images/haut/logo_rock.png",
 "La Grosse Radio Metal" => "http://www.lagrosseradio.com/_images/haut/logo_metal.png",
 "La Grosse Radio Reggae" => "http://lagrosseradio.com/_images/logos/officiels/Logo_GrosseRadioReggae_300dpi.png",
-"Le Mouv'" => "http://radiotraque.imca.fr/files/2011/09/Logo-le-mouv.jpg",
+"Le Mouv'" => "https://upload.wikimedia.org/wikipedia/fr/thumb/d/d3/Le_Mouv'_logo_2008.svg/1024px-Le_Mouv'_logo_2008.svg.png",
 "M2 Radio" => "http://rad.io/images/broadcasts/3028_4.jpeg",
 "M2 Radio - Chillout" => "http://www.m2radio.fr/images/logos/M/m2_chillout_t.png",
 "M2 Radio - Love" => "http://www.m2radio.fr/images/logos/M/m2_love_t.png",
 "M2 Radio - Sunshine" => "http://www.m2radio.fr/images/logos/M/m2_sunshine_t.png",
-"Maxi 80" => "http://rad.io/images/broadcasts/1726_4.gif",
+"Maxi 80" => "http://www.stormacq.com/wp-content/uploads/2010/06/maxi80-logo.jpg",
 "Maxxima" => "https://twimg0-a.akamaihd.net/profile_images/1107883540/maxxima_bg_w.png",
-"MFM" => "http://final6rugby2012.com/wp-content/uploads/2012/03/Logo-MFM-1.jpg",
+"MFM" => "https://upload.wikimedia.org/wikipedia/fr/b/bb/Logo-mfm.png",
 "MFM Lovers" => "http://i.img.co/radio/91/17/31791_290.png",
 "MFM Goldman" => "http://en.lixty.net/upload/stations/100/24658_mfm_100_jean_jacques_goldman.png",
 "MFM Duos" => "http://i.img.co/radio/88/17/31788_90.png",
@@ -79,7 +86,7 @@ my %icons = (
 "NRJ" => "http://www.24enfants.org/wp-content/uploads/2011/12/logo-NRJ1.jpg",
 "NRJ Lounge" => "http://i.img.co/radio/11/37/23711_290.png",
 "NTI" => "http://www.radionti.com/images/logo.gif",
-"Oui FM" => "http://www.radiosnumeriques.com/wp-content/uploads/2012/06/ouifm.jpeg",
+"Oui FM" => "https://upload.wikimedia.org/wikipedia/fr/f/ff/OUI_FM_2014_logo.png",
 "Oui FM Alternatif" => "http://i.img.co/radio/97/89/8997_290.png",
 "Oui FM Collector" => "http://i.img.co/radio/96/89/8996_290.png",
 "Oui FM Blues" => "http://i.img.co/radio/22/70/27022_290.png",
@@ -116,9 +123,10 @@ sub get_radio_pic {
 	my ($name,$rpic) = @_;
 	my $url = $icons{$name};
 	if ($url) {
-		($name) = $url =~ /.+\/(.+)/;
+		my ($ext) = $url =~ /.+\.(.+)/;
 #		print STDERR "channel name $name from $url\n";
-		$name = "radios/$name";
+		$name =~ s/ /_/g;
+		$name = "radios/$name.$ext";
 		if (! -f $name) {
 #			print STDERR "no channel logo, trying to get it from web\n";
 			push @$rpic,($name,$url);
