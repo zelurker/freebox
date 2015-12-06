@@ -115,9 +115,8 @@ sub read_stream_info {
 	$cur =~ s/pic:(http.+?) //;
 	my $pic = $1;
 	my $pics = "";
-	if ($source eq "flux" && $base_flux eq "stations") {
+	if ($source eq "flux" && $base_flux =~ /^stations/) {
 		$pics = get_radio_pic($cmd);
-		print "stream_info: radio:$cmd pic = $pic\n";
 	}
 	if ($pic) {
 		$pic = myget $pic;
