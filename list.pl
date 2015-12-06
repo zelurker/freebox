@@ -303,8 +303,14 @@ sub list_files {
 		my $name = $service;
 		$name =~ s/.+\///; # Supprime le path du nom
 		if (-d $service) {
+			if ($conf{$tri} eq "hasard") {
+				push @paths,bsd_glob("$service/*");
+				next;
+			}
 			$name .= "/";
 		}
+		next if ($name =~ /\.nfo$/i && $conf{$tri} eq "hasard");
+
 		# On aimerait bien utiliser is_utf8 ici, sauf qu'en fait si le flag
 		# utf8 de perl n'est pas positionné sur la chaine ça renvoie toujours
 		# faux, donc aucun intérêt. A priori y a toujours un caractère 0xc3
@@ -324,11 +330,19 @@ sub list_files {
 	unlink "info_coords";
 	if ($conf{$tri} eq "date") {
 		@list = sort { $$a[0][3] <=> $$b[0][3] } @list;
+	} elsif ($conf{$tri} eq "hasard") {
+		my @list2;
+		while (@list) {
+			push @list2,splice(@list,rand($#list+1),1);
+		}
+		@list = @list2;
 	}
 	if ($conf{$path} ne "/") {
 		unshift @list,[[$num++,"../",".."]];
 	}
-	unshift @list,[[$num++,"Tri par $conf{$tri}","tri par"]];
+	unshift @list,[[$num++,"Tri par nom","tri par nom"],
+	[$num++,"Tri par date", "tri par date"],
+	[$num++,"Tri aléatoire", "tri par hasard"]];
 	if ($inotify) {
 		print "adding watch for $conf{$path}\n";
 		$watch = $inotify->watch($conf{$path},IN_MODIFY|IN_CREATE|IN_DELETE,
@@ -1244,7 +1258,7 @@ while (1) {
 		$found--;
 		close_numero();
 	} elsif ($cmd eq "right") {
-		if ($source eq "flux" && $found > $#list-$nb_elem) {
+		if (($source eq "flux" && $found > $#list-$nb_elem) || $mode_opened) {
 			$cmd = "zap1";
 			goto again;
 		} else {
@@ -1389,7 +1403,8 @@ while (1) {
 		}
 		close_numero();
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-		print "serv $serv name $name source $source base $base_flux.\n";
+		# Attention : fermer mode APRES get_name !!!
+		close_mode if ($mode_opened);
 		save_conf() if ($serv ne "..");
 		$mode_opened = 0 if ($mode_opened);
 		if ($source eq "menu") {
@@ -1736,6 +1751,16 @@ while (1) {
 close($l);
 print "list à la fin input vide\n";
 
+sub get_sort_key {
+	my $key;
+	if ($source eq "Fichiers vidÃ©o" || $source eq "dvd") {
+		$key = "tri_video";
+	} else {
+		$key = "tri_music";
+	}
+	$key;
+}
+
 sub exec_file {
 	# Retour : 0 si la liste a changé, 1 autrement (next)
 	my ($name,$serv,$audio,$video) = @_;
@@ -1747,8 +1772,11 @@ sub exec_file {
 	} elsif ($source eq "dvd") {
 		$path = "dvd_path";
 	}
-	if ($serv eq "tri par") {
-		$conf{tri_video} = ($conf{tri_video} eq "nom" ? "date" : "nom");
+	if ($serv =~ /^tri par/) {
+		print "$name,$serv,$audio,$video\n";
+		my $key = get_sort_key();
+		$conf{$key} = substr($serv,8);
+		print "$key = $conf{$key}.\n";
 		read_list();
 	} elsif ($name =~ /\/$/) { # Répertoire
 		my $old;
@@ -1813,9 +1841,13 @@ sub disp_list {
 		} else {
 			$cur .= " ";
 		}
-		foreach (@$rtab) {
-			my ($temp,$name2) = @$_;
-			$name = $name2 if (length($name2) < length($name));
+		if ($n == 0 && $name =~ /^Tri par/) {
+			$name = "Tri par ".$conf{get_sort_key()};
+		} else {
+			foreach (@$rtab) {
+				my ($temp,$name2) = @$_;
+				$name = $name2 if (length($name2) < length($name));
+			}
 		}
 		if (!$num) {
 			die "list split failed\n";
@@ -1855,3 +1887,6 @@ sub disp_list {
 		out::send_bmovl("numero $numero");
 	}
 }
+
+# vim: encoding=latin1
+
