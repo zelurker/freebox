@@ -444,7 +444,7 @@ sub read_list {
 			print "read_list: pb conversion utf $list\n";
 		}
 
-		my ($num,$name,$service,$flavour,$audio,$video);
+		my ($num,$service,$flavour);
 		my $last_num = undef;
 		@list = ();
 		my $tv;
@@ -1753,7 +1753,7 @@ print "list à la fin input vide\n";
 
 sub get_sort_key {
 	my $key;
-	if ($source eq "Fichiers vidÃ©o" || $source eq "dvd") {
+	if ($source eq "Fichiers vidéo" || $source eq "dvd") {
 		$key = "tri_video";
 	} else {
 		$key = "tri_music";
