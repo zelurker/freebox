@@ -22,7 +22,8 @@ sub myget {
            autosave => 1,
          );
 		 # my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
-	my $useragt = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71";
+#	my $useragt = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71";
+	my $useragt = "Mozilla/5.0 (X11; Linux x86_64; rv:41.0) Gecko/20100101 Firefox/41.0";
 	my $ua = LWP::UserAgent->new(keep_alive => 0,
 		agent =>$useragt);
 	$ua->timeout(10);

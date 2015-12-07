@@ -874,6 +874,10 @@ sub run_mplayer2 {
 		$serv =~ /(mp4|avi|asf|mov)$/)) {
 		$cache = 1000;
 	}
+	if ($serv =~ /^https/) {
+		# Apparemment mplayer2 ne peut pas lire de l'https !!!
+		$player = "mplayer";
+	}
 	if ($src =~ /cd/) {
 		$quiet = "-quiet";
 		if (open(F,"</proc/sys/dev/cdrom/info")) {

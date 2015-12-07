@@ -6,7 +6,7 @@ require "http.pl";
 binmode STDERR; # ,":utf8";
 binmode STDOUT; # ,":utf8";
 my $str = shift @ARGV;
-my $debug = 1; # infos
+my $debug = 0; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
 if ($str =~ /http/) {
@@ -24,6 +24,8 @@ if ($debug && !$str) {
 	binmode STDIN; # ,":utf8";
 	@_ = <>;
 	$_ = join("",@_);
+	# On passe str = "http" quand c'est le traitement d'une page de vidéo
+	# passer str="" pour un index de vidéos
 	$str = "http";
 } else {
 	if ($str && $str !~ /^http/) {
@@ -47,7 +49,6 @@ if ($str =~ /^http/) {
 	my ($title) = /<title>(.+?)<\/title/;
 	my $start_tag = "url_encoded_fmt_stream_map";
 	# $start_tag = "adaptive_fmts" if (!/sig=/);
-	print STDERR "group $start_tag.\n" if ($debug);
 	handle_tag($start_tag,$title);
 
 	# adaptive_fmts : sépare le flux vidéo et audio dans 1 flux séparé, permet
@@ -79,46 +80,52 @@ foreach (split /\n/) {
 		$content = 3;
 		print STDERR "*** debug: content $content\n" if ($debug);
 	}
+	# Note : le texte du titre est apparemment souvent sur la même ligne
+	# que l'image d'après, donc il faut absolument traiter ça en 1er !
+	if (/yt-lockup-title.+?title="(.+?)"/) {
+		$data_text = $1;
+		print STDERR "debug: data_text = $data_text\n" if ($debug);
+	}
+	if ($data_link && $data_text) {
+		if ($img =~ /^\/\//) {
+			$img = "http:$img";
+		} elsif (!$img) {
+			my ($id) = $data_link =~ /v=(.+)/;
+			# On reconstitue l'image à partir de l'id vidéo, ça vaut mieux,
+			# tout se mélange là-dedans !
+			$img = "http:i.ytimg.com/vi/$id/mqdefault.jpg";
+			print STDERR "image reconstituée d'après id video\n" if ($debug);
+		}
+		if ($debug) {
+			print STDERR "debug: data pic $img link $data_link text $data_text\n";
+		} else {
+			print ($img ? "pic:$img " : "");
+			if (!utf8::valid($data_text)) {
+				die "problème $data_text\n";
+			}
+			print $data_text;
+			print "\nhttp://www.youtube.com$data_link\n";
+		}
+		$data_link = $data_text = $img = "";
+	}
 
-	if (/href="(.+?)".*yt-thumb-clip-inner.+?src="(.+?)"/) {
+	if (/href="(.+?)".*yt-thumb-simple.+?src="(.+?)"/) {
 		$link = $1;
 		my $truc = $2;
 		if ($truc =~ /jpg$/) {
 			$img = $truc;
+			# Le texte doit être en dernier !!!
+			$data_text = undef;
 			print STDERR "debug: img = $truc link $link (ident clip-inner)\n" if ($debug);
 		}
 #		} elsif ($debug) {
 #			print STDERR "debug: failed to recognize image $truc (ident clip-inner\n";
 	}
-	if (/data-context-item-title="(.+?)"/) {
-		$data_text = $1;
-		print STDERR "debug: data_text = $data_text\n" if ($debug);
-	} elsif (/data-sessionlink.*href="(.+?)"/ || /href="(.+?)".*data-sessionlink/) {
+	$img = $1 if (/data\-thumb="(.+?)"/);
+   	if (/data-sessionlink.*href="(.+?)"/ || /href="(.+?)".*data-sessionlink/) {
 		$data_link = $1;
 		$data_link = "" if ($data_link !~ /watch/);
 		print STDERR "debug: data_link = $data_link\n" if ($debug);
-	}
-	if (/data-thumb="\/\/(.+?)"/ || /yt-thumb-clip-inner"><img src="\/\/(.+?)"/
-	|| /<img alt="Miniature" src="\/\/(.+?)"/) {
-		my $truc = "http://$1";
-		if ($truc =~ /jpg$/) {
-			$img = $truc;
-			if ($data_link && $data_text) {
-				if ($debug) {
-					print STDERR "debug: data pic $img link $data_link text $data_text\n";
-				} else {
-					print ($img ? "pic:$img " : "");
-					if (!utf8::valid($data_text)) {
-						die "problème $data_text\n";
-					}
-					print $data_text;
-					print "\nhttp://www.youtube.com$data_link\n";
-				}
-			}
-			$data_link = $data_text = "";
-#		} elsif ($debug) {
-#			print STDERR "debug: failed to recognize image $truc (ident data-thumb\n";
-		}
 	}
 	if ($content == 1) {
 		if (/href="(\/.+?)".*?\>(.+)<\/a/) {
@@ -147,7 +154,9 @@ foreach (split /\n/) {
 sub handle_tag {
 	my ($start_tag,$title) = @_;
 	my $last = "";
-	while (s/\"$start_tag\": \"(.+?)\"//) {
+	print STDERR "handle_tag start_tag $start_tag title $title.\n" if ($debug);
+	while (s/\"$start_tag\": ?\"(.+?)\"//) {
+		print STDERR "in while\n" if ($debug);
 		my $url = $1;
 		$url =~ s/\\\//\//g;
 		$url =~ s/%(..)/chr(hex($1))/ge;
@@ -168,6 +177,7 @@ sub handle_tag {
 			# itag en double provoque un 403, donc le + simple c'est de tout
 			# remettre à plat en récupérant tout dans un hash et en éliminant
 			# ce qu'on veut pas
+			print "url $u\n" if ($debug);
 			my @args = split(/[\?\&]/,$u);
 			my %args;
 			foreach (@args) {
@@ -176,6 +186,9 @@ sub handle_tag {
 			}
 			my $type = delete $args{type};
 			my $s;
+			if (!$args{s} && $args{signature}) {
+				$args{s} = $args{signature};
+			}
 			if ($args{sig}) {
 				$s = delete $args{sig};
 				print STDERR "*** sig1: $s\n";
@@ -183,20 +196,33 @@ sub handle_tag {
 				# L'encodage de la signature est en fonction da la longueur de s
 				# problème : je ne connais pas toutes les longueurs possibles
 				# ça a changé 1 fois en 2 jours, y en a probablement d'autres
-				print STDERR "s $args{s}\n" if ($debug);
-				if (length($args{s}) == 88) {
-					my $pre = substr($args{s},0,1);
-					$s = substr(delete $args{s},1);
-					my $post = substr($s,length($s)-6);
-					my $s2 = "";
-					for (my $n=length($s)-7; $n>=0; $n--) {
-						$s2 .= substr($s,$n,1);
+				print STDERR "s $args{s} len ",length($args{s}),"\n" if ($debug);
+				if (length($args{s}) == 81) {
+					$s = $args{s};
+				} elsif (length($args{s}) == 88) {
+					if ($args{key} eq "yt6") { # pas sûr du tout !
+						# déduit à partir de :
+						# original : 3E37E7EF363ED472A3E66C5913B9EA776B196A882B7C1.DB000454D23DE1813148366A385335F6C2F62DE6E6
+						# résultat : 6ED26F2C6F533583A6638413181ED32D454000BD.1C3B288A691B677AE9B3195C66E3A274DE363FE7
+						my $pre = substr($args{s},0,1);
+						$s = reverse($args{s});
+						substr($s,2,2) = "";
+						substr($s,43,1) = $pre;
+						$s = substr($s,0,81);
+					} else {
+						my $pre = substr($args{s},0,1);
+						$s = substr(delete $args{s},1);
+						my $post = substr($s,length($s)-6);
+						my $s2 = "";
+						for (my $n=length($s)-7; $n>=0; $n--) {
+							$s2 .= substr($s,$n,1);
+						}
+						$s = $s2;
+						my $prev = substr($s,16,1);
+						substr($s,16,1) = substr($post,2,1);
+						substr($s,21,1) = $prev;
+						substr($s,49,1) = $pre;
 					}
-					$s = $s2;
-					my $prev = substr($s,16,1);
-					substr($s,16,1) = substr($post,2,1);
-					substr($s,21,1) = $prev;
-					substr($s,49,1) = $pre;
 				} elsif (length($args{s}) == 84) {
 					$s = substr(reverse(delete $args{s}),1);
 					my $post = substr($s,0,1);
