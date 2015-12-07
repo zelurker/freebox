@@ -111,7 +111,14 @@ sub open_bmovl {
 		print "trouvé la socket à $tries essais\n";
 	}
 
-	connect($out, sockaddr_un("sock_bmovl"))     || die "connect: $!";
+	do {
+		eval {
+			connect($out, sockaddr_un("sock_bmovl"))     || die "connect: $!";
+		};
+		if ($@) {
+			print "open_bmovl: $@\n";
+		}
+	} while ($@);
 	$out;
 }
 
