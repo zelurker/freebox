@@ -863,7 +863,7 @@ sub run_mplayer2 {
 	}
 	unlink "fifo_cmd","fifo";
 	system("mkfifo fifo_cmd fifo");
-	my $player = "mplayer2";
+	my $player = "mplayer";
 	my $cache = 100;
 	my $filter = "";
 	my $cd = "";
@@ -959,8 +959,6 @@ sub run_mplayer2 {
 	}
 	# hr-mp3-seek : lent, surtout quand on revient en arrière, mais
 	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/);
-	# L'option obligatoire pour mplayer avec la tnt hd
-	push @list,("-demuxer","lavf") if ($src =~ /(freeboxtv|dvb)/);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
 		if (!$list[$n]) {
