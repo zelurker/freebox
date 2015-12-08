@@ -1408,7 +1408,6 @@ while (1) {
 		# Attention : fermer mode APRES get_name !!!
 		close_mode if ($mode_opened);
 		save_conf() if ($serv ne "..");
-		$mode_opened = 0 if ($mode_opened);
 		if ($source eq "menu") {
 			$source = $name;
 			read_list();
@@ -1476,7 +1475,7 @@ while (1) {
 				print "base_flux = $name\n";
 				read_list();
 			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// ||
-					($serv =~ / / && $source !~ /youtube/)) && $mode_flux)) {
+					($serv =~ / / && $base_flux !~ /youtube/)) && $mode_flux)) {
 				$name =~ s/\//-/g;
 				$base_flux .= "/$name";
 				$base_flux =~ s/pic:.+? //;
