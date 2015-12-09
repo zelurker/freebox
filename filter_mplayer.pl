@@ -567,9 +567,11 @@ while (1) {
 				my ($name,$val) = ($1,$2);
 				if ($name eq "StreamTitle" && $val) {
 					$val =~ s/\.\.\. Telech.+//; # vire les pubs de hotmix
+					$val =~ s/\(WR\) //; # vire ce truc de rfm enfoirés...
 					$val = utf($val);
 					$info .= "$val ";
 					$titre = $val;
+					print "reçu par icy info: $val.\n";
 					if (!$net) {
 						$info .= " pas de réseau)";
 					} elsif (!$images) {
@@ -593,6 +595,7 @@ while (1) {
 				$titre = $old_titre;
 			}
 		} elsif (/Title: (.+)/i && !$titre) {
+			print "filter: update Title: $1\n";
 			$titre = utf($1);
 		} elsif (/Artist: (.+)/i || /ID_CDDB_INFO_ARTIST=(.+)/) {
 			$artist = utf($1);
