@@ -55,7 +55,7 @@ sub handle_prog {
 		($fa,$ft) = $res =~ /<b>(.+)<\/b> \- (.+)<\/span/m;
 		$fa =~ s/ +$//;
 		$ft =~ s/ +$//;
-		@tracks = ("$fa : $ft");
+		@tracks = ("$fa - $ft");
 	} elsif ($res =~ s/^\{//) { # format oui fm
 		my $t = time();
 		my @list = split(/\],/,$res);
@@ -85,7 +85,7 @@ sub handle_prog {
 					$val =~ s/"$//;
 					$hash{$key} = $val;
 				}
-				push @tracks,($hash{$img} ? "pic:$hash{$img} " : "")."$hash{$artiste} : $hash{$titre} ($hash{$album})";
+				push @tracks,($hash{$img} ? "pic:$hash{$img} " : "")."$hash{$artiste} - $hash{$titre} ($hash{$album})";
 				$ft = $hash{$titre} if (!$ft);
 				$fa = $hash{$artiste} if (!$fa);
 			}
@@ -118,7 +118,7 @@ sub handle_prog {
 				$ft = $chanson if (!$ft);
 				push @tracks,
 				($pochette ? "pic:$pochette " : "").
-				"$chanteur : $chanson";
+				"$chanteur - $chanson";
 			}
 		}
 
@@ -144,7 +144,7 @@ sub handle_prog {
 				$ft = $hash{title} if (!$ft);
 				push @tracks,
 				($hash{cover} ? "pic:$hash{cover} " : "").
-				"$hash{artist} : $hash{title}".
+				"$hash{artist} - $hash{title}".
 			   	($hash{album} ? " ($hash{album})" : "");
 			}
 		}
@@ -160,7 +160,7 @@ sub handle_prog {
 			close(F);
 		}
 		if ($ft && $fa) {
-			return "$fa : $ft"; # Renvoie la chaine pour google images
+			return "$fa - $ft"; # Renvoie la chaine pour google images
 		} elsif ($ft) {
 			return $ft;
 		} else {
