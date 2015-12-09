@@ -662,8 +662,11 @@ sub read_list {
 					$pic = $1;
 				}
 				eval {
-					Encode::from_to($name, "utf-8", "iso-8859-1")
-					if ($latin && $encoding =~ /utf/i);
+					if ($latin && $encoding =~ /utf/i) {
+						Encode::from_to($name, "utf-8", "iso-8859-1")
+					} elsif (!$latin && $encoding !~/utf/i) {
+						Encode::from_to($name, "iso-8859-1","utf-8")
+					}
 				};
 				if ($@) {
 					print "read_list: pb3 conv utf $name\n";
@@ -863,7 +866,7 @@ sub run_mplayer2 {
 	}
 	unlink "fifo_cmd","fifo";
 	system("mkfifo fifo_cmd fifo");
-	my $player = "mplayer";
+	my $player = "mplayer2";
 	my $cache = 100;
 	my $filter = "";
 	my $cd = "";
@@ -1869,6 +1872,17 @@ sub disp_list {
 		} else {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
 			$info = 1;
+		}
+		if (!$latin && ($source ne "flux" || $base_flux !~ /stations/)) {
+			# A priori il n'y a que les plugins de flux qui renvoient des
+			# trucs en utf8 ou qui convertissent autrement, tout le reste
+			# est en latin
+			eval {
+				Encode::from_to($cur, "iso-8859-1", "utf-8") ;
+			};
+			if ($@) {
+				print "read_list2: pb conv utf $serv\n";
+			}
 		}
 		print $out $cur;
 		close($out);
