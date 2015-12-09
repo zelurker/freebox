@@ -7,7 +7,8 @@ my %args;
 $_ = <>;
 chomp;
 $args{s} = $_;
-print "reverse ",scalar reverse $_,"\n";
+$args{key} = "yt6";
+print "len ",length($_)," reverse ",scalar reverse( $_),"\n";
 my $s;
 if (length($args{s}) == 81) {
 	$s = $args{s};
@@ -74,10 +75,22 @@ if (length($args{s}) == 81) {
 	substr($s,80,1) = substr($old,41,1);
 	substr($s,50,1) = substr($old,2,1);
 } elsif (length($args{s}) == 83) {
-	my $old = $s = delete $args{s};
-	substr($s,0,1) = substr($s,43,1);
-	substr($s,43,1) = substr($old,0,1);
-	substr($s,81) = "";
+	# url originale
+	# s=073AAC043F70F58C8CFADBAF38B2F3D7935439026.C8BD1CCFA2117B4AFB25C230547A310C2AB2D93EE
+	# https://r5---sn-25ge7nl6.googlevideo.com/videoplayback?expire=1449684773&gcr=fr&itag=160&keepalive=yes&requiressl=yes&ms=au&mv=m&mt=1449663065&sparams=clen,dur,gcr,gir,id,initcwndbps,ip,ipbits,itag,keepalive,lmt,mime,mm,mn,ms,mv,nh,pl,requiressl,source,upn,expire&pl=47&id=o-AErYrG8stYzRckK7GxXbjAVt9EN0_s9xSw_IVDKHvCyq&mime=video/mp4&sver=3&lmt=1434106452912156&gir=yes&mn=sn-25ge7nl6&ip=2001:41d0:fe0b:6d00:7a34:fe66:1360:c62f&mm=31&ipbits=0&upn=IypybhqI7pY&initcwndbps=2805000&source=youtube&dur=284.283&clen=3873553&nh=IgpwcjAxLnBhcjAxKgkxMjcuMC4wLjE&fexp=9406819,9414602,9416126,9418203,9418751,9420452,9420771,9422596,9423241,9423329,9423662,9424163,9424428,9424713,9425308&key=yt6&type=video/mp4;+codecs="avc1.4d400c"&itag=160&lmt=1434106452912156&quality_label=144p&init=0-671&projection_type=1&fps=15&clen=3873553,size=192x144
+	# signature décodée :
+	# 73AAC043F70F58C8CFADBAF38B2F3D0935439026.C8BD1CCFA2117B4AFB25C230547A310C2AB2D93E
+	if ($args{key} eq "yt6") {
+		$s = delete $args{s};
+		my $pre = substr($s,0,1);
+		$s = substr($s,1,81);
+		substr($s,30,1) = $pre;
+	} else {
+		my $old = $s = delete $args{s};
+		substr($s,0,1) = substr($s,43,1);
+		substr($s,43,1) = substr($old,0,1);
+		substr($s,81) = "";
+	}
 }
 if (length($s) == 81) {
 	print "$s ok\n";
