@@ -630,6 +630,7 @@ static int list(int fifo, int argc, char **argv)
 	}
 //	printf("y:%d/%d %s from %d\n",y0,maxh,list[n],x);
     }
+    int nb_elem = n-start;
 //    printf("sortie de boucle nb %d y %d + fsize %d < maxh %d\n",nb,y,fsize,maxh);
 
     int oldx,oldy,oldw,oldh,oldsel;
@@ -669,6 +670,7 @@ static int list(int fifo, int argc, char **argv)
 	f = fopen("list_coords","w");
 	fprintf(f,"%d %d %d %d %d\n",sf->w, sf->h,
 		x, y,sely);
+	fprintf(f,"%d\n",nb_elem);
 	fclose(f);
     }
     if (sdl_screen && *bg_pic) {

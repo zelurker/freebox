@@ -565,6 +565,7 @@ sub read_list {
 			if ($b =~ /\//) {
 				$b =~ s/(.+?)\/(.+)/$1/;
 			}
+			$encoding = "";
 			if (-x "flux/$b") {
 
 				# Ok, ça peut être valable d'expliquer les retours des plugins
@@ -592,7 +593,6 @@ sub read_list {
 					$serv = `zenity --entry --text="A chercher (regex)"`;
 					chomp $serv;
 					if ($encoding =~ /utf/i && $latin) {
-						print "encodage utf8\n";
 						eval {
 							Encode::from_to($serv, "iso-8859-1", "utf-8") ;
 						};
@@ -630,7 +630,6 @@ sub read_list {
 				}
 
 				print "list: execution plugin flux $b param $serv base_flux $base_flux\n";
-				$encoding = "";
 				open(F,"flux/$b \"$serv\"|");
 				$mode_flux = <F>;
 				if ($mode_flux =~ /encoding/) {
@@ -1263,7 +1262,7 @@ while (1) {
 		$found--;
 		close_numero();
 	} elsif ($cmd eq "right") {
-		if (($source eq "flux" && $found > $#list-$nb_elem) || $mode_opened) {
+		if (($source eq "flux" && $found-9+$nb_elem > $#list) || $mode_opened) {
 			$cmd = "zap1";
 			goto again;
 		} else {
@@ -1274,7 +1273,10 @@ while (1) {
 				next;
 			}
 			close_mode if ($mode_opened);
-			$found += $nb_elem;
+			if ($found < $#list) {
+				$found += $nb_elem;
+				$found = $#list if ($found > $#list);
+			}
 		}
 		close_numero();
 	} elsif ($cmd eq "left") {
@@ -1873,7 +1875,7 @@ sub disp_list {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
 			$info = 1;
 		}
-		if (!$latin && ($source ne "flux" || $base_flux !~ /stations/)) {
+		if (!$latin && $source ne "flux") {
 			# A priori il n'y a que les plugins de flux qui renvoient des
 			# trucs en utf8 ou qui convertissent autrement, tout le reste
 			# est en latin
@@ -1900,6 +1902,13 @@ sub disp_list {
 	}
 	if ($cmd =~ /^(\d|backspace)$/i) {
 		out::send_bmovl("numero $numero");
+	}
+	if (open(F,"<list_coords")) {
+		<F>;
+		$nb_elem = <F>;
+		chomp $nb_elem;
+		close(F);
+		print "récup nb_elem $nb_elem\n";
 	}
 }
 
