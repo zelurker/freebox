@@ -26,6 +26,7 @@ use progs::labas;
 use progs::podcasts;
 use progs::files;
 use progs::series;
+use progs::youtube;
 
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -213,6 +214,7 @@ push @prog, progs::labas->new($net);
 push @prog, progs::podcasts->new($net);
 push @prog, progs::files->new($net);
 push @prog, progs::series->new($net);
+push @prog, progs::youtube->new($net);
 
 system("rm -f fifo_info && mkfifo fifo_info");
 # read_prg:

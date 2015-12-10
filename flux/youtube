@@ -57,6 +57,18 @@ if ($str =~ /^http/) {
 	# imposé, peut-être pour la pub. Donc je les garde, mais en optionnel en fin
 	# de liste.
 	handle_tag("adaptive_fmts",$title) if (/adaptive_fmts/);
+	my ($suffix) = $str =~ /v=(.+)/;
+	mkdir "cache/yt";
+	# On aimerait bien sauver sous le nom du suffix pour qu'il soit unique,
+	# sauf qu'il n'arrive jamais jusqu'au bandeau d'info, ça reste une
+	# valeur intermédiaire gérée par list vu que le dernier argument est la
+	# vidéo elle même... Résultat : faut utiliser le titre !!!
+	open(F,">cache/yt/$title");
+	my ($upload) = $_ =~ /div id="watch-uploader-info">(.+?)<\/div/;
+	my ($info) = $_ =~ /div id="watch-description-text".*?>(.+?)<\/div/;
+	print F "$suffix\n", # on met le suffix parce qu'on peut récupérer l'image
+	"$upload\n$info\n";
+	close(F);
 	exit(0);
 }
 my ($name,$url);
@@ -95,7 +107,7 @@ foreach (split /\n/) {
 			my ($id) = $data_link =~ /v=(.+)/;
 			# On reconstitue l'image à partir de l'id vidéo, ça vaut mieux,
 			# tout se mélange là-dedans !
-			$img = "http:i.ytimg.com/vi/$id/mqdefault.jpg";
+			$img = "http://i.ytimg.com/vi/$id/mqdefault.jpg";
 			print STDERR "image reconstituée d'après id video\n" if ($debug);
 		}
 		if ($debug) {

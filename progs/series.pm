@@ -8,7 +8,7 @@ use HTML::Entities;
 
 @progs::series::ISA = ("progs::telerama");
 
-our $debug = 1;
+our $debug = 0;
 
 sub find_actor($) {
 	my $mech = shift;
