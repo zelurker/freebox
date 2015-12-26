@@ -317,13 +317,17 @@ sub list_files {
 		# devant les accents classiques français, j'ai pas tout vérifié donc
 		# pas sûr que ça marche partout, mais j'ai pas trouvé non plus de
 		# détection générique utf8. Pour l'instant ça marche en tous cas !
-		if ($latin && $name =~ /\xc3/) {
+		if ($latin && $name =~ /[\xc3\xc5]/) {
+			# c3 est pour la plupart des accents
+			# c5 est pour le oe collé.
 			eval {
 				Encode::from_to($name, "utf-8", "iso-8859-1");
 			}; # trop idiot autrement !
 			if ($@) {
 				print "list_files: pb conversion utf $name\n";
 			}
+		} elsif (!$latin && $name =~ /[\xc3\xc5]/) {
+			$encoding = "utf8";
 		}
 		push @list,[[$num++,$name,$service,-M $service]];
 	}
@@ -1875,7 +1879,7 @@ sub disp_list {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
 			$info = 1;
 		}
-		if (!$latin && $source ne "flux") {
+		if (!$latin && $source ne "flux" && $encoding !~ /utf/) {
 			# A priori il n'y a que les plugins de flux qui renvoient des
 			# trucs en utf8 ou qui convertissent autrement, tout le reste
 			# est en latin
