@@ -147,7 +147,9 @@ sub cd_menu {
 	my $error;
 	do {
 		$error = 0;
-		open(F,"mplayer -cdrom-device $cd cddb:// -nocache -identify -frames 0|");
+		# mplayer2 inclut un test pour quitter tout de suite si y a pas de cd
+		# mplayer passe 3 plombes dans ce cas là !
+		open(F,"mplayer2 -cdrom-device $cd cddb:// -nocache -identify -frames 0|");
 		my $track;
 		@list = @list_cdda = ();
 		my ($artist,@duree);
@@ -961,7 +963,9 @@ sub run_mplayer2 {
 		# initial avant que ça commence est vraiment trop long
 		push @list,("-nocache");
 	} else {
-		push @list,("-cache",$cache) if ($serv !~ /^(\/|livetv|records)/);
+		# Pas sûr qu'une valeur par défaut de 100 du cache soit sensée, ça casse la lecture des cds audio
+		# donc je ne passe un cache que si on a une valeur spéciale !
+		push @list,("-cache",$cache) if ($serv !~ /^(\/|livetv|records)/ && $cache > 100);
 	}
 	# hr-mp3-seek : lent, surtout quand on revient en arrière, mais
 	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/);
