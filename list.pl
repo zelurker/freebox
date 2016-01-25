@@ -899,6 +899,15 @@ sub run_mplayer2 {
 			close(F);
 			print "cd drive : $cd\n";
 		}
+		# le cache du cd n'est pas nécessaire sur toutes les configs
+		# mais ça aide pour mon ata. Quel cache alors ça ! Les valeurs
+		# élevées provoquent un délai entre le moment où on voit une piste
+		# commencer à l'écran et on entend son début. 
+		# En + le cache nécessaire semble varier en fonction du cd !
+		# (peut-être un effet de la lib paranoia ?)
+		# 200 semble le minimum absolu avec un certain cd, 250 pour avoir
+		# un peu de marge
+		$cache = 250;
 		# if ($serv =~ /cddb/) {
 			$player = "mplayer";
 			# }
