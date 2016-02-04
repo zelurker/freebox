@@ -7,6 +7,7 @@ use progs::telerama;
 use XML::Simple;
 use HTML::Entities;
 use Date::Parse;
+use Encode;
 
 @progs::podcasts::ISA = ("progs::telerama");
 
@@ -20,10 +21,11 @@ sub mydecode {
 our $debug = 0;
 our @tab;
 our $last_chan;
+our $latin = ($ENV{LANG} !~ /UTF/i);
 
 sub get {
 	my ($p,$channel,$source,$base_flux) = @_;
-	print "progs/podcats/get chan $channel source $source\n" if ($debug);
+	print STDERR "progs/podcats/get chan $channel source $source\n"; # if ($debug);
 	if (!$debug) {
 		return undef if ($source ne "flux" || $base_flux !~ /^podcasts.*\/(.+)/);
 		my $choice = $1;
@@ -34,8 +36,7 @@ sub get {
 
 	my $ref;
 	eval {
-		if (open(F,"<pod")) {
-			binmode(F,":utf8");
+		if (open(F,"<","pod")) {
 			@_ = <F>;
 			close(F);
 			$_ = join("",@_);
@@ -66,6 +67,15 @@ sub get {
 		my $date = $_->{pubDate};
 		$date = str2time($date) if ($date !~ /^\d+$/);
 		$title .= " le ".get_date($date) if ($date);
+		# Pour une raison méga bizarre, avec perl-5.22 le texte lu dans pod
+		# est bien en utf8, mais le champ $title est en latin1 ! Ca n'a
+		# absolument aucun sens, mais on peut corriger avec un appel à
+		# Encode... ! (ceci avec une locale utf8)
+		if (!$latin) {
+			eval {
+				Encode::from_to($title, "iso-8859-1", "utf-8");
+			}
+		}
 		if ($title eq $channel) {
 			my $desc = mydecode($_->{"description"});
 			$date = get_date($date);
@@ -81,7 +91,7 @@ sub get {
 			return \@tab;
 		}
 	}
-	print STDERR "pas trouvé le prog, cherchait channel $channel\n" if ($debug);
+	print STDERR "pas trouve le prog, cherchait channel $channel\n" if ($debug);
 	return undef;
 }
 

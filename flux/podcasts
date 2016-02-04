@@ -19,10 +19,10 @@ use POSIX qw(:sys_wait_h );
 # 2 - décodage du xml des podcasts avec xml::simple
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
-if (!$latin) {
-	binmode(STDOUT, ":utf8");
-	binmode(STDERR, ":utf8");
-}
+# if (!$latin) {
+# 	binmode(STDOUT, ":utf8");
+# 	binmode(STDERR, ":utf8");
+# }
 my $f;
 my @abo;
 my $fpod = "$ENV{HOME}/.freebox/podcasts";
@@ -84,6 +84,7 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 			} else {
 				open(F,"<:encoding(utf8)","pod") || die "peut pas lire pod\n";
 			}
+			# open(F,"<","pod") || die "peut pas lire pod\n";
 			@_ = <F>;
 			close(F);
 			$_ = join("\n",@_);
@@ -197,7 +198,7 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 	# On ne peut pas avoir de changement à ce niveau là, un xml est toujours
 	# en utf8 sinon le parser foire, donc on sauve en désactivant explicitement
 	# le décodage pour éviter tout problème.
-	if ($r && open(F,">pod")) {
+	if ($r && open(F,">:encoding(utf8)","pod")) {
 		print F $_;
 		close(F);
 	}
