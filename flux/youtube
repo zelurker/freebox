@@ -41,9 +41,11 @@ if (/encoding="(.+?)"/) {
 	print "encoding: $1\n";
 }
 
-open(F,">yt.html");
-print F $_;
-close(F);
+if (!$debug) {
+	open(F,">yt.html");
+	print F $_;
+	close(F);
+}
 if ($str =~ /^http/) {
 	# Extrait les formats vidéos de la page
 	my ($title) = /<title>(.+?)<\/title/;
@@ -203,6 +205,18 @@ sub handle_tag {
 			my @args = split(/[\?\&]/,$u);
 			my %args;
 			foreach (@args) {
+				# La séparation actuelle des args est un hack, il faudrait
+				# revoir ça pour gérer correctement les pistes séparées, le
+				# problème c'est que c'est un sacré bazar :
+				# arguments \u0026 qui font une espèce de header
+				# puis argument url avec arguments internes collés avec des
+				# %3d
+				# puis un autre bloc \u0026 pour la partie audio
+				# donc séparer les 2 s'annonce + que délicat. Pour
+				# l'instant seule la dernière url audio est récupéré avec
+				# ce hack, c'est + une preuve que ça marche...
+				# my (@eq) = split(/=/);
+				# $args{$eq[0]}=join("",@eq[1..$#eq]);
 				my ($name,$val) = split(/=/);
 				$args{$name}=$val;
 			}
@@ -311,13 +325,24 @@ sub handle_tag {
 				} elsif (length($s) == 82) {
 					my $pre = substr($s,0,1);
 					my $old = $s = substr($s,1);
-					substr($s,14,1) = substr($s,36,1);
-					substr($s,36,1) = substr($s,0,1);
-					substr($s,0,1) = substr($old,14,1);
-					substr($s,2,1) = $pre;
-					substr($s,41,1) = substr($s,80,1);
-					substr($s,80,1) = substr($old,41,1);
-					substr($s,50,1) = substr($old,2,1);
+					if ($args{key} eq "yt6") {
+						substr($s,17,1) = $pre;
+						# substr($s,36,1) = substr($s,0,1);
+						substr($s,0,1) = substr($old,17,1);
+						# substr($s,41,1) = substr($s,80,1);
+						substr($s,80,1) = substr($old,79,1);
+						# substr($s,50,1) = substr($old,2,1);
+						substr($s,79,1) = substr($s,13,1);
+						substr($s,13,1) = substr($old,80,1);
+					} else {
+						substr($s,14,1) = substr($s,36,1);
+						substr($s,36,1) = substr($s,0,1);
+						substr($s,0,1) = substr($old,14,1);
+						substr($s,2,1) = $pre;
+						substr($s,41,1) = substr($s,80,1);
+						substr($s,80,1) = substr($old,41,1);
+						substr($s,50,1) = substr($old,2,1);
+					}
 				} elsif (length($s) == 83) {
 					# url originale
 					# s=073AAC043F70F58C8CFADBAF38B2F3D7935439026.C8BD1CCFA2117B4AFB25C230547A310C2AB2D93EE
@@ -363,6 +388,8 @@ sub handle_tag {
 					push @url,"$u&signature=$s";
 				} else {
 					$audio = "$u&signature=$s";
+					print STDERR "*** addendum à $name[$#name] = $type\n";
+					$name[$#name] .= " $type"; # apparemment l'audio est 2ème
 				}
 			}
 		}
