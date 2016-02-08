@@ -150,7 +150,6 @@ if ($debug && !$str) {
 		$r = $mech->get($str);
 	} elsif (!$str) {
 		header("list");
-		print "Podcasts Radio France\n+prog1:http://www.radiofrance.fr/espace-pro/podcast-radio-france\n";
 		exit(0);
 	}
 	$_ = $mech->content;
@@ -170,16 +169,6 @@ if ($debug && !$str) {
 		}
 	}
 	$type = $r->header("content-type") if ($r);
-	if ($str =~ /^prog/) {
-		header("list");
-		if ($str =~ /^prog1/) {
-			parse_index_radio_france();
-		} elsif ($str =~ /^prog2/) {
-			parse_france_inter();
-		} elsif ($str =~ /^prog3/) {
-			parse_franceinfo();
-		}
-	}
 }
 
 my $encoding = "";
@@ -281,62 +270,11 @@ sub get_date {
 	sprintf("%d/%02d/%02d, %02d:%02d",$mday,$mon+1,$year+1900,$hour,$min);
 }
 
-sub parse_index_radio_france {
-	s/\r//g;
-	s/\n//g;
-	while (s/^.+?<a title="([^"]+)" href="(http[^"]+)" target="_blank"><img class="img-float-left" src="([^"]+)"//) {
-		my ($text,$url,$pic) = ($1,$2,$3);
-		my $prg;
-		if ($url =~ /franceinter/) {
-			$prg = "prog2";
-		} elsif ($url =~ /franceinfo/) {
-			$prg = "prog3";
-		}
-		print "pic:http://www.radiofrance.fr$pic $text\n+$prg:$url\n" if ($prg);
-	}
-	exit(0);
-}
-
-sub parse_france_inter {
-	s/\r//g;
-	s/\n//g;
-	while (s/^.*?<div class="index">(.+?)<div class="index"/<div class="index"/) {
-		my $cont = $1;
-		$cont =~ s/([\dh]+)//;
-		my $heure = $1;
-		$cont =~ s/<img src="(.+?)" alt="(.+?)"//;
-		my $leg = "pic:$1 $heure : $2";
-		if ($cont =~ s/<a href="(http[^"]+?)" title="Abonnement par RSS"//) {
-			print "$leg\n$1\n";
-		}
-	}
-	exit(0);
-}
-
-sub parse_franceinfo {
-	s/\r//g;
-	s/\n//g;
-	while (s/^.*?<li class="views-row(.+?)<li class="views-row/<div class="views-row/) {
-		my $cont = $1;
-		my $leg;
-		if ($cont =~ s/<img src="([^"]+)"//) {
-			$leg = "pic:$1 ";
-		} else {
-			last;
-		}
-		$cont =~ s/<a href=".+?">(.+?)<\/a>//;
-		$leg .= "$1";
-		if ($cont =~ s/<input type="text" id="rss-link" class="[^"]+" value="(.+?)"//) {
-			print "$leg\n$1\n";
-		}
-	}
-	exit(0);
-}
-
 sub header {
 	my $msg = shift;
 	print "$msg\n";
 	print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
+	print "Consulter une url xml...\nRecherche:url podcast xml\n"; # Transmis en mode list (ne contient pas //)
 	print "Abonnements\n+Abonnements\n" if (@abo);
 }
 

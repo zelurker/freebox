@@ -579,6 +579,8 @@ sub read_list {
 				# si ça commence par http ou mms -> lien direct
 				# Si c'est Recherche, traité en interne, base_flux est reseté
 				# et vaut plugin/result:ce qu'on cherche
+				# On peut passer Recherche:libellé pour changer le libellé
+				# affiché pour la recherche.
 				# Si ça commence par un +, base_flux est aussi reseté et
 				# contient ce qui suit le +
 				# Si y a un espace dans ce qui est retourné c'est pris pour
@@ -594,9 +596,11 @@ sub read_list {
 					# gauche !!!
 					print "reset serv\n";
 				}
-				if ($serv eq "Recherche") {
+				if ($serv =~ /^Recherche/) {
+					my ($libelle) = $serv =~ /^Recherche\:(.+)/;
+					$libelle = "A chercher (regex)" if (!$libelle);
 					delete $ENV{WINDOWID};
-					$serv = `zenity --entry --text="A chercher (regex)"`;
+					$serv = `zenity --entry --text="$libelle"`;
 					chomp $serv;
 					if ($encoding =~ /utf/i && $latin) {
 						eval {
@@ -902,7 +906,7 @@ sub run_mplayer2 {
 		# le cache du cd n'est pas nécessaire sur toutes les configs
 		# mais ça aide pour mon ata. Quel cache alors ça ! Les valeurs
 		# élevées provoquent un délai entre le moment où on voit une piste
-		# commencer à l'écran et on entend son début. 
+		# commencer à l'écran et on entend son début.
 		# En + le cache nécessaire semble varier en fonction du cd !
 		# (peut-être un effet de la lib paranoia ?)
 		# 200 semble le minimum absolu avec un certain cd, 250 pour avoir
