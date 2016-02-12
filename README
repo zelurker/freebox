@@ -1,0 +1,17 @@
+Une interface vidéo que j'ai faite pour remplacer celle de la freebox que
+j'aimais pas, après avoir testé mythtv que j'ai trouvé lourd et rempli de
+bugs. L'idée c'est d'avoir un truc simple, le + court possible, et
+facilement extensible. C'est essentiellement écrit en perl, avec un peu de
+C, et ça utilise principalement mplayer/mplayer2.
+Ca permet d'avoir les chaines tnt par une carte dvb, les flux youtube,
+shoutcasts et compagnie, les podcasts, les cds audio, les radios (avec
+affichage d'images google images en fonction de ce qui passe), lecture de
+musiques et de vidéos en local ou en réseau évidemment.
+
+En fait vu que ma télé dans la salle n'a pas de tuner tnt, la seule façon
+de regarder la télé est d'utiliser cette interface, donc je continue à
+l'utiliser et la maintenir encore aujourd'hui. Je l'ai surtout faite pour
+moi, et je la mets sur github pour que ça soit + simple de la transférer
+d'un ordo à l'autre. Français uniquement évidemment. Si ça intéresse du
+monde vous pouvez toujours m'envoyer un mail si vous voulez des infos !
+
