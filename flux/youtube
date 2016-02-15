@@ -248,12 +248,26 @@ sub handle_tag {
 					# clé origine : 808F088DF9C60F9AEB398864D7FC8BEB602991DEDCD.030115079646C58755B5E67CBA6791FCCCD48513513
 					# décoée : E088DF9C6089AEB398864D7FC8BEB602991DFDCD.030115079646C58755B5E67CBA6791FCCCD48315
 					my $pre = substr($s,0,1);
-					my $old = $s = substr($s,3,81);
-					substr($s,0,1) = substr($s,36,1);
-					substr($s,10,1) = $pre;
-					substr($s,36,1) = substr($old,0,1);
-					substr($s,78,1) = substr($s,80,1);
-					substr($s,80,1) = substr($old,78,1);
+					my $post = substr($s,86,1);
+					my $old = $s = reverse(substr($s,3,81));
+#	substr($s,0,1) = substr($s,36,1);
+#	substr($s,10,1) = $pre;
+#	substr($s,36,1) = substr($old,0,1);
+#	substr($s,78,1) = substr($s,80,1);
+#	substr($s,80,1) = substr($old,78,1);
+#	Nouvelle url d'origine avant décodage :
+#	https://r10---sn-25ge7nes.googlevideo.com/videoplayback\?c\=web\&clen\=4331650\&cpn\=l60-BtLxXH8IGk-P\&cver\=as3\&dur\=272.695\&expire\=1455512092\&fexp\=9407156,9414875,9416126,9420452,9422372,9422515,9422596,9423661,9423662,9425705,9426269,9426323,9426904,9427036,9428439,9428702,9428940\&gcr\=fr\&gir\=yes\&id\=o-AE4HRxroX_Z1My--dLGrV4iFTTLMVORMxOYySk6MwtBC\&initcwndbps\=3268750\&ip\=2001:41d0:fe0b:6d00:7a34:fe66:1360:c62f\&ipbits\=0\&itag\=140\&keepalive\=yes\&key\=yt6\&lmt\=1452310840770623\&mime\=audio/mp4\&mm\=31\&mn\=sn-25ge7nes\&ms\=au\&mt\=1455490369\&mv\=m\&nh\=IgpwcjAxLnBhcjEwKgkxMjcuMC4wLjE\&pcm2\=no\&pl\=33\&range\=0-237567\&ratebypass\=yes\&requiressl\=yes\&signature\=02E782B4092C53FAE044E7B25B2B4CBC8A30C28F.840FB3D9D06421959BCE181D559D5D6CE6EFEFC9\&source\=youtube\&sparams\=clen,dur,gcr,gir,id,initcwndbps,ip,ipbits,itag,keepalive,lmt,mime,mm,mn,ms,mv,nh,pcm2,pl,requiressl,source,upn,expire\&sver\=3\&upn\=N6dT-3DfgIo
+#	après décodage clé = 02E782B4092C53FAE044E7B25B2B4CBC8A30C28F.840FB3D9D06421959BCE181D559D5D6CE6EFEFC9
+#	donc en gros ce n'est pas le paramètre key=yt6 qui indique le type de
+#	décodage, mais aucune idée de ce que c'est ! fexp ressemble + à un truc
+#	lié à des time stamps, y a rien de flagrant dans les cookies lié à ça,
+#	donc pour l'instant je laisse tomber !
+					substr($s,0,1) = substr($s,21,1);
+					substr($s,21,1) = substr($old,0,1);
+					substr($s,48,1) = $post;
+					substr($s,74,1) = $pre;
+					substr($s,56,1) = substr($old,74,1);
+					substr($s,80,1) = substr($old,56,1);
 				} elsif (length($s) == 86) {
 					# url de départ
 					# Y a probablement l'explication de leur codage de
