@@ -512,6 +512,9 @@ while (1) {
 	if ($nfound > 0) {
 		my $ret = sysread(CHILD,$buff,8192,length($buff));
 		$buff =~ s/\x00+//;
+		# apparently the buffer can be full of empty lines ? Just 4000 0xa
+		# in it !
+		$buff =~ s/\x0a{2,}//;
 		if (length($buff) > 40000) {
 			open(F,">buff");
 			print F $buff;
