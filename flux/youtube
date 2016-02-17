@@ -242,13 +242,13 @@ sub handle_tag {
 				# ça a changé 1 fois en 2 jours, y en a probablement d'autres
 				$s = delete $args{s};
 				print STDERR "s $s len ",length($s),"\n";
+				my $pre = substr($s,0,1);
+				my $post = substr($s,length($s)-1,1);
 				if (length($s) == 87) {
 					# url :
 					# https://r8---sn-25g7sn76.googlevideo.com/videoplayback?c=web&clen=3245650&cpn=gXhweADxfv4A4CHD&cver=as3&dur=235.960&expire=1449932638&fexp=9406819,9416126,9418203,9418751,9420452,9420771,9422596,9423241,9423329,9423662,9424163,9424428,9424713,9425308,9425865&gcr=fr&gir=yes&id=o-AOTQh-K_bFAADRndo_d2cSCuDVCKbKXBAE6Uc0kvLNgO&initcwndbps=3068750&ip=2001:41d0:fe0b:6d00:7a34:fe66:1360:c62f&ipbits=0&itag=160&keepalive=yes&key=yt6&lmt=1417368535732977&mime=video/mp4&mm=31&mn=sn-25g7sn76&ms=au&mt=1449910888&mv=m&nh=IgpwcjAxLnBhcjEwKgkxMjcuMC4wLjE&pl=47&range=0-208895&ratebypass=yes&requiressl=yes&signature=E088DF9C6089AEB398864D7FC8BEB602991DFDCD.030115079646C58755B5E67CBA6791FCCCD48315&source=youtube&sparams=clen,dur,gcr,gir,id,initcwndbps,ip,ipbits,itag,keepalive,lmt,mime,mm,mn,ms,mv,nh,pl,requiressl,source,upn,expire&sver=3&upn=1CiYfJswzHw
 					# clé origine : 808F088DF9C60F9AEB398864D7FC8BEB602991DEDCD.030115079646C58755B5E67CBA6791FCCCD48513513
 					# décoée : E088DF9C6089AEB398864D7FC8BEB602991DFDCD.030115079646C58755B5E67CBA6791FCCCD48315
-					my $pre = substr($s,0,1);
-					my $post = substr($s,86,1);
 					my $old = $s = reverse(substr($s,3,81));
 #	substr($s,0,1) = substr($s,36,1);
 #	substr($s,10,1) = $pre;
@@ -268,6 +268,10 @@ sub handle_tag {
 					substr($s,74,1) = $pre;
 					substr($s,56,1) = substr($old,74,1);
 					substr($s,80,1) = substr($old,56,1);
+				} elsif (length($s) == 91) {
+					$s = substr($s,6,81);
+					substr($s,24,1) = $pre;
+					substr($s,53,1) = $post;
 				} elsif (length($s) == 86) {
 					# url de départ
 					# Y a probablement l'explication de leur codage de
@@ -293,8 +297,6 @@ sub handle_tag {
 					# pl=47&itag=160&
 					# s=232395E582AFBC4E64D6F0E921EEBD41837D6D1339.F3F7CE0350EB5B275216FB254D12DA15B9421A76A77&init=0-672&size=192x144&index=673-1196&fps=13
 					# &bitrate=111831,lmt=1449572842523717
-					my $post = substr($s,length($s)-1,1);
-					my $pre = substr($s,0,1);
 					$s = reverse substr($s,0,83);
 					substr($s,81-1,1) = substr($s,31-1,1);
 					substr($s,31-1,1) = $pre;
@@ -306,13 +308,11 @@ sub handle_tag {
 					# 67A1249B51AD71D452BF612572B5BE2530EC7F3F.9331D6D73814DBEE129E0F2D46E4CBFA285E5930
 				} elsif (length($s) == 88) {
 					if ($args{key} eq "yt6") { # pas sûr du tout !
-						my $pre = substr($s,0,1);
 						$s = reverse($s);
 						substr($s,2,2) = "";
 						substr($s,43,1) = $pre;
 						$s = substr($s,0,81);
 					} else {
-						my $pre = substr($s,0,1);
 						$s = substr($s,1);
 						my $post = substr($s,length($s)-6);
 						my $s2 = "";
@@ -327,7 +327,6 @@ sub handle_tag {
 					}
 				} elsif (length($s) == 84) {
 					$s = substr(reverse($s),1);
-					my $post = substr($s,0,1);
 					$s = substr($s,1);
 					my $pre = substr($s,0,1);
 					substr($s,0,1) = substr($s,39,1);
@@ -337,7 +336,6 @@ sub handle_tag {
 					substr($s,56,1) = substr($s,81,1);
 					substr($s,81,1) = "";
 				} elsif (length($s) == 82) {
-					my $pre = substr($s,0,1);
 					my $old = $s = substr($s,1);
 					if ($args{key} eq "yt6") {
 						substr($s,17,1) = $pre;
@@ -367,7 +365,6 @@ sub handle_tag {
 					# signature décodée :
 					# 73AAC043F70F58C8CFADBAF38B2F3D0935439026.C8BD1CCFA2117B4AFB25C230547A310C2AB2D93E
 					if ($args{key} eq "yt6") { # ???
-						my $pre = substr($s,0,1);
 						$s = substr($s,1,81);
 						substr($s,30,1) = $pre;
 					} else {
