@@ -93,11 +93,6 @@ sub decode_str {
 			substr($title,$index,length($_),$codage{$_}) if ($index >= 0);
 		} while ($index >= 0);
 	}
-	if ($ENV{LANG} =~ /UTF/) {
-		$title = Encode::encode("utf-8",$title);
-	} else {
-		$title = Encode::encode("iso-8859-15",$title );
-	}
 	$title =~ s/[\r\n]//g; # retours chariots à virer aussi !
 	$title;
 }
