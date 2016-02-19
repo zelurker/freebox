@@ -17,7 +17,7 @@ package progs::finter;
 #===============================================================================
 
 use strict;
-use warnings;
+# use warnings;
 use progs::telerama;
 @progs::finter::ISA = ("progs::telerama");
 use chaines;
@@ -27,27 +27,6 @@ use Cpanel::JSON::XS qw(decode_json);
 use Time::Local "timegm_nocheck";
 
 my $debug = 0;
-
-our %codage = (
-	'\u00e0' => 'à',
-	'\u00e2' => 'â',
-	'\u00e4' => 'ä',
-	'\u00e7' => 'ç',
-	'\u00e8' => 'è',
-	'\u00e9' => 'é',
-	'\u00ea' => 'ê',
-	'\u00eb' => 'ë',
-	'\u00ee' => 'î',
-	'\u00ef' => 'ï',
-	'\u00f4' => 'ô',
-	'\u00f6' => 'ö',
-	'\u00f9' => 'ù',
-	'\u00fb' => 'û',
-	'\u00fc' => 'ü',
-	'\u2019' => "'",
-	'\u00c7' => 'Ç',
-	'\u20ac' => 'euros',
-);
 
 our %fb = (
 	"bleu loire ocean" => "http://www.francebleu.fr/sites/default/files/lecteur_commun_json/timeline-13125.json",
@@ -86,13 +65,6 @@ sub get_date {
 
 sub decode_str {
 	my $title = shift;
-	foreach (keys %codage) {
-		my $index;
-		do {
-			$index = index($title,$_);
-			substr($title,$index,length($_),$codage{$_}) if ($index >= 0);
-		} while ($index >= 0);
-	}
 	$title =~ s/[\r\n]//g; # retours chariots à virer aussi !
 	$title;
 }
