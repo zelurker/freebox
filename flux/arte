@@ -1,0 +1,126 @@
+#!/usr/bin/perl
+
+use Cpanel::JSON::XS qw(decode_json);
+use strict;
+require "http.pl";
+
+# binmode STDOUT,":utf8";
+my $str = shift @ARGV;
+my @arg = split(/\//,$str);
+
+sub decode_field {
+	$_ = shift;
+	# Navigation dans le json, c'est là qu'on perd le + de temps parce que
+	# les structures changent en fonction des catégories choisies, donc
+	# faut s'adapter...
+
+	if (ref($_) eq "HASH") {
+		my %hash = %$_;
+		if ($hash{title}) {
+			my ($code) = $hash{url} =~ /fr\/(.+?)\//;
+			print "$hash{title}\n$str/vid:$code\n";
+		} elsif ($hash{day}) { # vidéos les + vues
+			if (!$arg[1]) {
+				print "$hash{day}\n$str/$hash{day}\n";
+			} elsif ($arg[1] eq $hash{day}) {
+				decode_field($hash{videos});
+			}
+		} elsif ($hash{category}) { # catégories de vidéos
+			if (!$arg[1]) {
+				print "$hash{category}{name}\n$str/$hash{category}{code}\n";
+			} elsif ($hash{category}{code} eq $arg[1]) {
+				decode_field($hash{videos});
+			}
+		} elsif ($hash{videos}) { # probablement videoSet, juste des videos...
+			decode_field($hash{videos});
+		}
+	} elsif (ref($_) eq "ARRAY") {
+		foreach (@$_) {
+			decode_field($_);
+		}
+	}
+}
+
+# print STDERR "*** str : $str\n";
+my $day = shift @arg;
+
+if ($arg[$#arg] =~ /vid:(.+)/) {
+	# On demande une vidéo !
+	my $code = $1;
+	my $url = "https://api.arte.tv/api/player/v1/config/fr/$code?platform=ARTEPLUS7&lang=fr_FR";
+	my $streams = myget($url,"cache/arte/$code",7);
+	my $json = decode_json($streams);
+	my $hash = $json->{videoJsonPlayer}{VSR};
+	print "direct\n";
+	foreach (keys %$hash) {
+		my $h = $hash->{$_};
+		next if ($h->{mediaType} eq "hls"); # hls c'est du m3u, on en veut pas!
+		print "$h->{mediaType} $h->{width}x$h->{height} $h->{versionLibelle}\n";
+		if ($h->{streamer}) {
+			print "$h->{streamer}$h->{url}\n";
+		} else {
+			print "$h->{url}\n";
+		}
+	}
+	exit(0);
+}
+
+my @urls = ("http://www.arte.tv/guide/fr/plus7/",
+               "http://www.arte.tv/guide/fr/plus7/toutes-les-videos?date=j-1",
+               "http://www.arte.tv/guide/fr/plus7/toutes-les-videos?date=j-2",
+               "http://www.arte.tv/guide/fr/plus7/toutes-les-videos?date=j-3",
+               "http://www.arte.tv/guide/fr/plus7/toutes-les-videos?date=j-4",
+               "http://www.arte.tv/guide/fr/plus7/toutes-les-videos?date=j-5",
+               "http://www.arte.tv/guide/fr/plus7/toutes-les-videos?date=j-6",
+               "http://www.arte.tv/guide/fr/plus7/toutes-les-videos?date=j-7");
+
+print "list\n";
+if (!defined($day)) {
+	print "Aujourd'hui\n0\n";
+	for (my $n=1; $n<=7; $n++) {
+		print "j-$n\n$n\n";
+	}
+	exit(0);
+} elsif ($day !~ /^\d$/) {
+	die "mauvais format $day\n";
+}
+
+my $page = myget($urls[$day],"cache/arte/j$day",1/24.0);
+my $capture = 0;
+my %json = ();
+foreach (split(/\n/,$page)) {
+	$capture = 1 if (/highlightedVideos/ || /videoSet/);
+	if ($capture) {
+		chomp;
+		if (/(\w+): ([\[\{].+),$/) {
+			$json{$1} = $2;
+		} elsif (/(\w+): ([\[\{].+)/) {
+			$json{$1} = $2;
+		}
+	}
+	last if ($capture && /\}\);/);
+}
+die "no capture\n" if ($capture == 0);
+foreach (sort { $a cmp $b } keys %json) {
+	next if ($_ eq "clusters"); # Juste les titres dans clusters, pas de vidéos
+	if (!defined($arg[0])) {
+		print "$_\n$str/$_\n";
+		next;
+	}
+	next if ($_ ne $arg[0]);
+	my $json;
+	eval  {
+		$json = decode_json( $json{$_});
+	};
+	if ($@) {
+		print "arte: couille dans le potage au niveau json $?:$@\n";
+		exit(0);
+	}
+	if (ref($json) eq "HASH") {
+		decode_field($json);
+	} else {
+		foreach (@$json) {
+			decode_field($_);
+		}
+	}
+}
