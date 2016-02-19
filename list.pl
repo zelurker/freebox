@@ -626,10 +626,26 @@ sub read_list {
 					# pas de mode (list ou direct)
 					$serv = "";
 					$base_flux =~ s/^(.+?)\/.+/$1/;
-				} elsif ($serv !~ /^(http|mms|prog)/ && $base_flux !~ /podcasts/) {
-					# reconstitue le vrai serv à partir de base_flux
-					$base_flux =~ /(.+?)\/(.+)/;
-					$serv = $2;
+				} elsif ($serv !~ /^(http|mms|prog)/ && $base_flux !~ /podcasts/ && $serv !~ /\//) {
+					# Endroit merdique : on se retrouve serv = valeur
+					# retournée et on veut l'arborescence des valeurs à la
+					# place, dispo dans base_flux sauf que base_flux
+					# utilise uniquement les libellés, pas les valeurs !!!
+					# Je ne suis pas sûr que la méthode ici soit fiable
+					# dans tous les cas, j'en doute même mais bon le
+					# principe c'est :
+					# on récupère base_flux, on vire l'entête (nom du
+					# plugin) et on remplace le dernier élément par la
+					# vraie valeur retournée.
+					# Attention en cas de retour (flèche gauche), serv ne
+					# vaut rien, cas particulier
+					#
+					# Solution à long terme : avoir une liste des valeurs
+					# en + de celles des libellés...
+					print "serv valait $serv\n";
+					my @arg = split(/\//,$base_flux);
+					$arg[$#arg] = $serv if (defined($serv));
+					$serv = join("/",@arg[1...$#arg]);
 					print "reconstitution serv = $serv\n";
 				}
 				if (!$serv && $base_flux =~ /\/result\:(.+)/) {
@@ -1313,10 +1329,23 @@ while (1) {
 					if ($base_flux =~ /\//) {
 						$mode_flux = "list";
 						my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+						print "left: $name,$serv,$flav,$audio,$video\n";
+						$serv =~ s/\/$//; # supprime un éventuel / à la fin
 						# Remet le "bon" service dans la liste
-						$base_flux =~ /.+\/(.+)/;
-						$serv = $1;
-						$list[$found] = [[$name,$serv,$flav,$audio,$video]];
+						$serv =~ s/(\/http.+)/\/http/; # vire un http (direct)
+						# si $serv contient des /, alors il a déjà le
+						# chemin complet pour la sélection actuelle, du
+						# coup il faut virer 2 niveaux !
+						if (!($serv =~ s/^(.+)\/.+\/.+/$1/)) {
+							$base_flux =~ /.+\/(.+)/;
+							$serv = $1;
+							print "left: corr base_flux $serv\n";
+						} else {
+							print "left: replace $name,$serv\n";
+						}
+						$list[$found] = [[$found,$name,$serv,$flav,$audio,$video]];
+						($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+						print "left: après màj $name,$serv,$flav,$audio,$video\n";
 					} else {
 						$mode_flux = "";
 					}
