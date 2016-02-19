@@ -13,10 +13,27 @@ use strict;
 use warnings;
 use LWP::UserAgent;
 use HTTP::Cookies;
+use File::Path qw(make_path);
 
 # Un get qui stocke les cookies et tient compte de l'utf dans le content-type
 sub myget {
-	my $url = shift;
+	# arguments optionnels : $cache un fichier à utiliser pour le cache
+	# et $age age du cache avant update en jours (nb à virgule ok)
+
+	my ($url,$cache,$age) = @_;
+	if ($cache) {
+		$age = 1 if (!$age);
+		my ($dir) = $cache =~ /^(.+)\//;
+		make_path($dir) if (!-d $dir);
+		if (-f $cache && -M $cache < $age) {
+			print STDERR "http.pl: cache hit, age ",(-M $cache),"\n";
+			open(my $f,"<$cache") || die "can't open $cache\n";
+			@_ = <$f>;
+			close($f);
+			return join("\n",@_);
+		}
+	}
+
 	my $cookie_jar = HTTP::Cookies->new(
            file => "$ENV{'HOME'}/lwp_cookies.dat",
            autosave => 1,
@@ -33,6 +50,11 @@ sub myget {
 	print STDERR "myget: got type $type\n";
 	if ($type =~ /charset=(.+)/) {
 		print "encoding: $1\n";
+	}
+	if ($cache) {
+		open(my $f,">$cache");
+		print $f $r->content;
+		close($f);
 	}
 	return $r->content;
 }
