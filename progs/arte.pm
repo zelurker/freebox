@@ -46,6 +46,11 @@ sub get {
 	my ($p,$channel,$source,$base_flux,$serv) = @_;
 	# print "arte: channel $channel,$source,$base_flux,$serv\n";
 	return undef if ($source !~ /flux/ || $base_flux !~ /^arte/);
+	if ($serv !~ /vid:(.+)/ && open(F,"<cache/arte/last_serv")) {
+		$serv = <F>;
+		chomp $serv;
+		close(F);
+	}
  	return undef if ($serv !~ /vid:(.+)/);
  	my $code = $1;
 
@@ -80,7 +85,7 @@ sub get {
 	}
 
 	my @tab = (undef, # chan id
-		"$source", "$channel",
+		"$source", $hash->{title},
 		undef, # début
 		undef, "", # fin
 		$hash->{subtitle}, # desc

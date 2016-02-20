@@ -296,7 +296,7 @@ sub check_eof {
 	$eof = 1;
 	unlink "vignettes" if ($has_vignettes);
 	print "check_eof: $source exit:$exit\n";
-	unlink("video_size","stream_info");
+	unlink("video_size","stream_info","cache/arte/last_serv");
 	if (!$stream && -f "info_coords") {
 		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
 			print F "clear\n";

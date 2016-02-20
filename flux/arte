@@ -47,6 +47,10 @@ my $day = shift @arg;
 if ($arg[$#arg] =~ /vid:(.+)/) {
 	# On demande une vidéo !
 	my $code = $1;
+	if (open(F,">cache/arte/last_serv")) {
+		print F $str;
+		close(F);
+	}
 	my $url = "https://api.arte.tv/api/player/v1/config/fr/$code?platform=ARTEPLUS7&lang=fr_FR";
 	my $streams = myget($url,"cache/arte/$code",7);
 	my $json = decode_json($streams);
