@@ -282,7 +282,8 @@ sub disp_prog {
 	}
 
 	my $out = out::setup_output("bmovl-src/bmovl",$raw,$long);
-	binmode($out, ":utf8"); # if ($source =~ /Fichiers/);
+	# Bizarre d'être obligé de faire ça, mais apparemment vaut mieux !
+	binmode($out, ":utf8") if ($ENV{LANG} =~ /UTF/);
 
 	print $out "$name\n";
 	print $out $raw if ($raw);
