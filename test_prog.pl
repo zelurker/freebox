@@ -36,10 +36,10 @@ my $sub = $p->get($channel) || die "die récupération prog finter: $@\n";
 
 my $n = 1;
 my $show = 0;
-print "Les 2 programmes d'avant :\n";
-while ($n < 3 && $sub) {
+print "Les 2 programmes d'après :\n";
+while ($n < 4 && $sub) {
 	core($sub);
-	$sub = $p->prev($channel);
+	$sub = $p->next($channel);
 	$n++;
 }
 exit(0);

@@ -27,6 +27,7 @@ use progs::podcasts;
 use progs::files;
 use progs::series;
 use progs::youtube;
+use progs::arte;
 
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -41,7 +42,7 @@ our ($channel,$long);
 my $time_refresh = 0;
 our @days = ("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi",
 	"Samedi");
-our ($source,$base_flux);
+our ($source,$base_flux,$serv);
 
 $SIG{PIPE} = sub { print "info: sigpipe ignoré\n" };
 my $start_timer = 0;
@@ -215,6 +216,7 @@ push @prog, progs::podcasts->new($net);
 push @prog, progs::files->new($net);
 push @prog, progs::series->new($net);
 push @prog, progs::youtube->new($net);
+push @prog, progs::arte->new($net);
 
 system("rm -f fifo_info && mkfifo fifo_info");
 # read_prg:
@@ -280,7 +282,7 @@ sub disp_prog {
 	}
 
 	my $out = out::setup_output("bmovl-src/bmovl",$raw,$long);
-	binmode($out, ":utf8") if ($source =~ /Fichiers/);
+	binmode($out, ":utf8"); # if ($source =~ /Fichiers/);
 
 	print $out "$name\n";
 	print $out $raw if ($raw);
@@ -435,6 +437,8 @@ if (!$channel) {
 		$source = $1;
 		$source =~ s/\/(.+)//;
 		$base_flux = $1;
+		$base_flux =~ s/,(.+)//;
+		$serv = $1;
 		$channel = $cmd;
 	} elsif ($cmd eq "record") {
 		out::clear("info_coords") if (-f "info_coords");
@@ -452,7 +456,7 @@ chomp $long if ($long);
 
 my $sub = undef;
 for (my $n=$#prog; $n>=0; $n--) {
-	$sub = $prog[$n]->get($channel,$source,$base_flux);
+	$sub = $prog[$n]->get($channel,$source,$base_flux,$serv);
 	if ($sub) {
 		$reader = $n;
 		last;

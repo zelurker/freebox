@@ -1919,7 +1919,7 @@ sub disp_list {
 		if ($source =~ /Fichiers/) {
 			$out = out::setup_output("fsel");
 		} elsif ($source eq "flux" && $base_flux ne "stations" && !$have_pic) {
-			$info = 1 if ($base_flux =~ /^(la-bas|podcasts)/);
+			$info = 1 if ($base_flux =~ /^(la-bas|podcasts|arte)/);
 			$out = out::setup_output("longlist");
 		} else {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
@@ -1945,7 +1945,7 @@ sub disp_list {
 			if ($source =~ /(Enregistrement|livetv)/) {
 				out::send_cmd_info("prog $service§$source/$base_flux") if ($info);
 			} else {
-				out::send_cmd_info("prog $name§$source/$base_flux") if ($info);
+				out::send_cmd_info("prog $name§$source/$base_flux,$service") if ($info);
 			}
 		}
 		$last_list = $cur;

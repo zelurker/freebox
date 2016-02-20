@@ -40,7 +40,7 @@ sub search {
 
 	# Décodage du js... !
 	my $c = $mech->content;
-	$mech->save_content("page.html");
+	# $mech->save_content("page.html");
 	my @vignette = ();
 	while ($c =~ s/a href="([^"]+?)"[^>]* class="?rg_l// ||
 		$c =~ s/a class="?rg_l" href="([^"]+?)"//) {
