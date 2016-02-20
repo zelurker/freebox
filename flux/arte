@@ -52,10 +52,10 @@ if ($arg[$#arg] =~ /vid:(.+)/) {
 	my $json = decode_json($streams);
 	my $hash = $json->{videoJsonPlayer}{VSR};
 	print "direct\n";
-	foreach (keys %$hash) {
+	foreach (sort { $a cmp $b } keys %$hash) {
 		my $h = $hash->{$_};
 		next if ($h->{mediaType} eq "hls"); # hls c'est du m3u, on en veut pas!
-		print "$h->{mediaType} $h->{width}x$h->{height} $h->{versionLibelle}\n";
+		print "$h->{mediaType} $h->{width}x$h->{height} @ $h->{bitrate}kbps $h->{versionLibelle}\n";
 		if ($h->{streamer}) {
 			print "$h->{streamer}$h->{url}\n";
 		} else {
