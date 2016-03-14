@@ -425,8 +425,13 @@ sub run_mplayer {
 		close CHILD;
 		$args[1] =~ s/ http.+//; # vire le prog si il est encore attaché là !
 		if ($bookmarks{$serv}) {
-			print "run_mplayer: bookmark $bookmarks{$serv}\n";
-			push @args,("-ss",$bookmarks{$serv});
+			if ($bookmarks{$serv} > 0) {
+				print "run_mplayer: bookmark $bookmarks{$serv}\n";
+				push @args,("-ss",$bookmarks{$serv});
+			} else {
+				print "run_mplayer: deleting bookmark $bookmarks{$serv}\n";
+				delete $bookmarks{$serv};
+			}
 		}
 		open(STDIN, "<&PARENT") || die "can't dup stdin to parent";
 		# close(STDIN);
