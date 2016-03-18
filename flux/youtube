@@ -308,10 +308,19 @@ sub handle_tag {
 					# 67A1249B51AD71D452BF612572B5BE2530EC7F3F.9331D6D73814DBEE129E0F2D46E4CBFA285E5930
 				} elsif (length($s) == 88) {
 					if ($args{key} eq "yt6") { # pas sûr du tout !
-						$s = reverse($s);
-						substr($s,2,2) = "";
-						substr($s,43,1) = $pre;
-						$s = substr($s,0,81);
+						# url de ce type : https://r15---sn-25g7sn7d.googlevideo.com/videoplayback?&pcm2=no&expire=1458319152&sparams=dur,gcr,id,initcwndbps,ip,ipbits,itag,lmt,mime,mm,mn,ms,mv,nh,pcm2,pl,ratebypass,requiressl,source,upn,expire&initcwndbps=3716250&upn=SsSsEux3fc0&pl=41&sver=3&mime=video/webm&key=yt6&gcr=fr&mn=sn-25g7sn7d&fallback_host=tc.v2.cache5.googlevideo.com&ratebypass=yes&source=youtube&id=o-AAbSgyX3lkoe4fg6UcfblIDpOd4pM1jTnYbY4jlz5FOU&ipbits=0&mm=31&mv=m&fexp=9405972,9407156,9414875,9416126,9420452,9422372,9422596,9423661,9423662,9426269,9426323,9427036,9427902,9429566,9429861,9431012,9431270&nh=IgpwcjAxLnBhcjEwKgkxMjcuMC4wLjE&itag=43&ip=2001:41d0:fe0b:6d00:7a34:fe66:1360:c62f&lmt=1450395935006854&ms=au&requiressl=yes&dur=0.000&mt=1458297430&signature=499404671B5CC29D336B1EDDA3095E9482795B592.ED44AC1C5EAFC84DFA49908A7092A7F664B0305
+						$s = substr($s,4,81);
+						my $t = substr($s,52,1);
+						substr($s,52,1) = $pre;
+						my $t2 = substr($s,29,1);
+						substr($s,29,1) = $t;
+						$t = substr($s,36,1);
+						substr($s,36,1) = $t2;
+						substr($s,63,1) = $t;
+#						$s = reverse($s);
+#						substr($s,2,2) = "";
+#						substr($s,43,1) = $pre;
+#						$s = substr($s,0,81);
 					} else {
 						$s = substr($s,1);
 						my $post = substr($s,length($s)-6);

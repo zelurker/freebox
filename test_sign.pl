@@ -51,13 +51,18 @@ if (length($s) == 87) {
 		substr($s,21,1) = $prev;
 		substr($s,49,1) = $pre;
 	} else {
-		# déduit à partir de :
-		# original : 3E37E7EF363ED472A3E66C5913B9EA776B196A882B7C1.DB000454D23DE1813148366A385335F6C2F62DE6E6
-		# résultat : 6ED26F2C6F533583A6638413181ED32D454000BD.1C3B288A691B677AE9B3195C66E3A274DE363FE7
-		$s = reverse($s);
-		substr($s,2,2) = "";
-		substr($s,43,1) = $pre;
-		$s = substr($s,0,81);
+		$s = substr($s,4,81);
+		my $t = substr($s,52,1);
+		substr($s,52,1) = $pre;
+		my $t2 = substr($s,29,1);
+		substr($s,29,1) = $t;
+		$t = substr($s,36,1);
+		substr($s,36,1) = $t2;
+		substr($s,63,1) = $t;
+#		$s = reverse($s);
+#		substr($s,2,2) = "";
+#		substr($s,43,1) = $pre;
+#		$s = substr($s,0,81);
 	}
 } elsif (length($s) == 86) {
 	# url de départ
@@ -80,25 +85,30 @@ if (length($s) == 87) {
 	substr($s,56,1) = substr($s,81,1);
 	substr($s,81,1) = "";
 } elsif (length($s) == 82) {
-	my $old = $s = substr($s,1);
-	if ($args{key} eq "yt6") {
-		substr($s,17,1) = $pre;
-		# substr($s,36,1) = substr($s,0,1);
-		substr($s,0,1) = substr($old,17,1);
-		# substr($s,41,1) = substr($s,80,1);
-		substr($s,80,1) = substr($old,79,1);
-		# substr($s,50,1) = substr($old,2,1);
-		substr($s,79,1) = substr($s,13,1);
-		substr($s,13,1) = substr($old,80,1);
-	} else {
-		substr($s,14,1) = substr($s,36,1);
-		substr($s,36,1) = substr($s,0,1);
-		substr($s,0,1) = substr($old,14,1);
-		substr($s,2,1) = $pre;
-		substr($s,41,1) = substr($s,80,1);
-		substr($s,80,1) = substr($old,41,1);
-		substr($s,50,1) = substr($old,2,1);
-	}
+	my $old = $s = substr($s,0,81);
+# 	if ($args{key} eq "yt6") {
+# 		substr($s,17,1) = $pre;
+# 		# substr($s,36,1) = substr($s,0,1);
+# 		substr($s,0,1) = substr($old,17,1);
+# 		# substr($s,41,1) = substr($s,80,1);
+# 		substr($s,80,1) = substr($old,79,1);
+# 		# substr($s,50,1) = substr($old,2,1);
+# 		substr($s,79,1) = substr($s,13,1);
+# 		substr($s,13,1) = substr($old,80,1);
+# 	} else {
+# 		substr($s,14,1) = substr($s,36,1);
+# 		substr($s,36,1) = substr($s,0,1);
+# 		substr($s,0,1) = substr($old,14,1);
+# 		substr($s,2,1) = $pre;
+# 		substr($s,41,1) = substr($s,80,1);
+# 		substr($s,80,1) = substr($old,41,1);
+# 		substr($s,50,1) = substr($old,2,1);
+# 	}
+
+	# grrr, variation suivante, ils me rendent dingue !
+	# Au moins elles sont simples...
+	substr($s,0,1) = substr($s,48,1);
+	substr($s,48,1) = substr($old,0,1);
 } elsif (length($s) == 83) {
 	# url originale
 	# s=073AAC043F70F58C8CFADBAF38B2F3D7935439026.C8BD1CCFA2117B4AFB25C230547A310C2AB2D93EE

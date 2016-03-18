@@ -891,7 +891,7 @@ sub run_mplayer2 {
 	}
 	unlink "fifo_cmd","fifo";
 	system("mkfifo fifo_cmd fifo");
-	my $player = "mplayer2";
+	my $player = "mplayer";
 	my $cache = 100;
 	my $filter = "";
 	my $cd = "";
