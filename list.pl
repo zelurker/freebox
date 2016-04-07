@@ -891,7 +891,7 @@ sub run_mplayer2 {
 	}
 	unlink "fifo_cmd","fifo";
 	system("mkfifo fifo_cmd fifo");
-	my $player = "mplayer";
+	my $player = "mplayer2";
 	my $cache = 100;
 	my $filter = "";
 	my $cd = "";
@@ -967,6 +967,21 @@ sub run_mplayer2 {
 		}
 	}
 
+	if ($player eq "mplayer2" && $serv =~ /(avi|mkv$)/ &&
+		# Dilemne : mplayer2 ne supporte pas le x265, mais mplayer est
+		# bourré de bugs ! Donc on continue à avoir mplayer2 par défaut
+		# sauf sur les fichiers où on ne trouve pas la vidéo avec lui !
+	   	open(F,"$player -frames 0 -identify -frames 0 \"$serv\"|")) {
+		my $found_video = 0;
+		while (<F>) {
+			if (/ID_VIDEO_FORMAT/) {
+				$found_video = 1;
+				last;
+			}
+		}
+		close(F);
+		$player = "mplayer" if (!$found_video);
+	}
 	my @list = ("perl","filter_mplayer.pl",$player,$dvd1,$serv,
 		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
 		# Apparemment options interdites avec vdpau, sinon on perd la synchro !
