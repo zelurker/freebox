@@ -938,18 +938,11 @@ sub run_mplayer2 {
 			$audio = $1;
 		}
 		if ($src =~ /Fichiers vidéo/) {
-			if ($name =~ /(mpg|ts)$/) {
-				$filter = ",kerndeint";
-			}
+# 			if ($name =~ /(mpg|ts)$/) {
+# 				$filter = ",kerndeint";
+# 			}
 			$cache = 5000;
 		} elsif ($src =~ /(freeboxtv|dvb)/) {
-			# Réglage pour les chaines HD :
-			# l'entrelacement est off par défaut, bouffe trop de temps cpu
-			# la touche D doit théoriquement le remettre, pas sûr que ça marche sur
-			# mplayer2, à tester vraiment.
-			# mplayer2 est nettement + rapide que mplayer pour la hd, donc on le prend
-			# avec mplayer il faut obligatoirement passer -demuxer lavf pour les chaines tnt hd
-			# A tester aussi : est-ce que l'index du fichier est bien mis à jour en temps réel ?
 			# $filter = ",kerndeint";
 			$player = "mplayer2";
 		}
@@ -985,12 +978,12 @@ sub run_mplayer2 {
 	my @list = ("perl","filter_mplayer.pl",$player,$dvd1,$serv,
 		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
 		# Apparemment options interdites avec vdpau, sinon on perd la synchro !
-		#	"-framedrop","-nocorrect-pts",
+#			"-framedrop", # "-nocorrect-pts",
 	   	"-autosync",10,
 		"-fs",
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
-		"bmovl=1:0:fifo,screenshot$filter",$dvd2,$dvd3);
+		"bmovl=1:0:fifo$filter,screenshot",$dvd2,$dvd3);
 	if ($audio) {
 		if ($src =~ /youtube/) {
 			push @list,("-audiofile",$audio);
