@@ -95,7 +95,7 @@ while [ "$ok" == "0" ]; do
 	echo sanity check $src...
 	case $src in
 		dvb)
-			mplayer -quiet -dumpfile "$name" -dumpstream dvb://"$service" >& log &
+			mplayer -quiet -dumpfile "$name" -dumpstream dvb://"$service" >& /dev/null &
 			;;
 		freebox|freeboxtv|"radios freebox")
 			# On met -c 2 parce que j'ai une ligne trop pourrie en ce moment
@@ -111,10 +111,10 @@ while [ "$ok" == "0" ]; do
 			fi
 				
 			echo lancement mplayer $audio2 -dumpfile "$name" -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour"
-			mplayer $audio2 -dumpfile "$name" -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" >& log &
+			mplayer $audio2 -dumpfile "$name" -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" >& /dev/null &
 			;;
 		flux)
-			mplayer -quiet -dumpfile "$name" -dumpstream "$service" >& log &
+			mplayer -quiet -dumpfile "$name" -dumpstream "$service" >& /dev/null &
 			;;
 		*)
 			echo source $src pas prévue pour run_mp1, on sort
