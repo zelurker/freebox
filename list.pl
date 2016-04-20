@@ -942,8 +942,8 @@ sub run_mplayer2 {
 # 				$filter = ",kerndeint";
 # 			}
 			$cache = 5000;
-		} elsif ($src =~ /(freeboxtv|dvb)/) {
-			# $filter = ",kerndeint";
+		} elsif ($src =~ /(freeboxtv|dvb|livetv)/) {
+			$filter = ",kerndeint";
 			$player = "mplayer2";
 		}
 	}
@@ -979,7 +979,7 @@ sub run_mplayer2 {
 		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
 		# Apparemment options interdites avec vdpau, sinon on perd la synchro !
 #			"-framedrop", # "-nocorrect-pts",
-	   	"-autosync",10,
+#	   	"-autosync",10,
 		"-fs",
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
@@ -1006,6 +1006,7 @@ sub run_mplayer2 {
 	}
 	# hr-mp3-seek : lent, surtout quand on revient en arrière, mais
 	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/);
+	push @list,("-demuxer","lavf") if ($player eq "mplayer" && $serv =~ /\.ts$/);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
 		if (!$list[$n]) {
