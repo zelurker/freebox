@@ -9,6 +9,7 @@ use POSIX qw(strftime :sys_wait_h SIGALRM);
 use Encode;
 use Fcntl;
 use File::Glob 'bsd_glob'; # le glob dans perl c'est n'importe quoi !
+use File::Path 'rmtree';
 use out;
 use chaines;
 require "mms.pl";
@@ -1423,8 +1424,13 @@ while (1) {
 		if ($source =~ /^(Fichiers|Enregistrements|livetv)/) {
 			my $file = $list[$found][0][2];
 			print "fichier à effacer $file\n";
-			unlink $file;
-			unlink "$file.info";
+			$conf{"sel_$source"} = $found; # garde le même index après read_list
+			if (-d "$file") {
+				rmtree $file;
+			} else {
+				unlink $file;
+				unlink "$file.info";
+			}
 		} elsif (open(F,">rejets/$source.0")) {
 			if (open(G,"<rejets/$source")) {
 				while (<G>) {
