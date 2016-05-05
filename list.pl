@@ -1421,15 +1421,26 @@ while (1) {
 			unlink "rejets/$source" && rename("rejets/$source.0","rejets/$source");
 		}
 	} elsif ($cmd eq "reject") {
+		my $file = $list[$found][0][2];
+		print "fichier à effacer $file\n";
 		if ($source =~ /^(Fichiers|Enregistrements|livetv)/) {
-			my $file = $list[$found][0][2];
-			print "fichier à effacer $file\n";
 			$conf{"sel_$source"} = $found; # garde le même index après read_list
 			if (-d "$file") {
 				rmtree $file;
 			} else {
 				unlink $file;
 				unlink "$file.info";
+			}
+		} elsif ($source eq "flux") {
+			my $b = $base_flux;
+			$b =~ s/\/.+//;
+			if (-x "flux/$b") {
+				system("flux/$b del \"$file\"");
+			}
+			if ($base_flux =~ /\/(.+)/) {
+				# hack : on remet l'ancien base_flux dans la liste pour
+				# actualiser l'affichage sans sélectionner l'élément effacé
+				$list[$found][0][2] = $1;
 			}
 		} elsif (open(F,">rejets/$source.0")) {
 			if (open(G,"<rejets/$source")) {

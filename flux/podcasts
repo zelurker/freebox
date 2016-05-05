@@ -32,6 +32,17 @@ if (open($f,"<$fpod")) {
 	chomp @abo;
 }
 my $str = shift @ARGV;
+if ($str eq "del") {
+	my $url = shift @ARGV;
+	for (my $n=1; $n <= $#abo; $n++) {
+		if ($abo[$n] eq $url) {
+			splice @abo,$n-1,2;
+			save_pods();
+			last;
+		}
+	}
+	exit(0);
+}
 my $debug = 0; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
@@ -45,10 +56,7 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 	$str = $2;
 	push @abo,$title;
 	push @abo,$2;
-	if (open($f,">$fpod")) {
-		print $f join("\n",@abo);
-		close($f);
-	}
+	save_pods();
 	exit(0);
 } elsif ($str eq "Abonnements") {
 	header("list");
@@ -285,3 +293,9 @@ sub REAPER {
 	}
 }
 
+sub save_pods {
+	if (open($f,">$fpod")) {
+		print $f join("\n",@abo);
+		close($f);
+	}
+}
