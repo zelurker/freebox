@@ -40,14 +40,15 @@ our %icons = (
 	119 => "http://upload.wikimedia.org/wikipedia/fr/thumb/8/8a/France_%C3%94_logo_2008.svg/347px-France_%C3%94_logo_2008.svg.png",
 	120 => "http://upload.wikimedia.org/wikipedia/fr/6/6e/Funtv.gif",
 	121 => "http://upload.wikimedia.org/wikipedia/fr/thumb/4/41/Logo_Game_One_2006.svg/735px-Logo_Game_One_2006.svg.png",
+	133 => "https://upload.wikimedia.org/wikipedia/fr/thumb/b/b4/LCI_logo_%282016%29.png/1280px-LCI_logo_%282016%29.png",
 	135 => "http://upload.wikimedia.org/wikipedia/fr/thumb/a/a5/Liberty_TV_Logo.png/220px-Liberty_TV_Logo.png",
 	142 => "https://upload.wikimedia.org/wikipedia/fr/e/e4/Mangas_%28TV%29_logo_2015.png",
-	166 => "http://upload.wikimedia.org/wikipedia/fr/8/84/Nantes7.gif",
 	173 => "http://upload.wikimedia.org/wikipedia/fr/0/0c/Logo_NRJ_Hits.jpg",
 	174 => "https://upload.wikimedia.org/wikipedia/fr/thumb/9/9b/NRJ_Paris_Logo.png/800px-NRJ_Paris_Logo.png",
 	186 => "http://upload.wikimedia.org/wikipedia/fr/thumb/0/0b/Paris_premi%C3%A8re_1997_logo.svg/150px-Paris_premi%C3%A8re_1997_logo.svg.png",
 	199 => "http://upload.wikimedia.org/wikipedia/fr/thumb/9/9a/RTL9logo.png/120px-RTL9logo.png",
 	206 => "https://upload.wikimedia.org/wikipedia/fr/thumb/8/83/TCM_logo.svg/885px-TCM_logo.svg.png",
+	214 => "https://upload.wikimedia.org/wikipedia/fr/9/98/T%C3%A9l%C3%A9nantes_logo_2011.png",
 	230 => "http://upload.wikimedia.org/wikipedia/fr/thumb/0/04/Poker_Channel_Logo.png/300px-Poker_Channel_Logo.png",
 	237 => "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3d/TV5Monde_Logo.svg/langfr-631px-TV5Monde_Logo.svg.png",
 	245 => "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Logo_tvt_2016_RVB.png/800px-Logo_tvt_2016_RVB.png",
@@ -68,6 +69,7 @@ our %chan;
 
 sub conv_channel {
 	my $channel = shift;
+	# chaine passée -> chaine dans liste_chaines
 	my %corresp =
 	(
 		"Poker Channel" => "The Poker Channel",
@@ -91,6 +93,7 @@ sub conv_channel {
 		"telenantes" => "Télé Nantes",
 		"NUMERO 23" => "Numéro 23",
 		"RMC DECOUVERTE" => "RMC Découverte",
+		"LCI" => "LCI - La Chaîne Info",
 	);
 	$channel =~ s/ \(.+\)//;
 	$channel =~ s/ ?hd$//i;
