@@ -90,6 +90,7 @@ void init_video() {
     sdl_screen = SDL_SetVideoMode( desktop_w,desktop_h,
 	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT /* |SDL_FULLSCREEN */ );
     SDL_ShowCursor(SDL_DISABLE);
+    SDL_EnableUNICODE(1);
     FILE *f = fopen("desktop","w");
     if (f) {
 	fprintf(f,"%d\n%d\n",desktop_w,desktop_h);
