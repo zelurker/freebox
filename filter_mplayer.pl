@@ -635,6 +635,9 @@ while (1) {
 				if (!$artist && !$titre && $chan =~ /(.+) - (.+)\..../) {
 					# Déduction de l'artiste et du titre sur le nom de fichier
 					($artist,$titre) = ($1,$2);
+					if ($artist =~ /\d+ \- (.+)/) { # piste - artiste
+						$artist = $1;
+					}
 				}
 				if ($images && $last_t == 0 && ($artist || $titre)) {
 					print "handle_image from timer\n";
