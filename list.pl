@@ -393,8 +393,9 @@ sub read_list {
 	} elsif ($source eq "cd") {
 		cd_menu();
 	} elsif ($source eq "dvd") {
-		@list = ([[1,"mplayer"]],
-		[[2,"vlc"]],
+		@list = ([[1,"mplayer dvdnav"]],
+		[[2,"mplayer dvd raw"]],
+		[[3,"vlc"]],
 		[[3,"eject"]]);
 	} elsif ($source =~ /freebox/) {
 		my $list;
@@ -948,16 +949,20 @@ sub run_mplayer2 {
 			$player = "mplayer2";
 		}
 	}
-	my ($dvd1,$dvd2,$dvd3);
+	my ($dvd1,@dvd2);
 	if ($serv =~ /iso$/i || $src eq "dvd") {
-		$serv = $dvd;
-		if ($flav eq "mplayer") {
+		if ($flav eq "mplayer dvdnav") {
 			$dvd1 = "-dvd-device";
-			$dvd2 = "-nocache";
-			$dvd3 = "dvdnav://";
+			@dvd2 = ("-nocache");
+			push @dvd2, "dvdnav://";
 			$filter = ",kerndeint";
-		} else {
+		} elsif ($flav eq "vlc") {
 			exec("vlc","-f","--deinterlace","-1",$serv);
+		} else { # mplayer raw, le résultat quoi...
+			print "dvdraw params : $name,$src,$serv,$flav,$audio,$video\n";
+			@dvd2 = ("-dvd-device",$dvd,"-cache","5000");
+			# push @dvd2, "dvdnav://";
+			$filter = ",kerndeint";
 		}
 	}
 
@@ -984,7 +989,7 @@ sub run_mplayer2 {
 		"-fs",
 		"-stop-xscreensaver","-identify",$quiet,"-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
-		"bmovl=1:0:fifo$filter,screenshot",$dvd2,$dvd3);
+		"bmovl=1:0:fifo$filter,screenshot",@dvd2);
 	if ($audio) {
 		if ($src =~ /youtube/) {
 			push @list,("-audiofile",$audio);
@@ -1149,6 +1154,18 @@ sub load_file2 {
 		if ($pid_player2) {
 			print "player2 pid ok, kill...\n";
 			kill "TERM" => $pid_player2;
+		}
+		if ($src eq "dvd" && $flav eq "mplayer dvd raw") {
+			open(F,"mplayer2 -dvd-device $dvd dvd://1 -nocache -identify -frames 0|");
+			@list = ();
+			while (<F>) {
+				if (/ID_DVD_TITLE_(\d+)_CHAPTERS=(\d+)/) {
+					push @list,[[$1,"Titre $1 : $2 chapitres","dvd://$1"]];
+				}
+			}
+			close(F);
+			disp_list();
+			return;
 		}
 		# On a déjà pas de player2, on admet qu'il faut tout relancer
 		# dans ce cas là
@@ -1499,13 +1516,15 @@ while (1) {
 		} elsif ($source eq "dvd") {
 			mount_dvd();
 			if ($base_flux eq "dvd") {
+				print "dvdmain: exec_file $name,$serv,$audio,$video\n";
 				next if (exec_file($name,$serv,$audio,$video));
 			} elsif ($name eq "eject") {
 				system("eject $dvd");
 				next;
 			} else {
 				if (-d "$dvd/VIDEO_TS" || -d "$dvd/video_ts") {
-					next if (load_file2("dvd","dvd",$name));
+					print "dvdmain: load_file2 dvd,dvd name $name,$serv\n";
+					next if (load_file2("dvd",($serv =~ /^dvd\:\// ? $serv : "dvd"),$name));
 				} else {
 					$base_flux = "dvd";
 					list_files();
