@@ -6,7 +6,32 @@ C, et ça utilise principalement mplayer/mplayer2.
 Ca permet d'avoir les chaines tnt par une carte dvb, les flux youtube,
 shoutcasts et compagnie, les podcasts, les cds audio, les radios (avec
 affichage d'images google images en fonction de ce qui passe), lecture de
-musiques et de vidéos en local ou en réseau évidemment.
+musiques et de vidéos en local ou en réseau évidemment et les dvds.
+Il faut avoir un minimum configuré mplayer en local du genre mettre au
+moins dans ~/.mplayer/config :
+--- début ---
+fs=1 # si on veut du plein écran par défaut alang=fra,fre # langue par
+# défaut pour l'audio quand disponible
+ao=alsa:device=hw=0.0 # utiliser le 1er périphérique alsa dispo et pas
+# "default"
+# Je me suis aperçu que si on ne configure pas alsa de cette façon on ne
+# peut avoir de sortie à 96 Khz par exemple, on tombe sur une espèce de
+# périphérique logique limité dans ses capacités...
+ac=hwac3,hwdts, # sortie hardware ac3 et dts, à n'utiliser que si on a
+# branché la sortie optique évidemment !
+subpos=90 # on remonte un peu les sous titres
+subcp=UTF8 # qui sont en utf8 d'habitude
+vo=vdpau # sortie vidéo par défaut : vdpau (nvidia)
+stop-xscreensaver=1
+mixer-channel=0,0 # pour aller avec la conf alsa pour régler le volume avec
+# les 2 touches du haut du pavé numérique
+--- fin ---
+
+Il y a aussi des patches optionnels pour mplayer et mplayer2, c'est mieux
+avec mais on peut s'en passer dans la plupart des cas.
+mplayer2 est utilisé par défaut sauf quand on est obligé d'utiliser mplayer.
+On peut éventuellement utiliser vlc pour la lecture dvd mais il n'est pas
+pratique au clavier... !
 
 En fait vu que ma télé dans la salle n'a pas de tuner tnt, la seule façon
 de regarder la télé est d'utiliser cette interface, donc je continue à
