@@ -91,6 +91,7 @@ void init_video() {
 	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT /* |SDL_FULLSCREEN */ );
     SDL_ShowCursor(SDL_DISABLE);
     SDL_EnableUNICODE(1);
+    SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
     FILE *f = fopen("desktop","w");
     if (f) {
 	fprintf(f,"%d\n%d\n",desktop_w,desktop_h);

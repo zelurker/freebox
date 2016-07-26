@@ -877,7 +877,8 @@ static void handle_event(SDL_Event *event) {
     if (!nb_keys) read_inputs();
     if (event->type != SDL_KEYDOWN) return;
     int input = event->key.keysym.sym;
-    if (event->key.keysym.unicode) input = event->key.keysym.unicode;
+    if (event->key.keysym.unicode && (input == 0 || (input >= 'a' && input <= 'z')))
+	input = event->key.keysym.unicode;
     int mod = event->key.keysym.mod;
     printf("reçu touche %d (%c)\n",input,input);
     int n;
