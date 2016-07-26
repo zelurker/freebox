@@ -1071,9 +1071,8 @@ sub load_file2 {
 			print "load_file2: pb conv utf $cont\n";
 		}
 		my @old = @list;
-		if ($cont =~ /^#EXTM3U/) {
-			@list = ();
-		} else {
+		@list = ();
+		if ($cont !~ /^#EXTM3U/) {
 			$base_flux = $old_base;
 		}
 		my $num = 1;
@@ -1099,13 +1098,8 @@ sub load_file2 {
 				push @list,[\@cur];
 				$name = undef;
 			} elsif (-f "$serv$_") { # liste de fichiers locaux
-				$serv .= $_;   # prend juste le 1er et sort !
-				for ($found=0; $found<=$#list; $found++) {
-					my ($name) = get_name($list[$found]);
-					last if ($name eq $_);
-				}
-				$cont = undef;
-				last;
+				push @list,[[$num++,$_,"$serv$_"]];
+				$found = 0;
 			} else {
 				$serv = $_;
 			}
@@ -1115,6 +1109,11 @@ sub load_file2 {
 			$cont = undef;
 			$base_flux = $old_base;
 			# $serv va juste être passé à la suite...
+		} elsif (@list != @old) {
+			$serv = $list[0][0][2];
+			disp_list();
+			# boucle sur la 1ère entrée de la liste
+			return load_file2($list[0][0][1],$serv,$flav,$audio,$video);
 		}
 		return 0 if ($cont && $serv =~ /m3u$/);
 	}
