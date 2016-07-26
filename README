@@ -1,12 +1,14 @@
 Une interface vidéo que j'ai faite pour remplacer celle de la freebox que
 j'aimais pas, après avoir testé mythtv que j'ai trouvé lourd et rempli de
 bugs. L'idée c'est d'avoir un truc simple, le + court possible, et
-facilement extensible. C'est essentiellement écrit en perl, avec un peu de
-C, et ça utilise principalement mplayer/mplayer2.
+facilement extensible, et utilisable entièrement au clavier, j'utiliser un
+clavier sans fil comme télécommande en fait. C'est essentiellement écrit en
+perl, avec un peu de C, et ça utilise principalement mplayer/mplayer2.
 Ca permet d'avoir les chaines tnt par une carte dvb, les flux youtube,
 shoutcasts et compagnie, les podcasts, les cds audio, les radios (avec
 affichage d'images google images en fonction de ce qui passe), lecture de
 musiques et de vidéos en local ou en réseau évidemment et les dvds.
+
 Il faut avoir un minimum configuré mplayer en local du genre mettre au
 moins dans ~/.mplayer/config :
 --- début ---
@@ -28,10 +30,23 @@ mixer-channel=0,0 # pour aller avec la conf alsa pour régler le volume avec
 --- fin ---
 
 Il y a aussi des patches optionnels pour mplayer et mplayer2, c'est mieux
-avec mais on peut s'en passer dans la plupart des cas.
+avec mais on peut s'en passer dans la plupart des cas. J'ai aussi un fork
+sur github de mplayer2 vu qu'il n'est plus maintenu pour le rendre
+compatible avec la dernière libavcodec... note que cette version a des
+bugs, entre autres les copies d'écran ne marchent plus. Chaint à corriger,
+peut-être + tard (c'est pas une priorité, la vidéo et l'audio marchent
+bien).
 mplayer2 est utilisé par défaut sauf quand on est obligé d'utiliser mplayer.
 On peut éventuellement utiliser vlc pour la lecture dvd mais il n'est pas
 pratique au clavier... !
+
+La commande à lancer pour lancer tout ça c'est freebox.
+On peut éventuellement lancer ça à la place d'un gestionnaire de fenêtres
+en mettant dans son .xsession :
+cd ~/free
+./freebox >& freebox.log
+
+ça permet d'avoir un pc spécialisé pour ça.
 
 En fait vu que ma télé dans la salle n'a pas de tuner tnt, la seule façon
 de regarder la télé est d'utiliser cette interface, donc je continue à
