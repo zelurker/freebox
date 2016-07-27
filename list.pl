@@ -1085,10 +1085,8 @@ sub load_file2 {
 			print "load_file2: pb conv utf $cont\n";
 		}
 		my @old = @list;
+		my $end_list = $#list;
 		@list = ();
-		if ($cont !~ /^#EXTM3U/) {
-			$base_flux = $old_base;
-		}
 		my $num = 1;
 		my $name = "";
 		my @pic = ();
@@ -1113,7 +1111,6 @@ sub load_file2 {
 				$name = undef;
 			} elsif (-f "$serv$_") { # liste de fichiers locaux
 				push @list,[[$num++,$_,"$serv$_"]];
-				$found = 0;
 			} else {
 				$serv = $_;
 			}
@@ -1125,6 +1122,8 @@ sub load_file2 {
 			# $serv va juste être passé à la suite...
 		} elsif (@list != @old) {
 			$serv = $list[0][0][2];
+			$conf{"sel_$source"} = $end_list; # index pour le retour...
+			$found = 0;
 			disp_list();
 			# boucle sur la 1ère entrée de la liste
 			return load_file2($list[0][0][1],$serv,$flav,$audio,$video);
@@ -1797,9 +1796,15 @@ while (1) {
 		$found++;
 		if ($found > $#list) {
 			if ($source =~ /^Fichiers /) {
-				$found = 1; # Pointe sur ..
-				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-				exec_file($name,$serv,$audio,$video);
+				if ($base_flux =~ /m3u$/) {
+					$base_flux = undef;
+					read_list();
+					disp_list();
+				} else {
+					$found = 1; # Pointe sur ..
+					my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+					exec_file($name,$serv,$audio,$video);
+				}
 				goto again;
 			} else {
 				$found = 0;
