@@ -16,6 +16,14 @@ require "mms.pl";
 require "radios.pl";
 use HTML::Entities;
 
+# Un mot sur le format interne de @list :
+# chaque élément est un tableau de tableau, c'est parce qu'à l'origine
+# @list ne contenait que les chaines de la freebox et pour certaines
+# chaines on avait plusieurs versions dispo, donc toutes les versions
+# allaient dans le même élément de @list C'est sûr que maintenant ça fait
+# un peu gachis de place où le seul élément utilisé du tableau de tableau
+# est toujours le 0...
+
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our ($inotify,$watch);
 use Linux::Inotify2;
@@ -732,6 +740,12 @@ sub read_list {
 }
 
 sub get_name {
+
+	# Récupère le nom d'une chaine passée en paramètre
+	# Si le menu de mode est ouvert pour la chaine il indique l'indice
+	# utilisé
+	# sinon on récupère le nom le + court
+
 	my $rtab = shift;
 	my $name = $$rtab[0][1];
 	my $sel = $$rtab[0];
