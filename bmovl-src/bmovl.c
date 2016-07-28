@@ -892,7 +892,10 @@ static void handle_event(SDL_Event *event) {
 		if (!strncmp(command[n],"run",3))
 		    system(&command[n][4]);
 		else {
-		    send_cmd("fifo_cmd",command[n]);
+		    if (fifo)
+			send_cmd("fifo_cmd",command[n]);
+		    else
+			send_cmd("fifo_list",command[n]);
 		}
 		break;
 	    }
@@ -929,10 +932,13 @@ static void handle_event(SDL_Event *event) {
 		}
 		send_cmd("fifo_list",buf);
 	    }
+	    return;
 	} else if (input >= 'a' && input <= 'z' && (mod & KMOD_SHIFT)) {
 	    // Particularité : shift + touche alphabétique pour naviguer par
 	    // lettre dans les listes
 	    input -= 32;
+	}
+	if (input >= 32 && input < 255) {
 	    if (fifo) {
 		sprintf(buf,"key_down_event %d",input);
 		send_cmd("fifo_cmd",buf);

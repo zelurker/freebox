@@ -1763,9 +1763,10 @@ while (1) {
 		$found = 1 if ($found == 0);
 		my $old = $found;
 		$cmd = ord($cmd);
+		$found++; # + logique si on tape la même lettre
 		for (; $found <= $#list; $found++) {
 			my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-			last if (ord(uc($name)) >= $cmd);
+			last if (ord(uc($name)) == $cmd);
 		}
 		if ($found > $#list || $found == $old) {
 			for ($found = 1; $found < $old; $found++) {
