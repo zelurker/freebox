@@ -1835,9 +1835,14 @@ while (1) {
 		next if (!-f "list_coords");
 	} elsif ($cmd eq "quit") {
 		print "list: commande quit\n";
-		system("kill `cat info.pid`");
-		system("kill `cat info_pl.pid`") if ((-s "recordings") == 0);
-		quit();
+		if ($pid_player2) {
+			print "c'était pour mplayer !\n";
+			out::send_command("quit\n");
+		} else {
+			system("kill `cat info.pid`");
+			system("kill `cat info_pl.pid`") if ((-s "recordings") == 0);
+			quit();
+		}
 	} elsif ($cmd ne "list") {
 		print "list: commande inconnue :$cmd!\n";
 		next;
