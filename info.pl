@@ -134,6 +134,14 @@ sub read_stream_info {
 
 			print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
 			print $out "Dernier morceau : $last\n" if ($last);
+			if (open(F,"<stream_lyrics")) {
+				my $info = "\nParoles : ";
+				while (<F>) {
+					$info .= $_;
+				}
+				close(F);
+				print $out $info;
+			}
 			out::close_fifo($out);
 			if (!$long) {
 				$start_timer = $time+5 if ($start_timer < $time);

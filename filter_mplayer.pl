@@ -23,6 +23,7 @@ use LWP 5.64;
 use images;
 use Encode;
 use URI::URL;
+use lyrics;
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our $has_vignettes = undef;
@@ -89,7 +90,7 @@ our %bookmarks;
 dbmopen %bookmarks,"bookmarks.db",0666;
 our $init = 0;
 our $prog;
-our ($codec,$bitrate);
+our ($codec,$bitrate,$lyrics);
 our $titre = "";
 if (open(F,"<$args[1].info")) {
 	# Si il y a un fichier info pour ce qu'on lit (podcast par exemple)
@@ -104,6 +105,7 @@ our $album;
 our $old_titre = "";
 our $time;
 our $time_prog;
+our $pid_lyrics;
 my $buff = "";
 our %bg_pic;
 
@@ -134,12 +136,31 @@ sub REAPER {
 		} elsif ($pid_mplayer == $child) {
 			print "filter: mplayer has just quit !\n";
 			$pid_mplayer = 0;
+		} elsif ($child == $pid_lyrics) {
+			$lyrics = 1;
+			send_cmd_prog() if (-f "stream_lyrics");
 		} else {
 			print "filter: didn't find bg_pic for child $child\n";
 		}
 	}
 }
 $SIG{CHLD} = \&REAPER;
+
+sub get_lyrics {
+	my $pid = fork();
+	if ($pid == 0) {
+		print "filter: calling get_lyrics $args[1],$artist,$titre\n";
+		my $lyrics = lyrics::get_lyrics($args[1],$artist,$titre);
+		if ($lyrics) {
+			open(F,">stream_lyrics");
+			print F $lyrics;
+			close(F);
+		}
+		exit(0);
+	} else {
+		$pid_lyrics = $pid;
+	}
+}
 
 sub handle_result {
 	my $result = shift;
@@ -261,7 +282,7 @@ $prog = $1 if ($source !~ /youtube/);
 print "filter: prog = $prog\n";
 $source =~ s/\/(.+)//;
 our $base_flux = $1;
-unlink "stream_info";
+unlink "stream_info","stream_lyrics";
 my ($width,$height) = ();
 my $exit = "";
 
@@ -296,7 +317,7 @@ sub check_eof {
 	$eof = 1;
 	unlink "vignettes" if ($has_vignettes);
 	print "check_eof: $source exit:$exit\n";
-	unlink("video_size","stream_info","cache/arte/last_serv");
+	unlink("video_size","stream_info","cache/arte/last_serv","stream_lyrics");
 	if (!$stream && -f "info_coords") {
 		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
 			print F "clear\n";
@@ -580,6 +601,7 @@ while (1) {
 					$info .= "$val ";
 					$titre = $val;
 					print "reçu par icy info: $val.\n";
+					get_lyrics() if (!$lyrics);
 					if (!$net) {
 						$info .= " pas de réseau)";
 					} elsif (!$images) {
@@ -648,6 +670,9 @@ while (1) {
 					}
 				}
 				if (!$last_t || -f "info_coords") {
+					if (!$lyrics && $artist && $titre) {
+						get_lyrics();
+					}
 					if (open(F,">stream_info")) {
 						print F "$codec $bitrate";
 						if (!$net) {
