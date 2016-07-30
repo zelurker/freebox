@@ -153,8 +153,11 @@ sub get_lyrics {
 		my $lyrics = lyrics::get_lyrics($args[1],$artist,$titre);
 		if ($lyrics) {
 			open(F,">stream_lyrics");
+			binmode(F, ":utf8") if ($ENV{LANG} =~ /UTF/);
 			print F $lyrics;
 			close(F);
+		} else {
+			unlink("stream_lyrics"); # Au cas où le titre vient de changer et qu'on a pas l'info
 		}
 		exit(0);
 	} else {
@@ -405,7 +408,7 @@ sub send_cmd_prog {
 	# on ajoute un timeout pour contourner les sites qui envoient l'info 2
 	# fois de suite avec variation, genre une pub au bout la 2ème fois.
 	my $cmd = "prog";
-	if (-f "info_coords" && time()-$last_cmd_prog >= 10) {
+	if (-f "info_coords") { #  && time()-$last_cmd_prog >= 10) {
 		$cmd = "prog:long";
 	}
 	$last_cmd_prog = time();
