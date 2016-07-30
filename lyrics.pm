@@ -19,9 +19,12 @@ sub get_lyrics {
 	}
 	if ($ogg) {
 		$ogg = Ogg::Vorbis::Header->new($file);
-		($artist) = $ogg->comment("ARTIST") || $ogg->comment("artist");
-		($title) = $ogg->comment("TITLE") || $ogg->comment("title");
-		my (@lyrics) = $ogg->comment("LYRICS") || $ogg->comment("lyrics");
+		($artist) = $ogg->comment("ARTIST");
+		($artist) = $ogg->comment("artist") if (!$artist);
+		($title) = $ogg->comment("TITLE");
+		($title) = $ogg->comment("title") if (!$title);
+		my (@lyrics) = $ogg->comment("LYRICS");
+		(@lyrics) = $ogg->comment("lyrics") if (!@lyrics);
 		$lyrics = join("\n",@lyrics);
 		print "ogg artist $artist title $title\n";
 		# Si c'est du vieux ogg, on aura peut-être créé un fichier lyrics
