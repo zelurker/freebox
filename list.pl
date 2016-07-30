@@ -320,7 +320,7 @@ sub list_files {
 			}
 			$name .= "/";
 		}
-		next if ($name =~ /\.nfo$/i && $conf{$tri} eq "hasard");
+		next if ($name =~ /\.(nfo|lyrics)$/i);
 
 		# On aimerait bien utiliser is_utf8 ici, sauf qu'en fait si le flag
 		# utf8 de perl n'est pas positionné sur la chaine ça renvoie toujours
