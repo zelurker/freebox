@@ -184,7 +184,7 @@ sub get_lyrics {
 				s/^[ \t]+//;
 				s/[ \t]+$//s;
 				$start = 0 if (s/<\/p.+//);
-				$lyrics .= decode_entities($_);
+				$lyrics .= decode_entities($_)."\n";
 			}
 		}
 		print "lyrics musixmatch.com : $lyrics\n";
