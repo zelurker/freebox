@@ -149,8 +149,14 @@ $SIG{CHLD} = \&REAPER;
 sub get_lyrics {
 	my $pid = fork();
 	if ($pid == 0) {
-		print "*** filter: calling get_lyrics $args[1] artist $artist titre $titre\n";
-		my $lyrics = lyrics::get_lyrics($args[1],$artist,$titre);
+		my ($aut,$tit) = ($artist,$titre);
+		# Gestion des flux : ils passent directement l'artiste et le titre
+		# dans StreamTitle... !
+		if (!$aut && $tit =~ /(.+) \- (.+)/) {
+			$aut = $1; $tit = $2;
+		}
+		print "*** filter: calling get_lyrics $args[1] artist $aut titre $tit\n";
+		my $lyrics = lyrics::get_lyrics($args[1],$aut,$tit);
 		if ($lyrics) {
 			open(F,">stream_lyrics");
 			binmode(F, ":utf8");
@@ -253,8 +259,6 @@ sub handle_images {
 		}
 
 		@cur_images = ($cur);
-		my $size = 200000;
-		my $id = shmget(IPC_PRIVATE, $size, S_IRUSR | S_IWUSR) || die "shmget $!\n";
 		$cur =~ s/û/u/g; # Pour une raison inconnue allergie !
 		my $res = $agent->search($cur);
 		open(F,">vignettes");
@@ -602,6 +606,7 @@ while (1) {
 					$val =~ s/\(WR\) //; # vire ce truc de rfm enfoirés...
 					$val = utf($val);
 					$info .= "$val ";
+					$lyrics = 0 if ($titre ne $val);
 					$titre = $val;
 					print "reçu par icy info: $val.\n";
 					get_lyrics() if (!$lyrics);

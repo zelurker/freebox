@@ -76,16 +76,16 @@ sub get_lyrics {
 		if ($u =~ /url.q=(http.+?)&/) {
 			$u = $1;
 			print $_->text,"\n$u\n";
-			last if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com)/);
+			last if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com)/);
 			next if ($_->text =~ /youtube/i || $u =~ /youtube/);
 		}
 	}
-	if ($u !~ /(paroles.net|lyricsfreak.com|parolesmania.com)/) {
+	if ($u !~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com)/) {
 		print "get_lyrics: url inconnue : $u pas de paroles ?\n";
 		return undef;
 	}
 	$mech->get($u);
-	# $mech->save_content("page.html");
+	$mech->save_content("page.html");
 	$_ = $mech->content;
 	if ($u =~ /lyricsfreak.com/) {
 		print "lyricsfreak.com\n";
@@ -131,7 +131,7 @@ sub get_lyrics {
 				s/\r//;
 				s/<br>/\n/g;
 				# Filtrage des pubs en plein milieu de la chanson !!!
-				$lyrics .= decode_entities($_) if (!/<\/?(div|script)/);
+				$lyrics .= decode_entities($_) if (!/<\/?(div|script)/ && $div-1 <= $start_div);
 			}
 		}
 		$lyrics =~ s/\n$//s;
@@ -153,6 +153,41 @@ sub get_lyrics {
 			}
 		}
 		print "lyrics parolesmania.com : $lyrics\n";
+	} elsif ($u =~ /flashlyrics.com/) {
+		my $start = undef;
+		foreach (split /\n/,$_) {
+			if (/<div.+padding\-horiz/) {
+				$start = 1;
+				next;
+			}
+			if ($start) {
+				if (/<div/) {
+					$start = 0;
+					next;
+				}
+				s/\r//g;
+				s/^[ \t]+//;
+				s/<\/?(br|p)( \/)?>/\n/gs;
+				s/[ \t]+$//s;
+				$lyrics .= decode_entities($_);
+			}
+		}
+		print "lyrics flashlyrics.com : $lyrics\n";
+	} elsif ($u =~ /musixmatch.com/) {
+		my $start = undef;
+		foreach (split /\n/,$_) {
+			if (s/^.+p class=".+?lyrics.+?content".+?>//) {
+				$start = 1;
+			}
+			if ($start) {
+				s/\r//g;
+				s/^[ \t]+//;
+				s/[ \t]+$//s;
+				$start = 0 if (s/<\/p.+//);
+				$lyrics .= decode_entities($_);
+			}
+		}
+		print "lyrics musixmatch.com : $lyrics\n";
 	}
 
 	if ($ogg) {
