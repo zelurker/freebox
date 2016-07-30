@@ -153,7 +153,7 @@ sub get_lyrics {
 		my $lyrics = lyrics::get_lyrics($args[1],$artist,$titre);
 		if ($lyrics) {
 			open(F,">stream_lyrics");
-			binmode(F, ":utf8") if ($ENV{LANG} =~ /UTF/);
+			binmode(F, ":utf8");
 			print F $lyrics;
 			close(F);
 		} else {

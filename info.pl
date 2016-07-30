@@ -29,6 +29,7 @@ use progs::series;
 use progs::youtube;
 use progs::arte;
 
+our $latin = ($ENV{LANG} !~ /UTF/i);
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
 $have_fb = out::have_freebox() if ($net);
@@ -137,6 +138,7 @@ sub read_stream_info {
 			if (open(F,"<stream_lyrics")) {
 				my $info = "\nParoles : ";
 				while (<F>) {
+					Encode::from_to($_, "utf-8", "iso-8859-1") if ($latin);
 					$info .= $_;
 				}
 				close(F);
