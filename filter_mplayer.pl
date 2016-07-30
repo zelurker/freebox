@@ -149,7 +149,7 @@ $SIG{CHLD} = \&REAPER;
 sub get_lyrics {
 	my $pid = fork();
 	if ($pid == 0) {
-		print "filter: calling get_lyrics $args[1],$artist,$titre\n";
+		print "*** filter: calling get_lyrics $args[1] artist $artist titre $titre\n";
 		my $lyrics = lyrics::get_lyrics($args[1],$artist,$titre);
 		if ($lyrics) {
 			open(F,">stream_lyrics");
@@ -673,8 +673,9 @@ while (1) {
 					}
 				}
 				if (!$last_t || -f "info_coords") {
-					if (!$lyrics && $artist && $titre) {
+					if (!$lyrics && (($artist && $titre) || $args[1] !~ /^http/)) {
 						get_lyrics();
+						$lyrics = 1;
 					}
 					if (open(F,">stream_info")) {
 						print F "$codec $bitrate";

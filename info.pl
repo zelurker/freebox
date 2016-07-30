@@ -108,6 +108,19 @@ sub myget {
 	}
 }
 
+sub disp_lyrics {
+	my $out = shift;
+	if (open(F,"<stream_lyrics")) {
+		my $info = "\nParoles : ";
+		while (<F>) {
+			Encode::from_to($_, "utf-8", "iso-8859-1") if ($latin);
+			$info .= $_;
+		}
+		close(F);
+		print $out $info;
+	}
+}
+
 sub read_stream_info {
 	my ($time,$cmd) = @_;
 	# Là il peut y avoir un problème si une autre source a le même nom
@@ -135,15 +148,7 @@ sub read_stream_info {
 
 			print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
 			print $out "Dernier morceau : $last\n" if ($last);
-			if (open(F,"<stream_lyrics")) {
-				my $info = "\nParoles : ";
-				while (<F>) {
-					Encode::from_to($_, "utf-8", "iso-8859-1") if ($latin);
-					$info .= $_;
-				}
-				close(F);
-				print $out $info;
-			}
+			disp_lyrics($out);
 			out::close_fifo($out);
 			if (!$long) {
 				$start_timer = $time+5 if ($start_timer < $time);
@@ -496,7 +501,12 @@ if (!$sub) {
 	print $out "$pic\n\n";
 	($sec,$min,$hour) = localtime($time);
 
-	print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\nAucune info\n";
+	print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n";
+	if (-f "stream_lyrics") {
+		disp_lyrics($out);
+	} else {
+		print $out "Aucune info\n";
+	}
 	out::close_fifo($out);
 	$start_timer = $time+5 if ($start_timer < $time);
 	$last_chan = $channel;
