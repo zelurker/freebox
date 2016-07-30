@@ -76,11 +76,11 @@ sub get_lyrics {
 		if ($u =~ /url.q=(http.+?)&/) {
 			$u = $1;
 			print $_->text,"\n$u\n";
-			last if ($u =~ /(paroles.net|lyricsfreak.com)/);
+			last if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com)/);
 			next if ($_->text =~ /youtube/i || $u =~ /youtube/);
 		}
 	}
-	if ($u !~ /(paroles.net|lyricsfreak.com)/) {
+	if ($u !~ /(paroles.net|lyricsfreak.com|parolesmania.com)/) {
 		print "get_lyrics: url inconnue : $u pas de paroles ?\n";
 		return undef;
 	}
@@ -108,6 +108,9 @@ sub get_lyrics {
 			}
 		}
 	} elsif ($u =~ /paroles.net/) {
+		# Le 1er que j'ai trouvé en fr, mais il a des fautes flagrantes et
+		# des fois il manque carrément la fin de la chanson ! Donc à éviter
+		# si possible, parolesmania est mieux.
 		my $lyr = 0;
 		my $div = 0;
 		my $start_div;
@@ -120,16 +123,36 @@ sub get_lyrics {
 				$start_div = $div-1;
 			}
 			if ($lyr) {
-				if (/<\/?div/ && $div == $start_div) {
+				if (s/<\/div>// && $div == $start_div) {
 					$lyr = 0;
-					next;
 				}
+				s/^[ \t]+//;
+				s/[ \t]+$//;
+				s/\r//;
 				s/<br>/\n/g;
 				# Filtrage des pubs en plein milieu de la chanson !!!
-				$lyrics .= decode_entities($_) if (!/<\/?(div|script)/ && $div-1 == $start_div);
+				$lyrics .= decode_entities($_) if (!/<\/?(div|script)/);
 			}
 		}
 		$lyrics =~ s/\n$//s;
+	} elsif ($u =~ /parolesmania.com/) {
+		my $start = undef;
+		foreach (split /\n/,$_) {
+			if (/<strong>Paroles/) {
+				$start = 1;
+				next;
+			}
+			if ($start) {
+				s/\r//g;
+				s/^[ \t]+//;
+				s/<div.*>//;
+				s/<br( \/)?>/\n/gs;
+				s/[ \t]+$//s;
+				$start = 0 if (s/<\/div.*>//);
+				$lyrics .= decode_entities($_);
+			}
+		}
+		print "lyrics parolesmania.com : $lyrics\n";
 	}
 
 	if ($ogg) {
