@@ -136,6 +136,8 @@ static void adjust_indent(int *x, int *y, int *indents)
     }
 }
 
+static int last_htext;
+
 static int info(int fifo, int argc, char **argv)
 {
 	char *s = strrchr(argv[0],'/');
@@ -171,7 +173,6 @@ static int info(int fifo, int argc, char **argv)
 			return -1;
 		}
 		char *heure, *title;
-		nb_prev = 0;
 		width = atoi(argv[2]);
 		height = atoi(argv[3]);
 		margew = width/36;
@@ -182,6 +183,7 @@ static int info(int fifo, int argc, char **argv)
 		int maxh = height - deby - 8;
 		int fsize = height/35;
 		if (fsize < 10) fsize = 10;
+		char *old_desc = desc;
 		if (desc) {
 			free(desc);
 			TTF_CloseFont(font);
@@ -286,6 +288,21 @@ static int info(int fifo, int argc, char **argv)
 		htext += 12;
 		get_size(font,desc,&w,&h,maxw);
 		htext += h;
+		if (htext != last_htext) {
+		    printf("clearing nb_prev htext %d != last_htext %d\n",htext,last_htext);
+		    last_htext = htext;
+		    nb_prev = 0;
+		    next = NULL;
+		    str = desc;
+		} else {
+		    if (old_desc) {
+			next = (next - old_desc) + desc;
+			str = (str - old_desc) + desc;
+			for (int n=0; n<=nb_prev; n++)
+			    prev[n] = (prev[n]- old_desc)+desc;
+		    }
+		}
+
 		if (w > wtext) wtext = w;
 		if (h > height-16) h = height-16;
 
@@ -328,9 +345,6 @@ static int info(int fifo, int argc, char **argv)
 		y += put_string(sf,font,x,y,title,fg,indents);
 		y += 12;
 		TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
-		str = desc;
-		next = NULL;
-		nb_prev = 0;
 		x0 = x; y0 = y;
 
 		// Clean up
@@ -1118,6 +1132,7 @@ int main(int argc, char **argv) {
 	signal(SIGPIPE, &disconnect);
 	signal(SIGTERM, &myexit);
 	signal(SIGALRM, &myalarm);
+	last_htext = 0;
 	FILE *f = fopen("info.pid","w");
 	fprintf(f,"%d\n",getpid());
 	fclose(f);
