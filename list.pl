@@ -1120,7 +1120,7 @@ sub load_file2 {
 			$cont = undef;
 			$base_flux = $old_base;
 			# $serv va juste être passé à la suite...
-		} elsif (@list != @old) {
+		} elsif (@list && @list != @old) {
 			$serv = $list[0][0][2];
 			$conf{"sel_$source"} = $end_list; # index pour le retour...
 			$found = 0;

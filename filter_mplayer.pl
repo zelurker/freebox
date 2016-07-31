@@ -145,6 +145,7 @@ sub REAPER {
 	}
 }
 $SIG{CHLD} = \&REAPER;
+$SIG{PIPE} = sub { print "filter_mplayer: sigpipe ignoré\n" };
 
 sub get_lyrics {
 	my $pid = fork();
@@ -603,7 +604,9 @@ while (1) {
 				my ($name,$val) = ($1,$2);
 				if ($name eq "StreamTitle" && $val) {
 					$val =~ s/\.\.\. Telech.+//; # vire les pubs de hotmix
+					$val =~ s/ \|.+//; # vire les sufixes hotmix
 					$val =~ s/\(WR\) //; # vire ce truc de rfm enfoirés...
+					$val =~ s/\+/ /g if ($serv =~ /ouifm\.ice/); # !!! y a vraiment n'importe quoi des fois !
 					$val = utf($val);
 					$info .= "$val ";
 					$lyrics = 0 if ($titre ne $val);
