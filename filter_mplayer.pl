@@ -106,16 +106,15 @@ our $old_titre = "";
 our $time;
 our $time_prog;
 our $pid_lyrics;
+our $wait_lyrics = 0;
 my $buff = "";
 our %bg_pic;
 
 sub REAPER {
 	my $child;
-	# loathe SysV: it makes us not only reinstate
-	# the handler, but place it after the wait
-	$SIG{CHLD} = \&REAPER;
 # Les images arrivent en tache de fond...
-	while (($child = waitpid(-1,WNOHANG)) > 0) {
+	# WIFEXITED : true if process exited calling exit !
+	while (($child = waitpid(-1,WNOHANG)) > 0 && WIFEXITED($?)) {
 		if ($bg_pic{$child}) {
 			if (!-f $bg_pic{$child}) {
 				my $result = $cur_images[1];
@@ -138,16 +137,29 @@ sub REAPER {
 			$pid_mplayer = 0;
 		} elsif ($child == $pid_lyrics) {
 			$lyrics = 1;
+			$pid_lyrics = 0;
+			if ($wait_lyrics) {
+				$wait_lyrics = 0;
+				print "calling waiting get_lyrics\n";
+				get_lyrics();
+			}
 			send_cmd_prog() if (-f "stream_lyrics");
 		} else {
 			print "filter: didn't find bg_pic for child $child\n";
 		}
 	}
+	# loathe SysV: it makes us not only reinstate
+	# the handler, but place it after the wait
+	$SIG{CHLD} = \&REAPER;
 }
 $SIG{CHLD} = \&REAPER;
 $SIG{PIPE} = sub { print "filter_mplayer: sigpipe ignoré\n" };
 
 sub get_lyrics {
+	if ($pid_lyrics) {
+		$wait_lyrics = 1;
+		return;
+	}
 	my $pid = fork();
 	if ($pid == 0) {
 		my ($aut,$tit) = ($artist,$titre);

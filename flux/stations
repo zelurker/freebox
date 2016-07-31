@@ -2,22 +2,12 @@
 http://www.4uradios.com/classicrock.m3u
 Accent 4
 http://str0.creacast.com:900/listen.pls
-Activ radio
-http://activradio.free.fr/www/m3u/activadsl.m3u
 Alouette
 http://www.alouette.fr/alouette.m3u http://www.alouette.fr/zenon/xml_out/alouette_onair_drupal.php
 Alpes 1
 http://broadcast.infomaniak.ch/alpes1gap-high.mp3 http://grandgrenoble.alpes1.com/winradio/prog.xml
 Alternantes
 http://diffusion.lafrap.fr/alternantes.mp3
-ARL
-http://gisv3.tv-radio.com/station/arl/arl.m3u
-Atlantis FM
-http://www.radioatlantis.fr:8000/listen.pls
-Beaub Fm
-http://gisv3.tv-radio.com/station/beaub/beaub.m3u
-BFM
-http://vipicecast.yacast.net/bfm
 Bide et Musique
 http://www.bide-et-musique.com/playlist-hq.m3u
 C9 Radio
@@ -26,16 +16,10 @@ Classic 21 64k aac
 http://classic21.ice.rtbf.be/classic21-64.aac
 Classic 21 128k mp3
 http://classic21.ice.rtbf.be/classic21-128.mp3
-Cocktail FM
-http://91.121.62.121:7450
-Demoiselle FM
-http://213.186.61.62:8800/listen.pls
 Enjoy Station
 http://www.enjoystation.net/player/mp3.m3u
 Euradio Nantes
 http://80.82.229.202/euradio.mp3 http://www.euradionantes.eu/afficherTitre.php
-Europe 1
-http://vipicecast.yacast.net/europe1
 FG America
 http://www.radiofg.com/streams/fg6.pls
 FG Chic
@@ -48,12 +32,8 @@ FG Underground
 http://www.radiofg.com/streams/fgu.pls
 FG Vintage
 http://www.radiofg.com/streams/fgv.pls
-FIP
-http://www.tv-radio.com/station/fip_mp3/fip_mp3-128k.m3u
 Flash FM
 http://live140.impek.com:8000/listen.pls
-FMC Radio
-http://www.fmcradio.info/module/radio/fmc_haut_debit.m3u
 France bleu Gascogne
 http://audio.scdn.arkena.com/11375/fbgascogne-midfi128.mp3
 France bleu loire ocean
@@ -66,14 +46,10 @@ France Musique
 http://audio.scdn.arkena.com/11012/francemusique-midfi128.mp3
 Frequence 3
 http://streams.frequence3.net/mp3-192.m3u
-Frequence Banane
-http://www.frequencebanane.ch/fb_128.m3u
 Frequence Terre
 http://streaming208.radionomy.com/frequence-terre?group=172&countrycode=FR
 Fun Radio
 http://streaming.radio.funradio.fr:80/fun-1-44-96
-Generation Disco Funk
-http://www.generationdiscofunk.com/v3/pls/stream02/hd.m3u
 Hit West
 http://broadcast.infomaniak.ch/hitwest-high.mp3
 Hot Mix Radio - 80
@@ -90,14 +66,8 @@ Hot Mix Radio - Rock & Pop
 http://www.hotmixradio.fr/stream/hotmixrock.m3u
 Kif Cool
 http://www.kifradio.com/cool/kifcool256.m3u
-Kif Radio
-http://www.kifradio.com/www.kifradio.com.m3u
-Kiss FM
-http://gisv3.tv-radio.com/station/kissfm-mp3/kissfm-mp3-128k.m3u
 La Grosse Radio
 http://www.lagrosseradio.com/son/stream/192.m3u
-Radio M Montpelier
-http://live.francra.org:8000/Radio-M-Montelimar?type=flash
 La Grosse Radio Metal
 http://hd.lagrosseradio.info:8200/;stream.nsv
 La Grosse Radio Reggae
@@ -147,13 +117,13 @@ http://mfm-wr3.ice.infomaniak.ch/mfm-wr1-128.mp3 http://mfmradio.fr/winradio/pro
 Oui FM
 http://ouifm.ice.infomaniak.ch/ouifm-high.mp3
 Oui FM Alternatif
-http://ouifm2.ice.infomaniak.ch/ouifm2.mp3 http://rock.ouifm.fr/dynamic-menu.json _alternatif
+http://ouifm2.ice.infomaniak.ch/ouifm2.mp3
 Oui FM Collector
-http://ouifm3.ice.infomaniak.ch/ouifm3.mp3 http://rock.ouifm.fr/dynamic-menu.json _collector
+http://ouifm3.ice.infomaniak.ch/ouifm3.mp3
 Oui FM Blues
-http://ouifm4.ice.infomaniak.ch/ouifm4.aac http://rock.ouifm.fr/dynamic-menu.json _blues
+http://ouifm4.ice.infomaniak.ch/ouifm4.aac
 Oui FM Indé
-http://ouifm5.ice.infomaniak.ch/ouifm5.aac http://rock.ouifm.fr/dynamic-menu.json _inde
+http://ouifm5.ice.infomaniak.ch/ouifm5.aac
 Oxyradio
 http://oxyradio.net:8000/hd.ogg
 Paris One Club
@@ -178,14 +148,10 @@ Puls Radio - Version Trance
 http://www.pulsradio.com/pls/pulstrance-adsl.m3u
 Radio Alpine Meilleure
 http://91.121.62.121:8310
-Radio Béton !
-http://213.186.61.62:8400/listen.pls
 Radio Bresse
 http://91.121.62.121:7350/listen.pls
 Radio Classique
 http://players.creacast.com/creacast/classique/playlist.pls
-Radio Côte d'Amour
-http://95.81.147.10/4771/rad_153645.mp3
 R'courchevel
 http://live76.laradiostation.fr:8888/listen.pls
 Radio Intensite
@@ -196,23 +162,13 @@ Radio Pulsar
 http://91.121.62.121:8100/listen.pls
 Radio RDL
 http://91.121.62.121:8300/listen.pls
-Radio TeenTall
-http://www.radioteentaal.com/masala128.m3u
 RDM - Lorraine
 http://213.186.61.62:7070/listen.pls
-RFM
-http://vipicecast.yacast.net/rfm_128
-RST
-http://213.186.61.62:8700/listen.pls
 RTL
 http://streaming.radio.rtl.fr/rtl-1-44-128 http://radio.rtl.fr/live.js
 RTL 2
 http://streaming.radio.rtl2.fr/rtl2-1-44-128 http://radio.rtl2.fr/player.js
-Stop radio
-http://www.stopradio.net/stream/hautdebit.m3u
 Sun
 http://80.82.229.202/sunhd.mp3
 Top Music
 http://players.creacast.com/creacast/topmusic/playlist.m3u
-Virgin Radio
-http://vipicecast.yacast.net/virginradio_128

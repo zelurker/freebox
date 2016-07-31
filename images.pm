@@ -11,22 +11,30 @@ our $debug = 0;
 
 sub search {
 	my ($self,$q) = @_;
-	my $mech = WWW::Mechanize->new();
+	my $mech;
 	my @tab = ();
-	# $mech->agent_alias("Linux Mozilla");
-	# Qui l'eut cru ? Les pages sont générées à partir du user agent, je
-	# croyais que plus personne ne faisait ça ou presque, et bin si, la preuve!
-	# Si on envoie un agent récent, on obtient la version javascript de frime
-	# avec toutes les infos dedans !!! :))))
-	$mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
-	$mech->timeout(10);
-	$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
+	do {
+		eval {
+			$mech = WWW::Mechanize->new();
+			# $mech->agent_alias("Linux Mozilla");
+			# Qui l'eut cru ? Les pages sont générées à partir du user agent, je
+			# croyais que plus personne ne faisait ça ou presque, et bin si, la preuve!
+			# Si on envoie un agent récent, on obtient la version javascript de frime
+			# avec toutes les infos dedans !!! :))))
+			$mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
+			$mech->timeout(10);
+			$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 
 # $mech->get("https://www.google.fr/search?hl=fr&site=imghp&tbm=isch&source=hp&biw=1240&bih=502&q=chien");
 # my $pwd = `pwd`;
 # chomp $pwd;
 # $mech->get("file://$pwd/final.html");
-	$mech->get("https://www.google.fr/imghp");
+			$mech->get("https://www.google.fr/imghp");
+		};
+		if ($@) {
+			print "*** images.pm: got error $@\n";
+		}
+	} while ($@);
 	$mech->submit_form(
 		form_number => 1,
 		fields      => {
