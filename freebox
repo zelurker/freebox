@@ -53,7 +53,9 @@ rm -f pod
 if ! [ -f info_pl.pid ] || ! ( ps -p `cat info_pl.pid` >& /dev/null ); then
 	perl info.pl &
 fi
-perl list.pl &
+if ! [ -f info_list.pid ] || ! ( ps -p `cat info_list.pid` >& /dev/null ); then
+  perl list.pl &
+fi
 if ! ./bmovl-src/bmovl fifo; then
 	cd bmovl-src
 	rm -f bmovl
