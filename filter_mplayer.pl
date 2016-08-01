@@ -12,14 +12,19 @@
 # rabattre sur select/sysread, et ça alourdit considérablement l'écriture...
 
 use strict;
-use Socket;
+use Coro::LWP;
+use Coro;
+use Coro::Handle;
+use Coro::Select;
+use AnyEvent;
+use AnyEvent::Util;
+use AnyEvent::Socket;
 use Fcntl;
 use POSIX qw(:sys_wait_h);
 use out;
 require "playlist.pl";
 use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
-use LWP 5.64;
 use images;
 use Encode;
 use URI::URL;
@@ -27,6 +32,7 @@ use lyrics;
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our $has_vignettes = undef;
+our ($child,$parent);
 
 sub utf($) {
 	my $str = shift;
@@ -110,49 +116,6 @@ our $wait_lyrics = 0;
 my $buff = "";
 our %bg_pic;
 
-sub REAPER {
-	my $child;
-# Les images arrivent en tache de fond...
-	# WIFEXITED : true if process exited calling exit !
-	while (($child = waitpid(-1,WNOHANG)) > 0 && WIFEXITED($?)) {
-		if ($bg_pic{$child}) {
-			if (!-f $bg_pic{$child}) {
-				my $result = $cur_images[1];
-				handle_result($result);
-			}
-			delete $bg_pic{$child};
-		} elsif ($ipc{$child}) {
-			my $id = $ipc{$child};
-			my $dump;
-			shmread($id,$dump,0,180000) || die "shmread: $!";
-			my $result;
-			$dump =~ s/\000+//;
-			eval($dump);
-			handle_result($result);
-			push @cur_images,$result;
-			shmctl($id, IPC_RMID, 0)        || die "shmctl: $!";
-			delete $ipc{$child};
-		} elsif ($pid_mplayer == $child) {
-			print "filter: mplayer has just quit !\n";
-			$pid_mplayer = 0;
-		} elsif ($child == $pid_lyrics) {
-			$lyrics = 1;
-			$pid_lyrics = 0;
-			if ($wait_lyrics) {
-				$wait_lyrics = 0;
-				print "calling waiting get_lyrics\n";
-				get_lyrics();
-			}
-			send_cmd_prog() if (-f "stream_lyrics");
-		} else {
-			print "filter: didn't find bg_pic for child $child\n";
-		}
-	}
-	# loathe SysV: it makes us not only reinstate
-	# the handler, but place it after the wait
-	$SIG{CHLD} = \&REAPER;
-}
-$SIG{CHLD} = \&REAPER;
 $SIG{PIPE} = sub { print "filter_mplayer: sigpipe ignoré\n" };
 
 sub get_lyrics {
@@ -160,27 +123,36 @@ sub get_lyrics {
 		$wait_lyrics = 1;
 		return;
 	}
-	my $pid = fork();
-	if ($pid == 0) {
-		my ($aut,$tit) = ($artist,$titre);
-		# Gestion des flux : ils passent directement l'artiste et le titre
-		# dans StreamTitle... !
-		if (!$aut && $tit =~ /(.+) \- (.+)/) {
-			$aut = $1; $tit = $2;
-		}
-		print "*** filter: calling get_lyrics $args[1] artist $aut titre $tit\n";
-		my $lyrics = lyrics::get_lyrics($args[1],$aut,$tit);
-		if ($lyrics) {
-			open(F,">stream_lyrics");
-			binmode(F, ":utf8");
-			print F $lyrics;
-			close(F);
-		} else {
-			unlink("stream_lyrics"); # Au cas où le titre vient de changer et qu'on a pas l'info
-		}
-		exit(0);
-	} else {
-		$pid_lyrics = $pid;
+	async {
+		LOOP: {
+		do {
+			my ($aut,$tit) = ($artist,$titre);
+			# Gestion des flux : ils passent directement l'artiste et le titre
+			# dans StreamTitle... !
+			if (!$aut && $tit =~ /(.+) \- (.+)/) {
+				$aut = $1; $tit = $2;
+			}
+			print "*** filter: calling get_lyrics $args[1] artist $aut titre $tit\n";
+			my $lyrics = lyrics::get_lyrics($args[1],$aut,$tit);
+			if ($lyrics) {
+				print "filter: obtenu lyrics $lyrics\n";
+				if (open(F,">:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","stream_lyrics")) {
+					print F $lyrics;
+					close(F);
+				}
+			} else {
+				unlink("stream_lyrics"); # Au cas où le titre vient de changer et qu'on a pas l'info
+			}
+			if ($wait_lyrics) {
+				cede;
+				$wait_lyrics = 0;
+			} else {
+				last;
+			}
+		} while (1);
+	}
+	$lyrics = 1;
+	send_cmd_prog();
 	}
 }
 
@@ -216,9 +188,7 @@ sub handle_result {
 			print "handle_result: using cache $name\n";
 			out::send_bmovl("image $name");
 		} else {
-			print "handle_result: fork pour récupérer $name from $url\n";
-			my $pid = fork();
-			if ($pid == 0) {
+			async {
 				my $referer = $url;
 				$referer =~ s/(.+)\/.+?$/$1\//;
 				print "get image $url, referer $referer\n";
@@ -226,7 +196,8 @@ sub handle_result {
 				$pic = $name;
 				if (!$res->is_success) {
 					print "filter: erreur get ",$res->status_line,"\n";
-					exit 0;
+					handle_images();
+					Coro::terminate 1;
 				}
 				my $ftype = `file $pic`;
 				chomp $ftype;
@@ -236,25 +207,26 @@ sub handle_result {
 					system("gunzip $pic.gz");
 					$ftype = `file $pic`;
 					chomp $ftype;
-					exit(1);
 				}
 				if ($ftype =~ /error/i || $ftype =~ /HTML/) {
 					unlink "$pic";
 					print "filter: type image $ftype\n";
-					exit 0;
+					handle_images();
+					Coro::terminate 1;
 				}
 				print "handle_result: calling image $pic\n";
 				out::send_bmovl("image $pic");
-				exit 0;
-			} else {
-				$bg_pic{$pid} = $name;
 			}
 		}
-		$time = time()+25;
+		print "calling anyevent::timer\n";
+		$time = AnyEvent->timer(after => 25,
+			interval => 25,
+			cb => sub { handle_images(); });
+		print "anyevent::timer done\n";
 	} else {
 		print "handle_result: fin de liste!\n";
 		out::send_bmovl("vignettes") if ($has_vignettes);
-		$time = 0;
+		$time = undef;
 	}
 }
 
@@ -453,17 +425,29 @@ sub update_codec_info {
 	}
 }
 
+our $child_checker;
+
+sub check_player2 {
+	$child_checker = AnyEvent->child(pid => $pid_mplayer, cb => sub {
+			my ($pid,$status) = @_;
+			print "list: fin de mplayer, pid $pid, status $status\n";
+			$pid_mplayer = 0;
+			$child_checker = undef;
+		});
+}
+
 sub run_mplayer {
 	# Lancement de mplayer à partir de filter
-	socketpair(CHILD, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
-	||  die "socketpair: $!";
+	($child,$parent) = portable_socketpair();
+	# socketpair($child, PARENT, AF_UNIX, SOCK_STREAM, PF_UNSPEC)
+	# ||  die "socketpair: $!";
 	$start_time = time();
 
-	CHILD->autoflush(1);
-	PARENT->autoflush(1);
+	$child->autoflush(1);
+	$parent->autoflush(1);
 	$pid_mplayer = fork();
 	if ($pid_mplayer == 0) {
-		close CHILD;
+		$child->close();
 		$args[1] =~ s/ http.+//; # vire le prog si il est encore attaché là !
 		if ($bookmarks{$serv}) {
 			if ($bookmarks{$serv} > 0) {
@@ -474,13 +458,14 @@ sub run_mplayer {
 				delete $bookmarks{$serv};
 			}
 		}
-		open(STDIN, "<&PARENT") || die "can't dup stdin to parent";
+		open(STDIN, "<&",$parent) || die "can't dup stdin to parent";
 		# close(STDIN);
-		open(STDOUT, ">&PARENT") || die "can't dup stdout to parent";
-		open(STDERR, ">&PARENT") || die "can't dup stderr";
+		open(STDOUT, ">&",$parent) || die "can't dup stdout to parent";
+		open(STDERR, ">&",$parent) || die "can't dup stderr";
 		print "run_mplayer: args = @args\n";
 		exec(@args);
 	}
+	check_player2();
 }
 
 $SIG{TERM} = \&check_eof;
@@ -495,68 +480,68 @@ start:
 if (@args) {
 	run_mplayer();
 } else {
-	*CHILD = *STDIN;
+	$child = *STDIN;
 }
-close(PARENT);
-vec($rin,fileno(CHILD),1) = 1;
-if ($prog && $net) {
-	$time_prog = time()+1;
-}
+$parent->close();
+print "got child $child\n";
+# $child = unblock $child;
+# print "non block : $child\n";
+vec($rin,$child->fileno(),1) = 1;
 
-my $old_str = "";
-while (1) {
+our $old_str = "";
 
-	my $t = undef;
-	my $t0 = time();
-	$t = $time - $t0 if ($time);
-	if ($time_prog && (($t && $time_prog - $t0 < $t) || !$t)) {
-		$t = $time_prog - $t0;
-	}
-
-	my $rout = $rin;
-	my $nfound = select($rout,undef,undef,$t);
-	$t0 = time();
-	if ($time && $time <= $t0) {
-		handle_images();
-	}
-	if ($time_prog && $time_prog <= $t0) {
-		unlink "stream_info.0";
-		rename "stream_info","stream_info.0";
-		my $str = handle_prog($prog,"$codec $bitrate");
-		if ($str) {
-			$time_prog = $t0+30;
-			my $diff = 0;
-			if (open(F,"stream_info")) {
-				if (open(G,"<stream_info.0")) {
-					while (<F>) {
-						if ($_ ne <G>) {
-							$diff = 1;
-							last;
-						}
+sub update_prog {
+	# Mise à jour du programme à partir de l'url contenue dans
+	# $prog...
+	unlink "stream_info.0";
+	rename "stream_info","stream_info.0";
+	my $str = handle_prog($prog,"$codec $bitrate");
+	if ($str) {
+		my $diff = 0;
+		if (open(F,"stream_info")) {
+			if (open(G,"<stream_info.0")) {
+				while (<F>) {
+					if ($_ ne <G>) {
+						$diff = 1;
+						last;
 					}
-					close(G);
-				} else {
-					$diff = 1;
 				}
-				close(F);
-			}
-			if ($diff) {
-				print "send_cmd_prog got str $str\n";
-				send_cmd_prog();
+				close(G);
 			} else {
-				print "filter: pas de cmd prog, pas de diff\n";
+				$diff = 1;
 			}
-			if ($str ne $old_str) {
-				print "new call to handle_image (old = $old_str)\n";
-				handle_images($str);
-				$old_str = $str;
-			}
-		} else {
-			print "filter: pas obtenu de str $str\n";
+			close(F);
 		}
+		if ($diff) {
+			print "send_cmd_prog got str $str\n";
+			send_cmd_prog();
+		} else {
+			print "filter: pas de cmd prog, pas de diff\n";
+		}
+		if ($str ne $old_str) {
+			print "new call to handle_image (old = $old_str)\n";
+			handle_images($str);
+			$old_str = $str;
+		}
+	} else {
+		print "filter: pas obtenu de str $str\n";
 	}
-	if ($nfound > 0) {
-		my $ret = sysread(CHILD,$buff,8192,length($buff));
+}
+
+if ($prog && $net) {
+	$time_prog = AnyEvent::timer(after => 1, interval => 30, cb => \&update_prog);
+}
+
+while (1) {
+	my $rout = $rin;
+	my $nfound = select($rout,undef,undef,0.2); # Coro::Select
+	if ($nfound) {
+		# Pour une raison totalement inconnue, même si on appelle
+		# $child = nonblock $child ici, sysread reste bloquant !
+		# y a absolument rien à faire pour l'empêcher apparemment du coup
+		# j'ai laissé tomber Coro::Handle pour child et j'utilise juste son
+		# select...
+		my $ret = $child->sysread($buff,8192); # ,length($buff));
 		$buff =~ s/\x00+//;
 		# apparently the buffer can be full of empty lines ? Just 4000 0xa
 		# in it !

@@ -4,7 +4,11 @@
 # Accepte les commandes par une fifo : fifo_list
 
 use strict;
-use Socket;
+use Coro::Socket;
+use Coro;
+use Coro::Handle;
+use AnyEvent;
+use AnyEvent::Filesys::Notify;
 use POSIX qw(strftime :sys_wait_h SIGALRM);
 use Encode;
 use Fcntl;
@@ -25,17 +29,14 @@ use HTML::Entities;
 # est toujours le 0...
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
-our ($inotify,$watch);
-use Linux::Inotify2;
-$inotify = new Linux::Inotify2;
-$inotify->blocking(0);
 our $dvd;
 our $encoding;
+our $watch;
 
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
 $have_fb = out::have_freebox() if ($net);
-our $have_dvb = (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
+our $have_dvb = 1; # (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
 our ($l);
 our $pid_player2;
 open(F,">info_list.pid") || die "info_list.pid\n";
@@ -44,7 +45,6 @@ close(F);
 my $numero = "";
 my $time_numero = undef;
 my $last_list = "";
-our $update_pic = 0;
 
 $SIG{PIPE} = sub { print "list: sigpipe ignoré\n" };
 
@@ -79,6 +79,7 @@ our (@list);
 our $found = undef;
 my $mode_flux;
 our %conf;
+our $updating = 0;
 
 sub update_pics {
 	my $rpic = shift;
@@ -86,19 +87,22 @@ sub update_pics {
 		print "update_pics: pas d'images\n";
 		return;
 	}
-	$update_pic = fork();
-	if ($update_pic == 0) {
+	return if ($updating);
+	async {
+		$updating = 1;
 		for (my $n=0; $n<=$#$rpic; $n+=2) {
 			if (open(my $f,">$$rpic[$n]")) {
+				print "*** update_pic, updating $n\n";
+				$f = unblock $f;
 				my ($type,$cont) = chaines::request($$rpic[$n+1]);
 				print "debug: url $$rpic[$n+1] -> type $type\n";
-				print $f $cont;
-				close($f);
-				# print "updated pic $$rpic[$n] from ",$$rpic[$n+1],"\n";
-				out::send_cmd_list("refresh");
+				$f->print($cont);
+				$f->close();
+				disp_list();
+				cede;
 			}
 		}
-		exit(0);
+		$updating = 0;
 	}
 }
 
@@ -288,9 +292,6 @@ sub list_files {
 		$path = "music_path";
 		$tri = "tri_music";
 	}
-	if ($watch) {
-		$watch->cancel;
-	}
 	my $num = 1;
 	my $pat;
 	if (!$conf{$path}) {
@@ -356,28 +357,23 @@ sub list_files {
 		unshift @list,[[$num++,"../",".."]];
 	}
 	unshift @list,[[$num++,"Tri par nom","tri par nom"],
-	[$num++,"Tri par date", "tri par date"],
-	[$num++,"Tri aléatoire", "tri par hasard"]];
-	if ($inotify) {
-		print "adding watch for $conf{$path}\n";
-		$watch = $inotify->watch($conf{$path},IN_MODIFY|IN_CREATE|IN_DELETE,
-			,sub {
-				my $e = shift;
-				print "*** inotify update $e->{w}{name}\n";
-				my ($old) = get_name($list[$found]);
-				read_list();
-				for (my $n=0; $n<=$#list; $n++) {
-					my ($name) = get_name($list[$n]);
-					if ($name eq $old) {
-						$found = $n;
-						last;
-					}
+		[$num++,"Tri par date", "tri par date"],
+		[$num++,"Tri aléatoire", "tri par hasard"]];
+	$watch = AnyEvent::Filesys::Notify->new(
+		dirs => [$conf{$path}],
+		interval => 2.0,
+		cb => sub {
+			my @e = @_;
+			my ($old) = get_name($list[$found]);
+			read_list();
+			for (my $n=0; $n<=$#list; $n++) {
+				my ($name) = get_name($list[$n]);
+				if ($name eq $old) {
+					$found = $n;
+					last;
 				}
-			});
-		print "got watch $watch\n";
-	} else {
-		print "no inotify\n";
-	}
+			}
+		});
 #		@list = reverse @list;
 }
 
@@ -1038,6 +1034,18 @@ sub run_mplayer2 {
 	exec(@list);
 }
 
+our $child_checker;
+
+sub check_player2 {
+	$child_checker = AnyEvent->child(pid => $pid_player2, cb => sub {
+			my ($pid,$status) = @_;
+			print "list: fin de mplayer, pid $pid, status $status\n";
+			$pid_player2 = 0;
+			$child_checker = undef;
+			unlink("fifo","fifo_cmd");
+		});
+}
+
 sub load_file2 {
 	# Même chose que load_file mais en + radical, ce coup là on kille le player
 	# pour redémarrer à froid sur le nouveau fichier. Obligatoire quand on vient
@@ -1166,6 +1174,7 @@ sub load_file2 {
 		if ($pid_player2) {
 			print "player2 pid ok, kill...\n";
 			kill "TERM" => $pid_player2;
+			$child_checker = undef;
 		}
 		if ($src eq "dvd" && $flav eq "mplayer dvd raw") {
 			open(F,"mplayer2 -dvd-device $dvd dvd://1 -nocache -identify -frames 0|");
@@ -1190,6 +1199,7 @@ sub load_file2 {
 		if ($pid_player2 == 0) {
 			run_mplayer2($name,$src,$serv,$flav,$audio,$video);
 		}
+		check_player2();
 		return 1;
 	}
 	return 0;
@@ -1247,36 +1257,13 @@ sub close_numero {
 read_conf();
 read_list();
 system("rm -f fifo_list && mkfifo fifo_list; mkfifo reply_list");
-sub REAPER {
-	my $child;
-	# loathe SysV: it makes us not only reinstate
-	# the handler, but place it after the wait
-	$SIG{CHLD} = \&REAPER;
-	while (($child = waitpid(-1,WNOHANG)) > 0) {
-		print "list: child $child terminated\n";
-		if ($child == $pid_player2) {
-			print "player2 quit\n";
-			$pid_player2 = 0;
-			unlink("fifo","fifo_cmd");
-		} elsif ($child == $update_pic) {
-			print "update pic over\n";
-			disp_list();
-			$update_pic = 0;
-		}
-# 		if (! -f "info_coords") {
-# 			print "plus d'info_coords, bye\n";
-# 			return;
-# 		}
-	}
-}
 
 sub quit {
-	close($l);
+	$l->close() if ($l);
    	unlink "fifo_list","reply_list","info_list.pid";
    	exit(0);
 }
 
-$SIG{CHLD} = \&REAPER;
 $SIG{TERM} = \&quit;
 my $nb_elem = 16;
 my $init = 1;
@@ -1293,21 +1280,30 @@ while (1) {
 	# -> interrompt la lecture fifo -> fermeture !
 	eval {
 		if (defined($l)) {
-			$cmd = <$l>;
-			chomp $cmd;
+			while (!defined($cmd)) {
+				$cmd = $l->readline();
+				if ($cmd) {
+					chomp $cmd;
+				} else {
+					Coro::AnyEvent::sleep 0.1; # pour pas exploser la charge !
+				}
+			}
 		}
 		if (!defined($cmd)) {
-			close($l) if (defined($l));
+			$l->close() if (defined($l));
+			$l = undef;
 			open($l,"<fifo_list");
 			if (!defined($l)) {
 				print "list: open fifo_list failed !!!\n";
+			} else {
+				$l = unblock $l;
 			}
 			next;
 		}
 	};
-	$inotify->poll if ($inotify);
+	cede;
 	again:
-	# print "list: commande reçue après again : $cmd\n";
+	print "list: commande reçue après again : $cmd\n";
 	if (-f "list_coords" && $cmd eq "clear") {
 		out::clear("list_coords");
 		out::clear("info_coords");
@@ -1316,7 +1312,6 @@ while (1) {
 		next;
 	} elsif ($cmd eq "refresh") {
 		my $found0 = $found;
-		read_list() if (!$inotify && $source eq "Enregistrements");
 		$found = $found0;
 	} elsif ($cmd eq "down") {
 		if ($mode_opened) {
@@ -1340,6 +1335,7 @@ while (1) {
 	} elsif ($cmd eq "right") {
 		if (($source eq "flux" && $found-9+$nb_elem > $#list) || $mode_opened) {
 			$cmd = "zap1";
+			disp_list();
 			goto again;
 		} else {
 			my $rtab = $list[$found];
@@ -1634,6 +1630,7 @@ while (1) {
 				if ($pid_player2 == 0) {
 					run_mplayer2($name,$source,$serv,$flav,$audio,$video);
 				}
+				check_player2();
 			}
 			next;
 		}
@@ -1820,12 +1817,14 @@ while (1) {
 			}
 		}
 		$cmd = "zap1";
+		disp_list();
 		goto again;
 	} elsif ($cmd eq "prevchan") {
 		reset_current() if (! -f "list_coords");
 		$found--;
 		if ($found >= 0) {
 			$cmd = "zap1";
+			disp_list();
 			goto again;
 		} else {
 			$found = 0;
@@ -1836,7 +1835,7 @@ while (1) {
 	} elsif ($cmd eq "quit") {
 		print "list: commande quit\n";
 		if ($pid_player2) {
-			print "c'était pour mplayer !\n";
+			print "c'était pour mplayer ! ($pid_player2)\n";
 			out::send_command("quit\n");
 		} else {
 			system("kill `cat info.pid`");
@@ -1846,19 +1845,6 @@ while (1) {
 	} elsif ($cmd ne "list") {
 		print "list: commande inconnue :$cmd!\n";
 		next;
-	}
-	if ($source =~ /Fichiers/ && @list && !$inotify) {
-		# Si on est sur une liste de fichiers, relit le répertoire à chaque
-		# fois
-		my ($old) = get_name($list[$found]);
-		read_list();
-		for (my $n=0; $n<=$#list; $n++) {
-			my ($name) = get_name($list[$n]);
-			if ($name eq $old) {
-				$found = $n;
-				last;
-			}
-		}
 	}
 
 	if ($cmd eq "refresh") {
@@ -1873,7 +1859,7 @@ while (1) {
 	}
 	disp_list();
 }
-close($l);
+$l->close() if (defined($l));
 print "list à la fin input vide\n";
 
 sub get_sort_key {
@@ -1983,7 +1969,7 @@ sub disp_list {
 		}
 		$cur .= "\n";
 	}
-	if ($cmd ne "refresh" || $cur ne $last_list || $update_pic) {
+	if ($cmd ne "refresh" || $cur ne $last_list) {
 		my $info = 0;
 		if ($source =~ /Fichiers/) {
 			$out = out::setup_output("fsel");

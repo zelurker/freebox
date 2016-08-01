@@ -2,7 +2,7 @@
 
 # Gère les programmes de certaines stations de radio web (lien http)
 
-use LWP 5.64;
+use Coro::LWP;
 use strict;
 use Encode;
 

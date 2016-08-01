@@ -2,7 +2,8 @@
 package chaines;
 
 use strict;
-use LWP 5.64;
+use Coro::LWP;
+use LWP::UserAgent;
 
 use out;
 

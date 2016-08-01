@@ -2,7 +2,7 @@
 
 # Récupération des liens mms ou autres à partir d'une page web
 
-use LWP 5.64;
+use Coro::LWP;
 use strict;
 
 my $debug = 0;

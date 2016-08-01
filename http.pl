@@ -11,6 +11,7 @@
 
 use strict;
 use warnings;
+use Coro::LWP;
 use LWP::UserAgent;
 use HTTP::Cookies;
 use File::Path qw(make_path);

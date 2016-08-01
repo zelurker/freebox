@@ -40,7 +40,6 @@ my $recordings = records->new();
 our @cache_pic;
 our ($lastprog,$last_chan,$last_long);
 our ($channel,$long);
-my $time_refresh = 0;
 our @days = ("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi",
 	"Samedi");
 our ($source,$base_flux,$serv);
@@ -387,10 +386,8 @@ if (!$channel) {
 ##			}
 #		}
 		$recordings->handle($time);
-		if (-f "list_coords" || -f "numero_coords" && $time-$time_refresh >= 1) {
-			$time_refresh = $time;
-			out::send_cmd_list("refresh");
-		}
+		# Plus besoin d'envoyer des refresh à intervalles réguliers à list
+		# avec Coro...
 
 		if ($nfound > 0) {
 			if ($cmd) {
