@@ -3,6 +3,7 @@
 package lyrics;
 
 use strict;
+use Coro::LWP;
 use WWW::Mechanize;
 use HTML::Entities;
 use Ogg::Vorbis::Header;
@@ -61,8 +62,9 @@ sub get_lyrics {
 
 	my $mech = WWW::Mechanize->new();
 	$mech->agent_alias("Linux Mozilla");
+	# $mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
 	$mech->timeout(10);
-	$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
+#	$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 	$mech->get("https://www.google.fr/");
 	my $r = $mech->submit_form(
 		form_number => 1,
@@ -76,17 +78,18 @@ sub get_lyrics {
 		if ($u =~ /url.q=(http.+?)&/) {
 			$u = $1;
 			print $_->text,"\n$u\n";
-			last if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com)/);
+			last if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com)/);
 			next if ($_->text =~ /youtube/i || $u =~ /youtube/);
 		}
 	}
-	if ($u !~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com)/) {
+	if ($u !~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com)/) {
 		print "get_lyrics: url inconnue : $u pas de paroles ?\n";
 		return undef;
 	}
 	$mech->get($u);
 	$mech->save_content("page.html");
 	$_ = $mech->content;
+	my $start = undef;
 	if ($u =~ /lyricsfreak.com/) {
 		print "lyricsfreak.com\n";
 		my $lyr = 0;
@@ -136,7 +139,6 @@ sub get_lyrics {
 		}
 		$lyrics =~ s/\n$//s;
 	} elsif ($u =~ /parolesmania.com/) {
-		my $start = undef;
 		foreach (split /\n/,$_) {
 			if (/<strong>Paroles/) {
 				$start = 1;
@@ -154,7 +156,6 @@ sub get_lyrics {
 		}
 		print "lyrics parolesmania.com : $lyrics\n";
 	} elsif ($u =~ /flashlyrics.com/) {
-		my $start = undef;
 		foreach (split /\n/,$_) {
 			if (/<div.+padding\-horiz/) {
 				$start = 1;
@@ -174,7 +175,6 @@ sub get_lyrics {
 		}
 		print "lyrics flashlyrics.com : $lyrics\n";
 	} elsif ($u =~ /musixmatch.com/) {
-		my $start = undef;
 		foreach (split /\n/,$_) {
 			if (s/^.+p class=".+?lyrics.+?content".+?>//) {
 				$start = 1;
@@ -188,6 +188,19 @@ sub get_lyrics {
 			}
 		}
 		print "lyrics musixmatch.com : $lyrics\n";
+	} elsif ($u =~ /lyrics.wikia.com/) {
+		foreach (split /\n/,$_) {
+			if (s/<div class=.lyricbox.>//) {
+				# Vraiment très particulier : tout en 1 seule ligne, et
+				# encodé en ascii !
+				s/<!.+//; # se termine par un commentaire
+				s/&#(\d+);/chr($1)/eg;
+				s/<\/?(br|p)( \/)?>/\n/gs;
+				s/\r//sg;
+				$lyrics .= decode_entities($_)."\n";
+			}
+		}
+		print "lyrics lyrics.wikia.com : $lyrics\n";
 	}
 
 	if ($ogg) {
@@ -199,7 +212,7 @@ sub get_lyrics {
 		} else {
 			# Old ogg files can't have their comments updated (ogg 1.2.0 and
 			# before).
-			if (open(F,">$file.lyrics")) {
+			if (open(F,">:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","$file.lyrics")) {
 				print F "$lyrics";
 				close(F);
 				print "lyrics file created\n";
