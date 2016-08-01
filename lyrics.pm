@@ -203,6 +203,9 @@ sub get_lyrics {
 		print "lyrics lyrics.wikia.com : $lyrics\n";
 	}
 
+	# Pour corriger l'apostrophe à la con de krosoft !
+	$lyrics =~ s/\x{2019}/'/g;
+
 	if ($ogg) {
 		$lyrics =~ s/\n/<br>/sg;
 		$ogg->add_comments("LYRICS",$lyrics);
