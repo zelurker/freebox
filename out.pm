@@ -10,6 +10,9 @@ use Socket;
 use POSIX qw(SIGALRM);
 use Net::Ping;
 use File::Path qw(make_path);
+use AnyEvent::Socket;
+use Coro::Handle;
+use Coro;
 
 sub send_bmovl {
 	my $cmd = shift;
@@ -20,10 +23,23 @@ sub send_bmovl {
 	}
 }
 
-sub send_cmd_fifo($$) {
-	my ($fifo,$cmd) = @_;
+sub send_cmd_fifo {
+	my ($fifo,$cmd,$rep) = @_;
 	my $tries = 1;
 	my $error;
+	if ($fifo =~ /^sock_/) {
+       tcp_connect "unix/", getcwd()."/$fifo", sub {
+          my ($fh) = @_;
+		  $fh = unblock $fh;
+
+		  $fh->print("$cmd\012");
+		  if (defined($rep)) {
+			  my $reply = $fh->readline();
+			  $rep->put($reply);
+		  }
+       };
+	   return;
+   }
 	do {
 		if (sysopen(my $f,"$fifo",O_WRONLY|O_NONBLOCK)) {
 			$error = 0;
@@ -40,7 +56,9 @@ sub send_cmd_fifo($$) {
 
 sub send_cmd_list($) {
 	my $cmd = shift;
-	send_cmd_fifo("fifo_list",$cmd);
+	my $reply = new Coro::Channel;
+	send_cmd_fifo("sock_list",$cmd,$reply);
+	return $reply->get();
 }
 
 sub send_cmd_info($) {
@@ -51,20 +69,9 @@ sub send_cmd_info($) {
 sub send_list {
 	# envoie une commande à fifo_list et récupère la réponse
 	my $cmd = shift;
-	out::send_cmd_list($cmd);
-	print "send_list: sent $cmd\n";
-	$cmd = undef;
-	if (open(F,"<reply_list")) {
-		while (<F>) {
-			chomp;
-			$cmd = $_;
-		}
-		close(F);
-	} else {
-		print "can't read from fifo_list\n";
-	}
-	print "send_list: got $cmd\n";
-	$cmd;
+	my $repl = out::send_cmd_list($cmd);
+	print "send_list: sent $cmd, reply $repl\n";
+	$repl;
 }
 
 sub send_command {

@@ -871,6 +871,43 @@ static int numero(int fifo, int argc, char **argv) {
 
 static void send_cmd(char *fifo, char *cmd) {
     char *buf = strdup(cmd);
+    if (!strncmp(fifo,"sock",4)) {
+	struct sockaddr_un address;
+	int  socket_fd, nbytes;
+	char buffer[256];
+	printf("bmovl: envoi commande à socket %s\n",fifo);
+
+	socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
+	if(socket_fd < 0)
+	{
+	    printf("bmovl: send_cmd socket() failed\n");
+	    return ;
+	}
+
+	/* start with a clean address structure */
+	memset(&address, 0, sizeof(struct sockaddr_un));
+
+	address.sun_family = AF_UNIX;
+	strncpy(address.sun_path, fifo, sizeof(address.sun_path) - 1);
+
+	if(connect(socket_fd,
+		    (struct sockaddr *) &address,
+		    sizeof(struct sockaddr_un)) != 0)
+	{
+	    printf("bmovl: send_cmd connect() failed\n");
+	    return ;
+	}
+
+	strncpy(buffer,cmd,256);
+	buffer[255] = 0;
+	if (strlen(buffer) < 255)
+	    strcat(buffer,"\015\012");
+	write(socket_fd, buffer, strlen(buffer));
+
+	close(socket_fd);
+
+	return ;
+    }
     if (buf[strlen(buf)-1] >= 32)
 	strcat(buf,"\n");
     int file = open(fifo,O_WRONLY|O_NONBLOCK);
@@ -879,9 +916,9 @@ static void send_cmd(char *fifo, char *cmd) {
 	close(file);
     } else {
 	// printf("could not send command %s\n",buf);
-	if (strcmp(fifo,"fifo_list")) {
-	    printf("trying to send to fifo_list instead...\n");
-	    send_cmd("fifo_list",cmd);
+	if (strcmp(fifo,"sock_list")) {
+	    printf("trying to send to sock_list instead...\n");
+	    send_cmd("sock_list",cmd);
 	}
     }
     free(buf);
@@ -909,7 +946,7 @@ static void handle_event(SDL_Event *event) {
 		    if (fifo)
 			send_cmd("fifo_cmd",command[n]);
 		    else
-			send_cmd("fifo_list",command[n]);
+			send_cmd("sock_list",command[n]);
 		}
 		break;
 	    }
@@ -923,14 +960,14 @@ static void handle_event(SDL_Event *event) {
 	    if (input >= SDLK_KP0 && input <= SDLK_KP9) {
 		buf[0] = input-SDLK_KP0+'0';
 		buf[1] = 0;
-		send_cmd("fifo_list",buf);
+		send_cmd("sock_list",buf);
 		return;
 	    } else if (input == SDLK_KP_ENTER) {
 		FILE *f = fopen("list_coords","r");
 		if (!f) f = fopen("numero_coords","r");
 		if (f) {
 		    fclose(f);
-		    send_cmd("fifo_list","zap1");
+		    send_cmd("sock_list","zap1");
 		} else
 		    send_cmd("fifo_info","zap1");
 		return;
@@ -944,7 +981,7 @@ static void handle_event(SDL_Event *event) {
 		    buf[2] = input-SDLK_F10+'0';
 		    buf[3] = 0;
 		}
-		send_cmd("fifo_list",buf);
+		send_cmd("sock_list",buf);
 	    }
 	    return;
 	} else if (input >= 'a' && input <= 'z' && (mod & KMOD_SHIFT)) {
@@ -958,7 +995,7 @@ static void handle_event(SDL_Event *event) {
 		send_cmd("fifo_cmd",buf);
 	    } else {
 		sprintf(buf,"%c",input);
-		send_cmd("fifo_list",buf);
+		send_cmd("sock_list",buf);
 	    }
 	}
     }

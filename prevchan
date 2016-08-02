@@ -1,4 +1,4 @@
 #!/bin/sh
 
-echo prevchan > fifo_list
+echo prevchan |socat stdio unix:/home/manu/free/sock_list
 

@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 
 # Gestion des listes
-# Accepte les commandes par une fifo : fifo_list
 
 use strict;
 use Coro::Socket;
@@ -9,6 +8,7 @@ use Coro;
 use Coro::Handle;
 use AnyEvent;
 use AnyEvent::Filesys::Notify;
+use AnyEvent::Socket;
 use POSIX qw(strftime :sys_wait_h SIGALRM);
 use Encode;
 use Fcntl;
@@ -19,6 +19,9 @@ use chaines;
 require "mms.pl";
 require "radios.pl";
 use HTML::Entities;
+use Cwd;
+use EV;
+use Guard;
 
 # Un mot sur le format interne de @list :
 # chaque élément est un tableau de tableau, c'est parce qu'à l'origine
@@ -295,8 +298,7 @@ sub list_files {
 	my $num = 1;
 	my $pat;
 	if (!$conf{$path}) {
-		$conf{$path} = `pwd`;
-		chomp $conf{$path};
+		$conf{$path} = getcwd;
 	}
 	if ($conf{$path} eq "/") {
 		$pat = "/*";
@@ -907,8 +909,7 @@ sub run_mplayer2 {
 	my $cache = 100;
 	my $filter = "";
 	my $cd = "";
-	my $pwd;
-	chomp ($pwd = `pwd`);
+	my $pwd = getcwd;
 	my $quiet = "";
 	if ($serv =~ /(mms|rtmp|rtsp)/ || $src =~ /youtube/ || ($serv =~ /:\/\// &&
 		$serv =~ /(mp4|avi|asf|mov)$/)) {
@@ -1256,52 +1257,42 @@ sub close_numero {
 
 read_conf();
 read_list();
-system("rm -f fifo_list && mkfifo fifo_list; mkfifo reply_list");
 
 sub quit {
 	$l->close() if ($l);
-   	unlink "fifo_list","reply_list","info_list.pid";
+   	unlink "info_list.pid";
    	exit(0);
 }
 
-$SIG{TERM} = \&quit;
 my $nb_elem = 16;
 my $init = 1;
-my $cmd = "list";
-my $lout;
-while (1) {
-	if ($init) {
-		$init = 0;
-	} else {
-		$cmd = undef;
-	}
-	# Il faut coller ça dans un eval sinon on est presque sûr d'avoir un couac
-	# pendant la récupération de beaucoup d'images (fin du process -> sig child
-	# -> interrompt la lecture fifo -> fermeture !
-	eval {
-		if (defined($l)) {
-			while (!defined($cmd)) {
-				$cmd = $l->readline();
-				if ($cmd) {
-					chomp $cmd;
-				} else {
-					Coro::AnyEvent::sleep 0.1; # pour pas exploser la charge !
-				}
-			}
-		}
-		if (!defined($cmd)) {
-			$l->close() if (defined($l));
-			$l = undef;
-			open($l,"<fifo_list");
-			if (!defined($l)) {
-				print "list: open fifo_list failed !!!\n";
-			} else {
-				$l = unblock $l;
-			}
-			next;
+my $path = getcwd()."/sock_list";
+my $unlink_guard = guard { unlink $path; quit(); };
+print "defining server\n";
+our $server = AnyEvent::Socket::tcp_server("unix/", $path, sub {
+	my ($fh) = @_;
+	$unlink_guard; # mention it
+	async {
+		$fh = unblock $fh;
+
+		my $cmd = $fh->readline ("\012");
+		if (defined($cmd)) {
+			# Pas de boucle à priori, 1 seule commande avec éventuellement
+			# 1 réponse
+			chomp $cmd;
+			print "list: reçu commande $cmd.\n";
+			commands($fh,$cmd);
+			cede;
 		}
 	};
-	cede;
+}) or Carp::croak "Coro::Debug::new_unix_server($path): $!";
+print "server defined\n";
+
+commands(undef,"list");
+EV::run;
+
+sub commands {
+	my ($fh,$cmd) = @_;
 	again:
 	print "list: commande reçue après again : $cmd\n";
 	if (-f "list_coords" && $cmd eq "clear") {
@@ -1309,7 +1300,7 @@ while (1) {
 		out::clear("info_coords");
 		close_mode() if ($mode_opened);
 		out::send_bmovl("image");
-		next;
+		return;
 	} elsif ($cmd eq "refresh") {
 		my $found0 = $found;
 		$found = $found0;
@@ -1318,31 +1309,31 @@ while (1) {
 			$mode_sel++;
 			$mode_sel = 0 if ($mode_sel > $#{$list[$found]});
 			disp_modes();
-			next;
+			return;
 		}
 		$found++;
 		close_numero();
-		next if (! -f "list_coords");
+		return if (! -f "list_coords");
 	} elsif ($cmd eq "up") {
 		if ($mode_opened) {
 			$mode_sel--;
 			$mode_sel = $#{$list[$found]} if ($mode_sel < 0);
 			disp_modes();
-			next;
+			return;
 		}
 		$found--;
 		close_numero();
 	} elsif ($cmd eq "right") {
 		if (($source eq "flux" && $found-9+$nb_elem > $#list) || $mode_opened) {
 			$cmd = "zap1";
-			disp_list();
+			disp_list($cmd);
 			goto again;
 		} else {
 			my $rtab = $list[$found];
 			if ($#$rtab > 0 && !$mode_opened) {
 				$mode_sel = get_cur_mode();
 				disp_modes();
-				next;
+				return;
 			}
 			close_mode if ($mode_opened);
 			if ($found < $#list) {
@@ -1355,7 +1346,7 @@ while (1) {
 		if ($mode_opened) {
 			close_mode();
 			out::send_bmovl("image");
-			next;
+			return;
 		}
 		if ($found < $nb_elem || $nb_elem == 0) {
 			if ($source =~ "flux" && $base_flux) {
@@ -1406,7 +1397,7 @@ while (1) {
 		if ($mode_opened) {
 			$mode_sel = 0;
 			disp_modes();
-			next;
+			return;
 		}
 		$found = 0;
 		close_numero();
@@ -1414,7 +1405,7 @@ while (1) {
 		if ($mode_opened) {
 			$mode_sel = $#{$list[$found]};
 			disp_modes();
-			next;
+			return;
 		}
 		$found = $#list;
 		close_numero();
@@ -1525,23 +1516,23 @@ while (1) {
 			mount_dvd();
 			if ($base_flux eq "dvd") {
 				print "dvdmain: exec_file $name,$serv,$audio,$video\n";
-				next if (exec_file($name,$serv,$audio,$video));
+				return if (exec_file($name,$serv,$audio,$video));
 			} elsif ($name eq "eject") {
 				system("eject $dvd");
-				next;
+				return;
 			} else {
 				if (-d "$dvd/VIDEO_TS" || -d "$dvd/video_ts") {
 					print "dvdmain: load_file2 dvd,dvd name $name,$serv\n";
-					next if (load_file2("dvd",($serv =~ /^dvd\:\// ? $serv : "dvd"),$name));
+					return if (load_file2("dvd",($serv =~ /^dvd\:\// ? $serv : "dvd"),$name));
 				} else {
 					$base_flux = "dvd";
 					list_files();
 				}
 			}
 		} elsif ($source =~ /^(livetv|Enregistrements)$/) {
-			next if (load_file2($name,$serv,$flav,$audio,$video));
+			return if (load_file2($name,$serv,$flav,$audio,$video));
 		} elsif ($source =~ /^Fichiers/) {
-			next if exec_file($name,$serv,$audio,$video);
+			return if exec_file($name,$serv,$audio,$video);
 		} elsif ($source eq "apps") {
 			my ($name,$serv) = get_name($list[$found]);
 			if (!$serv) {
@@ -1590,7 +1581,7 @@ while (1) {
 				read_list();
 			} else {
 				print "lecture flux: load_file2 $serv\n";
-				next if (load_file2($name,$serv,$flav,$audio,$video));
+				return if (load_file2($name,$serv,$flav,$audio,$video));
 			}
 		} else {
 			# cas freeboxtv/dvb/radios freebox
@@ -1632,13 +1623,13 @@ while (1) {
 				}
 				check_player2();
 			}
-			next;
+			return;
 		}
-		next if (! -f "list_coords");
+		return if (! -f "list_coords");
 	} elsif ($cmd =~ /^name /) {
 		my @arg = split(/ /,$cmd);
 		if ($#arg < 2 && $source =~ /freebox/) {
-			print F "syntax: name service flavour [audio] $#arg\n";
+			print $fh "syntax: name service flavour [audio] $#arg\n";
 		} else {
 			if ($source eq "dvb") {
 				$cmd =~ s/^name //;
@@ -1646,26 +1637,24 @@ while (1) {
 			}
 			my ($n,$x) = find_channel($arg[1],$arg[2],$arg[3]);
 			if (!defined($n)) {
-				print F "not found $arg[1] $arg[2]\n";
+				print $fh "not found $arg[1] $arg[2]\n";
 			} else {
 				my ($name) = get_name($list[$n]); # récupère le nom le + court
-				print F "$name,$source/$base_flux\n";
+				print $fh "$name,$source/$base_flux\n";
 			}
 		}
-		close(F);
-		next;
+		return;
 	} elsif ($cmd =~ /^(next|prev) /) {
 		my $next;
 		$next = $cmd =~ s/^next //;
 		$cmd =~ s/^prev //;
-		open($lout,">reply_list") || die "can't write reply_list\n";
 		if (!$cmd) {
-			print $lout "syntax: next|prev <nom de la chaine>\n";
+			print $fh "syntax: next|prev <nom de la chaine>\n";
 		} else {
 			reset_current() if (!-f "list_coords");
 			my ($n,$x) = find_name($cmd);
 			if (!defined($n)) {
-				print $lout "not found $cmd\n";
+				print $fh "not found $cmd\n";
 			} else {
 				my $name;
 				if ($next) {
@@ -1678,28 +1667,25 @@ while (1) {
 					$prev = $#list if ($prev < 0);
 					($name) =get_name($list[$prev]);
 				}
-				print $lout "$name\n";
+				print $fh "$name\n";
 			}
 		}
-		close($lout);
-		next;
+		return;
 	} elsif ($cmd =~ s/^info //) {
-		open($lout,">reply_list") || die "can't write reply_list\n";
 		if (!$cmd) {
-			print $lout "syntax: info <nom de la chaine>\n";
+			print $fh "syntax: info <nom de la chaine>\n";
 		} else {
 			# si la commande est envoyée par le bandeau d'info tout seul
 			# revenir à la source utilisée par la chaine courante
 			reset_current() if (! -f "list_coords");
 			my ($n,$x) = find_name($cmd);
 			if (!defined($n)) {
-				print $lout "not found $cmd\n";
+				print $fh "not found $cmd\n";
 			} else {
-				print $lout "$source/$base_flux,",join(",",@{$list[$n][$x]}),"\n";
+				print $fh "$source/$base_flux,",join(",",@{$list[$n][$x]}),"\n";
 			}
 		}
-		close($lout);
-		next;
+		return;
 	} elsif ($cmd =~ /^switch_mode/) {
 		my @arg = split(/ /,$cmd);
 		my $found = 0;
@@ -1730,7 +1716,7 @@ while (1) {
 			$numero =~ s/\d$//;
 			if (!$numero) {
 				close_numero();
-				next;
+				return;
 			} else {
 				out::clear("numero_coords");
 			}
@@ -1754,7 +1740,7 @@ while (1) {
 			# Si la liste est affichée de toutes façons ça va provoquer une
 			# commande à info, pas la peine de le réveiller
 			out::send_cmd_info("refresh");
-			next;
+			return;
 		}
 	} elsif ($cmd =~ /^[A-Z]$/) { # alphabétique
 		$found = 1 if ($found == 0);
@@ -1777,7 +1763,7 @@ while (1) {
 			$found = $old;
 			my ($name) = get_name($list[$found]);
 			print "list: touche pas trouvée, format : $name\n";
-			next;
+			return;
 		} else {
 			print "list: touche trouvée, found $found old $old\n";
 		}
@@ -1797,7 +1783,7 @@ while (1) {
 				if ($base_flux =~ /m3u$/) {
 					$base_flux = undef;
 					read_list();
-					disp_list();
+					disp_list($cmd);
 				} else {
 					$found = 1; # Pointe sur ..
 					my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
@@ -1817,21 +1803,21 @@ while (1) {
 			}
 		}
 		$cmd = "zap1";
-		disp_list();
+		disp_list($cmd);
 		goto again;
 	} elsif ($cmd eq "prevchan") {
 		reset_current() if (! -f "list_coords");
 		$found--;
 		if ($found >= 0) {
 			$cmd = "zap1";
-			disp_list();
+			disp_list($cmd);
 			goto again;
 		} else {
 			$found = 0;
 		}
 	} elsif ($cmd eq "reset_current") {
 		reset_current();
-		next if (!-f "list_coords");
+		return if (!-f "list_coords");
 	} elsif ($cmd eq "quit") {
 		print "list: commande quit\n";
 		if ($pid_player2) {
@@ -1844,7 +1830,7 @@ while (1) {
 		}
 	} elsif ($cmd ne "list") {
 		print "list: commande inconnue :$cmd!\n";
-		next;
+		return;
 	}
 
 	if ($cmd eq "refresh") {
@@ -1855,12 +1841,10 @@ while (1) {
 			}
 			close_numero();
 		}
-		next if (! -f "list_coords");
+		return if (! -f "list_coords");
 	}
-	disp_list();
+	disp_list($cmd);
 }
-$l->close() if (defined($l));
-print "list à la fin input vide\n";
 
 sub get_sort_key {
 	my $key;
@@ -1915,6 +1899,7 @@ sub exec_file {
 }
 
 sub disp_list {
+	my $cmd = shift;
 	$nb_elem = 16;
 	$nb_elem = $#list+1 if ($nb_elem > $#list);
 

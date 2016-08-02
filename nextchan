@@ -1,4 +1,4 @@
 #!/bin/sh
 
-echo nextchan > fifo_list
+echo nextchan |socat stdio unix:/home/manu/free/sock_list
 

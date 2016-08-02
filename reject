@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ -f list_coords ]; then
-	echo reject > fifo_list
+	echo reject |socat stdio unix:/home/manu/free/sock_list
 else
 	echo alt_src_step -1 > fifo_cmd
 fi
