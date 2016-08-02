@@ -112,7 +112,6 @@ sub disp_lyrics {
 	if (open(F,"<stream_lyrics")) {
 		my $info = "\nParoles : ";
 		while (<F>) {
-			Encode::from_to($_, "utf-8", "iso-8859-1") if ($latin);
 			$info .= $_;
 		}
 		close(F);
