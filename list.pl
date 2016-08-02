@@ -21,7 +21,6 @@ require "radios.pl";
 use HTML::Entities;
 use Cwd;
 use EV;
-use Guard;
 
 # Un mot sur le format interne de @list :
 # chaque élément est un tableau de tableau, c'est parce qu'à l'origine
@@ -39,8 +38,7 @@ our $watch;
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
 $have_fb = out::have_freebox() if ($net);
-our $have_dvb = 1; # (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
-our ($l);
+our $have_dvb = (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
 our $pid_player2;
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
@@ -889,7 +887,6 @@ sub mount_dvd() {
 
 sub run_mplayer2 {
 	my ($name,$src,$serv,$flav,$audio,$video) = @_;
-	$l = undef; # Ne ferme pas ça dans le fils !!!
 	if ($serv =~ /^get,\d+:.+/) {
 		# lien get : download géré par le plugin
 		print "lien get détecté: $serv\n";
@@ -1259,7 +1256,6 @@ read_conf();
 read_list();
 
 sub quit {
-	$l->close() if ($l);
    	unlink "info_list.pid";
    	exit(0);
 }
@@ -1267,26 +1263,7 @@ sub quit {
 my $nb_elem = 16;
 my $init = 1;
 my $path = getcwd()."/sock_list";
-my $unlink_guard = guard { unlink $path; quit(); };
-print "defining server\n";
-our $server = AnyEvent::Socket::tcp_server("unix/", $path, sub {
-	my ($fh) = @_;
-	$unlink_guard; # mention it
-	async {
-		$fh = unblock $fh;
-
-		my $cmd = $fh->readline ("\012");
-		if (defined($cmd)) {
-			# Pas de boucle à priori, 1 seule commande avec éventuellement
-			# 1 réponse
-			chomp $cmd;
-			print "list: reçu commande $cmd.\n";
-			commands($fh,$cmd);
-			cede;
-		}
-	};
-}) or Carp::croak "Coro::Debug::new_unix_server($path): $!";
-print "server defined\n";
+our $server = out::setup_server($path,\&commands);
 
 commands(undef,"list");
 EV::run;

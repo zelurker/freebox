@@ -875,7 +875,6 @@ static void send_cmd(char *fifo, char *cmd) {
 	struct sockaddr_un address;
 	int  socket_fd, nbytes;
 	char buffer[256];
-	printf("bmovl: envoi commande à socket %s\n",fifo);
 
 	socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
 	if(socket_fd < 0)
@@ -901,7 +900,7 @@ static void send_cmd(char *fifo, char *cmd) {
 	strncpy(buffer,cmd,256);
 	buffer[255] = 0;
 	if (strlen(buffer) < 255)
-	    strcat(buffer,"\015\012");
+	    strcat(buffer,"\012");
 	write(socket_fd, buffer, strlen(buffer));
 
 	close(socket_fd);
@@ -969,7 +968,7 @@ static void handle_event(SDL_Event *event) {
 		    fclose(f);
 		    send_cmd("sock_list","zap1");
 		} else
-		    send_cmd("fifo_info","zap1");
+		    send_cmd("sock_info","zap1");
 		return;
 	    } else if (input >= SDLK_F1 && input <= SDLK_F12) {
 		buf[0] = 'F';

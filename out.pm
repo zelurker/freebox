@@ -13,6 +13,9 @@ use File::Path qw(make_path);
 use AnyEvent::Socket;
 use Coro::Handle;
 use Coro;
+use Cwd;
+
+our $cwd = getcwd();
 
 sub send_bmovl {
 	my $cmd = shift;
@@ -28,7 +31,7 @@ sub send_cmd_fifo {
 	my $tries = 1;
 	my $error;
 	if ($fifo =~ /^sock_/) {
-       tcp_connect "unix/", getcwd()."/$fifo", sub {
+       tcp_connect "unix/", "$cwd/$fifo", sub {
           my ($fh) = @_;
 		  $fh = unblock $fh;
 
@@ -40,6 +43,8 @@ sub send_cmd_fifo {
        };
 	   return;
    }
+   # A priori y a plus de fifo, donc tout le code qui suit ne sera plus
+   # utilisé
 	do {
 		if (sysopen(my $f,"$fifo",O_WRONLY|O_NONBLOCK)) {
 			$error = 0;
@@ -63,7 +68,7 @@ sub send_cmd_list($) {
 
 sub send_cmd_info($) {
 	my $cmd = shift;
-	send_cmd_fifo("fifo_info",$cmd);
+	send_cmd_fifo("sock_info",$cmd);
 }
 
 sub send_list {
@@ -265,6 +270,25 @@ sub get_cache($) {
 		print "default pic: $file\n";
 	}
 	$file;
+}
+
+sub setup_server {
+	my ($path,$cb) = @_;
+	my $server = AnyEvent::Socket::tcp_server("unix/", $path, sub {
+			my ($fh) = @_;
+			async {
+				$fh = unblock $fh;
+
+				my $cmd = $fh->readline ("\012");
+				if (defined($cmd)) {
+					# Pas de boucle à priori, 1 seule commande avec éventuellement
+					# 1 réponse
+					chomp $cmd;
+					&$cb($fh,$cmd);
+					cede;
+				}
+			};
+		}) or Carp::croak "Coro::Debug::new_unix_server($path): $!";
 }
 
 1;

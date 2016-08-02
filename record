@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ -f info_coords ]; then
-  echo record > fifo_info
+  echo record | socat stdio sock_info
 else
   echo sub_pos -1 > fifo_cmd
 fi
