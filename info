@@ -4,7 +4,7 @@
 
 if [ -f info_coords ] && [ "$1" == "" ]; then
 	# un bandeau d'info est actif -> on le kille
-	echo clear | socat stdio sock_info
+	echo clear | socat stdio unix:sock_info
 else
 	ch=`head -n 1 current`§`head -n 2 current|tail -n 1`
 	if [ "$ch" == "" ]; then
@@ -12,6 +12,6 @@ else
 		flav=`head -n 4 current|tail -n 1`
 		ch=`echo name $serv $flav |socat stdio unix:sock_list`
 	fi
-	echo "prog:long $ch" | socat stdio sock_info
+	echo "prog:long $ch" | socat stdio unix:sock_info
 fi
 

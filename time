@@ -1,4 +1,4 @@
 #!/bin/sh
 
-echo time | socat stdio sock_info
+echo time | socat stdio unix:sock_info
 

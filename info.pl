@@ -202,7 +202,7 @@ push @prog, progs::arte->new($net);
 my $path = "sock_info";
 # Ouais génial, sig{term} est intercepté par anyevent donc faut passer par
 # ça, et passer un guard au serveur est compliqué (pas trouvé)
-our $fin = AnyEvent->signal( signal => "TERM", cb => sub { print "info: on vire les fichiers\n"; unlink $path; unlink "info_pl.pid"; });
+our $fin = AnyEvent->signal( signal => "TERM", cb => sub { print "info: on vire les fichiers\n"; unlink $path; unlink "info_pl.pid"; exit(0); });
 our $server = out::setup_server($path,\&commands);
 my $nb_days = 1;
 my $cmd;
