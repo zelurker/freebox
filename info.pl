@@ -340,15 +340,13 @@ sub commands {
 		$base_flux =~ s/,(.+)//;
 		$serv = $1;
 		$channel = $cmd;
+		disp_channel();
 	} elsif ($cmd eq "record") {
 		out::clear("info_coords") if (-f "info_coords");
 		out::clear("list_coords") if (-f "list_coords");
 		$recordings->add($lastprog);
 	} else {
 		print "info: commande inconnue $cmd\n";
-	}
-	if (defined($channel)) {
-		disp_channel();
 	}
 }
 

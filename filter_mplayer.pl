@@ -81,8 +81,7 @@ my @duree;
 my $net = out::have_net();
 my $images = 0;
 our ($connected,$started);
-if (!$@ && $net) {
-	# google images dispo si pas d'erreur
+if ($net) {
 	$images = 1;
 	$agent = images->new();
 }
