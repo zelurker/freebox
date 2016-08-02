@@ -10,85 +10,12 @@ use Ogg::Vorbis::Header;
 use MP3::Tag;
 use utf8;
 
-sub get_lyrics {
-	my ($file,$artist,$title) = @_;
-	my $lyrics = "";
-	my $ogg = $file =~ /ogg$/i;
-	my $mp3 = $file =~ /mp3$/i;
-	if ($file =~ /^http/) {
-		$mp3 = $ogg = 0;
-	}
-	if ($ogg) {
-		$ogg = Ogg::Vorbis::Header->new($file);
-		($artist) = $ogg->comment("ARTIST");
-		($artist) = $ogg->comment("artist") if (!$artist);
-		($title) = $ogg->comment("TITLE");
-		($title) = $ogg->comment("title") if (!$title);
-		my (@lyrics) = $ogg->comment("LYRICS");
-		(@lyrics) = $ogg->comment("lyrics") if (!@lyrics);
-		$lyrics = join("\n",@lyrics);
-		print "ogg artist $artist title $title\n";
-		# Si c'est du vieux ogg, on aura peut-être créé un fichier lyrics
-		if (!$lyrics && open(F,"<$file.lyrics")) {
-			while (<F>) {
-				$lyrics .= $_;
-			}
-			close(F);
-		}
-		if ($lyrics) {
-			$lyrics =~ s/<br>/\n/g;
-			return $lyrics;
-		}
-	}
-	if ($mp3) {
-		$mp3 = MP3::Tag->new($file);
-
-		# get some information about the file in the easiest way
-		my ($track,$album,$comment,$year,$genre);
-		($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
-		if (!$comment) {
-			$comment = $mp3->comment();
-			print "comment fixed\n" if ($comment);
-		}
-		# On essaye de suivre le standard mp3 pour stocker les paroles mais vu
-		# que je fais ça sans aucun fichier d'exemple je ne suis pas certain
-		# d'être ok. Bah en tous cas ça peut être lit/écrit par ce script !
-		$lyrics = $mp3->select_id3v2_frame_by_descr('COMM(fre,fra,eng,#0)[USLT]');
-		print "mp3: title $title track $track artist $artist album $album comment $comment year $year genre $genre\n";
-		if ($lyrics) {
-			return $lyrics;
-		}
-	}
-
-	my $mech = WWW::Mechanize->new();
-	$mech->agent_alias("Linux Mozilla");
-	# $mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
-	$mech->timeout(10);
-#	$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
-	$mech->get("https://www.google.fr/");
-	my $r = $mech->submit_form(
-		form_number => 1,
-		fields      => {
-			q => "lyrics $artist - $title",
-		}
-	);
-	my $u;
-	foreach ($mech->links) {
-		$u = $_->url;
-		if ($u =~ /url.q=(http.+?)&/) {
-			$u = $1;
-			print $_->text,"\n$u\n";
-			last if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com)/);
-			next if ($_->text =~ /youtube/i || $u =~ /youtube/);
-		}
-	}
-	if ($u !~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com)/) {
-		print "get_lyrics: url inconnue : $u pas de paroles ?\n";
-		return undef;
-	}
+sub handle_lyrics {
+	my ($mech,$u) = @_;
 	$mech->get($u);
 	$mech->save_content("page.html");
 	$_ = $mech->content;
+	my $lyrics = "";
 	my $start = undef;
 	if ($u =~ /lyricsfreak.com/) {
 		print "lyricsfreak.com\n";
@@ -201,6 +128,94 @@ sub get_lyrics {
 			}
 		}
 		print "lyrics lyrics.wikia.com : $lyrics\n";
+	}
+	$lyrics;
+}
+
+sub get_lyrics {
+	my ($file,$artist,$title) = @_;
+	my $lyrics = "";
+	my $ogg = $file =~ /ogg$/i;
+	my $mp3 = $file =~ /mp3$/i;
+	if ($file =~ /^http/) {
+		$mp3 = $ogg = 0;
+	}
+	if ($ogg) {
+		$ogg = Ogg::Vorbis::Header->new($file);
+		($artist) = $ogg->comment("ARTIST");
+		($artist) = $ogg->comment("artist") if (!$artist);
+		($title) = $ogg->comment("TITLE");
+		($title) = $ogg->comment("title") if (!$title);
+		my (@lyrics) = $ogg->comment("LYRICS");
+		(@lyrics) = $ogg->comment("lyrics") if (!@lyrics);
+		$lyrics = join("\n",@lyrics);
+		print "ogg artist $artist title $title\n";
+		# Si c'est du vieux ogg, on aura peut-être créé un fichier lyrics
+		if (!$lyrics && open(F,"<$file.lyrics")) {
+			while (<F>) {
+				$lyrics .= $_;
+			}
+			close(F);
+		}
+		if ($lyrics) {
+			$lyrics =~ s/<br>/\n/g;
+			return $lyrics;
+		}
+	}
+	if ($mp3) {
+		$mp3 = MP3::Tag->new($file);
+
+		# get some information about the file in the easiest way
+		my ($track,$album,$comment,$year,$genre);
+		($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
+		if (!$comment) {
+			$comment = $mp3->comment();
+			print "comment fixed\n" if ($comment);
+		}
+		# On essaye de suivre le standard mp3 pour stocker les paroles mais vu
+		# que je fais ça sans aucun fichier d'exemple je ne suis pas certain
+		# d'être ok. Bah en tous cas ça peut être lit/écrit par ce script !
+		$lyrics = $mp3->select_id3v2_frame_by_descr('COMM(fre,fra,eng,#0)[USLT]');
+		print "mp3: title $title track $track artist $artist album $album comment $comment year $year genre $genre\n";
+		if ($lyrics) {
+			return $lyrics;
+		}
+	}
+
+	my $mech = WWW::Mechanize->new();
+	$mech->agent_alias("Linux Mozilla");
+	# $mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
+	$mech->timeout(10);
+#	$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
+	eval {
+		$mech->get("https://www.google.fr/");
+	};
+	if ($@) {
+		print "lyrics: got error $!: $@\n";
+		return undef;
+	}
+	my $r = $mech->submit_form(
+		form_number => 1,
+		fields      => {
+			q => "lyrics $artist - $title",
+		}
+	);
+	my $u;
+	foreach ($mech->links) {
+		$u = $_->url;
+		if ($u =~ /url.q=(http.+?)&/) {
+			$u = $1;
+			print $_->text,"\n$u\n";
+			if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com)/) {
+				$lyrics = handle_lyrics($mech,$u);
+				last if ($lyrics);
+			}
+			next if ($_->text =~ /youtube/i || $u =~ /youtube/);
+		}
+	}
+	if (!$lyrics) {
+		print "get_lyrics: url inconnue : $u pas de paroles ?\n";
+		return undef;
 	}
 
 	# Pour corriger l'apostrophe à la con de krosoft !
