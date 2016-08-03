@@ -323,12 +323,6 @@ sub check_eof {
 	if (!$exit || $exit =~ /ID_SIGNAL.(11|6)/) {
 		quit_mplayer();
 	}
-	if ($exit) {
-		open(F,">id") || die "can't write to id\n";
-		print F "$exit\n";
-		close(F);
-		print "filter: fichier id créé\n";
-	}
 	if ($started) {
 		if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
 			print "filter: envoi nextchan exit $exit\n";
