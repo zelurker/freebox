@@ -166,10 +166,12 @@ sub alpha {
 		close(F);
 		for(my $i=$start; $i != $stop; $i+=$step) {
 			send_bmovl("ALPHA $coords $i");
+			cede;
 		}
 		send_bmovl("ALPHA $coords $stop");
 		# le clear est pour l'affichage direct quand pas de mplayer
 		send_bmovl("CLEAR $coords");
+		unlink("info_coords");
 	}
 }
 
@@ -217,6 +219,7 @@ sub setup_output {
 	if ($width > 100 && $height > 100) {
 		$out = open_bmovl();
 		print $out "$prog fifo $width $height $long\n" if ($out);
+		print "setup_output: $prog fifo $width $height $long\n" if ($out);
 	} else {
 		print "*** width $width height $height, on annule bmovl\n";
 		$out = *STDERR;

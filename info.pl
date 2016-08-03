@@ -47,7 +47,7 @@ our @days = ("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi",
 our ($source,$base_flux,$serv);
 
 $SIG{PIPE} = sub { print "info: sigpipe ignoré\n" };
-my $start_timer = 0;
+our $fadeout;
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
@@ -86,6 +86,10 @@ sub myget {
 	# un get avec cache
 	my $url = shift;
 	my $name = out::get_cache($url);
+	if (!$name) {
+		print "info: get_name from $url returns nothing\n";
+		return undef;
+	}
 	my $raw = undef;
 	if (-f $name && !-z $name) {
 		utime(undef,undef,$name);
@@ -121,6 +125,23 @@ sub disp_lyrics {
 	}
 }
 
+sub setup_fadeout {
+	my $long = shift;
+	print "setup_fadeout long:$long\n";
+	if (!$long) {
+		$fadeout = AnyEvent->timer(after=>5, cb =>
+			sub {
+				if (! -f "list_coords") {
+					out::alpha("info_coords",-40,-255,-5);
+					out::send_bmovl("image");
+				}
+			}
+		);
+	} else {
+		undef $fadeout;
+	}
+}
+
 sub read_stream_info {
 	my ($time,$cmd) = @_;
 	# Là il peut y avoir un problème si une autre source a le même nom
@@ -128,20 +149,20 @@ sub read_stream_info {
 	# nom... Pour l'instant pas d'idée sur comment éviter ça...
 	my ($cur,$last,$info) = get_stream_info();
 	$cur = "" if (!$cur); # Evite le warning de manip d'undef
-	$cur =~ s/pic:(http.+?) //;
-	my $pic = $1;
+	my $pic = "";
+	if ($cur =~ s/pic:(http.+?) //) {
+		$pic = $1;
+	}
 	my $pics = "";
 	if ($source eq "flux" && $base_flux =~ /^stations/) {
 		$pics = get_radio_pic($cmd);
 	}
 	if ($pic) {
-		$pic = myget $pic;
-		$last =~ s/pic:(http.+?) //;
-	} else {
-		$pic = "";
+		$pic = myget $pic || "";
+		$last =~ s/pic:(http.+?) // if ($last);
 	}
 	if ($info) {
-		my $out = out::setup_output("bmovl-src/bmovl","",0);
+		my $out = out::setup_output("bmovl-src/bmovl","",$long);
 		if ($out) {
 			print $out "$pics\n$pic\n";
 			my ($sec,$min,$hour) = localtime($time);
@@ -150,13 +171,7 @@ sub read_stream_info {
 			print $out "Dernier morceau : $last\n" if ($last);
 			disp_lyrics($out);
 			out::close_fifo($out);
-			if (!$long) {
-				$start_timer = $time+5 if ($start_timer < $time);
-				print "init start_timer $start_timer / $time\n";
-			} else {
-				$start_timer = 0;
-				print "reset start_timer\n";
-			}
+			setup_fadeout($long);
 		}
 		$last_chan = $channel;
 	}
@@ -234,6 +249,7 @@ sub disp_prog {
 		print "info: disp_prog sans sub !\n";
 		return;
 	}
+	print "disp_long : long:$long\n";
 	$lastprog = $sub;
 	$last_chan = $$sub[1];
 	my $start = $$sub[3];
@@ -288,17 +304,14 @@ sub disp_prog {
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
 	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
 	out::close_fifo($out);
-	if (!$long) {
-		$start_timer = $time+5 if ($start_timer < $time);
-	} else {
-		$start_timer = 0;
-	}
+	setup_fadeout($long);
 	$last_long = $long;
 #	print "last_long = $last_long from disp_prog\n";
 }
 
 sub commands {
-	my ($fh,$cmd) = @_;
+	my $fh = shift;
+	$cmd = shift;
 	# C'est un peu bizarre comme idée, long initialisé pour toutes les
 	# commandes ? A priori ça n'est utile que pour prog, mais bon on va
 	# garder comme ça pour l'instant...
@@ -306,7 +319,7 @@ sub commands {
 	($tab[0],$long) = split(/\:/,$tab[0]);
 	$cmd = join(" ",@tab);
 
-	print "info: reçu commande $cmd.\n";
+	print "info: reçu commande $cmd long:$long.\n";
 	if ($cmd eq "clear") {
 		out::clear("info_coords");
 	} elsif ($cmd eq "time") {
@@ -354,6 +367,7 @@ sub disp_channel {
 # Ici on a obtenu la chaine, on cherche un afficheur
 	chomp $channel;
 	chomp $long if ($long);
+	print "disp_channel: entrée avec long:$long\n";
 
 	my $sub = undef;
 # 1 les trucs spécialisés (séries, radios, etc).
@@ -380,7 +394,7 @@ sub disp_channel {
 	if (!$sub) {
 		# Pas trouvé la chaine
 		my $time = time();
-		my $out = out::setup_output("bmovl-src/bmovl","",0);
+		my $out = out::setup_output("bmovl-src/bmovl","",$long);
 		$cmd =~ s/pic:(.+?) //;
 		my $pic = $1;
 #	my $src = out::send_list("info ".lc($cmd));
@@ -398,7 +412,7 @@ sub disp_channel {
 			print $out "Aucune info\n";
 		}
 		out::close_fifo($out);
-		$start_timer = $time+5 if ($start_timer < $time);
+		setup_fadeout($long);
 		$last_chan = $channel;
 		return;
 	}

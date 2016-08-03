@@ -39,7 +39,7 @@ sub find_actor($) {
 
 sub get {
 	my ($p,$channel,$source,$base_flux) = @_;
-	return undef if ($source !~ /Fichiers/);
+	return undef if ($source !~ /Fichiers v/);
 
 	if ($channel !~ /^(.+)[ \.]s(\d+)e(\d+)/i) {
 		print STDERR "series: format de nom incorrect $channel\n";

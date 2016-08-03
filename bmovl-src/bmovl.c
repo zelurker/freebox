@@ -312,6 +312,13 @@ static int info(int fifo, int argc, char **argv)
 		h = (htext + 16+12 < height-16 ? htext + 16+12 : height-16);
 		if (h > maxh) h = maxh;
 
+		x = margew;
+		y = height - h - margeh;
+		if (list_opened && y < listy+listh) {
+		    y = listy+listh;
+		    if (y+h > height-16)
+			h = height-16-y;
+		}
 		sf = create_surface(width,h);
 		fg = get_fg(sf);
 
