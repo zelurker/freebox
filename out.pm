@@ -33,12 +33,14 @@ sub send_cmd_fifo {
 	if ($fifo =~ /^sock_/) {
        tcp_connect "unix/", "$cwd/$fifo", sub {
           my ($fh) = @_;
-		  $fh = unblock $fh;
+		  async {
+			  $fh = unblock $fh;
 
-		  $fh->print("$cmd\012");
-		  if (defined($rep)) {
-			  my $reply = $fh->readline();
-			  $rep->put($reply);
+			  $fh->print("$cmd\012");
+			  if (defined($rep)) {
+				  my $reply = $fh->readline();
+				  $rep->put($reply);
+			  }
 		  }
        };
 	   return;
