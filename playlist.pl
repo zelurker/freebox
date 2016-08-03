@@ -7,6 +7,7 @@ use strict;
 use Encode;
 
 our $browser = LWP::UserAgent->new(keep_alive => 0);
+$browser->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
 $browser->timeout(5);
 $browser->default_header(
 	[ 'Accept-Language' => "fr-fr"
@@ -43,7 +44,7 @@ sub handle_prog {
 	my ($site) = $prog =~ /^(http:\/\/.+?\/)/;
 	my $response = $browser->get($prog);
 	if (! $response->is_success) {
-		print "filter: pas pu récupérer le prog en $prog\n";
+		print "filter: pas pu récupérer le prog en $prog.\n";
 		return;
 	}
 	my $res = $response->content;
@@ -152,7 +153,7 @@ sub handle_prog {
 		print "format inconnu $res\n";
 	}
 	if (@tracks) {
-		if (open(F,">stream_info")) {
+		if (open(F,">:encoding(".($ENV{LANG} =~ /UTF/i ? "utf-8" : "iso-8859-1").")","stream_info")) {
 			print F "$info\n";
 			foreach (reverse @tracks) {
 				print F "$_\n";

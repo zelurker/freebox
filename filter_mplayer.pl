@@ -39,6 +39,15 @@ sub utf($) {
 	if ($latin && $str =~ /\xc3/) {
 		# Tentative de détection de l'utf8, pas du tout sûr de marcher !
 		Encode::from_to($str, "utf-8", "iso-8859-15");
+	} elsif ($str !~ /\xc3/) {
+		print "utf: encodage utf $str is_utf:",utf8::is_utf8($str),"\n";
+		for (my $n=0; $n<length($str); $n++) {
+			print ord(substr($str,$n))," ";
+		}
+		print "\n";
+		eval {
+			Encode::from_to($str, "iso-8859-1", "utf-8");
+		}
 	}
 	$str;
 }
@@ -118,11 +127,16 @@ our %bg_pic;
 $SIG{PIPE} = sub { print "filter_mplayer: sigpipe ignoré\n" };
 
 sub get_lyrics {
+	# Apparemment il faut des paramètres locaux sinon
+	# en our c'est mis à jour dans le async quand il a le temps, souvent
+	# trop tard !
+	my ($artist,$titre) = @_;
 	if ($pid_lyrics) {
 		$wait_lyrics = 1;
 		return;
 	}
 	async {
+		# LOOP nécessaire pour sortir par last ??!
 		LOOP: {
 		do {
 			my ($aut,$tit) = ($artist,$titre);
@@ -217,11 +231,9 @@ sub handle_result {
 				out::send_bmovl("image $pic");
 			}
 		}
-		print "calling anyevent::timer\n";
 		$time = AnyEvent->timer(after => 25,
 			interval => 25,
 			cb => sub { handle_images(); });
-		print "anyevent::timer done\n";
 	} else {
 		print "handle_result: fin de liste!\n";
 		out::send_bmovl("vignettes") if ($has_vignettes);
@@ -396,9 +408,6 @@ sub send_cmd_prog {
 	# on ajoute un timeout pour contourner les sites qui envoient l'info 2
 	# fois de suite avec variation, genre une pub au bout la 2ème fois.
 	my $cmd = "prog";
-	if (-f "info_coords") { #  && time()-$last_cmd_prog >= 10) {
-		$cmd = "prog:long";
-	}
 	$last_cmd_prog = time();
 	out::send_cmd_info("$cmd $chan§$source/$base_flux") if ($cmd);
 }
@@ -407,12 +416,12 @@ sub update_codec_info {
 	my $f;
 	if ($codec && $bitrate && $init) {
 		my $info = "";
-		if (open($f,"<stream_info")) {
-			while (<$f>) {
+		if (open(FILE,"<stream_info") || open(FILE,"<stream_info.0")) {
+			while (<FILE>) {
 				$info .= $_;
 			}
+			close(FILE);
 		}
-		close($f);
 		if (open($f,">stream_info")) {
 			print $f "$codec $bitrate\n";
 			print $f $info if ($info);
@@ -429,7 +438,7 @@ our $child_checker;
 sub check_player2 {
 	$child_checker = AnyEvent->child(pid => $pid_mplayer, cb => sub {
 			my ($pid,$status) = @_;
-			print "list: fin de mplayer, pid $pid, status $status\n";
+			print "filter: fin de mplayer, pid $pid, status $status\n";
 			$pid_mplayer = 0;
 			$child_checker = undef;
 		});
@@ -482,7 +491,6 @@ if (@args) {
 	$child = *STDIN;
 }
 $parent->close();
-print "got child $child\n";
 # $child = unblock $child;
 # print "non block : $child\n";
 vec($rin,$child->fileno(),1) = 1;
@@ -492,11 +500,14 @@ our $old_str = "";
 sub update_prog {
 	# Mise à jour du programme à partir de l'url contenue dans
 	# $prog...
-	unlink "stream_info.0";
-	rename "stream_info","stream_info.0";
+	# Apparemment il faut obligatoirement un async ici pour Coro sinon on
+	# se prend une erreur fatale de blocage incompréhensible !
+	async {
 	my $str = handle_prog($prog,"$codec $bitrate");
 	if ($str) {
 		my $diff = 0;
+		unlink "stream_info.0";
+		rename "stream_info","stream_info.0";
 		if (open(F,"stream_info")) {
 			if (open(G,"<stream_info.0")) {
 				while (<F>) {
@@ -524,11 +535,13 @@ sub update_prog {
 		}
 	} else {
 		print "filter: pas obtenu de str $str\n";
+		undef $time_prog;
 	}
+}
 }
 
 if ($prog && $net) {
-	$time_prog = AnyEvent::timer(after => 1, interval => 30, cb => \&update_prog);
+	$time_prog = AnyEvent->timer(after => 1, interval => 30, cb => sub { update_prog(); } );
 }
 
 while (1) {
@@ -603,16 +616,18 @@ while (1) {
 					$val =~ s/ \|.+//; # vire les sufixes hotmix
 					$val =~ s/\(WR\) //; # vire ce truc de rfm enfoirés...
 					$val =~ s/\+/ /g if ($serv =~ /ouifm\.ice/); # !!! y a vraiment n'importe quoi des fois !
-					$val = utf($val);
-					$info .= "$val ";
-					$lyrics = 0 if ($titre ne $val);
-					$titre = $val;
-					print "reçu par icy info: $val.\n";
-					get_lyrics() if (!$lyrics);
-					if (!$net) {
-						$info .= " pas de réseau)";
-					} elsif (!$images) {
-						$info .= " (pas de WWW::Google::Images)";
+					if ($val !~ /^ *\- *$/ && $val !~ /^<.+>$/) { # spécialité mfm : " - " ou "<html>" !
+						$val = utf($val);
+						$info .= "$val ";
+						$lyrics = 0 if ($titre ne $val);
+						$titre = $val;
+						print "reçu par icy info: $val.\n";
+						get_lyrics($artist,$titre) if (!$lyrics);
+						if (!$net) {
+							$info .= " pas de réseau)";
+						} elsif (!$images) {
+							$info .= " (pas de WWW::Google::Images)";
+						}
 					}
 				} elsif ($val && $name !~ /^(StreamUrl|adw_ad|durationMilliseconds|insertionType|metadata)/) {
 					$info .= " + $name=\'$val\' ";
@@ -623,7 +638,6 @@ while (1) {
 				print F "$info\n";
 				close(F);
 			}
-			print "envoie send_cmd_prog\n";
 			send_cmd_prog();
 
 			if ($images && $titre =~ /\-/ && $titre ne $old_titre) {
@@ -678,7 +692,7 @@ while (1) {
 				}
 				if (!$last_t || -f "info_coords") {
 					if (!$lyrics && (($artist && $titre) || $args[1] !~ /^http/)) {
-						get_lyrics();
+						get_lyrics($artist,$titre);
 						$lyrics = 1;
 					}
 					if (open(F,">stream_info")) {
@@ -686,7 +700,7 @@ while (1) {
 						if (!$net) {
 							print F " - pas de réseau";
 						} elsif (!$images) {
-							print F " - pas de WWW::Google::Images";
+							print F " - pas de réseau";
 						}
 						print F "\n$artist - $titre ($album) $t2 ".($t3>0 ? int($t1*100/$t3) : "-"),"%\n";
 						close(F);

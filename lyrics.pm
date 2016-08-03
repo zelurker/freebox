@@ -12,7 +12,13 @@ use utf8;
 
 sub handle_lyrics {
 	my ($mech,$u) = @_;
-	$mech->get($u);
+	eval {
+		$mech->get($u);
+	};
+	if ($@) {
+		print "handle_lyrics: got error $!: $@\n";
+		return undef;
+	}
 	$mech->save_content("page.html");
 	$_ = $mech->content;
 	my $lyrics = "";
@@ -81,6 +87,7 @@ sub handle_lyrics {
 				$lyrics .= decode_entities($_);
 			}
 		}
+		$lyrics = "" if ($lyrics =~ /Les paroles de la chanson/);
 		print "lyrics parolesmania.com : $lyrics\n";
 	} elsif ($u =~ /flashlyrics.com/) {
 		foreach (split /\n/,$_) {
@@ -207,7 +214,9 @@ sub get_lyrics {
 			$u = $1;
 			print $_->text,"\n$u\n";
 			if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com)/) {
+				my $old = $_;
 				$lyrics = handle_lyrics($mech,$u);
+				$_ = $old;
 				last if ($lyrics);
 			}
 			next if ($_->text =~ /youtube/i || $u =~ /youtube/);

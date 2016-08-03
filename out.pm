@@ -219,7 +219,6 @@ sub setup_output {
 	if ($width > 100 && $height > 100) {
 		$out = open_bmovl();
 		print $out "$prog fifo $width $height $long\n" if ($out);
-		print "setup_output: $prog fifo $width $height $long\n" if ($out);
 	} else {
 		print "*** width $width height $height, on annule bmovl\n";
 		$out = *STDERR;

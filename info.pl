@@ -127,7 +127,6 @@ sub disp_lyrics {
 
 sub setup_fadeout {
 	my $long = shift;
-	print "setup_fadeout long:$long\n";
 	if (!$long) {
 		$fadeout = AnyEvent->timer(after=>5, cb =>
 			sub {
@@ -316,8 +315,10 @@ sub commands {
 	# commandes ? A priori ça n'est utile que pour prog, mais bon on va
 	# garder comme ça pour l'instant...
 	my @tab = split(/ /,$cmd);
+	my $old_long = $long;
 	($tab[0],$long) = split(/\:/,$tab[0]);
 	$cmd = join(" ",@tab);
+	$long = "" if (!$long); # Evite les warnings !
 
 	print "info: reçu commande $cmd long:$long.\n";
 	if ($cmd eq "clear") {
@@ -353,6 +354,8 @@ sub commands {
 		$base_flux =~ s/,(.+)//;
 		$serv = $1;
 		$channel = $cmd;
+		# long n'est pas effacé par une commande prog
+		$long = $old_long if ($old_long);
 		disp_channel();
 	} elsif ($cmd eq "record") {
 		out::clear("info_coords") if (-f "info_coords");
