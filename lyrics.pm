@@ -147,7 +147,7 @@ sub pure_ascii {
 	s/[éèêë]/e/g;
 	s/ô/o/g;
 	s/ù/u/g;
-	s/[!,?;\-]//g;
+	s/[!,?;\-]/ /g;
 	s/ +/ /g;
 	s/^ +//;
 	s/ +$//;
@@ -227,7 +227,6 @@ sub get_lyrics {
 	);
 	my $orig = $title;
 	$title = pure_ascii($title);
-	die "conv title orig $orig title $title\n" if ($title =~ /ê/);
 
 	my $u;
 	foreach ($mech->links) {

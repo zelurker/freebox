@@ -39,15 +39,9 @@ sub utf($) {
 	if ($latin && $str =~ /\xc3/) {
 		# Tentative de détection de l'utf8, pas du tout sûr de marcher !
 		Encode::from_to($str, "utf-8", "iso-8859-15");
-	} elsif ($str !~ /\xc3/) {
+	} else {
 		print "utf: encodage utf $str is_utf:",utf8::is_utf8($str),"\n";
-		for (my $n=0; $n<length($str); $n++) {
-			print ord(substr($str,$n))," ";
-		}
-		print "\n";
-		eval {
-			Encode::from_to($str, "iso-8859-1", "utf-8");
-		}
+		print "result : ", utf8::decode($str),"\n";
 	}
 	$str;
 }
@@ -148,7 +142,6 @@ sub get_lyrics {
 			print "*** filter: calling get_lyrics $args[1] artist $aut titre $tit\n";
 			my $lyrics = lyrics::get_lyrics($args[1],$aut,$tit);
 			if ($lyrics) {
-				print "filter: obtenu lyrics $lyrics\n";
 				if (open(F,">:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","stream_lyrics")) {
 					print F $lyrics;
 					close(F);
@@ -634,7 +627,7 @@ while (1) {
 				}
 			}
 			$info =~ s/ *$//;
-			if ($info && open(F,">>stream_info")) {
+			if ($info && open(F,">>:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","stream_info")) {
 				print F "$info\n";
 				close(F);
 			}
