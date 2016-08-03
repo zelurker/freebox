@@ -2,6 +2,7 @@
 
 package images;
 
+use Coro::LWP;
 use WWW::Mechanize;
 use Encode;
 use MIME::Base64;
@@ -35,15 +36,22 @@ sub search {
 			print "*** images.pm: got error $@\n";
 		}
 	} while ($@);
-	$mech->submit_form(
-		form_number => 1,
-		fields      => {
-			site => "imghp",
-			q => $q,
-			biw => 1337,
-			bih => 722,
-		}
-	);
+	eval {
+		$mech->submit_form(
+			form_number => 1,
+			fields      => {
+				site => "imghp",
+				q => $q,
+				biw => 1337,
+				bih => 722,
+			}
+		);
+	};
+	if ($@) {
+		print "*** images.pm: got error submit_form $@\n";
+		return undef;
+	}
+
 	$self->{mech} = $mech;
 
 	# Décodage du js... !
