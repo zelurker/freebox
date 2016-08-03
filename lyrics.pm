@@ -139,6 +139,21 @@ sub handle_lyrics {
 	$lyrics;
 }
 
+sub pure_ascii {
+	# Vire les accents et la ponctuation
+	$_ = shift;
+	$_ = lc($_);
+	s/[àâ]/a/g;
+	s/[éèêë]/e/g;
+	s/ô/o/g;
+	s/ù/u/g;
+	s/[!,?;\-]//g;
+	s/ +/ /g;
+	s/^ +//;
+	s/ +$//;
+	$_;
+}
+
 sub get_lyrics {
 	my ($file,$artist,$title) = @_;
 	my $lyrics = "";
@@ -153,21 +168,14 @@ sub get_lyrics {
 		($artist) = $ogg->comment("artist") if (!$artist);
 		($title) = $ogg->comment("TITLE");
 		($title) = $ogg->comment("title") if (!$title);
-		my (@lyrics) = $ogg->comment("LYRICS");
-		(@lyrics) = $ogg->comment("lyrics") if (!@lyrics);
-		$lyrics = join("\n",@lyrics);
+		# Normalement on devrait pouvoir stocker les paroles dans un tag
+		# vorbis, sauf qu'ils sont supers intolérants, on a le droit qu'à
+		# de l'ascii standard. Pour les retours charriots ça va encore,
+		# mais pour les accents c'est un merdier sans nom (possibilité de
+		# le faire à partir des définitions des accents html en recopiant à
+		# partir de la table, mais c'est trop chiant), donc on laisse
+		# tomber les tags vorbis pour les paroles, .lyrics uniquement !
 		print "ogg artist $artist title $title\n";
-		# Si c'est du vieux ogg, on aura peut-être créé un fichier lyrics
-		if (!$lyrics && open(F,"<$file.lyrics")) {
-			while (<F>) {
-				$lyrics .= $_;
-			}
-			close(F);
-		}
-		if ($lyrics) {
-			$lyrics =~ s/<br>/\n/g;
-			return $lyrics;
-		}
 	}
 	if ($mp3) {
 		$mp3 = MP3::Tag->new($file);
@@ -188,6 +196,16 @@ sub get_lyrics {
 			return $lyrics;
 		}
 	}
+	if (!$lyrics && open(F,"<:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","$file.lyrics")) {
+		while (<F>) {
+			$lyrics .= $_;
+		}
+		close(F);
+	}
+	if ($lyrics) {
+		print "got lyrics from .lyrics\n";
+		return $lyrics;
+	}
 
 	my $mech = WWW::Mechanize->new();
 	$mech->agent_alias("Linux Mozilla");
@@ -207,6 +225,10 @@ sub get_lyrics {
 			q => "lyrics $artist - $title",
 		}
 	);
+	my $orig = $title;
+	$title = pure_ascii($title);
+	die "conv title orig $orig title $title\n" if ($title =~ /ê/);
+
 	my $u;
 	foreach ($mech->links) {
 		$u = $_->url;
@@ -215,9 +237,14 @@ sub get_lyrics {
 			print $_->text,"\n$u\n";
 			if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com)/) {
 				my $old = $_;
-				$lyrics = handle_lyrics($mech,$u);
+				my $text = pure_ascii($_->text);
+				if ($text =~ /$title/) {
+					$lyrics = handle_lyrics($mech,$u);
+					last if ($lyrics);
+				} else {
+					print "lyrics: rejet sur le titre, texte : $text, title $title.\n";
+				}
 				$_ = $old;
-				last if ($lyrics);
 			}
 			next if ($_->text =~ /youtube/i || $u =~ /youtube/);
 		}
@@ -230,23 +257,7 @@ sub get_lyrics {
 	# Pour corriger l'apostrophe à la con de krosoft !
 	$lyrics =~ s/\x{2019}/'/g;
 
-	if ($ogg) {
-		$lyrics =~ s/\n/<br>/sg;
-		$ogg->add_comments("LYRICS",$lyrics);
-		my $ret = $ogg->write_vorbis();
-		if ($ret == 1) {
-			print "ogg file updated !\n";
-		} else {
-			# Old ogg files can't have their comments updated (ogg 1.2.0 and
-			# before).
-			if (open(F,">:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","$file.lyrics")) {
-				print F "$lyrics";
-				close(F);
-				print "lyrics file created\n";
-			}
-		}
-		$lyrics =~ s/<br>/\n/sg;
-	} elsif ($mp3) {
+	if ($mp3) {
 		my $lang;
 		# Les paroles dans le mp3 c'est pourquoi faire simple quand on peut
 		# faire compliqué ! En gros y a un commité de standardisation qui s'est
@@ -275,6 +286,15 @@ sub get_lyrics {
 		$mp3->config(write_v24 => 1);
 		$mp3->select_id3v2_frame_by_descr("COMM($lang)[USLT]", $lyrics);
 		$mp3->update_tags();
+	} else {
+		# Sans déconner, vu la complexité des tags mp3 je me demande si je
+		# devrais pas plutôt stocker dans un fichier .lyrics pour tout le
+		# monde ? Enfin bon...
+		if (open(F,">:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","$file.lyrics")) {
+			print F "$lyrics";
+			close(F);
+			print "lyrics file created\n";
+		}
 	}
 	return $lyrics;
 }
