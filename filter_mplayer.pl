@@ -278,7 +278,7 @@ $prog = $1 if ($source !~ /youtube/);
 print "filter: prog = $prog\n";
 $source =~ s/\/(.+)//;
 our $base_flux = $1;
-unlink "stream_info","stream_lyrics";
+unlink "stream_info","stream_lyrics","stream_info.0";
 my ($width,$height) = ();
 my $exit = "";
 
@@ -313,7 +313,7 @@ sub check_eof {
 	$eof = 1;
 	unlink "vignettes" if ($has_vignettes);
 	print "check_eof: $source exit:$exit\n";
-	unlink("video_size","stream_info","cache/arte/last_serv","stream_lyrics");
+	unlink("video_size","stream_info","cache/arte/last_serv","stream_lyrics","stream_info.0");
 	if (!$stream && -f "info_coords") {
 		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
 			print F "clear\n";
