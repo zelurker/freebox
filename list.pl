@@ -359,21 +359,25 @@ sub list_files {
 	unshift @list,[[$num++,"Tri par nom","tri par nom"],
 		[$num++,"Tri par date", "tri par date"],
 		[$num++,"Tri aléatoire", "tri par hasard"]];
-	$watch = AnyEvent::Filesys::Notify->new(
-		dirs => [$conf{$path}],
-		interval => 2.0,
-		cb => sub {
-			my @e = @_;
-			my ($old) = get_name($list[$found]);
-			read_list();
-			for (my $n=0; $n<=$#list; $n++) {
-				my ($name) = get_name($list[$n]);
-				if ($name eq $old) {
-					$found = $n;
-					last;
+	if (!$watch || $watch->{dirs}[0] ne $conf{$path}) {
+		undef $watch;
+		$watch = AnyEvent::Filesys::Notify->new(
+			dirs => [$conf{$path}],
+			interval => 2.0,
+			cb => sub {
+				my @e = @_;
+				my ($old) = get_name($list[$found]);
+				read_list();
+				for (my $n=0; $n<=$#list; $n++) {
+					my ($name) = get_name($list[$n]);
+					if ($name eq $old) {
+						$found = $n;
+						last;
+					}
 				}
-			}
-		});
+			});
+		print "ajout Filesys::Notify $conf{$path}\n";
+	}
 #		@list = reverse @list;
 }
 
