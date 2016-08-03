@@ -1153,11 +1153,6 @@ sub load_file2 {
 		}
 	}
 	if ($serv) {
-		if ($source !~ /(Fichiers son|cd)/) {
-			print "effacement fichiers coords:$source:\n";
-			out::clear( "list_coords","info_coords","video_size");
-			system("kill -USR2 `cat info.pid`");
-		}
 		out::send_command("pause\n");
 		open(G,">current");
 		my $src = $source; # ($source eq "cd" ? "flux" : $source);
@@ -1169,7 +1164,7 @@ sub load_file2 {
 		print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
 		close(G);
 		print "sending quit\n";
-		unlink("id","stream_info");
+		unlink("id","stream_info","stream_info.0");
 		# Remarque ici on ne veut pas que le message id_exit=quit sorte de
 		# filter, donc on le kille juste avant d'envoyer la commande de quit
 		my $f;
