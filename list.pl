@@ -725,7 +725,10 @@ sub read_list {
 				}
 			}
 			if (@pic) {
+				print "updating pics $#pic\n";
 				update_pics(\@pic);
+			} else {
+				print "*** no update pics\n";
 			}
 			print "list: ".($#list+1)." flux\n";
 			$found = 0 if ($found > $#list);

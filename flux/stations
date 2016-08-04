@@ -2,22 +2,32 @@
 http://www.4uradios.com/classicrock.m3u
 Accent 4
 http://str0.creacast.com:900/listen.pls
+Ado
+http://start-adofm.ice.infomaniak.ch/start-adofm-high.mp3
 Alouette
 http://www.alouette.fr/alouette.m3u http://www.alouette.fr/zenon/xml_out/alouette_onair_drupal.php
 Alpes 1
 http://broadcast.infomaniak.ch/alpes1gap-high.mp3 http://grandgrenoble.alpes1.com/winradio/prog.xml
 Alternantes
 http://diffusion.lafrap.fr/alternantes.mp3
+BFM Business
+http://bfmbusiness.scdn.arkena.com/bfmbusiness.mp3
 Bide et Musique
 http://www.bide-et-musique.com/playlist-hq.m3u
 C9 Radio
 http://streaming.c9radio.eu/listen.m3u
+Chérie FM
+http://cdn.nrjaudio.fm/audio1/fr/30201/mp3_128.mp3
 Classic 21 64k aac
 http://classic21.ice.rtbf.be/classic21-64.aac
 Classic 21 128k mp3
 http://classic21.ice.rtbf.be/classic21-128.mp3
+Contact
+http://radio-contact.ice.infomaniak.ch/radio-contact-high.mp3
 Enjoy Station
 http://www.enjoystation.net/player/mp3.m3u
+Europe 1
+http://audio.scdn.arkena.com/12541/europe1_64.mp3
 Euradio Nantes
 http://80.82.229.202/euradio.mp3 http://www.euradionantes.eu/afficherTitre.php
 FG America
@@ -32,6 +42,8 @@ FG Underground
 http://www.radiofg.com/streams/fgu.pls
 FG Vintage
 http://www.radiofg.com/streams/fgv.pls
+FIP
+http://audio.scdn.arkena.com/11016/fip-midfi128.mp3
 Flash FM
 http://live140.impek.com:8000/listen.pls
 France bleu Gascogne
@@ -40,6 +52,8 @@ France bleu loire ocean
 http://audio.scdn.arkena.com/11381/fbloireocean-midfi128.mp3
 France Culture
 http://audio.scdn.arkena.com/11010/franceculture-midfi128.mp3
+France Info
+http://audio.scdn.arkena.com/11006/franceinfo-midfi128.mp3
 France Inter
 http://audio.scdn.arkena.com/11008/franceinter-midfi128.mp3
 France Musique
@@ -50,6 +64,8 @@ Frequence Terre
 http://streaming208.radionomy.com/frequence-terre?group=172&countrycode=FR
 Fun Radio
 http://streaming.radio.funradio.fr:80/fun-1-44-96
+Generations
+http://generationfm.ice.infomaniak.ch/generationfm-high.mp3
 Hit West
 http://broadcast.infomaniak.ch/hitwest-high.mp3
 Hot Mix Radio - 80
@@ -64,6 +80,8 @@ Hot Mix Radio - House Dance
 http://www.hotmixradio.fr/stream/hotmix.m3u
 Hot Mix Radio - Rock & Pop
 http://www.hotmixradio.fr/stream/hotmixrock.m3u
+Jazz Radio
+http://jazzradio.ice.infomaniak.ch/jazzradio-high.mp3
 Kif Cool
 http://www.kifradio.com/cool/kifcool256.m3u
 La Grosse Radio
@@ -73,7 +91,7 @@ http://hd.lagrosseradio.info:8200/;stream.nsv
 La Grosse Radio Reggae
 http://hd.lagrosseradio.info:8300/;stream.nsv
 Le Mouv'
-http://www.tv-radio.com/station/le_mouv_mp3/le_mouv_mp3-128k.m3u
+http://audio.scdn.arkena.com/11014/mouv-midfi128.mp3
 M2 Radio
 http://www.m2radio.fr/pls/m2radio.m3u
 M2 Radio - Analog
@@ -114,6 +132,10 @@ MFM Culte 80 90
 http://mfm-wr3.ice.infomaniak.ch/mfm-wr2-128.mp3 http://mfmradio.fr/winradio/prog1.xml
 MFM Lady
 http://mfm-wr3.ice.infomaniak.ch/mfm-wr1-128.mp3 http://mfmradio.fr/winradio/prog4.xml
+NRJ
+http://cdn.nrjaudio.fm/audio1/fr/30001/mp3_128.mp3
+Nostalgie
+http://cdn.nrjaudio.fm/audio1/fr/30601/mp3_128.mp3
 Oui FM
 http://ouifm.ice.infomaniak.ch/ouifm-high.mp3
 Oui FM Alternatif
@@ -158,17 +180,35 @@ Radio Intensite
 http://radiointensite.free.fr/live128.m3u
 Radio Junior
 http://213.186.61.62:8080/listen.pls
+Radio Latina
+http://broadcast.infomaniak.net/start-latina-high.mp3
 Radio Pulsar
 http://91.121.62.121:8100/listen.pls
 Radio RDL
 http://91.121.62.121:8300/listen.pls
 RDM - Lorraine
 http://213.186.61.62:7070/listen.pls
+RFI Monde
+http://rfi-monde-64k.scdn.arkena.com/rfimonde.mp3
+RFM
+http://rfm-live-mp3-64.scdn.arkena.com/rfm.mp3
+RMC
+http://rmc.scdn.arkena.com/rmc.mp3
 RTL
 http://streaming.radio.rtl.fr/rtl-1-44-128 http://radio.rtl.fr/live.js
 RTL 2
 http://streaming.radio.rtl2.fr/rtl2-1-44-128 http://radio.rtl2.fr/player.js
+SUD Radio
+http://broadcast.infomaniak.net/start-sud-high.mp3
 Sun
 http://80.82.229.202/sunhd.mp3
 Top Music
 http://players.creacast.com/creacast/topmusic/playlist.m3u
+Vibration
+http://vibration.ice.infomaniak.ch/vibration-high.mp3
+Virgin Radio
+http://mp3lg4.tdf-cdn.com/9243/lag_164753.mp3
+Voltage
+http://start-voltage.ice.infomaniak.ch/start-voltage-high.mp3
+WIT FM
+http://start-witfm.ice.infomaniak.ch/start-witfm-high.mp3

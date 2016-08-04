@@ -118,7 +118,7 @@ sub get_browser {
 	my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
 	my $browser = LWP::UserAgent->new(keep_alive => 0,
 		agent =>$useragt);
-    $browser->timeout(10);
+    $browser->timeout(20);
 	$browser;
 }
 

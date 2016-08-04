@@ -1,56 +1,98 @@
-#!/usr/bin/env perl 
-#===============================================================================
-#
-#         FILE: search_radios.pl
-#
-#        USAGE: ./search_radios.pl  
-#
-#  DESCRIPTION: 
-#
-#      OPTIONS: ---
-# REQUIREMENTS: ---
-#         BUGS: ---
-#        NOTES: ---
-#       AUTHOR: Emmanuel Anne (), emmanuel.anne@gmail.com
-# ORGANIZATION: 
-#      VERSION: 1.0
-#      CREATED: 06/03/2013 18:22:30
-#     REVISION: ---
-#===============================================================================
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
-use WWW::Google::Images;
+use WWW::Mechanize;
+require "radios.pl";
+use Data::Dumper;
+use strict;
 
-my $agent = WWW::Google::Images->new(
-	server => 'images.google.com',
-);
-
-open(my $f,"<flux/stations") || die "lecture stations\n";
-while (<$f>) {
-	chomp;
-	my $station = $_;
-
-	my $result = $agent->search("logo $_".(/radio/i ? "" : " radio"),
-	   	limit => 3);
-
-	my $count = 0;
-	while (my $image = $result->next()) {
-		$count++;
-		# print $image->content_url();
-		# print $image->context_url();
-		my $file = $image->save_content(base => 'image' . $count);
-		system("feh $file &");
-		print STDERR "$station ? (o/n)\n";
-		my $reply = <>;
-		chomp $reply;
-		next if ($reply ne "o");
-		print "\"$station\" => \"",$image->content_url(),"\",\n";
-		last;
+$| = 1;
+my %icons = get_icons();
+sub disp_stations {
+	print "\n";
+	foreach (sort { $a cmp $b } keys %icons) {
+		print "  \"$_\" => \"$icons{$_}\",\n"
 	}
-	<$f>;
 }
-close($f);
+my $site_addr = "guidetv-iphone.telerama.fr";
+my $mech = WWW::Mechanize->new();
+#$mech->agent_alias("Linux Mozilla");
+$mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
+$mech->timeout(10);
+$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 
+open(my $i,"<flux/stations") || die "can't read stations\n";
+while (<$i>) {
+	chomp;
+	my $url = <$i>;
+	my $station = $_;
+	my $adr = $icons{$station};
+	if ($adr) {
+		print "j'ai déjà $_, check... ";
+		eval {
+			$mech->head($adr);
+		};
+		if (!$@) {
+			print "ok\n";
+			next;
+		} else {
+			print "$!: $@\n";
+			delete $icons{$station};
+		}
+	}
+	print "on étudie $station... ";
+	my $q = "logo $station".(/radio/i ? "" : " radio");
+	my $r;
+	do {
+		eval {
+			$mech->get("https://www.google.fr/");
+			$r = $mech->submit_form(
+				form_number => 1,
+				fields      => {
+					q => $q,
+				}
+			);
+		};
+		if ($@) {
+			print "Erreur $!: $@\n";
+			my @forms = $mech->forms;
+			for (my $n=0; $n<=$#forms; $n++) {
+				print "$n: ",Dumper($forms[$n]),"\n";
+			}
+			print "sleeping 3s... ";
+			sleep 3;
+			print "\n";
+			undef $mech;
+			$mech = WWW::Mechanize->new();
+#$mech->agent_alias("Linux Mozilla");
+			$mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
+			$mech->timeout(10);
+			$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
+		}
+	} while ($@);
+	foreach ($mech->links) {
+		my ($sub) = $_->url =~ /q=(.+?)\&/;
+		($sub) = $_->url =~ /url=(.+?)\&/ if (!$sub);
+		if ($sub && $sub =~ /(png|jpg|jpeg)$/i) {
+			if ($icons{$station}) {
+				$icons{$station} .= "\n$sub";
+			} else {
+				$icons{$station} = $sub;
+			}
+			print "ok:$sub\n";
+		}
+		print "found ",$sub,"\n" if ($sub && $sub =~ /wiki/);
+	}
+	if (!$icons{$station}) {
+		print "rien trouvé ?\n";
+		$mech->save_content("page.html");
+		open(F,">links");
+		foreach ($mech->links) {
+			print F $_->url,"\n";
+		}
+		close(F);
+	}
+}
 
-
+disp_stations();
