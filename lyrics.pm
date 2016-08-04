@@ -262,6 +262,7 @@ sub get_lyrics {
 
 	# Pour corriger l'apostrophe à la con de krosoft !
 	$lyrics =~ s/\x{2019}/'/g;
+	$lyrics =~ s/\x{0153}/oe/g; # bizarre c'est sensé être supporté par perl5...
 
 	if ($mp3) {
 		my $lang;
