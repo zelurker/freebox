@@ -1711,7 +1711,14 @@ sub commands {
 				last;
 			}
 		}
-		$time_numero = time()+3;
+		undef $time_numero;
+		$time_numero = AnyEvent->timer(after=>3, cb =>
+			sub {
+				async {
+					commands($fh,"zap1");
+					close_numero();
+				};
+			});
 		if (!-f "list_coords") {
 			# Si la liste est affichée de toutes façons ça va provoquer une
 			# commande à info, pas la peine de le réveiller
@@ -1810,13 +1817,6 @@ sub commands {
 	}
 
 	if ($cmd eq "refresh") {
-		if ($time_numero && time() >= $time_numero) {
-			if ($cmd !~ /^zap/ && $numero) {
-				$cmd = "zap1";
-				goto again;
-			}
-			close_numero();
-		}
 		return if (! -f "list_coords");
 	}
 	disp_list($cmd);
