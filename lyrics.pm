@@ -219,12 +219,19 @@ sub get_lyrics {
 		print "lyrics: got error $!: $@\n";
 		return undef;
 	}
-	my $r = $mech->submit_form(
-		form_number => 1,
-		fields      => {
-			q => "lyrics $artist - $title",
-		}
-	);
+	my $r;
+	eval {
+		$r = $mech->submit_form(
+			form_number => 1,
+			fields      => {
+				q => "lyrics $artist - $title",
+			}
+		);
+	};
+	if ($@) {
+		print "lyrics: foirage sur le submit $!: $@\n";
+		return undef;
+	}
 	my $orig = $title;
 	$title = pure_ascii($title);
 
