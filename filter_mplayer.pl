@@ -603,7 +603,7 @@ while (1) {
 					$val =~ s/ \|.+//; # vire les sufixes hotmix
 					$val =~ s/\(WR\) //; # vire ce truc de rfm enfoirés...
 					$val =~ s/\+/ /g if ($serv =~ /ouifm\.ice/); # !!! y a vraiment n'importe quoi des fois !
-					if ($val !~ /^ *\- *$/ && $val !~ /^<.+>$/) { # spécialité mfm : " - " ou "<html>" !
+					if ($val !~ /^ *\- *$/ && $val !~ /^<.+>$/ && $val !~ /^\d+ \- \d+$/ && $val !~ /RFI \d+/) { # spécialité mfm : " - " ou "<html>" !
 						$val = utf($val);
 						$info .= "$val ";
 						$lyrics = 0 if ($titre ne $val);
