@@ -92,8 +92,13 @@ sub decode_html {
 					}
 				}
 			} elsif (substr($l,$pos+1,3) eq "img") {
-				substr($l,$pos+1) =~ /data-pagespeed-high-res-src="(.+?)"/;
-				$img = $1;
+				my $sub = substr($l,$pos+1);
+				$sub =~ s/>.+//;
+				if ($sub =~ /data-pagespeed-high-res-src="(.+?)"/) {
+					$img = $1;
+				} elsif ($sub =~ / src="(.+?)"/) {
+					$img = $1;
+				}
 			} elsif (substr($l,$pos+1,5) eq "span>") {
 				last;
 			}
