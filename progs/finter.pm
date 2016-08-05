@@ -1,30 +1,17 @@
 package progs::finter;
-#
-#===============================================================================
-#
-#         FILE: finter.pm
-#
-#  DESCRIPTION: progs france inter
-#
-#        FILES: ---
-#         BUGS: ---
-#        NOTES: ---
-#       AUTHOR: Emmanuel Anne (), emmanuel.anne@gmail.com
-# ORGANIZATION:
-#      VERSION: 1.0
-#      CREATED: 08/03/2013 18:13:21
-#     REVISION: ---
-#===============================================================================
+
+# Refonte été 2016 de finter : ça ne marche plus par de l'xml apparemment,
+# maintenant c'est de la page html brute apparemment ! Heuremsent ça n'a
+# pas l'air trop dur d'extraire l'info... !
 
 use strict;
 # use warnings;
 use progs::telerama;
 @progs::finter::ISA = ("progs::telerama");
-use chaines;
-use Encode;
 use Data::Dumper;
-use Cpanel::JSON::XS qw(decode_json);
-use Time::Local "timegm_nocheck";
+use HTML::Entities;
+use Time::Local "timelocal_nocheck";
+use Encode;
 
 my $debug = 0;
 
@@ -36,16 +23,9 @@ our %fb = (
 sub update_prog($) {
 	my $file = shift;
 	my $url = $file;
-	$url =~ s/^f//;
-	if ($file eq "fmusique") {
-		# Bizarrement fmusique attend une date obligatoire à la fin de son json
-		my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
-		my $d = timegm_nocheck(0,0,12,$mday,$mon,$year);
-		$url = "http://www.france$url.fr/sites/default/files/lecteur_commun_json/reecoute-$d.json";
-	} elsif ($file =~ /^bleu/) {
-		$url = $fb{$file};
-	} else {
-		$url = "http://www.france$url.fr/sites/default/files/lecteur_commun_json/timeline.json";
+	my ($base,$date) = $url =~ /^(.+?)-(.+)/;
+	if ($base eq "finter") {
+		$url = "https://www.franceinter.fr/programmes/$date";
 	}
 	my ($status,$prog) = chaines::request($url);
 	print STDERR "update_prog: got status $status, prog $prog\n" if ($debug && $prog);
@@ -63,29 +43,87 @@ sub get_date {
 	sprintf("%d/%02d/%02d",$mday,$mon+1,$year+1900);
 }
 
-sub decode_str {
-	my $title = shift;
-	$title =~ s/[\r\n]//g; # retours chariots à virer aussi !
-	$title;
-}
-
-sub get_desc($) {
-	my $hash = $_;
-	decode_str(
-		($hash->{diffusions}[0]->{title} ?
-			$hash->{diffusions}[0]->{title}." : " :
-			"").
-		($hash->{diffusions}[0]->{desc_emission} ?
-			$hash->{diffusions}[0]->{desc_emission}." "
-			: "").
-		($hash->{diffusions}[0]->{texte_emission} ?
-			$hash->{diffusions}[0]->{texte_emission}
-			: ""));
+sub decode_html {
+	my ($l,$name,$rtab) = @_;
+	my $pos = 0;
+	my ($time,$date);
+	if ($l =~ /<a href="\/programmes\/(\d+)-(..)-(..)" title="Jour pr/) {
+		my ($y,$m,$d) = ($1,$2,$3);
+		$y -= 1900;
+		$m--;
+		$time = timelocal_nocheck( 0, 0, 0, $d, $m, $y );
+		$time += 24*3600; # jour actuel
+		$date = get_date($time);
+	}
+	my $time0 = $time;
+	while (($pos = index($l,"<span",$pos))> 0) {
+		my $heure = substr($l,$pos+6,5);
+		if ($heure !~ /^\d/) {
+			$pos++;
+			next;
+		}
+		# print "$time ";
+		my ($h,$m) = $heure =~ /(\d+)h(\d+)/;
+		if ($h < 5) {
+			$time = $time0 + 24*3600;
+			$date = get_date($time);
+		}
+		my $start = $time + $h*3600+$m*60;
+		my $end = $time + ($h+1)*3600;
+		my ($desc,$title,$img);
+		while (1) {
+			$pos = index($l,"<",$pos+1);
+			if (substr($l,$pos+1,1) eq "a") {
+				my $sub = substr($l,$pos+1);
+				$sub =~ s/>.+//;
+				my $class;
+				if ($sub =~ /class="(.+?)"/) {
+					$class = $1;
+				}
+				if ($sub =~ /title="(.+?)"/) {
+					my $tit = $1;
+					if ($class =~ /emission-title/) {
+						$title = $tit;
+						# Après faut sortir tout de suite de la boucle !!!
+						$pos = index($l,"<span>",$pos+1);
+						last;
+					} elsif ($class =~ /content-title/) {
+						$desc = $tit;
+					}
+				}
+			} elsif (substr($l,$pos+1,3) eq "img") {
+				substr($l,$pos+1) =~ /data-pagespeed-high-res-src="(.+?)"/;
+				$img = $1;
+			} elsif (substr($l,$pos+1,5) eq "span>") {
+				last;
+			}
+		}
+		if (substr($l,$pos+1,4) eq "span") {
+			foreach ($desc,$title) {
+				s/&#(\d+);/chr($1)/ge;
+				s/&amp;/\&/g;
+				# utf8::decode(decode_entities($_));
+				s/\xe2\x80\x99/'/g;
+				Encode::from_to($_, "utf-8", "iso-8859-1");
+			}
+			my @tab = (undef, $name, $title, $start,
+				$end, "",
+				$desc,
+				"","",$img,0,0,$date);
+			push @$rtab,\@tab;
+			if ($$rtab[$#$rtab-1][4] > $start) {
+				$$rtab[$#$rtab-1][4] = $start;
+			}
+			redo;
+		}
+	}
+	$rtab;
 }
 
 sub update {
-	my ($p,$channel) = @_;
-	return undef if (lc($channel) !~ /france (inter|culture|musique|bleu )/);
+	my ($p,$channel,$offset) = @_;
+	return undef if (lc($channel) !~ /france (inter)/); # |culture|musique|bleu )/);
+	$offset = 0 if (!defined($offset));
 
 	my $file;
 	if ($channel =~ /inter/) {
@@ -102,6 +140,12 @@ sub update {
 	my $name = $file;
 	$name =~ s/^f//;
 	$name = "France ".uc(substr($name,0,1)).substr($name,1);
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
+	if ($hour < 5 && !$offset) { # Avant 5h c'est le prog de la veille
+		($sec,$min,$hour,$mday,$mon,$year) = localtime(time()-24*3600);
+	}
+	$file .= sprintf("-%d-%02d-%02d",$year+1900,$mon+1,$mday);
+
 	my $res;
 	if (!-f "cache/$file" || -M "cache/$file" >= 1/24) {
 		$res = update_prog($file);
@@ -112,70 +156,19 @@ sub update {
 		$res = join("\n",<$f>);
 		close($f);
 	}
-    my $json;
-    eval  {
-        $json = decode_json $res;
-    };
-    if ($@) {
-        print "finter: couille dans le potage au niveau json à partir de $res\n";
-        return undef;
-    }
-
-	# On récupère l'heure de création du fichier, correspond à la desc étendue
-	my $time = time() - (-M "$file")*24*3600;
 	my $rtab = $p->{chaines}->{$channel};
-	my $inserted = 0;
-	my $cont = 0;
-	my @fields;
-	$json = $json->{diffusions} if (ref($json) ne "ARRAY");
-	foreach (@$json) {
-		my %hash = %$_;
-		# France inter fait ça aussi...
-		print STDERR "\n" if ($debug);
-		my $title = $hash{title_emission};
-		next if (!$title);
-		$title = decode_str($title);
-		my $img = $hash{path_img_emission};
-		if ($hash{debut}) {
-			my $found = 0;
-			foreach (@$rtab) {
-				if ($$_[3] == $hash{debut} && $$_[4] == $hash{fin}) {
-					$found = 1;
-					last;
-				}
-			}
-			if (!$found) {
-				$inserted = 1;
-
-				my @tab = (undef, $name, $title, $hash{debut},
-					$hash{fin}, "",
-					get_desc(\%hash),
-					"","",$img,0,0,get_date($hash{debut}));
-				if ($hash{personnes}) {
-					$tab[6] .= decode_str(" (".join(",",@{$hash{personnes}}).")");
-				}
-				push @$rtab,\@tab;
-			}
-		} elsif ($inserted) {
-			# met à jour la description
-			$$rtab[$#$rtab][6] = get_desc(\%hash) if (!$$rtab[$#$rtab][6]);
+	my $rtab2 = decode_html($res,$name);
+	if ($rtab) {
+		if ($$rtab2[0][3] < $$rtab[0][3]) {
+			push @$rtab2,$rtab;
+			$rtab = $rtab2;
+		} else {
+			push @$rtab,$rtab2;
 		}
+	} else {
+		$rtab = $rtab2;
 	}
-	for (my $n=1; $n<$#$rtab; $n++) {
-		if ($$rtab[$n][3] > $$rtab[$n-1][4]+60) { # gros écart entre les progs
-			# Arrive surtout pour france musique en fait...
-			# Sans déconner ce bout de code est absolument horrible, ça montre
-			# le + gros point faible de perl5 : on ne veut qu'insérer un élément
-			# dans un tableau ici. Sauf que si on ne passe pas par chunk alors
-			# la référence vers $$rtab[n] se retrouve dupliquée !
-			my @chunk = @{$$rtab[$n]};
-			splice @$rtab,$n,0,[@chunk];
-			$$rtab[$n][3] = $$rtab[$n-1][4]+60;
-			$$rtab[$n][4] = $$rtab[$n+1][3]-60;
-			$$rtab[$n][2] = "Aucun programme";
-			$$rtab[$n][6] = $$rtab[$n][9] = undef;
-		}
-	}
+	undef $rtab2;
 	$p->{chaines}->{$channel} = $rtab;
 	$rtab;
 }
