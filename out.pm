@@ -35,11 +35,14 @@ sub send_cmd_fifo {
           my ($fh) = @_;
 		  async {
 			  $fh = unblock $fh;
-
-			  $fh->print("$cmd\012");
-			  if (defined($rep)) {
-				  my $reply = $fh->readline();
-				  $rep->put($reply);
+			  if (!$fh) {
+				  print "couldn't get unblock from fifo $fifo\n";
+			  } else {
+				  $fh->print("$cmd\012");
+				  if (defined($rep)) {
+					  my $reply = $fh->readline();
+					  $rep->put($reply);
+				  }
 			  }
 		  }
        };
