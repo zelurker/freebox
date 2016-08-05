@@ -379,7 +379,7 @@ sub get {
 	if ($debug && !$rtab) {
 		print "get: rien trouvé pour $channel\n";
 	}
-	return undef if (!$rtab);
+	return undef if (!$rtab || $#$rtab < 0);
 	my $time = time();
 	if ($time > $$rtab[$#$rtab][4]) {
 		# Si le cache dans chaines{} est trop vieux, on met à jour
