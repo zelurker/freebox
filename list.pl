@@ -7,7 +7,6 @@ use Coro::Socket;
 use Coro;
 use Coro::Handle;
 use AnyEvent;
-use AnyEvent::Filesys::Notify;
 use AnyEvent::Socket;
 use POSIX qw(strftime :sys_wait_h SIGALRM);
 use Encode;
@@ -21,6 +20,7 @@ require "radios.pl";
 use HTML::Entities;
 use Cwd;
 use EV;
+use Data::Dumper;
 
 # Un mot sur le format interne de @list :
 # chaque élément est un tableau de tableau, c'est parce qu'à l'origine
@@ -33,7 +33,10 @@ use EV;
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our $dvd;
 our $encoding;
-our $watch;
+our ($inotify,$watch);
+use Linux::Inotify2;
+$inotify = new Linux::Inotify2;
+$inotify->blocking(0);
 
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -360,12 +363,13 @@ sub list_files {
 		[$num++,"Tri par date", "tri par date"],
 		[$num++,"Tri aléatoire", "tri par hasard"]];
 	if (!$watch || $watch->{dirs}[0] ne $conf{$path}) {
+		print "màj watch\n";
 		undef $watch;
-		$watch = AnyEvent::Filesys::Notify->new(
-			dirs => [$conf{$path}],
-			interval => 2.0,
-			cb => sub {
-				my @e = @_;
+		print "undef ok\n";
+		$watch = $inotify->watch($conf{$path},IN_MODIFY|IN_CREATE|IN_DELETE,
+			,sub {
+				my $e = shift;
+				print "*** inotify update $e->{w}{name}\n";
 				my ($old) = get_name($list[$found]);
 				read_list();
 				for (my $n=0; $n<=$#list; $n++) {
@@ -376,7 +380,7 @@ sub list_files {
 					}
 				}
 			});
-		print "ajout Filesys::Notify $conf{$path}\n";
+		print "ajout watch $conf{$path}\n";
 	}
 #		@list = reverse @list;
 }
@@ -1272,6 +1276,7 @@ EV::run;
 
 sub commands {
 	my ($fh,$cmd) = @_;
+	$inotify->poll if ($inotify);
 	again:
 	print "list: commande reçue après again : $cmd\n";
 	if (-f "list_coords" && $cmd eq "clear") {
@@ -1862,7 +1867,9 @@ sub exec_file {
 			$conf{$path} = $serv;
 		}
 		my $n;
+		print "exec_file: calling read_list\n";
 		read_list();
+		print "exec_file: read_list ok\n";
 		for ($n=0; $n<=$#list; $n++) {
 			my ($name) = get_name($list[$n]);
 			if ($name eq $old) {
