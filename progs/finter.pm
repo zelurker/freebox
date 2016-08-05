@@ -115,8 +115,18 @@ sub decode_html {
 				$end, "",
 				$desc,
 				"","",$img,0,0,$date);
+			my $fin = $start;
+			if ($#$rtab >= 0) {
+				$fin = $$rtab[$#$rtab][4];
+				if ($fin < $start) {
+					push @$rtab, [ undef, $name, ($fin % 3600 == 0 ? "Flash ?" : "Programme inconnu"),
+						$fin,$start, "",
+						"",
+						"","",undef,0,0,$date];
+				}
+			}
 			push @$rtab,\@tab;
-			if ($$rtab[$#$rtab-1][4] > $start) {
+			if ($fin > $start) {
 				$$rtab[$#$rtab-1][4] = $start;
 			}
 			redo;
