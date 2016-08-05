@@ -1,23 +1,23 @@
 /* SaveSurf: an example on how to save a SDLSurface in PNG
    Copyright (C) 2006 Angelo "Encelo" Theodorou
- 
+
    This program is free software; you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation; either version 2 of the License, or
    (at your option) any later version.
- 
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-  
+
    You should have received a copy of the GNU General Public License
    along with this program; if not, write to the Free Software
    Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- 
-   NOTE: 
- 
-   This program is part of "Mars, Land of No Mercy" SDL examples, 
+
+   NOTE:
+
+   This program is part of "Mars, Land of No Mercy" SDL examples,
    you can find other examples on http://marsnomercy.org
 */
 
@@ -37,7 +37,7 @@ static int png_colortype_from_surface(SDL_Surface *surface)
 		colortype |= PNG_COLOR_MASK_PALETTE;
 	else if (surface->format->Amask)
 		colortype |= PNG_COLOR_MASK_ALPHA;
-		
+
 	return colortype;
 }
 
@@ -58,11 +58,11 @@ int png_save_surface(char *filename, SDL_Surface *surf)
 	png_infop info_ptr;
 	int i, colortype;
 	png_bytep *row_pointers;
-	printf("png_save_surface shifts %d %d %d %d\n",
+	printf("png_save_surface shifts %d %d %d %d to %s\n",
 		surf->format->Rshift,
 		surf->format->Gshift,
 		surf->format->Bshift,
-		surf->format->Ashift);
+		surf->format->Ashift,filename);
 
 	/* Opening output file */
 	fp = fopen(filename, "wb");
@@ -72,7 +72,7 @@ int png_save_surface(char *filename, SDL_Surface *surf)
 	}
 
 	/* Initializing png structures and callbacks */
-	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING, 
+	png_ptr = png_create_write_struct(PNG_LIBPNG_VER_STRING,
 		NULL, png_user_error, png_user_warn);
 	if (png_ptr == NULL) {
 		printf("png_create_write_struct error!\n");
@@ -95,7 +95,7 @@ int png_save_surface(char *filename, SDL_Surface *surf)
 	png_init_io(png_ptr, fp);
 
 	colortype = png_colortype_from_surface(surf);
-	png_set_IHDR(png_ptr, info_ptr, surf->w, surf->h, 8, colortype,	PNG_INTERLACE_NONE, 
+	png_set_IHDR(png_ptr, info_ptr, surf->w, surf->h, 8, colortype,	PNG_INTERLACE_NONE,
 		PNG_COMPRESSION_TYPE_DEFAULT, PNG_FILTER_TYPE_DEFAULT);
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
 	png_set_swap_alpha(png_ptr);

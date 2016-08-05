@@ -138,6 +138,16 @@ static void adjust_indent(int *x, int *y, int *indents)
 
 static int last_htext;
 
+static SDL_Surface *extend_surface(SDL_Surface *s) {
+    if (s->format->BitsPerPixel < 16) {
+	SDL_Surface *surf = create_surface(s->w,s->h);
+	SDL_BlitSurface(s,NULL,surf,NULL);
+	SDL_FreeSurface(s);
+	s = surf;
+    }
+    return s;
+}
+
 static int info(int fifo, int argc, char **argv)
 {
 	char *s = strrchr(argv[0],'/');
@@ -224,6 +234,7 @@ static int info(int fifo, int argc, char **argv)
 			SDL_Surface *s = IMG_Load((char*)buff);
 			if (!s) {
 			    s = zoomSurface(chan,ratio,ratio,SMOOTHING_ON);
+			    s = extend_surface(s);
 			    png_save_surface((char*)buff,s);
 			}
 			SDL_FreeSurface(chan);
@@ -248,6 +259,7 @@ static int info(int fifo, int argc, char **argv)
 			SDL_Surface *s = IMG_Load((char*)buff);
 			if (!s) {
 			    s = zoomSurface(pic,ratio,ratio,SMOOTHING_ON);
+			    s = extend_surface(s);
 			    png_save_surface((char*)buff,s);
 			}
 			SDL_FreeSurface(pic);
@@ -551,6 +563,7 @@ static int list(int fifo, int argc, char **argv)
 		    ratio = ratio2;
 		SDL_Surface *s = zoomSurface(chan[nb2],ratio,ratio,SMOOTHING_ON);
 		SDL_FreeSurface(chan[nb2]);
+		s = extend_surface(s);
 		chan[nb2] = s;
 		png_save_surface(name,s); // On sauve redimensionné !
 	    }
