@@ -11,8 +11,8 @@ sub get_date {
 }
 
 sub decode_html {
-	my ($l,$name,$rtab) = @_;
-	print "decode_html ",length($l)," $name\n";
+	my ($p,$l,$name) = @_;
+	my $rtab = [];
 	my $pos = 0;
 	my ($time,$date);
 	if ($l =~ /<a href="\/programmes\/(\d+)-(..)-(..)" title="Jour pr/) {
@@ -83,25 +83,7 @@ sub decode_html {
 				$end, "",
 				$desc,
 				"","",$img,0,0,$date);
-			my $fin = $start;
-			if ($#$rtab >= 0) {
-				$fin = $$rtab[$#$rtab][4];
-				if ($fin < $start ) {
-					if ($start - $fin < 600) { # moins de 10 minutes
-						push @$rtab, [ undef, $name, ($fin % 3600 == 0 ? "Flash ?" : "Programme inconnu"),
-							$fin,$start, "",
-							"",
-							"","",undef,0,0,$date];
-					} else {
-						# on allonge l'heure de fin du précédent
-						$$rtab[$#$rtab][4] = $start;
-					}
-				}
-			}
-			push @$rtab,\@tab;
-			if ($fin > $start) {
-				$$rtab[$#$rtab-1][4] = $start;
-			}
+			$p->insert(\@tab,$rtab,600);
 			redo;
 		}
 	}

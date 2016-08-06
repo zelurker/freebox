@@ -115,7 +115,7 @@ sub update {
 	my $rtab2;
 	my $json;
     if (!$use_json) {
-		$rtab2 = progs::html::finter::decode_html($res,$name);
+		$rtab2 = progs::html::finter::decode_html($p,$res,$name);
 	} else {
 		eval  {
 			$json = decode_json $res;
@@ -127,7 +127,7 @@ sub update {
 		open(F,">json");
 		print F Dumper($json);
 		close(F);
-		$rtab2 = progs::json::decode_json($json,$file,$name);
+		$rtab2 = progs::json::decode_json($p,$json,$file,$name);
 	}
 	if ($rtab) {
 		if ($$rtab2[0][3] < $$rtab[0][3]) {
@@ -142,6 +142,29 @@ sub update {
 	undef $rtab2;
 	$p->{chaines}->{$channel} = $rtab;
 	$rtab;
+}
+
+sub insert {
+	my ($p,$rtab2,$rtab,$min_delay) = @_;
+	# La fonction d'insertion d'un nouveau prog en commun pour tous les
+	# décodeurs parce qu'on retrouve le même genre de problème à traiter
+	# (correction de l'heure de fin de celui d'avant ou insertion d'un prog
+	# inconnu ou d'un flash).
+	my $fin = $$rtab2[3];
+	$min_delay = 12*3600 if (!$min_delay);
+	if ($#$rtab >= 0) {
+		$fin = $$rtab[$#$rtab][4];
+		if ($fin < $$rtab2[3] && $$rtab2[3] - $fin < $min_delay) { # 10 minutes pour finter
+			push @$rtab, [ undef, $$rtab2[1], ($fin % 3600 == 0 ? "Flash ?" : "Programme inconnu"),
+				$fin,$$rtab2[3], "",
+				"",
+				"","",undef,0,0,$$rtab2[12]];
+		}
+	}
+	push @$rtab,$rtab2;
+	if ($fin > $$rtab2[3]) {
+		$$rtab[$#$rtab-1][4] = $$rtab2[3];
+	}
 }
 
 1;

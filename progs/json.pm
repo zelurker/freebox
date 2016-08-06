@@ -21,7 +21,7 @@ sub get_desc($) {
 }
 
 sub decode_json {
-	my ($json,$file,$name) = @_;
+	my ($p,$json,$file,$name) = @_;
 	($tstart,$tend,$ttitle,$tdesc) = ("start","end","conceptTitle","expressionTitle");
 	if ($file =~ /fculture/) {
 		$ttitle = "surtitle";
@@ -49,6 +49,7 @@ sub decode_json {
 			my $found = 0;
 			foreach (@$rtab) {
 				if ($$_[3] == $hash{$tstart} && $$_[4] == $hash{$tend}) {
+					print "json: collision !\n";
 					$found = 1;
 					last;
 				}
@@ -63,20 +64,7 @@ sub decode_json {
 				if ($hash{personnes}) {
 					$tab[6] .= decode_str(" (".join(",",@{$hash{personnes}}).")");
 				}
-				my $fin = $hash{$tstart};
-				if ($#$rtab >= 0) {
-					$fin = $$rtab[$#$rtab][4];
-					if ($fin < $hash{$tstart}) {
-						push @$rtab, [ undef, $name, ($fin % 3600 == 0 ? "Flash ?" : "Programme inconnu"),
-							$fin,$hash{$tstart}, "",
-							"",
-							"","",undef,0,0,get_date($hash{$tstart})];
-					}
-				}
-				push @$rtab,\@tab;
-				if ($fin > $hash{$tstart}) {
-					$$rtab[$#$rtab-1][4] = $hash{$tstart};
-				}
+				$p->insert(\@tab,$rtab);
 			}
 		} elsif ($inserted) {
 			# met à jour la description
