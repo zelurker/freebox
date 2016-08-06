@@ -18,7 +18,7 @@ use Time::Local "timelocal_nocheck";
 use Encode;
 
 my $debug = 0;
-our $file;
+our ($file,$use_json);
 
 our %fb = (
 	"fbleu_loire_ocean" => "https://www.francebleu.fr/emissions/grille-programmes/loire-ocean",
@@ -94,7 +94,7 @@ sub update {
 	$file .= sprintf("-%d-%02d-%02d",$year+1900,$mon+1,$mday);
 
 	my $res;
-	my $use_json = 0;
+	$use_json = 0;
 	for ($use_json = 0; $use_json <= 1; $use_json++) {
 		if (!-f "cache/$file") {
 			if ($use_json) {
@@ -164,7 +164,7 @@ sub insert {
 		s/&amp;/\&/g;
 		# utf8::decode(decode_entities($_));
 		s/\xe2\x80\x99/'/g;
-		Encode::from_to($_, "utf-8", "iso-8859-1");
+		Encode::from_to($_, "utf-8", "iso-8859-1") if (!$use_json);
 	}
 
 	my $fin = $$rtab2[3];
