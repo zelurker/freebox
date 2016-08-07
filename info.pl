@@ -32,6 +32,7 @@ use progs::series;
 use progs::youtube;
 use progs::arte;
 
+our %info; # hash pour stocker les stream_info
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -51,35 +52,8 @@ our $fadeout;
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
-	my ($name) = out::get_current();
-	return lc($name);
-}
-
-sub get_stream_info {
-	my ($cur,$last,$info);
-	my $tries = 3;
-	while ($tries-- > 0 && !(-s "stream_info")) {
-		select undef,undef,undef,0.1;
-	}
-	if (open(F,"<stream_info")) {
-		my $info = <F>;
-		if (!$info) {
-			print "info nulle, on recommence\n";
-			close(F);
-			open(F,"<stream_info");
-			$info = <F>;
-		}
-		chomp $info;
-		while (<F>) {
-			chomp;
-			$last = $cur;
-			$cur = $_;
-		}
-		$last =~ s/pic\:.+? // if ($last);
-		close(F);
-		return ($cur,$last,$info);
-	}
-	undef;
+	my ($name,$source) = out::get_current();
+	return (lc($name),$source);
 }
 
 sub myget {
@@ -141,12 +115,32 @@ sub setup_fadeout {
 	}
 }
 
+sub conv {
+	# fonction utilitaire pour formater correctement chaine / source /
+	# base_flux pour comparaison
+	my $cmd = shift;
+	chaines::conv_channel($cmd)."&$source" . ($base_flux ? "/$base_flux" : "");
+}
+
 sub read_stream_info {
-	my ($time,$cmd) = @_;
+	my ($time,$cmd,$rinfo) = @_;
 	# Là il peut y avoir un problème si une autre source a le même nom
 	# de chaine, genre une radio et une chaine de télé qui ont le même
 	# nom... Pour l'instant pas d'idée sur comment éviter ça...
-	my ($cur,$last,$info) = get_stream_info();
+	if (!$rinfo) {
+		my ($name,$src) = get_cur_name();
+		$name .= "&$src";
+		if ($name eq conv($cmd)) {
+			$rinfo = $info{$name};
+		} else {
+			return;
+		}
+	}
+	my $rtracks = $rinfo->{tracks};
+	my $info = $rinfo->{codec} || "?";
+	my $progress = $rinfo->{progress} || "";
+	my $cur = $$rtracks[0];
+	my $last = $$rtracks[1];
 	$cur = "" if (!$cur); # Evite le warning de manip d'undef
 	my $pic = "";
 	if ($cur =~ s/pic:(http.+?) //) {
@@ -166,7 +160,12 @@ sub read_stream_info {
 			print $out "$pics\n$pic\n";
 			my ($sec,$min,$hour) = localtime($time);
 
-			print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n$cur\n";
+			print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+			if ($cur) {
+				print $out "\n$cur $progress\n";
+			} else {
+				print $out " $progress\n\n";
+			}
 			print $out "Dernier morceau : $last\n" if ($last);
 			disp_lyrics($out);
 			out::close_fifo($out);
@@ -290,15 +289,11 @@ sub disp_prog {
 
 	print $out "\n$$sub[1] : $start - $end ".
 	($reste ? "reste ".disp_duree($reste) : "($days[$wday])");
-	if (-f "stream_info") {
-		my ($cur,$last,$info) = get_stream_info();
-		$cur = "" if (!$cur); # Evite le warning de manip d'undef
-		$cur =~ s/pic:(http.+?) //;
-		$cur =~ s/^.+\(\) //; # vire les infos vides d'auteurs/pistes
-		print "*** info: got $cur,$last,$info.\n";
 
-		print $out " ($info)";
-	}
+	my $tag = conv($channel);
+	my $codec = $info{$tag}->{codec};
+	print $out " ($codec)" if ($codec);
+
 	print $out "\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
 	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
@@ -323,6 +318,48 @@ sub commands {
 	print "info: reçu commande $cmd long:$long.\n";
 	if ($cmd eq "clear") {
 		out::clear("info_coords");
+	} elsif ($cmd eq "tracks") {
+		my ($name,$src) = get_cur_name();
+		$name .= "&$src";
+		my @tracks = ();
+		my $rtracks = $info{$name}->{tracks};
+		while (<$fh>) {
+			chomp;
+			push @tracks,$_;
+		}
+		close($fh);
+		my $same = 0;
+		if ($rtracks && $#$rtracks == $#tracks) {
+			$same = 1;
+			for (my $n=0; $n<=$#tracks; $n++) {
+				if ($tracks[$n] ne $$rtracks[$n]) {
+					$same = 0;
+					last;
+				}
+			}
+		}
+		if (!$same) {
+			$info{$name}->{tracks} = \@tracks;
+			if ($name eq conv($channel)) {
+				read_stream_info(time(),$channel,$info{$name});
+			}
+		}
+	} elsif ($cmd =~ /^codec/) {
+		my ($codec,$bitrate);
+		($cmd,$codec,$bitrate) = split / /,$cmd;
+		my ($name,$src) = get_cur_name();
+		$name .= "&$src";
+		$info{$name}->{codec} = "$codec $bitrate";
+		if ($name eq conv($channel)) {
+			read_stream_info(time(),$channel,$info{$name});
+		}
+	} elsif ($cmd =~ s/^progress //) {
+		my ($name,$src) = get_cur_name();
+		$name .= "&$src";
+		$info{$name}->{progress} = $cmd;
+		if ($name eq conv($channel)) {
+			read_stream_info(time(),$channel,$info{$name});
+		}
 	} elsif ($cmd eq "time") {
 		out::send_command("osd_show_property_text ".get_time(time())." 3000\n");
 	} elsif ($cmd eq "nextprog" || $cmd eq "right") {
@@ -341,18 +378,23 @@ sub commands {
 		$long = $last_long;
 	} elsif ($cmd eq "zap1") {
 		out::send_list("zap2 $last_chan");
-	} elsif ($cmd =~ s/^prog //) {
+	} elsif ($cmd =~ s/^prog //) { # on vire le prog, garde que la chaine
 		# Note : $long est passé collé à la commande par un :
 		# mais il est séparé avant même l'interprêtation, dès la lecture
 		# Nouvelle syntaxe prog[:long] chaine,source/base_flux
 		# ça devient obligatoire d'avoir la source liée à ça avec toutes les
 		# sources de programmes maintenant
-		$cmd =~ s/§(.+)//;
+		$cmd =~ s/&(.+)//;
 		$source = $1;
-		$source =~ s/\/(.+)//;
-		$base_flux = $1;
-		$base_flux =~ s/,(.+)//;
-		$serv = $1;
+		if ($source =~ s/\/(.+)//) {
+			$base_flux = $1;
+			$base_flux =~ s/,(.+)//;
+			$serv = $1;
+		} else {
+			$base_flux = "";
+			$source =~ s/\///;
+			$serv = "";
+		}
 		$channel = $cmd;
 		# long n'est pas effacé par une commande prog
 		$long = $old_long if ($old_long);
@@ -384,12 +426,10 @@ sub disp_channel {
 	$lastprog = undef;
 # 2 l'afficheur de base pour les fichiers (stream_info)
 	if (!$sub) {
-		my $name = get_cur_name();
-		if ($name eq chaines::conv_channel($channel)) {
-			if (-f "stream_info") {
-				read_stream_info(time(),$cmd);
-				return;
-			}
+		my ($name,$src) = get_cur_name();
+		if ($name eq conv($channel)) {
+			read_stream_info(time(),$cmd,$info{"$name&$src"});
+			return;
 		}
 	}
 

@@ -5,6 +5,7 @@
 use Coro::LWP;
 use strict;
 use Encode;
+use out;
 
 our $browser = LWP::UserAgent->new(keep_alive => 0);
 $browser->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
@@ -146,13 +147,8 @@ sub handle_prog {
 		print "format inconnu $res\n";
 	}
 	if (@tracks) {
-		if (open(F,">:encoding(".($ENV{LANG} =~ /UTF/i ? "utf-8" : "iso-8859-1").")","stream_info")) {
-			print F "$info\n";
-			foreach (reverse @tracks) {
-				print F "$_\n";
-			}
-			close(F);
-		}
+		my $tracks = join("\n",@tracks);
+		out::send_cmd_info("tracks\n$tracks");
 		if ($ft && $fa) {
 			return "$fa - $ft"; # Renvoie la chaine pour google images
 		} elsif ($ft) {

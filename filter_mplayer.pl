@@ -46,6 +46,7 @@ sub utf($) {
 	$str;
 }
 
+my @tracks;
 open(F,"<desktop");
 my $desk_w = <F>;
 my $desk_h = <F>;
@@ -278,7 +279,7 @@ $prog = $1 if ($source !~ /youtube/);
 print "filter: prog = $prog\n";
 $source =~ s/\/(.+)//;
 our $base_flux = $1;
-unlink "stream_info","stream_lyrics","stream_info.0";
+unlink "stream_lyrics";
 my ($width,$height) = ();
 my $exit = "";
 
@@ -313,7 +314,7 @@ sub check_eof {
 	$eof = 1;
 	unlink "vignettes" if ($has_vignettes);
 	print "check_eof: $source exit:$exit\n";
-	unlink("video_size","stream_info","cache/arte/last_serv","stream_lyrics","stream_info.0");
+	unlink("video_size","cache/arte/last_serv","stream_lyrics");
 	if (!$stream && -f "info_coords") {
 		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
 			print F "clear\n";
@@ -396,27 +397,13 @@ sub send_cmd_prog {
 	# fois de suite avec variation, genre une pub au bout la 2ème fois.
 	my $cmd = "prog";
 	$last_cmd_prog = time();
-	out::send_cmd_info("$cmd $chan§$source/$base_flux") if ($cmd);
+	out::send_cmd_info("$cmd $chan&$source/$base_flux") if ($cmd);
 }
 
 sub update_codec_info {
 	my $f;
 	if ($codec && $bitrate && $init) {
-		my $info = "";
-		if (open(FILE,"<stream_info") || open(FILE,"<stream_info.0")) {
-			while (<FILE>) {
-				$info .= $_;
-			}
-			close(FILE);
-		}
-		if (open($f,">stream_info")) {
-			print $f "$codec $bitrate\n";
-			print $f $info if ($info);
-			close($f);
-			send_cmd_prog();
-		} else {
-			print "impossible de créer stream_info !\n";
-		}
+		out::send_cmd_info("codec $codec $bitrate");
 	}
 }
 
@@ -490,41 +477,21 @@ sub update_prog {
 	# Apparemment il faut obligatoirement un async ici pour Coro sinon on
 	# se prend une erreur fatale de blocage incompréhensible !
 	async {
-	my $str = handle_prog($prog,"$codec $bitrate");
-	if ($str) {
-		my $diff = 0;
-		unlink "stream_info.0";
-		rename "stream_info","stream_info.0";
-		if (open(F,"stream_info")) {
-			if (open(G,"<stream_info.0")) {
-				while (<F>) {
-					if ($_ ne <G>) {
-						$diff = 1;
-						last;
-					}
-				}
-				close(G);
-			} else {
-				$diff = 1;
+		my $str = handle_prog($prog,"$codec $bitrate");
+		if ($str) {
+			if ($str ne $old_str) {
+				my ($artist,$titre) = split(/\-/,$str);
+				get_lyrics($artist,$titre);
+
+				print "new call to handle_image (old = $old_str)\n";
+				handle_images($str);
+				$old_str = $str;
 			}
-			close(F);
-		}
-		if ($diff) {
-			print "send_cmd_prog got str $str\n";
-			send_cmd_prog();
 		} else {
-			print "filter: pas de cmd prog, pas de diff\n";
+			print "filter: pas obtenu de str $str\n";
+			undef $time_prog;
 		}
-		if ($str ne $old_str) {
-			print "new call to handle_image (old = $old_str)\n";
-			handle_images($str);
-			$old_str = $str;
-		}
-	} else {
-		print "filter: pas obtenu de str $str\n";
-		undef $time_prog;
 	}
-}
 }
 
 if ($prog && $net) {
@@ -621,11 +588,10 @@ while (1) {
 				}
 			}
 			$info =~ s/ *$//;
-			if ($info && open(F,">>:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","stream_info")) {
-				print F "$info\n";
-				close(F);
+			if ($info) {
+				push @tracks,$info;
+				out::send_cmd_info("tracks\n".join("\n",@tracks));
 			}
-			send_cmd_prog();
 
 			if ($images && $titre =~ /\-/ && $titre ne $old_titre) {
 				handle_images($titre) ;
@@ -682,17 +648,8 @@ while (1) {
 						get_lyrics($artist,$titre);
 						$lyrics = 1;
 					}
-					if (open(F,">stream_info")) {
-						print F "$codec $bitrate";
-						if (!$net) {
-							print F " - pas de réseau";
-						} elsif (!$images) {
-							print F " - pas de réseau";
-						}
-						print F "\n$artist - $titre ($album) $t2 ".($t3>0 ? int($t1*100/$t3) : "-"),"%\n";
-						close(F);
-						send_cmd_prog();
-					}
+					# out::send_cmd_info("progress $t2 ".($t3>0 ? int($t1*100/$t3) : "-")."%");
+					out::send_cmd_info("progress ".($t3>0 ? int($t1*100/$t3) : "-")."%");
 				}
 				if ($last_t == 0) {
 					$last_t = 6; # le délai pour que l'info puisse se barrer

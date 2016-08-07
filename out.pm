@@ -14,6 +14,7 @@ use AnyEvent::Socket;
 use Coro::Handle;
 use Coro;
 use Cwd;
+use Encode;
 
 our $cwd = getcwd();
 
@@ -38,7 +39,10 @@ sub send_cmd_fifo {
 			  if (!$fh) {
 				  print "couldn't get unblock from fifo $fifo\n";
 			  } else {
-				  $fh->print("$cmd\012");
+				  $cmd = encode(($ENV{LANG} =~ /UTF/ ? "utf-8" : "iso-8859-1") =>"$cmd\012");
+				  $cmd =~ s/\x{2019}/'/g;
+				  $cmd =~ s/\x{0153}/oe/g; # bizarre c'est sensé être supporté par perl5...
+				  $fh->print( $cmd);
 				  if (defined($rep)) {
 					  my $reply = $fh->readline();
 					  $rep->put($reply);
