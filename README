@@ -4,10 +4,34 @@ bugs. L'idée c'est d'avoir un truc simple, le + court possible, et
 facilement extensible, et utilisable entièrement au clavier, j'utiliser un
 clavier sans fil comme télécommande en fait. C'est essentiellement écrit en
 perl, avec un peu de C, et ça utilise principalement mplayer/mplayer2.
-Ca permet d'avoir les chaines tnt par une carte dvb, les flux youtube,
-shoutcasts et compagnie, les podcasts, les cds audio, les radios (avec
-affichage d'images google images en fonction de ce qui passe), lecture de
-musiques et de vidéos en local ou en réseau évidemment et les dvds.
+Les fonctionnalités :
+
+ - chaines de télé par carte dvb ou à partir d'une freebox si les flux
+   vidéos sont toujours accessibles sur la freebox (je suis plus chez free
+   depuis longtemps !). Evidemment c'est de la télé par dvr, donc programme
+   des chaines en temps réel, pause, avance et retour rapide, sélection des
+   cannaux audio ou sous titres, et toutes les fonctions de mplayer sur la
+   vidéo.  Remarque ça utilise le principe de "livetv" de mythtv, c'est à dire
+   que toute chaine regardée est automatiquement enregistrée, et
+   l'enregistrement conservé pendant 24h dans un répertoire livetv, donc si on
+   veut revoir ou garder ça + tard, on peut toujours déplacer le fichier hors
+   du répertoire livetv.
+ - Evidemment on peut aussi voir des fichiers vidéo, tout ce qui est
+   accessible par le système de fichier, que ça soit distant ou pas, tant
+   que c'est décodable par mplayer, ça marche aussi avec le h265, et ça
+   permet d'utiliser la sortie audio optique si on en a une. Sauvegarde de
+   là où on en est de la lecture et reprise automatique.
+ - les chansons en local, avec affichage des paroles dans le bandeau d'info
+   et d'images en rapport avec la chanson récupérées sur google images
+   pendant la lecture (ça marche aussi avec les radios et les cds audios).
+ - Les flux réseau : arte (arte+7), youtube (qui me pose toujours des
+   problèmes j'ai pas pigé comment marche le changement de leur clé, il
+   faudra que je prenne le temps de voir ça un de ces 4), radios du web (+
+   d'1 centaine actuellement, on peut facilement en ajouter d'autres),
+   podcasts avec recherche utilisant google, shoutcast. Pour les radios, la
+   plupart n'indiquent leur programme que dans le flux transmis donc c'est
+   du temps réel, mais on a le programme de la journée pour les radio
+   france (inter, culture, musique, france bleu).
 
 Il faut avoir un minimum configuré mplayer en local du genre mettre au
 moins dans ~/.mplayer/config :
@@ -17,7 +41,9 @@ ao=alsa:device=hw=0.0 # utiliser le 1er périphérique alsa dispo et pas
 # "default"
 # Je me suis aperçu que si on ne configure pas alsa de cette façon on ne
 # peut avoir de sortie à 96 Khz par exemple, on tombe sur une espèce de
-# périphérique logique limité dans ses capacités...
+# périphérique logique limité dans ses capacités... par contre default
+# permet de partager la sortie son entre plusieurs programmes donc c'est au
+# choix
 ac=hwac3,hwdts, # sortie hardware ac3 et dts quand utilisable, à n'utiliser
 que si on a # branché la sortie optique évidemment !
 subpos=90 # on remonte un peu les sous titres

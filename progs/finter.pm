@@ -25,6 +25,12 @@ our %fb = (
 	"fbleu_gascogne" => "https://www.francebleu.fr/emissions/grille-programmes/gascogne"
 );
 
+sub disp_heure {
+	my $time = shift;
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
+	sprintf("%02d:%02d:%02d",$hour,$min,$sec);
+}
+
 sub update_prog_html($) {
 	my $file = shift;
 	my $url = $file;
@@ -62,6 +68,14 @@ sub update_prog_json($) {
 	} elsif ($file =~ /bleu/) {
 		print "france bleu : json non supporté!\n";
 		return undef;
+	} elsif ($file =~ /fip/) {
+		$url = "http://www.fipradio.fr/livemeta/7"; # c'est koi ce 7 ???
+	} elsif ($file =~ /le_mouv/) {
+		$url = "http://www.mouv.fr/sites/default/files/import_si/si_titre_antenne/leMouv_player_current.json";
+		# l'url suivante est sensée avoir les émissions qui viennent sauf
+		# que testé dans la nuit de samedi à dimanche, ça s'arrête à
+		# dimanche minuit, donc pas très utile !
+		# $url = "http://www.mouv.fr/sites/default/files/lecteur_commun_json/timeline.json";
 	} else {
 		# $url = "http://www.france$url.fr/sites/default/files/lecteur_commun_json/timeline.json";
 		$url = "https://www.france$url.fr/programmes?xmlHttpRequest=1";
@@ -69,24 +83,30 @@ sub update_prog_json($) {
 	my ($status,$prog) = chaines::request($url);
 	print STDERR "update_prog_json: got status $status, prog $prog\n" if ($debug && $prog);
 	return if (!$prog);
-	open(my $f,">cache/$file");
-	return if (!$f);
-	print $f $prog;
-	close($f);
+	if ($file !~ /(fip|le_mouv)/) {
+		open(my $f,">cache/$file");
+		return if (!$f);
+		print $f $prog;
+		close($f);
+	}
 	return $prog;
 }
 
 sub update {
 	my ($p,$channel,$offset) = @_;
-	return undef if (lc($channel) !~ /france (inter|culture|musique|bleu )/);
+	return undef if (lc($channel) !~ /france (inter|culture|musique|bleu )/ &&
+	lc($channel) !~ /(le mouv|fip)/);
 	$offset = 0 if (!defined($offset));
 
 	my ($suffix) = $channel =~ /france (.+)/;
-	$file = "f$suffix";
-	my $name = $file;
+	if ($suffix) {
+		$file = "f$suffix";
+	} else {
+		$file = lc($channel);
+	}
 	$file =~ s/ /_/g;
-	$name =~ s/^f//;
-	$name = "France ".uc(substr($name,0,1)).substr($name,1);
+	$file =~ s/[^a-zA-Z0-9_]//g;
+	my $name = $channel;
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
 	if ($hour < 5 && !$offset && $channel eq "france inter") { # Avant 5h c'est le prog de la veille
 		($sec,$min,$hour,$mday,$mon,$year) = localtime(time()-24*3600);
@@ -140,10 +160,14 @@ sub update {
 	}
 	if ($rtab) {
 		if ($$rtab2[0][3] < $$rtab[0][3]) {
-			push @$rtab2,$rtab;
+			for (my $n=0; $n<=$#$rtab; $n++) {
+				push @$rtab2,$$rtab[$n];
+			}
 			$rtab = $rtab2;
 		} else {
-			push @$rtab,$rtab2;
+			for (my $n=0; $n<=$#$rtab2; $n++) {
+				push @$rtab,$$rtab2[$n];
+			}
 		}
 	} else {
 		$rtab = $rtab2;
@@ -180,7 +204,7 @@ sub insert {
 		}
 	}
 	push @$rtab,$rtab2;
-	if ($fin > $$rtab2[3]) {
+	if ($#$rtab > 0 && ($fin > $$rtab2[3] || $fin < $$rtab2[3]-120)) {
 		$$rtab[$#$rtab-1][4] = $$rtab2[3];
 	}
 }

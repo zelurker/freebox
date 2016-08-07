@@ -26,6 +26,11 @@ sub decode_json {
 	if ($file =~ /fculture/) {
 		$ttitle = "surtitle";
 		$tdesc = "title";
+	} elsif ($file =~ /fip/) {
+		$ttitle = "title";
+	} elsif ($file =~ /le_mouv/) {
+		($tstart,$tend,$ttitle,$tdesc) = ("startTime","endTime","titre","expressionTitle");
+
 	} elsif ($file =~ /fmusique/) {
 		($tstart,$tend,$ttitle,$tdesc) = ("debut","fin","title_emission","desc_emission");
 	}
@@ -36,15 +41,48 @@ sub decode_json {
 	my $inserted = 0;
 	my $cont = 0;
 	my @fields;
-	$json = $json->{diffusions} if (ref($json) ne "ARRAY");
+	$json = $json->{diffusions} if (ref($json) ne "ARRAY" && $json->{diffusions});
+	if ($file =~ /le_mouv/) {
+		my $current = $json->{current};
+		my $emission = $current->{emission};
+		my $song = $current->{song};
+		if ($song ) {
+			if (time() > $song->{endTime}) {
+				$song->{endTime} = time()+12;
+			}
+			$song->{titre} .= " (emission : $emission->{titre})";
+			$json = [$song]; # faut coller ça dans un tableau d'1 élément !
+		} else {
+			# pour forcer une màj d'ici 30s, 1 chance de choper 1 chanson !
+			$emission->{endTime} = time()+30;
+			$json = [$emission];
+		}
+	} elsif ($file =~ /fip/) {
+		$json = $json->{steps};
+		my @tab;
+		foreach (sort { $json->{$a}->{start} <=> $json->{$b}->{start} } keys %$json) {
+			push @tab,$json->{$_};
+		}
+		$json = \@tab;
+	}
 	print "on y va avec $tstart $tend ttitle $ttitle json $json\n";
 	foreach (@$json) {
 		my %hash = %$_;
 		# France inter fait ça aussi...
 		my $title = $hash{$ttitle};
+		if ($file =~ /fip/) {
+			# fip a une playlist uniquement, cas très particulier !
+			$title = "$hash{authors} - $title";
+		} elsif ($file =~ /le_mouv/) {
+			$title = "$hash{interpreteMorceau} - $title";
+		}
 		next if (!$title);
 		$title = decode_str($title);
 		my $img = $hash{path_img_emission}; # Uniquement france musique en 2016 !
+		$img = $hash{visual} if (!$img); # fip !
+		if ($hash{visuel}) {
+			$img = $hash{visuel}->{medium};
+		}
 		if ($hash{$tstart}) {
 			my $found = 0;
 			foreach (@$rtab) {
@@ -61,7 +99,7 @@ sub decode_json {
 					$hash{$tend}, "",
 					get_desc(\%hash),
 					"","",$img,0,0,get_date($hash{$tstart}));
-				if ($hash{personnes}) {
+				if ($hash{personnes} && $#{$hash{personnes}} >= 0) {
 					$tab[6] .= decode_str(" (".join(",",@{$hash{personnes}}).")");
 				}
 				$p->insert(\@tab,$rtab);
@@ -71,6 +109,9 @@ sub decode_json {
 			$$rtab[$#$rtab][6] = get_desc(\%hash) if (!$$rtab[$#$rtab][6]);
 		}
 	}
+#	foreach (@$rtab) {
+#		print disp_heure($$_[3])," ",disp_heure($$_[4])," $$_[2]\n";
+#	}
 	$rtab;
 }
 
