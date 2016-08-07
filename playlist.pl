@@ -50,14 +50,7 @@ sub handle_prog {
 	my $res = $response->content;
 	my @tracks;
 	my ($fa,$ft);
-	if ($prog =~ /euradionantes.eu/) {
-		# Top naze, y a juste un script php pour accèder au programme, pas
-		# de balises dans le mp3, pas d'xml en vue... !!!
-		($fa,$ft) = $res =~ /<b>(.+)<\/b> \- (.+)<\/span/m;
-		$fa =~ s/ +$//;
-		$ft =~ s/ +$//;
-		@tracks = ("$fa - $ft");
-	} elsif ($res =~ s/^\{//) { # format oui fm
+	if ($res =~ s/^\{//) { # format oui fm
 		my $t = time();
 		my @list = split(/\],/,$res);
 		foreach (@list) {
