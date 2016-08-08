@@ -230,6 +230,8 @@ sub disp_duree($) {
 	}
 }
 
+our $refresh;
+
 sub disp_prog {
 	$cleared = 0;
 	my ($sub,$long) = @_;
@@ -249,6 +251,19 @@ sub disp_prog {
 	my $reste = undef;
 	if ($start && $time > $start && $time < $end) {
 		$reste = $end-$time;
+		$refresh = AnyEvent->timer(after=>($reste > 60 ? 60 : $reste+1), cb =>
+			sub {
+				# Il faut recréer $sub -> disp_channel
+				disp_channel();
+			});
+	} elsif ($end < $time) {
+		# paradoxe reste négatif
+		$refresh = AnyEvent->timer(after=>15, cb =>
+			sub {
+				disp_channel();
+			});
+	} else {
+		undef $refresh;
 	}
 	$start = get_time($start);
 	$end = get_time($end);
@@ -309,6 +324,7 @@ sub commands {
 	if ($cmd eq "clear") {
 		out::clear("info_coords");
 		$cleared = 1;
+		undef $fadeout,$refresh;
 	} elsif ($cmd eq "tracks") {
 		my ($name,$src) = get_cur_name();
 		$name .= "&$src";
@@ -405,7 +421,12 @@ sub commands {
 		$channel = $cmd;
 		# long n'est pas effacé par une commande prog
 		$long = $old_long if ($old_long);
-		disp_channel();
+		if ($lastprog && $channel eq $last_chan) {
+			print "prog disp_prog\n";
+			disp_prog($lastprog,$last_long);
+		} else {
+			disp_channel();
+		}
 	} elsif ($cmd eq "record") {
 		out::clear("info_coords") if (-f "info_coords");
 		out::clear("list_coords") if (-f "list_coords");
@@ -470,7 +491,6 @@ sub disp_channel {
 
 	# Si on arrive là, on a le texte à afficher dans sub, y a plus qu'à y
 	# aller !
-	my $read_after = undef;
-	disp_prog($sub,$long);
+	disp_prog($sub,$long) if ($sub);
 }
 
