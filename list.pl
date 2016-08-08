@@ -1153,11 +1153,6 @@ sub load_file2 {
 		my $old = $serv;
 	    $serv = get_mms($serv) if ($serv =~ /^http/ && $serv !~ /youtube/);
 		print "get_mms $old -> $serv\n";
-		if ($serv) {
-			print "flux: loadfile $serv from $serv\n";
-			open(G,">live");
-			close(G);
-		}
 	}
 	if ($serv) {
 		out::send_command("pause\n");

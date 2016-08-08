@@ -128,7 +128,7 @@ sub read_stream_info {
 		}
 	}
 	my $rtracks = $rinfo->{tracks};
-	my $info = $rinfo->{codec} || "?";
+	my $info = $rinfo->{codec} || "";
 	my $progress = $rinfo->{progress} || "";
 	my $cur = $$rtracks[0];
 	my $last = $$rtracks[1];
@@ -158,7 +158,7 @@ sub read_stream_info {
 				print $out " $progress\n\n";
 			}
 			print $out "Dernier morceau : $last\n" if ($last);
-			print $out $rinfo->{lyrics} if ($rinfo->{lyrics});
+			print $out "Paroles : $rinfo->{lyrics}" if ($rinfo->{lyrics});
 			out::close_fifo($out);
 			setup_fadeout($long);
 		}

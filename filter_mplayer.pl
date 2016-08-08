@@ -444,7 +444,7 @@ sub run_mplayer {
 	check_player2();
 }
 
-$SIG{TERM} = \&check_eof;
+our $fin = AnyEvent->signal( signal => "TERM", cb => \&check_eof );
 my $rin = "";
 
 if ($source =~ /^(dvb|freebox)/) {
