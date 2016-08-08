@@ -50,6 +50,7 @@ our ($source,$base_flux,$serv);
 
 $SIG{PIPE} = sub { print "info: sigpipe ignoré\n" };
 our $fadeout;
+our $refresh;
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
@@ -94,6 +95,7 @@ sub setup_fadeout {
 		$fadeout = AnyEvent->timer(after=>5, cb =>
 			sub {
 				if (! -f "list_coords") {
+					undef $refresh;
 					out::alpha("info_coords",-40,-255,-5);
 					out::send_bmovl("image");
 				}
@@ -230,8 +232,6 @@ sub disp_duree($) {
 	}
 }
 
-our $refresh;
-
 sub disp_prog {
 	$cleared = 0;
 	my ($sub,$long) = @_;
@@ -322,9 +322,9 @@ sub commands {
 
 	print "info: reçu commande $cmd long:$long.\n";
 	if ($cmd eq "clear") {
+		undef $fadeout,$refresh;
 		out::clear("info_coords");
 		$cleared = 1;
-		undef $fadeout,$refresh;
 	} elsif ($cmd eq "tracks") {
 		my ($name,$src) = get_cur_name();
 		$name .= "&$src";
@@ -421,12 +421,9 @@ sub commands {
 		$channel = $cmd;
 		# long n'est pas effacé par une commande prog
 		$long = $old_long if ($old_long);
-		if ($lastprog && $channel eq $last_chan) {
-			print "prog disp_prog\n";
-			disp_prog($lastprog,$last_long);
-		} else {
-			disp_channel();
-		}
+		# Note : prog appelle disp_channel pour recalculer le programme
+		# pas disp_prog qui réaffiche un programme qu'on a déjà !
+		disp_channel();
 	} elsif ($cmd eq "record") {
 		out::clear("info_coords") if (-f "info_coords");
 		out::clear("list_coords") if (-f "list_coords");
