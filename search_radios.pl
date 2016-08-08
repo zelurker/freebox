@@ -27,6 +27,7 @@ while (<$i>) {
 	chomp;
 	my $url = <$i>;
 	my $station = $_;
+	next if ($station ne "MFM Lady");
 	my $adr = $icons{$station};
 	if ($adr) {
 		print "j'ai déjà $_, check... ";
@@ -75,10 +76,15 @@ while (<$i>) {
 		my ($sub) = $_->url =~ /q=(.+?)\&/;
 		($sub) = $_->url =~ /url=(.+?)\&/ if (!$sub);
 		if ($sub && $sub =~ /(png|jpg|jpeg)$/i) {
-			if ($icons{$station}) {
-				$icons{$station} .= "\n$sub";
-			} else {
-				$icons{$station} = $sub;
+			eval {
+				$mech->head($sub);
+			};
+			if (!$@) {
+				if ($icons{$station}) {
+					$icons{$station} .= "\n$sub";
+				} else {
+					$icons{$station} = $sub;
+				}
 			}
 			print "ok:$sub\n";
 		}
