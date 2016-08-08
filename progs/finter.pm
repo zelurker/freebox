@@ -106,7 +106,8 @@ sub update {
 	}
 	$file =~ s/ /_/g;
 	$file =~ s/[^a-zA-Z0-9_]//g;
-	my $name = $channel;
+	my $name = $p->{name};
+
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
 	if ($hour < 5 && !$offset && $channel eq "france inter") { # Avant 5h c'est le prog de la veille
 		($sec,$min,$hour,$mday,$mon,$year) = localtime(time()-24*3600);

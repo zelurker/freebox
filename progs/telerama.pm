@@ -368,6 +368,7 @@ sub update {
 
 sub get {
 	my ($p,$channel,$source,$base_flux) = @_;
+	$p->{name} = $channel;
 	$channel = chaines::conv_channel($channel);
 	my $rtab = $p->{chaines}->{$channel};
 	$rtab = $p->update($channel) if (!$rtab);

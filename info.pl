@@ -342,7 +342,11 @@ sub commands {
 		$name .= "&$src";
 		$info{$name}->{codec} = "$codec $bitrate";
 		if (!$cleared && $name eq conv($channel)) {
-			read_stream_info(time(),$channel,$info{$name});
+			if ($lastprog && $channel eq $last_chan) {
+				disp_prog($lastprog,$last_long);
+			} else {
+				read_stream_info(time(),$channel,$info{$name});
+			}
 		}
 	} elsif ($cmd =~ s/^progress //) {
 		my ($name,$src) = get_cur_name();
@@ -416,7 +420,7 @@ sub disp_channel {
 	chomp $channel;
 	chomp $long if ($long);
 	$cleared = 0;
-	print "disp_channel: entrée avec long:$long\n";
+	print "disp_channel: entrée avec channel=$channel long:$long\n";
 
 	my $sub = undef;
 # 1 les trucs spécialisés (séries, radios, etc).
