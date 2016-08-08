@@ -142,6 +142,7 @@ sub get_lyrics {
 			if (!$aut && $tit =~ /(.+) \- (.+)/) {
 				$aut = $1; $tit = $2;
 			}
+			$tit =~ s/ \(.+\)//; # Supprime toute mention entre () dans le titre
 			print "*** filter: calling get_lyrics $args[1] artist $aut titre $tit\n";
 			my $lyrics = lyrics::get_lyrics($args[1],$aut,$tit);
 			if ($lyrics) {
@@ -569,6 +570,10 @@ while (1) {
 						$lyrics = 0 if ($titre ne $val);
 						$titre = $val;
 						print "reçu par icy info: $val.\n";
+						if ($prog && $time_prog) {
+							undef $prog,$time_prog;
+							print "on désactive les updates par prog dans ce cas là...\n";
+						}
 						get_lyrics($artist,$titre) if (!$lyrics);
 						if (!$net) {
 							$info .= " pas de réseau)";
