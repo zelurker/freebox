@@ -33,6 +33,7 @@ use progs::youtube;
 use progs::arte;
 
 our %info; # hash pour stocker les stream_info
+our $cleared = 1;
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -85,18 +86,6 @@ sub myget {
 		};
 	}
 		return $name;
-}
-
-sub disp_lyrics {
-	my $out = shift;
-	if (open(F,"<stream_lyrics")) {
-		my $info = "\nParoles : ";
-		while (<F>) {
-			$info .= $_;
-		}
-		close(F);
-		print $out $info;
-	}
 }
 
 sub setup_fadeout {
@@ -167,7 +156,7 @@ sub read_stream_info {
 				print $out " $progress\n\n";
 			}
 			print $out "Dernier morceau : $last\n" if ($last);
-			disp_lyrics($out);
+			print $out $rinfo->{lyrics} if ($rinfo->{lyrics});
 			out::close_fifo($out);
 			setup_fadeout($long);
 		}
@@ -242,6 +231,7 @@ sub disp_duree($) {
 }
 
 sub disp_prog {
+	$cleared = 0;
 	my ($sub,$long) = @_;
 	if (!$sub) {
 		print "info: disp_prog sans sub !\n";
@@ -318,6 +308,7 @@ sub commands {
 	print "info: reçu commande $cmd long:$long.\n";
 	if ($cmd eq "clear") {
 		out::clear("info_coords");
+		$cleared = 1;
 	} elsif ($cmd eq "tracks") {
 		my ($name,$src) = get_cur_name();
 		$name .= "&$src";
@@ -340,7 +331,7 @@ sub commands {
 		}
 		if (!$same) {
 			$info{$name}->{tracks} = \@tracks;
-			if ($name eq conv($channel)) {
+			if (!$cleared && $name eq conv($channel)) {
 				read_stream_info(time(),$channel,$info{$name});
 			}
 		}
@@ -350,14 +341,26 @@ sub commands {
 		my ($name,$src) = get_cur_name();
 		$name .= "&$src";
 		$info{$name}->{codec} = "$codec $bitrate";
-		if ($name eq conv($channel)) {
+		if (!$cleared && $name eq conv($channel)) {
 			read_stream_info(time(),$channel,$info{$name});
 		}
 	} elsif ($cmd =~ s/^progress //) {
 		my ($name,$src) = get_cur_name();
 		$name .= "&$src";
 		$info{$name}->{progress} = $cmd;
-		if ($name eq conv($channel)) {
+		if (!$cleared && $name eq conv($channel)) {
+			read_stream_info(time(),$channel,$info{$name});
+		}
+	} elsif ($cmd =~ /^lyrics/) {
+		my ($name,$src) = get_cur_name();
+		$name .= "&$src";
+		my $lyrics = "";
+		while (<$fh>) {
+			$lyrics .= $_;
+		}
+		$fh->close();
+		$info{$name}->{lyrics} = $lyrics;
+		if (!$cleared && $name eq conv($channel)) {
 			read_stream_info(time(),$channel,$info{$name});
 		}
 	} elsif ($cmd eq "time") {
@@ -412,6 +415,7 @@ sub disp_channel {
 # Ici on a obtenu la chaine, on cherche un afficheur
 	chomp $channel;
 	chomp $long if ($long);
+	$cleared = 0;
 	print "disp_channel: entrée avec long:$long\n";
 
 	my $sub = undef;
@@ -427,7 +431,7 @@ sub disp_channel {
 # 2 l'afficheur de base pour les fichiers (stream_info)
 	if (!$sub) {
 		my ($name,$src) = get_cur_name();
-		if ($name eq conv($channel)) {
+		if ($name."&$src" eq conv($channel)) {
 			read_stream_info(time(),$cmd,$info{"$name&$src"});
 			return;
 		}
@@ -449,11 +453,11 @@ sub disp_channel {
 		($sec,$min,$hour) = localtime($time);
 
 		print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n";
-		if (-f "stream_lyrics") {
-			disp_lyrics($out);
-		} else {
+#		if (-f "stream_lyrics") {
+#			disp_lyrics($out);
+#		} else {
 			print $out "Aucune info\n";
-		}
+#		}
 		out::close_fifo($out);
 		setup_fadeout($long);
 		$last_chan = $channel;

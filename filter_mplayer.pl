@@ -27,6 +27,7 @@ use IPC::SysV qw(IPC_PRIVATE IPC_RMID S_IRUSR S_IWUSR);
 use Data::Dumper;
 use images;
 use Encode;
+use Ogg::Vorbis::Header;
 use URI::URL;
 use lyrics;
 
@@ -130,6 +131,7 @@ sub get_lyrics {
 		$wait_lyrics = 1;
 		return;
 	}
+	$lyrics = 1;
 	async {
 		# LOOP nécessaire pour sortir par last ??!
 		LOOP: {
@@ -143,12 +145,9 @@ sub get_lyrics {
 			print "*** filter: calling get_lyrics $args[1] artist $aut titre $tit\n";
 			my $lyrics = lyrics::get_lyrics($args[1],$aut,$tit);
 			if ($lyrics) {
-				if (open(F,">:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","stream_lyrics")) {
-					print F $lyrics;
-					close(F);
-				}
+				out::send_cmd_info("lyrics\n$lyrics");
 			} else {
-				unlink("stream_lyrics"); # Au cas où le titre vient de changer et qu'on a pas l'info
+				out::send_cmd_info("lyrics"); # Au cas où le titre vient de changer et qu'on a pas l'info
 			}
 			if ($wait_lyrics) {
 				cede;
@@ -158,8 +157,6 @@ sub get_lyrics {
 			}
 		} while (1);
 	}
-	$lyrics = 1;
-	send_cmd_prog();
 	}
 }
 
@@ -279,7 +276,6 @@ $prog = $1 if ($source !~ /youtube/);
 print "filter: prog = $prog\n";
 $source =~ s/\/(.+)//;
 our $base_flux = $1;
-unlink "stream_lyrics";
 my ($width,$height) = ();
 my $exit = "";
 
@@ -314,7 +310,7 @@ sub check_eof {
 	$eof = 1;
 	unlink "vignettes" if ($has_vignettes);
 	print "check_eof: $source exit:$exit\n";
-	unlink("video_size","cache/arte/last_serv","stream_lyrics");
+	unlink("video_size","cache/arte/last_serv");
 	if (!$stream && -f "info_coords") {
 		if (sysopen(F,"fifo_info",O_WRONLY|O_NONBLOCK)) {
 			print F "clear\n";
@@ -362,8 +358,6 @@ sub check_eof {
 	exit(0); # au cas où on est là par un signal
 }
 
-our $last_cmd_prog = 0;
-
 sub quit_mplayer {
 	print "filter: fait quitter mplayer...\n";
 	out::send_command("quit\n");
@@ -396,7 +390,6 @@ sub send_cmd_prog {
 	# on ajoute un timeout pour contourner les sites qui envoient l'info 2
 	# fois de suite avec variation, genre une pub au bout la 2ème fois.
 	my $cmd = "prog";
-	$last_cmd_prog = time();
 	out::send_cmd_info("$cmd $chan&$source/$base_flux") if ($cmd);
 }
 
@@ -601,8 +594,16 @@ while (1) {
 		} elsif (/Title: (.+)/i && !$titre) {
 			print "filter: update Title: $1\n";
 			$titre = utf($1);
+			if ($artist && $titre) {
+				out::send_cmd_info("tracks\n$artist - $titre\n");
+				handle_images("$artist - $titre");
+			}
 		} elsif (/Artist: (.+)/i || /ID_CDDB_INFO_ARTIST=(.+)/) {
 			$artist = utf($1);
+			if ($artist && $titre) {
+				out::send_cmd_info("tracks\n$artist - $titre\n");
+				handle_images("$artist - $titre");
+			}
 		} elsif (/ID_CDDB_INFO_TRACK_(\d+)_NAME=(.+)/) {
 			$list[$1] = ($list[$1] ? $list[$1] : "").utf($2);
 		} elsif (/ID_CDDB_INFO_TRACK_(\d+)_MSF=(.+)/) {
@@ -627,7 +628,20 @@ while (1) {
 		} elsif (!$stream && /^A:[ \t]*(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
 			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
 			$pos = $t1; # bookmark (podcast...)
-			if (($last_t == 6 && $t1 > $last_t) || ($last_t != 6 && abs($t1 - $last_t) >= 1)) {
+			if ($t1 - $last_t >= 1) {
+				$last_t = $t1;
+				if (!$artist && !$titre && $source =~ /Fichiers/ && $args[1] =~ /ogg$/i) {
+					# La lecture des tags vorbis est gravement buguée dans
+					# mplayer, un truc à patcher un de ces 4 éventuellement
+					# mais on peut peut-être utiliser le module perl +
+					# simple...
+					my $ogg = Ogg::Vorbis::Header->new($args[1]);
+					($artist) = $ogg->comment("ARTIST");
+					($artist) = $ogg->comment("artist") if (!$artist);
+					($titre) = $ogg->comment("TITLE");
+					($titre) = $ogg->comment("title") if (!$titre);
+					out::send_cmd_info("tracks\n$artist - $titre\n");
+				}
 				if (!$artist && !$titre && $chan =~ /(.+) - (.+)\..../) {
 					# Déduction de l'artiste et du titre sur le nom de fichier
 					($artist,$titre) = ($1,$2);
@@ -635,27 +649,11 @@ while (1) {
 						$artist = $1;
 					}
 				}
-				if ($images && $last_t == 0 && ($artist || $titre)) {
-					print "handle_image from timer\n";
-					if ($artist && $titre) {
-						handle_images("$artist - $titre");
-					} else {
-						handle_images("$titre");
-					}
+				if (!$lyrics && (($artist && $titre) || $args[1] !~ /^http/)) {
+					get_lyrics($artist,$titre);
 				}
-				if (!$last_t || -f "info_coords") {
-					if (!$lyrics && (($artist && $titre) || $args[1] !~ /^http/)) {
-						get_lyrics($artist,$titre);
-						$lyrics = 1;
-					}
-					# out::send_cmd_info("progress $t2 ".($t3>0 ? int($t1*100/$t3) : "-")."%");
-					out::send_cmd_info("progress ".($t3>0 ? int($t1*100/$t3) : "-")."%");
-				}
-				if ($last_t == 0) {
-					$last_t = 6; # le délai pour que l'info puisse se barrer
-				} else {
-					$last_t = $t1;
-				}
+				# out::send_cmd_info("progress $t2 ".($t3>0 ? int($t1*100/$t3) : "-")."%");
+				out::send_cmd_info("progress ".($t3>0 ? int($t1*100/$t3) : "-")."%");
 			}
 		} elsif (/Starting playback/) {
 			if ($width && $height) {
