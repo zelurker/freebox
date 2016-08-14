@@ -322,7 +322,7 @@ sub commands {
 
 	print "info: reçu commande $cmd long:$long.\n";
 	if ($cmd eq "clear") {
-		undef $fadeout,$refresh;
+		$fadeout = $refresh = undef;
 		out::clear("info_coords");
 		$cleared = 1;
 	} elsif ($cmd eq "tracks") {
