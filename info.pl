@@ -332,7 +332,7 @@ sub commands {
 		my $rtracks = $info{$name}->{tracks};
 		while (<$fh>) {
 			chomp;
-			push @tracks,$_;
+			push @tracks,$_ if ($_);
 		}
 		close($fh);
 		my $same = 0;
@@ -345,7 +345,7 @@ sub commands {
 				}
 			}
 		}
-		if (!$same) {
+		if (!$same && $#tracks > 0) {
 			$info{$name}->{tracks} = \@tracks;
 			if (!$cleared && $name eq conv($channel)) {
 				read_stream_info(time(),$channel,$info{$name});
@@ -357,7 +357,7 @@ sub commands {
 		my ($name,$src) = get_cur_name();
 		$name .= "&$src";
 		$info{$name}->{codec} = "$codec $bitrate";
-		if (!$cleared && $name eq conv($channel)) {
+		if (!$cleared && $name eq conv($channel && $src !~ /^flux\/podcasts/)) {
 			if ($lastprog && $channel eq $last_chan) {
 				disp_prog($lastprog,$last_long);
 			} else {
@@ -368,7 +368,9 @@ sub commands {
 		my ($name,$src) = get_cur_name();
 		$name .= "&$src";
 		$info{$name}->{progress} = $cmd;
-		if (!$cleared && $name eq conv($channel)) {
+		if (!$cleared && $name eq conv($channel) && $src !~ /^flux\/podcasts/) {
+			# Ne pas afficher de progress sur les podcasts, conflit avec
+			# l'info progs/podcasts
 			read_stream_info(time(),$channel,$info{$name});
 		}
 	} elsif ($cmd =~ /^lyrics/) {
@@ -380,7 +382,7 @@ sub commands {
 		}
 		$fh->close();
 		$info{$name}->{lyrics} = $lyrics;
-		if (!$cleared && $name eq conv($channel)) {
+		if (!$cleared && $name eq conv($channel) && $lyrics) {
 			read_stream_info(time(),$channel,$info{$name});
 		}
 	} elsif ($cmd eq "time") {
