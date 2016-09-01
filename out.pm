@@ -207,15 +207,21 @@ sub setup_output {
 	# En cas d'attente on bloquerait d'autant à chaque commande vers info
 	# ou list c'est totalement insupportable. Normalement ce n'est plus
 	# nécessaire
-	if (open(F,"<video_size") || open(F,"<desktop")) {
-		# Si on démarre sur une chaine dvb cryptée, mplayer sort et freebox
-		# passe en boucle. Dans ce cas là on obtient jamais video_size, donc
-		# on se rabat sur desktop, la taille de la fenêtre de fond, ça tombe
-		# bien...
-		($width,$height) = <F>;
-		chomp $width;
-		chomp $height;
-		close(F);
+	while (1) {
+		# Par contre on attend au moins l'1 des 2 parce qu'avec coro on
+		# arrive souvent là avant que bmovl ne soit prêt !
+		if (open(F,"<video_size") || open(F,"<desktop")) {
+			# Si on démarre sur une chaine dvb cryptée, mplayer sort et freebox
+			# passe en boucle. Dans ce cas là on obtient jamais video_size, donc
+			# on se rabat sur desktop, la taille de la fenêtre de fond, ça tombe
+			# bien...
+			($width,$height) = <F>;
+			chomp $width;
+			chomp $height;
+			close(F);
+			last;
+		}
+		sleep 1;
 	}
 	if (!$long) {
 		$long = $height*2/3;
