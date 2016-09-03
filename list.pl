@@ -989,7 +989,7 @@ sub run_mplayer2 {
 		# Dilemne : mplayer2 ne supporte pas le x265, mais mplayer est
 		# bourré de bugs ! Donc on continue à avoir mplayer2 par défaut
 		# sauf sur les fichiers où on ne trouve pas la vidéo avec lui !
-	   	open(F,"$player -frames 0 -identify -frames 0 \"$serv\"|")) {
+	   	open(F,"$player -frames 0 -identify \"$serv\"|")) {
 		my $found_video = 0;
 		while (<F>) {
 			if (/ID_VIDEO_FORMAT/) {
@@ -1274,6 +1274,7 @@ sub commands {
 	$inotify->poll if ($inotify);
 	again:
 	print "list: commande reçue après again : $cmd\n";
+	undef $time_numero; # le timeout numéro viré pour toute commande
 	if (-f "list_coords" && $cmd eq "clear") {
 		out::clear("list_coords");
 		out::clear("info_coords");
@@ -1714,7 +1715,6 @@ sub commands {
 				last;
 			}
 		}
-		undef $time_numero;
 		$time_numero = AnyEvent->timer(after=>3, cb =>
 			sub {
 				async {
