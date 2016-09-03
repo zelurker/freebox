@@ -289,18 +289,18 @@ sub bindings($) {
 	}
 
 	if ($cmd =~ /^KP(\d)/) {
-		out::send_cmd_list($1);
+		out::send_cmd_fifo("sock_list",$1);
 	} elsif ($cmd =~ /KP_ENTER/) {
 		if (-f "list_coords" || -f "numero_coords") {
-			out::send_cmd_list("zap1");
+			out::send_cmd_fifo("sock_list","zap1");
 		} elsif (-f "info_coords") {
 			out::send_cmd_info("zap1");
 		}
 	} elsif ($cmd eq "KP_INS") {
-		out::send_cmd_list("0");
+		out::send_cmd_fifo("sock_list","0");
 	} elsif ($cmd =~ /^[A-Z]$/ || $cmd =~ /^F\d+$/) {
 		# Touche alphabétique
-		out::send_cmd_list($cmd);
+		out::send_cmd_fifo("sock_list",$cmd);
 	} else {
 		print "bindings: touche non reconnue $cmd\n";
 	}
@@ -324,7 +324,7 @@ sub check_eof {
 	if ($started) {
 		if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
 			print "filter: envoi nextchan exit $exit\n";
-			out::send_cmd_list("nextchan");
+			out::send_cmd_fifo("sock_list","nextchan");
 		} elsif ($source =~ /(dvb|freebox)/) {
 			if ($pid_player1) {
 				print "pid player1 à tuer $pid_player1.\n";
@@ -627,7 +627,7 @@ while (1) {
 				print "filter: current updated on cdda info\n";
 				$chan = "$titre ($duree[$1])";
 				send_cmd_prog();
-				out::send_cmd_list("reset_current");
+				out::send_cmd_fifo("sock_list","reset_current");
 			}
 			handle_images("$artist - $titre") # ($album)")
 		} elsif (!$stream && /^A:[ \t]*(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
@@ -683,7 +683,7 @@ while (1) {
 				if ($source =~ /Fichiers vidéo/) {
 					delete $bookmarks{$serv};
 					sleep(1);
-					out::send_cmd_list("list");
+					out::send_cmd_fifo("sock_list","list");
 				}
 			}
 			# A priori pas la peine d'envoyer un check_eof ici, ça va éviter
