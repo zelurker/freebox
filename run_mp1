@@ -127,17 +127,17 @@ while [ "$ok" == "0" ]; do
 	tries=0
 	# Laisse au moins 3s au flux pour commencer à arriver
 	while [ $tries -lt 10 ] && ! [ -f "$name" ] && ps -p $pid >& /dev/null; do
-		sleep 1
+		sleep 0.5
 		tries=$(( $tries+1 ))
 	done
 	echo run_mp1: fin attente fichier tries=$tries
+	tries=0
+	while [ `stat --printf=%s "$name"` == 0 ] && [ $tries -lt 10 ]; do
+		sleep 0.5
+		tries=$(( $tries+1 ))
+	done
 	size=`stat --printf=%s "$name"`
-	if [ "$size" == "0" ]; then
-		echo size à 0, on attend 1s pour voir...
-		sleep 1
-	fi
-	size=`stat --printf=%s "$name"`
-	echo new size $size
+	echo fin attente taille $size tries $tries
 	if [ "$size" == "0" ]; then
 		echo run_mp1: shortcut fichier à 0
 		kill `cat player1.pid`
@@ -152,12 +152,12 @@ while [ "$ok" == "0" ]; do
 		while [ -f "$name" ] && ! (mplayer2 -frames 0 -identify "$name" 2>/dev/null|grep -q ID_AUDIO_FORMAT) && \
 			ps -p $pid >& /dev/null && \
 			[ $(( `date +%s`-$start )) -lt 10 ]; do
-		  sleep 1
+		  sleep 0.1
 		done
 		while [ -f "$name" ] && ! (mplayer2 -frames 0 -identify "$name" 2>/dev/null|grep -q ID_VIDEO_FORMAT) && \
 			ps -p $pid >& /dev/null && \
 			[ $(( `date +%s`-$start )) -lt 10 ]; do
-		  sleep 1
+		  sleep 0.1
 		done
 		echo run_mp1: out of timeout loop, file : `ls -sk "$name"` ps :
 		ps -p `cat player1.pid`
