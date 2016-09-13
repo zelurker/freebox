@@ -90,11 +90,11 @@ sub conv_channel {
 		"TEVA" => "Téva",
 		"Equidia live" => "Equidia",
 		"Luxe.TV" => "Luxe TV",
-		"D8" => "Direct 8",
 		"telenantes" => "Télé Nantes",
 		"NUMERO 23" => "Numéro 23",
 		"RMC DECOUVERTE" => "RMC Découverte",
 		"LCI" => "LCI - La Chaîne Info",
+		"PARIS PREMIERE" => "PARIS Première",
 	);
 	$channel =~ s/ \(.+\)//;
 	$channel =~ s/ ?hd$//i;
