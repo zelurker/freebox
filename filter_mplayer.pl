@@ -588,7 +588,7 @@ while (1) {
 			$info =~ s/ *$//;
 			if ($info) {
 				push @tracks,$info;
-				out::send_cmd_info("tracks\n".join("\n",@tracks));
+				out::send_cmd_info("tracks\n".join("\n",reverse @tracks));
 			}
 
 			if ($images && $titre =~ /\-/ && $titre ne $old_titre) {

@@ -345,7 +345,7 @@ sub commands {
 				}
 			}
 		}
-		if (!$same && $#tracks > 0) {
+		if (!$same && $#tracks > -1) {
 			$info{$name}->{tracks} = \@tracks;
 			if (!$cleared && $name eq conv($channel)) {
 				read_stream_info(time(),$channel,$info{$name});
