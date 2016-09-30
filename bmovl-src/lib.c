@@ -88,7 +88,7 @@ void init_video() {
     }
     get_video_info();
     sdl_screen = SDL_SetVideoMode( desktop_w,desktop_h,
-	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT /* |SDL_FULLSCREEN */ );
+	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT|SDL_NOFRAME /* |SDL_FULLSCREEN */ );
     SDL_ShowCursor(SDL_DISABLE);
     SDL_EnableUNICODE(1);
     SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
