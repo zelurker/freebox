@@ -16,6 +16,7 @@ use Cpanel::JSON::XS qw(decode_json);
 use Data::Dumper;
 use Time::Local "timelocal_nocheck";
 use Encode;
+use HTML::Entities;
 
 my $debug = 0;
 our ($file,$use_json);
@@ -186,7 +187,8 @@ sub insert {
 	# inconnu ou d'un flash).
 	foreach ($$rtab2[6],$$rtab2[2]) { # desc & titre
 		s/&#(\d+);/chr($1)/ge;
-		s/&amp;/\&/g;
+		# s/&amp;/\&/g;
+		$_ = decode_entities($_);
 		# utf8::decode(decode_entities($_));
 		s/\xe2\x80\x99/'/g;
 		Encode::from_to($_, "utf-8", "iso-8859-1") if (!$use_json);
