@@ -74,6 +74,7 @@ sub get {
 		my $actor = 0;
 		my $u;
 		$u = $mech->find_link( text_regex => qr/Episodes /);
+		return undef if (!$u);
 #		foreach ($mech->links) {
 			$u = $u->url;
 			if ($u =~ /url.q=(http.+?)&/) {
