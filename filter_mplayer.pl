@@ -324,7 +324,7 @@ sub check_eof {
 	if ($started) {
 		if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
 			print "filter: envoi nextchan exit $exit\n";
-			out::send_cmd_fifo("sock_list","nextchan");
+			out::send_cmd_fifo("direct_sock_list","nextchan");
 		} elsif ($source =~ /(dvb|freebox)/) {
 			if ($pid_player1) {
 				print "pid player1 à tuer $pid_player1.\n";
@@ -356,8 +356,7 @@ sub check_eof {
 	if (-f $args[1] && $args[1] =~ /^podcast/) {
 		utime(undef,undef,$args[1]); # touch sur le fichier pour les podcasts!
 	}
-	Coro::terminate(0);
-#	exit(0); # au cas où on est là par un signal
+	exit(0); # au cas où on est là par un signal
 }
 
 sub quit_mplayer {
