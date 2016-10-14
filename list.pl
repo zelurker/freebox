@@ -1789,7 +1789,7 @@ sub commands {
 			}
 		}
 		$cmd = "zap1";
-		disp_list($cmd);
+		disp_list($cmd) if (-f "list_coords");
 		goto again;
 	} elsif ($cmd eq "prevchan") {
 		reset_current() if (! -f "list_coords");
