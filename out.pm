@@ -31,6 +31,9 @@ sub send_cmd_fifo {
 	my ($fifo,$cmd,$rep) = @_;
 	my $tries = 1;
 	my $error;
+	$cmd = encode(($ENV{LANG} =~ /UTF/ ? "utf-8" : "iso-8859-1") =>"$cmd\012");
+	$cmd =~ s/\x{2019}/'/g;
+	$cmd =~ s/\x{0153}/oe/g; # bizarre c'est sensé être supporté par perl5...
 	if ($fifo =~ /^sock_/) {
        tcp_connect "unix/", "$cwd/$fifo", sub {
           my ($fh) = @_;
@@ -39,9 +42,6 @@ sub send_cmd_fifo {
 			  if (!$fh) {
 				  print "couldn't get unblock from fifo $fifo\n";
 			  } else {
-				  $cmd = encode(($ENV{LANG} =~ /UTF/ ? "utf-8" : "iso-8859-1") =>"$cmd\012");
-				  $cmd =~ s/\x{2019}/'/g;
-				  $cmd =~ s/\x{0153}/oe/g; # bizarre c'est sensé être supporté par perl5...
 				  $fh->print( $cmd);
 				  if (defined($rep)) {
 					  my $reply = $fh->readline();
@@ -51,21 +51,18 @@ sub send_cmd_fifo {
 		  }
        };
 	   return;
+   } elsif ($fifo =~ s/^direct_//) {
+	   print "envoi direct $fifo: $cmd\n";
+	   socket(SOCK, PF_UNIX, SOCK_STREAM, 0)     || die "socket: $!";
+	   connect(SOCK, sockaddr_un($fifo))   || die "connect: $!";
+	   print SOCK $cmd;
+	   if (defined($rep)) {
+		   my $reply = <SOCK>;
+		   $rep->put($reply);
+	   }
+	   close(SOCK);
+	   return;
    }
-   # A priori y a plus de fifo, donc tout le code qui suit ne sera plus
-   # utilisé
-	do {
-		if (sysopen(my $f,"$fifo",O_WRONLY|O_NONBLOCK)) {
-			$error = 0;
-			print $f "$cmd\n";
-			close($f);
-		} else {
-			print "filter: send_cmd $fifo $cmd impossible tries=$tries !\n" if ($tries >= 10);
-			$error = 1;
-			select undef,undef,undef,0.1;
-		}
-
-	} while ($error && $tries++ <= 20);
 }
 
 sub send_cmd_list($) {
