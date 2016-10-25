@@ -46,8 +46,8 @@ sub decode_html {
 			} elsif (substr($l,$pos+1,3) eq "img") {
 				my $sub = substr($l,$pos+1);
 				$sub =~ s/>.+//;
-				if ($sub =~ /data-pagespeed-high-res-src="(.+?)"/) {
-					$img = $1;
+				if ($sub =~ /data-pagespeed-(.+?)-src="(.+?)"/) {
+					$img = $2;
 				} elsif ($sub =~ / src="(.+?)"/) {
 					$img = $1;
 				}
