@@ -40,10 +40,12 @@ if ! perl -c filter_mplayer.pl; then
 	echo problèmes filter_mplayer.pl
 	exit 1
 fi
-if ! type wget > /dev/null 2> /dev/null; then
-	echo install wget
+for n in wget socat; do
+if ! type $n > /dev/null 2> /dev/null; then
+	echo install $n
 	exit 1
 fi
+done
 ulimit -c unlimited
 find cache/ -mtime +3 -delete
 find podcasts/ -mtime +7 -delete
