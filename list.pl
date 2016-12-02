@@ -1816,6 +1816,7 @@ sub commands {
 		}
 	} elsif ($cmd ne "list") {
 		print "list: commande inconnue :$cmd!\n";
+		out::send_command("$cmd\n");
 		return;
 	}
 
