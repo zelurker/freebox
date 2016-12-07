@@ -67,6 +67,7 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 	my $size = $1;
 	mkdir "podcasts";
 	my ($file) = $str =~ /.+\/(.+)/;
+	$file =~ s/\?.+//; # Vire tout ce qui suit d'éventuels params !
 	$file = "podcasts/$file";
 
 	# Vérification de la taille !!!
@@ -115,14 +116,13 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 				print STDERR "problem, could not find url in pod file !\n";
 			}
 			print STDERR "execution wget -q -c -N $str\n" if ($debug);
-			chdir("podcasts");
 			# L'idée était d'utiliser -O $file, sauf que ce crétin de wget
 			# ne sait pas gèrer l'horodatage avec -O ! Y a des fois je me dis
 			# que je ferais mieux de ne pas utiliser du tout wget et plutôt
 			# faire le transfert en perl, mais bon c'est un bordel si on ne
 			# veut pas qu'il télécharge tout en ram... !!!
 			# Enfin vu qu'on est dans un child, le chdir n'a pas d'importance
-			exec("wget","-q","-c","-N",$str);
+			exec("wget","-O",$file,"-q","-c","-N",$str);
 		} else {
 			my $n = 1;
 			my $dest = ($file =~ /mp3$/ ? 40*1024 : 7*1024*1024);
