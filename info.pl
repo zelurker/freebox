@@ -312,14 +312,13 @@ sub disp_prog {
 sub commands {
 	my $fh = shift;
 	$cmd = shift;
-	# C'est un peu bizarre comme idée, long initialisé pour toutes les
-	# commandes ? A priori ça n'est utile que pour prog, mais bon on va
-	# garder comme ça pour l'instant...
 	my @tab = split(/ /,$cmd);
 	my $old_long = $long;
 	($tab[0],$long) = split(/\:/,$tab[0]);
 	$cmd = join(" ",@tab);
 	$long = "" if (!$long); # Evite les warnings !
+	# A priori utile juste pour prog
+	$long = $old_long if ($cmd !~ /^prog/);
 
 	print "info: reçu commande $cmd long:$long.\n";
 	if ($cmd eq "clear") {
