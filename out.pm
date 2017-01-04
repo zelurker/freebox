@@ -31,7 +31,9 @@ sub send_cmd_fifo {
 	my ($fifo,$cmd,$rep) = @_;
 	my $tries = 1;
 	my $error;
-	$cmd = encode(($ENV{LANG} =~ /UTF/ ? "utf-8" : "iso-8859-1") =>"$cmd\012");
+	# Apparemment il ne faut plus forcer l'encode sur les handles Coro... !
+	# $cmd = encode(($ENV{LANG} =~ /UTF/ ? "utf-8" : "iso-8859-1") =>"$cmd\012");
+	$cmd .= "\012";
 	$cmd =~ s/\x{2019}/'/g;
 	$cmd =~ s/\x{0153}/oe/g; # bizarre c'est sensé être supporté par perl5...
 	if ($fifo =~ /^sock_/) {

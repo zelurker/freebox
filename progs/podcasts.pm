@@ -71,6 +71,7 @@ sub get {
 		# est bien en utf8, mais le champ $title est en latin1 ! Ca n'a
 		# absolument aucun sens, mais on peut corriger avec un appel à
 		# Encode... ! (ceci avec une locale utf8)
+		my $old_title = $title;
 		if (!$latin) {
 			eval {
 				Encode::from_to($title, "iso-8859-1", "utf-8");
@@ -80,7 +81,7 @@ sub get {
 			my $desc = mydecode($_->{"description"});
 			$date = get_date($date);
 			$date =~ s/,.+//;
-			@tab = (undef, "podcasts", "$title",
+			@tab = (undef, "podcasts", $old_title,
 				undef, # début
 				undef, "", # fin
 				$desc, # desc
