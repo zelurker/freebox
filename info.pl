@@ -55,6 +55,7 @@ our $refresh;
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
 	my ($name,$source) = out::get_current();
+	$source =~ s/flux\/stations\/.+/flux\/stations/;
 	return (lc($name),$source);
 }
 
@@ -327,12 +328,16 @@ sub commands {
 		$cleared = 1;
 	} elsif ($cmd eq "tracks") {
 		my ($name,$src) = get_cur_name();
+		print "tracks: name $name, src $src.\n";
 		$name .= "&$src";
 		my @tracks = ();
 		my $rtracks = $info{$name}->{tracks};
 		while (<$fh>) {
 			chomp;
-			push @tracks,$_ if ($_);
+			if ($_) {
+				push @tracks,$_ ;
+				print "tracks: reçu $_.\n";
+			}
 		}
 		close($fh);
 		my $same = 0;
@@ -382,7 +387,7 @@ sub commands {
 		}
 		$fh->close();
 		$info{$name}->{lyrics} = $lyrics;
-		if (!$cleared && $name eq conv($channel) && $lyrics) {
+		if (!$cleared && $name eq conv($channel)) {
 			read_stream_info(time(),$channel,$info{$name});
 		}
 	} elsif ($cmd eq "time") {
@@ -413,6 +418,7 @@ sub commands {
 		$source = $1;
 		if ($source =~ s/\/(.+)//) {
 			$base_flux = $1;
+			$base_flux =~ s/^stations\/.+/stations/;
 			$base_flux =~ s/,(.+)//;
 			$serv = $1;
 		} else {
