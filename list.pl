@@ -102,7 +102,11 @@ sub update_pics {
 				print "debug: url $$rpic[$n+1] -> type $type\n";
 				$f->print($cont);
 				$f->close();
-				disp_list();
+				if ($cont) {
+					disp_list();
+				} else {
+					print "pas de contenu, pas de disp_list\n";
+				}
 				cede;
 			}
 		}
