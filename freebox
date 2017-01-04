@@ -40,7 +40,7 @@ if ! perl -c filter_mplayer.pl; then
 	echo problèmes filter_mplayer.pl
 	exit 1
 fi
-for n in wget socat; do
+for n in wget socat zenity; do
 if ! type $n > /dev/null 2> /dev/null; then
 	echo install $n
 	exit 1
