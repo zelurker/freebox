@@ -111,7 +111,6 @@ my %icons = (
   "RST" => "http://www.vdc-nrw.com/userfiles/image/Logo_RadioRST.png",
   "RTL" => "http://www.dorea-deco.com/wp-content/uploads/2010/12/logo-rtl1.jpg",
   "RTL 2" => "http://static.rtl2.fr/versions/www/6.0.127/img/rtl2_fb.jpg",
-  "Radio Alpine Meilleure" => "http://perlbal.hi-pi.com/blog-images/221828/gd/1140613570/Radio-Alpine-Meilleure.jpg",
   "Radio Bresse" => "http://www.radiobresse.com/wp-content/uploads/2015/12/logo-radio-bresse.png",
   "Radio Classique" => "https://upload.wikimedia.org/wikipedia/fr/2/20/Radio_Classique_logo_2014.png",
   "Radio Côte d'Amour" => "http://www.franck-gergaud.com/images_content/Radio_Cote_signature.jpg",
