@@ -557,6 +557,7 @@ while (1) {
 		} elsif (/ICY Info/) {
 			my $info = "";
 			$stream = 1;
+			my $icy_ok = undef;
 			while (s/([a-z_]+)\=\'(.*?)\'\;//i) {
 				my ($name,$val) = ($1,$2);
 				if ($name eq "StreamTitle" && $val) {
@@ -570,6 +571,7 @@ while (1) {
 						$lyrics = 0 if ($titre ne $val);
 						$titre = $val;
 						print "reçu par icy info: $val.\n";
+						$icy_ok = 1;
 						if ($prog && $time_prog) {
 							undef $prog,$time_prog;
 							print "on désactive les updates par prog dans ce cas là...\n";
@@ -586,15 +588,14 @@ while (1) {
 				}
 			}
 			$info =~ s/ *$//;
-			if ($info) {
+			if ($info && $icy_ok) {
 				push @tracks,$info;
 				out::send_cmd_info("tracks\n".join("\n",reverse @tracks));
-			}
-
-			if ($images && $titre =~ /\-/ && $titre ne $old_titre) {
-				handle_images($titre) ;
-			} else {
-				$titre = $old_titre;
+				if ($images && $titre =~ /\-/ && $titre ne $old_titre) {
+					handle_images($titre) ;
+				} else {
+					$titre = $old_titre;
+				}
 			}
 		} elsif (/Title: (.+)/i && !$titre) {
 			print "filter: update Title: $1\n";
