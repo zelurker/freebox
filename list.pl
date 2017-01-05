@@ -1969,10 +1969,10 @@ sub disp_list {
 		}
 		print $out $cur;
 		close($out);
-		print "command prog source $source base_flux $base_flux\n";
 		if ($found <= $#list) {
 			my $rtab = $list[$found];
 			my ($num,$name,$service,$flavour,$audio,$video,$red,$pic) = @{$$rtab[0]};
+			print "command prog name $name serv $service source $source base_flux $base_flux\n";
 			if ($source =~ /(Enregistrement|livetv)/) {
 				out::send_cmd_info("prog $service&$source/$base_flux") if ($info);
 			} else {

@@ -20,7 +20,19 @@ sub handle_lyrics {
 		return undef;
 	}
 	$mech->save_content("page.html");
-	$_ = $mech->content;
+	# La gestion de l'utf par perl est HORRIBLE !
+	# la solution est probablement de forcer un encodage pour contourner
+	# ses détections d'encodage qui foirent tout le temps...
+	# Au lieu de ça pour l'instant je vais tenter de juste demander de
+	# retourner l'encodage du site web. Autrement ce crétin retourne un
+	# texte latin1 venant d'un site utf8 même si la locale est utf ! Un
+	# foirage de détection d'encodage assez monumental sur ce coup là !
+	# Apparemment en utilisant ça les fichiers sont bien écrits en utf et
+	# relus correctement.
+	# Par contre si on le laisse faire sa conversion foireuse en latin1
+	# bmovl appelle la fonction pour afficher du texte utf et ça foire !
+
+	$_ = $mech->content(decoded_by_headers => 1);
 	my $lyrics = "";
 	my $start = undef;
 	if ($u =~ /lyricsfreak.com/) {
@@ -196,7 +208,7 @@ sub get_lyrics {
 			return $lyrics;
 		}
 	}
-	if (!$lyrics && open(F,"<:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","$file.lyrics")) {
+	if (!$lyrics && open(F,"<","$file.lyrics")) {
 		while (<F>) {
 			$lyrics .= $_;
 		}
@@ -211,7 +223,7 @@ sub get_lyrics {
 	$mech->agent_alias("Linux Mozilla");
 	# $mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
 	$mech->timeout(10);
-#	$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
+	# $mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 	eval {
 		$mech->get("https://www.google.fr/");
 	};
@@ -293,11 +305,11 @@ sub get_lyrics {
 		$mp3->config(write_v24 => 1);
 		$mp3->select_id3v2_frame_by_descr("COMM($lang)[USLT]", $lyrics);
 		$mp3->update_tags();
-	} else {
+	} elsif ($file !~ /^http/) {
 		# Sans déconner, vu la complexité des tags mp3 je me demande si je
 		# devrais pas plutôt stocker dans un fichier .lyrics pour tout le
 		# monde ? Enfin bon...
-		if (open(F,">:encoding(".($ENV{LANG} =~ /UTF/i ?"utf-8" : "iso-8859-1").")","$file.lyrics")) {
+		if (open(F,">","$file.lyrics")) {
 			print F "$lyrics";
 			close(F);
 			print "lyrics file created\n";

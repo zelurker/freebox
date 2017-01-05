@@ -42,7 +42,7 @@ sub utf($) {
 		Encode::from_to($str, "utf-8", "iso-8859-15");
 	} else {
 		print "utf: encodage utf $str is_utf:",utf8::is_utf8($str),"\n";
-		print "result : ", utf8::decode($str),"\n";
+		print "result : ", utf8::decode($str)," chaine:$str\n";
 	}
 	$str;
 }
@@ -599,13 +599,13 @@ while (1) {
 			}
 		} elsif (/Title: (.+)/i && !$titre) {
 			print "filter: update Title: $1\n";
-			$titre = utf($1);
+			$titre = $1;
 			if ($artist && $titre) {
 				out::send_cmd_info("tracks\n$artist - $titre\n");
 				handle_images("$artist - $titre");
 			}
 		} elsif (/Artist: (.+)/i || /ID_CDDB_INFO_ARTIST=(.+)/) {
-			$artist = utf($1);
+			$artist = $1;
 			if ($artist && $titre) {
 				out::send_cmd_info("tracks\n$artist - $titre\n");
 				handle_images("$artist - $titre");
