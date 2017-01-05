@@ -146,7 +146,7 @@ sub read_stream_info {
 		$pic = myget $pic || "";
 		$last =~ s/pic:(http.+?) // if ($last);
 	}
-	if ($info) {
+	if (1) { # $info) {
 		my $out = out::setup_output("bmovl-src/bmovl","",$long);
 		if ($out) {
 			print $out "$pics\n$pic\n";
@@ -361,7 +361,7 @@ sub commands {
 		my ($name,$src) = get_cur_name();
 		$name .= "&$src";
 		$info{$name}->{codec} = "$codec $bitrate";
-		if (!$cleared && $name eq conv($channel && $src !~ /^flux\/podcasts/)) {
+		if (!$cleared && $name eq conv($channel) && $src !~ /^flux\/podcasts/) {
 			if ($lastprog && $channel eq $last_chan) {
 				disp_prog($lastprog,$last_long);
 			} else {

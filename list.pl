@@ -1937,7 +1937,8 @@ sub disp_list {
 			}
 		}
 		if (!$num) {
-			die "list split failed\n";
+			print "list split failed:$num,$name,$service indice $n\n";
+			next;
 		}
 		$cur .= sprintf("%3d:%s",$num,($pic ? "pic:$pic " : "").$name);
 		if ($#$rtab > 0) {
