@@ -146,6 +146,7 @@ sub get_lyrics {
 			print "*** filter: calling get_lyrics $args[1] artist $aut titre $tit\n";
 			my $lyrics = lyrics::get_lyrics($args[1],$aut,$tit);
 			if ($lyrics) {
+				Encode::from_to($lyrics, "utf-8", "iso-8859-15") if ($latin);
 				out::send_cmd_info("lyrics\n$lyrics");
 			} else {
 				out::send_cmd_info("lyrics"); # Au cas où le titre vient de changer et qu'on a pas l'info

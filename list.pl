@@ -1909,6 +1909,7 @@ sub disp_list {
 	} elsif ($source =~ /Fichiers/) {
 		my $path = ($source eq "Fichiers vidéo" ? "video_path" : "music_path");
 		$cur .= "$source : $conf{$path}\n";
+		Encode::from_to($cur, "iso-8859-1", "utf-8") if (!$latin);
 	} else {
 		$cur .= "$source\n";
 	}
