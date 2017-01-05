@@ -37,7 +37,7 @@ our ($child,$parent);
 
 sub utf($) {
 	my $str = shift;
-	if ($latin && $str =~ /\xc3/) {
+	if ($latin && $str =~ /[\xc3\xc5]/) {
 		# Tentative de détection de l'utf8, pas du tout sûr de marcher !
 		Encode::from_to($str, "utf-8", "iso-8859-15");
 	} else {

@@ -36,15 +36,16 @@ sub get {
 
 	my $ref;
 	eval {
-		if (open(F,"<","pod")) {
+		if (open(F,"<pod")) {
 			@_ = <F>;
 			close(F);
 			$_ = join("",@_);
-			my $char = chr(8217); # apostrophe ?
-			s/$char/\'/g;
-			$char = chr(8230); # apostrophe fermé apparemment, merdier windoze
-			s/$char/\'/g;
-
+			eval {
+				Encode::from_to($_, "iso-8859-1", "utf-8");
+			};
+			if ($@) {
+				print STDERR "encodage utf8 : $@\n";
+			}
 		} else {
 			die "pas de fichier pod ???\n";
 		}
@@ -67,21 +68,11 @@ sub get {
 		my $date = $_->{pubDate};
 		$date = str2time($date) if ($date !~ /^\d+$/);
 		$title .= " le ".get_date($date) if ($date);
-		# Pour une raison méga bizarre, avec perl-5.22 le texte lu dans pod
-		# est bien en utf8, mais le champ $title est en latin1 ! Ca n'a
-		# absolument aucun sens, mais on peut corriger avec un appel à
-		# Encode... ! (ceci avec une locale utf8)
-		my $old_title = $title;
-		if (!$latin) {
-			eval {
-				Encode::from_to($title, "iso-8859-1", "utf-8");
-			}
-		}
 		if ($title eq $channel) {
 			my $desc = mydecode($_->{"description"});
 			$date = get_date($date);
 			$date =~ s/,.+//;
-			@tab = (undef, "podcasts", $old_title,
+			@tab = (undef, "podcasts", $title,
 				undef, # début
 				undef, "", # fin
 				$desc, # desc

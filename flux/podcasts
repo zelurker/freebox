@@ -150,7 +150,11 @@ if ($debug && !$str) {
 		$r = $mech->submit_form(
 			form_number => 1,
 			fields      => {
-				q => "podcast $str filetype:xml",
+				# Note qu'on peut ajouter filetype:xml pour avoir les
+				# résultats xml de google, sauf que certains sites genre
+				# radiofrance utilisent un robots.txt pour exclure ces
+				# pages des résultats de recherche !
+				q => "podcast $str",
 			}
 		);
 	} elsif ($str) {
@@ -160,7 +164,7 @@ if ($debug && !$str) {
 		header("list");
 		exit(0);
 	}
-	$_ = $mech->content;
+	$_ = $mech->content(charset => "utf8");
 	# Apparemment l'apostrophe windows n'est même pas de l'utf8 standard
 	# ça provoque un sacré merdier, alors on traque les codes étendus ici...
 	if ($latin) {
@@ -186,20 +190,14 @@ my ($link,$title,$desc,$img,$date);
 print STDERR "*** type $type\n";
 if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 	header("direct");
-	# Sauver le fichier pour l'information programmes (prog/podcasts.pm)
-	# Normalement LWP détecte tout seul l'encodage des caractères et fait la
-	# conversion (en fonction de la locale ou prend en default latin1 ?)
-	# Sauf que des fois le serveur en face n'envoie pas de header avec l'
-	# encodage et dans ce cas là la détection foire, et là on se retrouve
-	# avec un fichier utf8 alors que normalement il est latin1.
-	# On ne peut pas avoir de changement à ce niveau là, un xml est toujours
-	# en utf8 sinon le parser foire, donc on sauve en désactivant explicitement
-	# le décodage pour éviter tout problème.
-	if ($r && open(F,">:encoding(utf8)","pod")) {
+	my $char = chr(8217); # apostrophe ?
+	s/$char/\'/g;
+	$char = chr(8230); # apostrophe fermé apparemment, merdier windoze
+	s/$char/\'/g;
+	if ($r && open(F,">","pod")) {
 		print F $_;
 		close(F);
 	}
-	s/\xe2\x80\x99/'/gs;
 	s/(&[^a])/&amp;/g;
 	print STDERR "décodage xml\n" if ($debug);
 	# fichier xml podcast
@@ -234,6 +232,7 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 		# print "tri $c et $d\n";
 		$d <=> $c;
 	} @$item;
+	binmode STDOUT;
 	foreach (@item) {
 		# A priori ça ne semble pas être une bonne idée de coller l'image ici
 		# j'ai jamais vu ces images changer pour chaque épisode et généralement
