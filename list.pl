@@ -41,7 +41,7 @@ $inotify->blocking(0);
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
 $have_fb = out::have_freebox() if ($net);
-our $have_dvb = (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
+our $have_dvb = 1; # (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
 our $pid_player2;
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
@@ -535,7 +535,7 @@ sub read_list {
 		}
 	} elsif ($source eq "dvb") {
 		my $f;
-		open($f,"<:encoding(utf8)","$ENV{HOME}/.mplayer/channels.conf") || die "can't open channels.conf\n";
+		open($f,"<","$ENV{HOME}/.mplayer/channels.conf") || die "can't open channels.conf\n";
 		@list = ();
 		my $num = 1;
 		my @pic = ();
@@ -557,15 +557,19 @@ sub read_list {
 		if ($source eq "livetv") {
 			$pat = "livetv/*.ts";
 		} else {
-			$pat = "records/*.ts";
+			$pat = "records/*";
 		}
 		while (glob($pat)) {
 			my $service = $_;
 			my $name = $service;
-			$name =~ s/.ts$//;
-			$name =~ s/^.+\///;
-			my ($an,$mois,$jour,$heure,$minute,$sec,$chaine) = $name =~ /^(....)(..)(..) (..)(..)(..) (.+)/;
-			$name = "$jour/$mois $heure:$minute $chaine ";
+			if ($name =~ /\.ts$/) {
+				$name =~ s/.ts$//;
+				$name =~ s/^.+\///;
+				my ($an,$mois,$jour,$heure,$minute,$sec,$chaine) = $name =~ /^(....)(..)(..) (..)(..)(..) (.+)/;
+				$name = "$jour/$mois $heure:$minute $chaine ";
+			} else {
+				$name =~ s/records\///;
+			}
 			my $taille = -s "$service";
 			$taille = sprintf("%d",$taille/1024/1024);
 			$name .= $taille."Mo";
@@ -607,7 +611,7 @@ sub read_list {
 				# Un peu bordelique tout ça, mais bon, ça marche pas mal...
 
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-				print "name $name,$serv,$flav,$audio,$video mode_flux $mode_flux base_flux $base_flux\n";
+				print "list: name $name,$serv,$flav,$audio,$video mode_flux $mode_flux base_flux $base_flux\n";
 				if ($base_flux =~ /result:/ && $base_flux !~ /result:.*\// &&
 					$serv =~ /http/) {
 					$serv = ""; # Sinon on ne peut plus revenir avec la flèche
@@ -644,7 +648,7 @@ sub read_list {
 					# pas de mode (list ou direct)
 					$serv = "";
 					$base_flux =~ s/^(.+?)\/.+/$1/;
-				} elsif ($serv !~ /^(http|mms|prog)/ && $base_flux !~ /podcasts/ && $serv !~ /\//) {
+				} elsif ($serv !~ /^(http|mms|prog)/ && $base_flux !~ /(podcasts|youtube)/ && $serv !~ /\//) {
 					# Endroit merdique : on se retrouve serv = valeur
 					# retournée et on veut l'arborescence des valeurs à la
 					# place, dispo dans base_flux sauf que base_flux
@@ -681,6 +685,16 @@ sub read_list {
 					$mode_flux = <F>;
 				}
 				chomp $mode_flux;
+				if ($mode_flux eq "direct") {
+					$_ = <F>;
+					chomp $_;
+					if (/\//) {
+						close(F);
+						$serv = $_;
+						print "list: shortcut sur direct serv $serv\n";
+						return load_file2($name,$serv,$flav,$audio,$video);
+					}
+				}
 			} else {
 				if (!open(F,"<flux/$base_flux")) {
 					return;
@@ -1555,7 +1569,7 @@ sub commands {
 				system("$serv");
 			}
 		} elsif ($source =~ /^(flux|cd)/) {
-#			print "list: serv $serv source pour lancement $source/$base_flux mode_flux $mode_flux\n";
+			print "list: serv $serv source pour lancement $source/$base_flux mode_flux $mode_flux\n";
 			if (!$base_flux) {
 				$base_flux = $name;
 				$base_flux =~ s/pic:.+? //;

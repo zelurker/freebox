@@ -2,6 +2,7 @@
 
 use strict;
 require "http.pl";
+use File::Glob 'bsd_glob'; # le glob dans perl c'est n'importe quoi !
 
 binmode STDERR; # ,":utf8";
 binmode STDOUT; # ,":utf8";
@@ -9,14 +10,54 @@ my $str = shift @ARGV;
 my $debug = 0; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
-if ($str =~ /http/) {
+if ($str =~ /^(\d+),(.+)/) {
 	print STDERR "str $str sending direct\n";
 	print "direct\n";
+	my ($format,$suffix) = ($1,$2);
+	print STDERR "got format $format suffix $suffix\n";
+	my $title;
+	if (open(F,"<cache/yt/$suffix")) {
+		$title = <F>;
+		close(F);
+		print STDERR "got title $title\n";
+	} else {
+		die "could not get title from $suffix\n";
+	}
+	my $pid = fork();
+	if (!$pid) {
+		chdir("records");
+		exec("~/bin/youtube-dl -q -f $format $suffix 1> /dev/null");
+	} else {
+		my $tries = 0;
+		$title =~ s/\[/\\\[/g;
+		$title =~ s/\]/\\\]/g;
+		$title =~ s/\&#(\d+);/chr($1)/ge;
+		while (!bsd_glob("records/$title*") && $tries < 10) {
+			$tries++;
+			sleep 1;
+		}
+		if ($tries == 10) {
+			print STDERR "pas trouvé le fichier attendu racine:records/$title*. on va essayer en aveugle\n";
+			print "records/$title*\n";
+			exit(0);
+		}
+		print STDERR "trouvé le fichier après $tries secondes\n";
+		my $file = bsd_glob("records/$title*");
+		print STDERR "file = $file\n";
+		$tries = 0;
+		while (-s "$file" < 3*1024*1024 && $tries < 10) {
+			sleep 1;
+			$tries ++;
+		}
+		print STDERR "taille ",(-s "$file")," après $tries secondes\n";
+		print "$file\n";
+		exit(0);
+	}
 } else {
 	print STDERR "str $str sending list\n";
 	print "list\n";
+	print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
 }
-print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
 $str =~ s/ /\+/g;
 if ($debug && !$str) {
 	# Mode debug : on lit à partir de stdin, passer une page sauvée de youtube
@@ -49,17 +90,22 @@ if (!$debug) {
 if ($str =~ /^http/) {
 	# Extrait les formats vidéos de la page
 	my ($title) = /<title>(.+?)<\/title/;
-	my $start_tag = "url_encoded_fmt_stream_map";
-	# $start_tag = "adaptive_fmts" if (!/sig=/);
-	handle_tag($start_tag,$title);
+	$title =~ s/ \- YouTube$//;
 
-	# adaptive_fmts : sépare le flux vidéo et audio dans 1 flux séparé, permet
-	# + de choix, et y a une + haute qualité vidéo. Par contre ça met + de temps
-	# à démarrer, les serveurs ont l'air de vouloir un délai de démarrage
-	# imposé, peut-être pour la pub. Donc je les garde, mais en optionnel en fin
-	# de liste.
-	handle_tag("adaptive_fmts",$title) if (/adaptive_fmts/);
+	if (! -f "~/bin/youtube-dl") {
+		mkdir "~/bin";
+		system("wget -q -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl");
+	}
 	my ($suffix) = $str =~ /v=(.+)/;
+	open(F,"~/bin/youtube-dl -F $str|grep -v only|");
+	while (<F>) {
+		chomp;
+		if (/^(\d+)/) {
+			print "$_\n$1,$suffix\n";
+		}
+	}
+	close(F);
+
 	mkdir "cache/yt";
 	# On aimerait bien sauver sous le nom du suffix pour qu'il soit unique,
 	# sauf qu'il n'arrive jamais jusqu'au bandeau d'info, ça reste une
@@ -70,6 +116,9 @@ if ($str =~ /^http/) {
 	my ($info) = $_ =~ /div id="watch-description-text".*?>(.+?)<\/div/;
 	print F "$suffix\n", # on met le suffix parce qu'on peut récupérer l'image
 	"$upload\n$info\n";
+	close(F);
+	open(F,">cache/yt/$suffix");
+	print F $title;
 	close(F);
 	exit(0);
 }
@@ -164,249 +213,6 @@ foreach (split /\n/) {
 			}
 			$link = $content = undef;
 		}
-	}
-}
-
-sub handle_tag {
-	# Cette sub récupère les différents formats vidéos d'une page, y en a
-	# de 2 sortes qui sont déterminés par start_tag :
-	# url_encoded_fmt_map qui est le format par défaut
-	# adaptive_fmt qui fournit une résolution et une piste audio séparée !
-	# Le gros problème de cette sub est la signature qu'il faut régénérer
-	# toutes les 24h environ, chaque facile à décoder, mais chaque fois
-	# différente... je suis un peu paumé pour un algo générique pour
-	# l'instant...
-	my ($start_tag,$title) = @_;
-	my $last = "";
-	print STDERR "handle_tag start_tag $start_tag title $title.\n" if ($debug);
-	while (s/\"$start_tag\": ?\"(.+?)\"//) {
-		print STDERR "in while\n" if ($debug);
-		my $url = $1;
-		$url =~ s/\\\//\//g;
-		$url =~ s/%(..)/chr(hex($1))/ge;
-		$url =~ s/generate_204/videoplayback/g;
-		$url =~ s/\\u(....)/chr(hex($1))/ge;
-		my ($tag) = $url =~ /^(.+?)\=/;
-		print STDERR "starting tag $tag\n" if ($debug);
-		my (@name,@url);
-		my $audio;
-		while ($url =~ s/($tag=.+?)(,$tag=|$)/$2/) {
-			my $u = $1;
-			$u =~ s/\\\//\//g;
-			while ($u =~ s/%(..)/chr(hex($1))/ge) {}
-			$u =~ s/generate_204/videoplayback/g;
-			$u =~ s/\\u(....)/chr(hex($1))/ge;
-			# L'url arrive avec la plupart de ses arguments encodés, et une
-			# partie en clair (et pour certains doublés, comme itag). Passer
-			# itag en double provoque un 403, donc le + simple c'est de tout
-			# remettre à plat en récupérant tout dans un hash et en éliminant
-			# ce qu'on veut pas
-			print STDERR "url $u\n" if ($debug);
-			my @args = split(/[\?\&]/,$u);
-			my %args;
-			foreach (@args) {
-				# La séparation actuelle des args est un hack, il faudrait
-				# revoir ça pour gérer correctement les pistes séparées, le
-				# problème c'est que c'est un sacré bazar :
-				# arguments \u0026 qui font une espèce de header
-				# puis argument url avec arguments internes collés avec des
-				# %3d
-				# puis un autre bloc \u0026 pour la partie audio
-				# donc séparer les 2 s'annonce + que délicat. Pour
-				# l'instant seule la dernière url audio est récupéré avec
-				# ce hack, c'est + une preuve que ça marche...
-				# my (@eq) = split(/=/);
-				# $args{$eq[0]}=join("",@eq[1..$#eq]);
-				my ($name,$val) = split(/=/);
-				$args{$name}=$val;
-			}
-			my $type = delete $args{type};
-#			# Ca valait le coup d'essayer, mais apparemment requiressl ne
-#			change pas grand chose, si on essaye de le coller à no on prend
-#			toujours un 403 en http, et aucun flux en https. Vaut mieux pas
-#			toucher !
-#			if ($args{requiressl}) {
-#				$args{requiressl} = "no";
-#				$args{url} =~ s/https/http/;
-#			}
-			my $s;
-			if (!$args{s} && $args{signature}) {
-				$args{s} = $args{signature};
-			}
-			if ($args{sig}) {
-				$s = delete $args{sig};
-				print STDERR "*** sig1: $s\n";
-			} elsif ($args{s}) {
-				# L'encodage de la signature est en fonction da la longueur de s
-				# problème : je ne connais pas toutes les longueurs possibles
-				# ça a changé 1 fois en 2 jours, y en a probablement d'autres
-				$s = delete $args{s};
-				print STDERR "s $s len ",length($s),"\n";
-				my $pre = substr($s,0,1);
-				my $post = substr($s,length($s)-1,1);
-				if (length($s) == 87) {
-					# url :
-					# https://r8---sn-25g7sn76.googlevideo.com/videoplayback?c=web&clen=3245650&cpn=gXhweADxfv4A4CHD&cver=as3&dur=235.960&expire=1449932638&fexp=9406819,9416126,9418203,9418751,9420452,9420771,9422596,9423241,9423329,9423662,9424163,9424428,9424713,9425308,9425865&gcr=fr&gir=yes&id=o-AOTQh-K_bFAADRndo_d2cSCuDVCKbKXBAE6Uc0kvLNgO&initcwndbps=3068750&ip=2001:41d0:fe0b:6d00:7a34:fe66:1360:c62f&ipbits=0&itag=160&keepalive=yes&key=yt6&lmt=1417368535732977&mime=video/mp4&mm=31&mn=sn-25g7sn76&ms=au&mt=1449910888&mv=m&nh=IgpwcjAxLnBhcjEwKgkxMjcuMC4wLjE&pl=47&range=0-208895&ratebypass=yes&requiressl=yes&signature=E088DF9C6089AEB398864D7FC8BEB602991DFDCD.030115079646C58755B5E67CBA6791FCCCD48315&source=youtube&sparams=clen,dur,gcr,gir,id,initcwndbps,ip,ipbits,itag,keepalive,lmt,mime,mm,mn,ms,mv,nh,pl,requiressl,source,upn,expire&sver=3&upn=1CiYfJswzHw
-					# clé origine : 808F088DF9C60F9AEB398864D7FC8BEB602991DEDCD.030115079646C58755B5E67CBA6791FCCCD48513513
-					# décoée : E088DF9C6089AEB398864D7FC8BEB602991DFDCD.030115079646C58755B5E67CBA6791FCCCD48315
-					my $old = $s = reverse(substr($s,3,81));
-#	substr($s,0,1) = substr($s,36,1);
-#	substr($s,10,1) = $pre;
-#	substr($s,36,1) = substr($old,0,1);
-#	substr($s,78,1) = substr($s,80,1);
-#	substr($s,80,1) = substr($old,78,1);
-#	Nouvelle url d'origine avant décodage :
-#	https://r10---sn-25ge7nes.googlevideo.com/videoplayback\?c\=web\&clen\=4331650\&cpn\=l60-BtLxXH8IGk-P\&cver\=as3\&dur\=272.695\&expire\=1455512092\&fexp\=9407156,9414875,9416126,9420452,9422372,9422515,9422596,9423661,9423662,9425705,9426269,9426323,9426904,9427036,9428439,9428702,9428940\&gcr\=fr\&gir\=yes\&id\=o-AE4HRxroX_Z1My--dLGrV4iFTTLMVORMxOYySk6MwtBC\&initcwndbps\=3268750\&ip\=2001:41d0:fe0b:6d00:7a34:fe66:1360:c62f\&ipbits\=0\&itag\=140\&keepalive\=yes\&key\=yt6\&lmt\=1452310840770623\&mime\=audio/mp4\&mm\=31\&mn\=sn-25ge7nes\&ms\=au\&mt\=1455490369\&mv\=m\&nh\=IgpwcjAxLnBhcjEwKgkxMjcuMC4wLjE\&pcm2\=no\&pl\=33\&range\=0-237567\&ratebypass\=yes\&requiressl\=yes\&signature\=02E782B4092C53FAE044E7B25B2B4CBC8A30C28F.840FB3D9D06421959BCE181D559D5D6CE6EFEFC9\&source\=youtube\&sparams\=clen,dur,gcr,gir,id,initcwndbps,ip,ipbits,itag,keepalive,lmt,mime,mm,mn,ms,mv,nh,pcm2,pl,requiressl,source,upn,expire\&sver\=3\&upn\=N6dT-3DfgIo
-#	après décodage clé = 02E782B4092C53FAE044E7B25B2B4CBC8A30C28F.840FB3D9D06421959BCE181D559D5D6CE6EFEFC9
-#	donc en gros ce n'est pas le paramètre key=yt6 qui indique le type de
-#	décodage, mais aucune idée de ce que c'est ! fexp ressemble + à un truc
-#	lié à des time stamps, y a rien de flagrant dans les cookies lié à ça,
-#	donc pour l'instant je laisse tomber !
-					substr($s,0,1) = substr($s,21,1);
-					substr($s,21,1) = substr($old,0,1);
-					substr($s,48,1) = $post;
-					substr($s,74,1) = $pre;
-					substr($s,56,1) = substr($old,74,1);
-					substr($s,80,1) = substr($old,56,1);
-				} elsif (length($s) == 91) {
-					$s = substr($s,6,81);
-					substr($s,24,1) = $pre;
-					substr($s,53,1) = $post;
-				} elsif (length($s) == 86) {
-					# url de départ
-					# Y a probablement l'explication de leur codage de
-					# signature dans ces paramètres, je pencherais pour
-					# fexp, mais pour l'instant, c'est très obscur !!!
-					#
-					# https://r6---sn-25ge7nls.googlevideo.com/videoplayback?requiressl=yes&ipbits=0&
-					# fexp=9406819,9408710,9414602,9416126,9417683,9418203,9418751,9420452,9420771,9422596,9422618,9423241,9423329,9423662,9424163,9424428,9424713,9425308&
-					# clen=2993338&
-					# mime=video/mp4&
-					# gir=yes&mm=31&mn=sn-25ge7nls&
-					# itag=160&mt=1449581375&mv=m&ms=au&sver=3&
-					# dur=217.600&gcr=fr&
-					# ip=2001:41d0:fe0b:6d00:7a34:fe66:1360:c62f&
-					# lmt=1417346102810277&
-					# id=o-AAkOGD8yzVt587O-Se0Y4JHXZ9Vd7wxonDG0hHn8Clgz&
-					# expire=1449603143&
-					# nh=IgpwcjAxLnBhcjEwKgkxMjcuMC4wLjE&upn=OFeI1Ltet3M&
-					# keepalive=yes&source=youtube&
-					# sparams=clen,dur,gcr,gir,id,initcwndbps,ip,ipbits,itag,keepalive,lmt,mime,mm,mn,ms,mv,nh,pl,requiressl,source,upn,expire&
-					# initcwndbps=2747500&
-					# key=yt6&
-					# pl=47&itag=160&
-					# s=232395E582AFBC4E64D6F0E921EEBD41837D6D1339.F3F7CE0350EB5B275216FB254D12DA15B9421A76A77&init=0-672&size=192x144&index=673-1196&fps=13
-					# &bitrate=111831,lmt=1449572842523717
-					$s = reverse substr($s,0,83);
-					substr($s,81-1,1) = substr($s,31-1,1);
-					substr($s,31-1,1) = $pre;
-					substr($s,64-1,1) = substr($s,13-1,1);
-					substr($s,13-1,1) = $post;
-
-					$s = substr($s,0,81);
-					# clé convertie :
-					# 67A1249B51AD71D452BF612572B5BE2530EC7F3F.9331D6D73814DBEE129E0F2D46E4CBFA285E5930
-				} elsif (length($s) == 88) {
-					if ($args{key} eq "yt6") { # pas sûr du tout !
-						# url de ce type : https://r15---sn-25g7sn7d.googlevideo.com/videoplayback?&pcm2=no&expire=1458319152&sparams=dur,gcr,id,initcwndbps,ip,ipbits,itag,lmt,mime,mm,mn,ms,mv,nh,pcm2,pl,ratebypass,requiressl,source,upn,expire&initcwndbps=3716250&upn=SsSsEux3fc0&pl=41&sver=3&mime=video/webm&key=yt6&gcr=fr&mn=sn-25g7sn7d&fallback_host=tc.v2.cache5.googlevideo.com&ratebypass=yes&source=youtube&id=o-AAbSgyX3lkoe4fg6UcfblIDpOd4pM1jTnYbY4jlz5FOU&ipbits=0&mm=31&mv=m&fexp=9405972,9407156,9414875,9416126,9420452,9422372,9422596,9423661,9423662,9426269,9426323,9427036,9427902,9429566,9429861,9431012,9431270&nh=IgpwcjAxLnBhcjEwKgkxMjcuMC4wLjE&itag=43&ip=2001:41d0:fe0b:6d00:7a34:fe66:1360:c62f&lmt=1450395935006854&ms=au&requiressl=yes&dur=0.000&mt=1458297430&signature=499404671B5CC29D336B1EDDA3095E9482795B592.ED44AC1C5EAFC84DFA49908A7092A7F664B0305
-						$s = substr($s,4,81);
-						my $t = substr($s,52,1);
-						substr($s,52,1) = $pre;
-						my $t2 = substr($s,29,1);
-						substr($s,29,1) = $t;
-						$t = substr($s,36,1);
-						substr($s,36,1) = $t2;
-						substr($s,63,1) = $t;
-#						$s = reverse($s);
-#						substr($s,2,2) = "";
-#						substr($s,43,1) = $pre;
-#						$s = substr($s,0,81);
-					} else {
-						$s = substr($s,1);
-						my $post = substr($s,length($s)-6);
-						my $s2 = "";
-						for (my $n=length($s)-7; $n>=0; $n--) {
-							$s2 .= substr($s,$n,1);
-						}
-						$s = $s2;
-						my $prev = substr($s,16,1);
-						substr($s,16,1) = substr($post,2,1);
-						substr($s,21,1) = $prev;
-						substr($s,49,1) = $pre;
-					}
-				} elsif (length($s) == 84) {
-					$s = substr(reverse($s),1);
-					$s = substr($s,1);
-					my $pre = substr($s,0,1);
-					substr($s,0,1) = substr($s,39,1);
-					substr($s,39,1) = $pre;
-					substr($s,20,1) = substr($s,26,1);
-					substr($s,26,1) = $post;
-					substr($s,56,1) = substr($s,81,1);
-					substr($s,81,1) = "";
-				} elsif (length($s) == 82) {
-					my $old = $s = substr($s,0,81);
-					substr($s,0,1) = substr($s,48,1);
-					substr($s,48,1) = substr($old,0,1);
-				} elsif (length($s) == 83) {
-					# url originale
-					# s=073AAC043F70F58C8CFADBAF38B2F3D7935439026.C8BD1CCFA2117B4AFB25C230547A310C2AB2D93EE
-					# https://r5---sn-25ge7nl6.googlevideo.com/videoplayback?expire=1449684773&gcr=fr&itag=160&keepalive=yes&requiressl=yes&ms=au&mv=m&mt=1449663065&sparams=clen,dur,gcr,gir,id,initcwndbps,ip,ipbits,itag,keepalive,lmt,mime,mm,mn,ms,mv,nh,pl,requiressl,source,upn,expire&pl=47&id=o-AErYrG8stYzRckK7GxXbjAVt9EN0_s9xSw_IVDKHvCyq&mime=video/mp4&sver=3&lmt=1434106452912156&gir=yes&mn=sn-25ge7nl6&ip=2001:41d0:fe0b:6d00:7a34:fe66:1360:c62f&mm=31&ipbits=0&upn=IypybhqI7pY&initcwndbps=2805000&source=youtube&dur=284.283&clen=3873553&nh=IgpwcjAxLnBhcjAxKgkxMjcuMC4wLjE&
-					# fexp=9406819,9414602,9416126,9418203,9418751,9420452,9420771,9422596,9423241,9423329,9423662,9424163,9424428,9424713,9425308&
-					#
-					# key=yt6&type=video/mp4;+codecs="avc1.4d400c"&itag=160&lmt=1434106452912156&quality_label=144p&init=0-671&projection_type=1&fps=15&clen=3873553,size=192x144
-					# signature décodée :
-					# 73AAC043F70F58C8CFADBAF38B2F3D0935439026.C8BD1CCFA2117B4AFB25C230547A310C2AB2D93E
-					if ($args{key} eq "yt6") { # ???
-						$s = substr($s,1,81);
-						substr($s,30,1) = $pre;
-					} else {
-						my $old = $s;
-						substr($s,0,1) = substr($s,43,1);
-						substr($s,43,1) = substr($old,0,1);
-						substr($s,81) = "";
-					}
-				}
-				$s = undef if (length($s) != 81);
-				print STDERR "sig2: $s (",length($s),")\n" if ($debug);
-			}
-			my $q = delete $args{quality};
-			$q = delete $args{size} if (!$q);
-			$q =~ s/,.+//;
-			delete $args{index};
-			my $bitrate = delete $args{bitrate};
-			delete $args{init};
-			$last = $q;
-			$type =~ s/;.+//;
-			if ($s) {
-				$u = delete $args{url};
-				$u .= "?";
-				foreach (keys %args) {
-					$u .= "&$_=".$args{$_};
-				}
-				print STDERR "processing q=$q type=$type bitrate=$bitrate\n" if ($debug);
-				# Sépare les pistes audio pour les adaptive
-				if ($type !~ /^audio/) {
-					# Il faut garder le titre ici pour le bandeau d'info...
-					push @name,"$title $q $type"; # on laisse tomber le bitrate
-					push @url,"$u&signature=$s";
-				} else {
-					$audio = "$u&signature=$s";
-					print STDERR "*** addendum à $name[$#name] = $type\n";
-					$name[$#name] .= " $type"; # apparemment l'audio est 2ème
-				}
-			}
-		}
-		if ($audio) {
-			foreach (@url) {
-				$_ .= " $audio";
-			}
-		}
-		print STDERR "in ze end : $#name names\n" if ($debug);
-		for (my $n=0; $n<=$#name; $n++) {
-			print "$name[$n]\n$url[$n]\n";
-		}
-		# return $url;
 	}
 }
 
