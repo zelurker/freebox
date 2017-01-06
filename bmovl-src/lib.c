@@ -1,4 +1,3 @@
-
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include <unistd.h>
@@ -37,7 +36,7 @@ SDL_Surface *create_surface(int w, int h)
 	SDL_Rect r; r.x = r.y = 1; r.w = sf->w - 2; r.h = sf->h-2;
 	SDL_FillRect(sf,&r,bg);
 	char *lang = getenv("LANG");
-	utf = strstr(lang,"UTF") != NULL;
+	utf = strcasestr(lang,"UTF") != NULL;
 	return sf;
 }
 
