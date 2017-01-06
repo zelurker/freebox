@@ -1,20 +1,4 @@
 package progs::telerama;
-#
-#===============================================================================
-#
-#         FILE: telerama.pm
-#
-#  DESCRIPTION:
-#
-#        FILES: ---
-#         BUGS: ---
-#        NOTES: ---
-#       AUTHOR: Emmanuel Anne (), emmanuel.anne@gmail.com
-# ORGANIZATION:
-#      VERSION: 1.0
-#      CREATED: 05/03/2013 12:52:52
-#     REVISION: ---
-#===============================================================================
 
 use strict;
 use LWP;
@@ -23,7 +7,8 @@ use POSIX qw(strftime);
 use Time::Local "timelocal_nocheck","timegm_nocheck";
 use chaines;
 require HTTP::Cookies;
-our $VERSION = '0.1';
+use Encode;
+our $latin = ($ENV{LANG} !~ /UTF/i);
 
 # my @def_chan = ("France 2", "France 3", "France 4", "Arte", "TV5MONDE",
 # "Direct 8", "TMC", "NT1", "NRJ 12",
@@ -105,6 +90,15 @@ sub get_offset {
 	my $d2 = timelocal_nocheck(0,0,0,$mday,$mon,$year);
 	$d = int(($d-$d2)/(3600*24));
 	$d;
+}
+
+sub encode_sub {
+	my $rsub = shift;
+	if (!$latin) {
+		foreach (1,2,6,7,11) {
+			Encode::from_to($$rsub[$_], "iso-8859-1", "utf-8");
+		}
+	}
 }
 
 sub parse_prg($) {
@@ -201,10 +195,12 @@ sub parse_prg($) {
 				# print "colision chaine $$colision[1] titre $$colision[2]\n";
 				$nb_collision++;
 			} else {
+				encode_sub(\@sub);
 				push @$rtab,\@sub;
 				push @fields2,$old;
 			}
 		} else {
+			encode_sub(\@sub);
 			$chaines{$chan} = [\@sub];
 			push @fields2,$old;
 		}
