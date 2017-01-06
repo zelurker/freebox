@@ -1904,14 +1904,15 @@ sub disp_list {
 	my $out;
 
 	my $cur = "";
+	my $header = "";
 	if (($source eq "flux" || $source eq "cd") && $base_flux) {
-		$cur .= "$source > $base_flux\n";
+		$header .= "$source > $base_flux\n";
 	} elsif ($source =~ /Fichiers/) {
 		my $path = ($source eq "Fichiers vidéo" ? "video_path" : "music_path");
-		$cur .= "$source : $conf{$path}\n";
-		Encode::from_to($cur, "iso-8859-1", "utf-8") if (!$latin);
+		$header .= "$source : $conf{$path}\n";
+		Encode::from_to($header, "iso-8859-1", "utf-8") if (!$latin);
 	} else {
-		$cur .= "$source\n";
+		$header .= "$source\n";
 	}
 	my $n = $beg-1;
 	my $have_pic = undef;
@@ -1969,7 +1970,7 @@ sub disp_list {
 				print "read_list2: pb conv utf $serv\n";
 			}
 		}
-		print $out $cur;
+		print $out $header,$cur;
 		close($out);
 		if ($found <= $#list) {
 			my $rtab = $list[$found];
