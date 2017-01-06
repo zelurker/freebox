@@ -37,6 +37,19 @@ sub send_cmd_fifo {
 	$cmd =~ s/\x{2019}/'/g;
 	$cmd =~ s/\x{0153}/oe/g; # bizarre c'est sensé être supporté par perl5...
 	if ($fifo =~ /^sock_/) {
+		if (!-S "$cwd/$fifo") {
+			print "pas de socket $cwd/$fifo, on attend 1s...\n";
+			my $tries = 0;
+			while ($tries < 20 && !-S "$cwd/$fifo") {
+				select undef,undef,undef,0.1;
+				$tries++;
+			}
+			if (!-S "$cwd/$fifo") {
+				print "toujours pas\n";
+			} else {
+				print "ok après ",$tries*0.1,"s\n";
+			}
+		}
        tcp_connect "unix/", "$cwd/$fifo", sub {
           my ($fh) = @_;
 		  async {
