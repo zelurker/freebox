@@ -562,6 +562,7 @@ sub read_list {
 		while (glob($pat)) {
 			my $service = $_;
 			my $name = $service;
+			next if (/\.info$/);
 			if ($name =~ /\.ts$/) {
 				$name =~ s/.ts$//;
 				$name =~ s/^.+\///;

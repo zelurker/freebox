@@ -29,7 +29,6 @@ use progs::labas;
 use progs::podcasts;
 use progs::files;
 use progs::series;
-use progs::youtube;
 use progs::arte;
 
 our %info; # hash pour stocker les stream_info
@@ -200,7 +199,6 @@ push @prog, progs::labas->new($net);
 push @prog, progs::podcasts->new($net);
 push @prog, progs::files->new($net);
 push @prog, progs::series->new($net);
-push @prog, progs::youtube->new($net);
 push @prog, progs::arte->new($net);
 
 # read_prg:

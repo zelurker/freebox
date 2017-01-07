@@ -3,6 +3,7 @@
 use strict;
 require "http.pl";
 use File::Glob 'bsd_glob'; # le glob dans perl c'est n'importe quoi !
+use HTML::Entities;
 
 binmode STDERR; # ,":utf8";
 binmode STDOUT; # ,":utf8";
@@ -18,10 +19,15 @@ if ($str =~ /^(\d+),(.+)/) {
 	my $title;
 	if (open(F,"<cache/yt/$suffix")) {
 		$title = <F>;
+		chomp $title;
 		close(F);
 		print STDERR "got title $title\n";
 	} else {
 		die "could not get title from $suffix\n";
+	}
+	if (! -f "~/bin/youtube-dl") {
+		mkdir "~/bin";
+		system("wget -q -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl");
 	}
 	my $pid = fork();
 	if (!$pid) {
@@ -31,6 +37,7 @@ if ($str =~ /^(\d+),(.+)/) {
 		my $tries = 0;
 		$title =~ s/\[/\\\[/g;
 		$title =~ s/\]/\\\]/g;
+		$title = decode_entities($title);
 		$title =~ s/\&#(\d+);/chr($1)/ge;
 		while (!bsd_glob("records/$title*") && $tries < 10) {
 			$tries++;
@@ -44,6 +51,9 @@ if ($str =~ /^(\d+),(.+)/) {
 		print STDERR "trouvé le fichier après $tries secondes\n";
 		my $file = bsd_glob("records/$title*");
 		print STDERR "file = $file\n";
+		my $r = $file;
+		$r =~ s/.part$//;
+		rename("cache/yt/$suffix","$r.info");
 		$tries = 0;
 		while (-s "$file" < 3*1024*1024 && $tries < 10) {
 			sleep 1;
@@ -87,38 +97,26 @@ if (!$debug) {
 	print F $_;
 	close(F);
 }
+my $suffix;
 if ($str =~ /^http/) {
 	# Extrait les formats vidéos de la page
 	my ($title) = /<title>(.+?)<\/title/;
 	$title =~ s/ \- YouTube$//;
 
-	if (! -f "~/bin/youtube-dl") {
-		mkdir "~/bin";
-		system("wget -q -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl");
-	}
-	my ($suffix) = $str =~ /v=(.+)/;
-	open(F,"~/bin/youtube-dl -F $str|grep -v only|");
-	while (<F>) {
-		chomp;
-		if (/^(\d+)/) {
-			print "$_\n$1,$suffix\n";
-		}
-	}
-	close(F);
+	($suffix) = $str =~ /v=(.+)/;
+	my $start_tag = "url_encoded_fmt_stream_map";
+	handle_tag($start_tag,$title);
 
 	mkdir "cache/yt";
 	# On aimerait bien sauver sous le nom du suffix pour qu'il soit unique,
 	# sauf qu'il n'arrive jamais jusqu'au bandeau d'info, ça reste une
 	# valeur intermédiaire gérée par list vu que le dernier argument est la
 	# vidéo elle même... Résultat : faut utiliser le titre !!!
-	open(F,">cache/yt/$title");
 	my ($upload) = $_ =~ /div id="watch-uploader-info">(.+?)<\/div/;
 	my ($info) = $_ =~ /div id="watch-description-text".*?>(.+?)<\/div/;
-	print F "$suffix\n", # on met le suffix parce qu'on peut récupérer l'image
-	"$upload\n$info\n";
-	close(F);
+	$info = decode_entities($info);
 	open(F,">cache/yt/$suffix");
-	print F $title;
+	print F "$title\nUploader : $upload\n$info\n";
 	close(F);
 	exit(0);
 }
@@ -216,3 +214,103 @@ foreach (split /\n/) {
 	}
 }
 
+sub handle_tag {
+	# Cette sub récupère les différents formats vidéos d'une page, y en a
+	# de 2 sortes qui sont déterminés par start_tag :
+	# url_encoded_fmt_map qui est le format par défaut
+	# adaptive_fmt qui fournit une résolution et une piste audio séparée !
+	# Avant j'essayais aussi de décoder la signature, mais je n'ai jamais
+	# trouvé comment elle change environ tous les jours, donc je laisse
+	# tomber et je laisse ça à youtube-dl, je garde quand même la sub pour
+	# la liste des formats, beaucoup + rapide que d'appeler youtube-dl pour
+	# ça.
+	my ($start_tag,$title) = @_;
+	my $last = "";
+	print STDERR "handle_tag start_tag $start_tag title $title.\n" if ($debug);
+	while (s/\"$start_tag\": ?\"(.+?)\"//) {
+		print STDERR "in while\n" if ($debug);
+		my $url = $1;
+		$url =~ s/\\\//\//g;
+		$url =~ s/%(..)/chr(hex($1))/ge;
+		$url =~ s/generate_204/videoplayback/g;
+		$url =~ s/\\u(....)/chr(hex($1))/ge;
+		my ($tag) = $url =~ /^(.+?)\=/;
+		print STDERR "starting tag $tag\n" if ($debug);
+		my (@name,@url);
+		my $audio;
+		while ($url =~ s/($tag=.+?)(,$tag=|$)/$2/) {
+			my $u = $1;
+			$u =~ s/\\\//\//g;
+			while ($u =~ s/%(..)/chr(hex($1))/ge) {}
+			$u =~ s/generate_204/videoplayback/g;
+			$u =~ s/\\u(....)/chr(hex($1))/ge;
+			# L'url arrive avec la plupart de ses arguments encodés, et une
+			# partie en clair (et pour certains doublés, comme itag). Passer
+			# itag en double provoque un 403, donc le + simple c'est de tout
+			# remettre à plat en récupérant tout dans un hash et en éliminant
+			# ce qu'on veut pas
+			print STDERR "url $u\n" if ($debug);
+			my @args = split(/[\?\&]/,$u);
+			my %args;
+			foreach (@args) {
+				# La séparation actuelle des args est un hack, il faudrait
+				# revoir ça pour gérer correctement les pistes séparées, le
+				# problème c'est que c'est un sacré bazar :
+				# arguments \u0026 qui font une espèce de header
+				# puis argument url avec arguments internes collés avec des
+				# %3d
+				# puis un autre bloc \u0026 pour la partie audio
+				# donc séparer les 2 s'annonce + que délicat. Pour
+				# l'instant seule la dernière url audio est récupéré avec
+				# ce hack, c'est + une preuve que ça marche...
+				# my (@eq) = split(/=/);
+				# $args{$eq[0]}=join("",@eq[1..$#eq]);
+				my ($name,$val) = split(/=/);
+				$args{$name}=$val;
+			}
+			my $type = delete $args{type};
+#			# Ca valait le coup d'essayer, mais apparemment requiressl ne
+#			change pas grand chose, si on essaye de le coller à no on prend
+#			toujours un 403 en http, et aucun flux en https. Vaut mieux pas
+#			toucher !
+#			if ($args{requiressl}) {
+#				$args{requiressl} = "no";
+#				$args{url} =~ s/https/http/;
+#			}
+			my $q = delete $args{quality};
+			$q = delete $args{size} if (!$q);
+			$q =~ s/,.+//;
+			delete $args{index};
+			my $bitrate = delete $args{bitrate};
+			delete $args{init};
+			$last = $q;
+			$type =~ s/;.+//;
+			$u = delete $args{url};
+			$u .= "?";
+			foreach (keys %args) {
+				$u .= "&$_=".$args{$_};
+			}
+			print STDERR "processing q=$q type=$type bitrate=$bitrate\n" if ($debug);
+			# Sépare les pistes audio pour les adaptive
+			if ($type !~ /^audio/) {
+				# Il faut garder le titre ici pour le bandeau d'info...
+				push @name,"$title $q $type $args{codecs}"; # on laisse tomber le bitrate
+				push @url,"$args{itag},$suffix";
+			} else {
+				$audio = "$u";
+				print STDERR "*** addendum à $name[$#name] = $type\n";
+				$name[$#name] .= " $type"; # apparemment l'audio est 2ème
+			}
+		}
+		if ($audio) {
+			foreach (@url) {
+				$_ .= " $audio";
+			}
+		}
+		print STDERR "in ze end : $#name names\n" if ($debug);
+		for (my $n=0; $n<=$#name; $n++) {
+			print "$name[$n]\n$url[$n]\n";
+		}
+		# return $url;
+	}
+}

@@ -19,7 +19,6 @@ sub get {
 	my $sub = <F>;
 	my $desc = "";
 	chomp $sub;
-	chomp $desc;
 	while (<F>) {
 		$desc .= $_;
 	}
@@ -29,6 +28,8 @@ sub get {
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =
 	localtime($mtime);
 	my $date = sprintf("%02d/%02d/%d",$mday,$mon+1,$year+1900);
+	$desc = "$sub\n$desc"; # apparemment pas de champ séparé pour le sous titre?
+	while ($desc =~ s/<(.+?)>//g) {} # dégage les trucs html
 
 	my @tab = (undef, # chan id
 		"$source", "$title",
