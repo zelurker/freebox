@@ -11,6 +11,18 @@ our $debug = 0;
 
 sub get {
 	my ($p,$channel,$source,$base_flux) = @_;
+	if ($source eq "Enregistrements" && $channel !~ /^records/) {
+		$channel = "records/$channel";
+	}
+	if ($channel !~ /\./) { # même pas un fichier
+		if (open(F,"<current")) {
+			(undef,undef,$channel) = <F>;
+			chomp $channel;
+			close(F);
+			$channel =~ s/\.part$//;
+		}
+	}
+	$channel =~ s/ \d+ Mo$//; # supprime la taille en suffixe éventuelle
 	return undef if ($source !~ /(livetv|Enregistrement)/);
 
 	return undef if (!-f "$channel.info");

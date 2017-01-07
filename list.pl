@@ -573,7 +573,7 @@ sub read_list {
 			}
 			my $taille = -s "$service";
 			$taille = sprintf("%d",$taille/1024/1024);
-			$name .= $taille."Mo";
+			$name .= " $taille Mo";
 			push @list,[[$num++,$name,$service]];
 		}
 		@list = reverse @list;
@@ -693,6 +693,7 @@ sub read_list {
 						close(F);
 						$serv = $_;
 						print "list: shortcut sur direct serv $serv\n";
+						$source = "Enregistrements" if ($serv =~ /^records\//);
 						return load_file2($name,$serv,$flav,$audio,$video);
 					}
 				}

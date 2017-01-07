@@ -77,7 +77,7 @@ if ($debug && !$str) {
 	$_ = join("",@_);
 	# On passe str = "http" quand c'est le traitement d'une page de vidéo
 	# passer str="" pour un index de vidéos
-	$str = "http";
+	$str = "http://channel";
 } else {
 	if ($str && $str !~ /^http/) {
 		$_ = myget( "http://www.youtube.com/results?search_query=$str&oq=$str");
@@ -98,7 +98,7 @@ if (!$debug) {
 	close(F);
 }
 my $suffix;
-if ($str =~ /^http/) {
+if ($str =~ /^http/ && $str !~ /channel/) {
 	# Extrait les formats vidéos de la page
 	my ($title) = /<title>(.+?)<\/title/;
 	$title =~ s/ \- YouTube$//;
@@ -187,7 +187,7 @@ foreach (split /\n/) {
 	$img = $1 if (/data\-thumb="(.+?)"/);
    	if (/data-sessionlink.*href="(.+?)"/ || /href="(.+?)".*data-sessionlink/) {
 		$data_link = $1;
-		$data_link = "" if ($data_link !~ /watch/);
+		$data_link = "" if ($data_link !~ /(watch|channel)/);
 		print STDERR "debug: data_link = $data_link\n" if ($debug);
 	}
 	if ($content == 1) {
