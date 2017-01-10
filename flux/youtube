@@ -11,9 +11,8 @@ my $str = shift @ARGV;
 my $debug = 0; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
-if ($str =~ /^(\d+),(.+)/) {
+if ($str =~ /^get,(\d+),(.+)/) {
 	print STDERR "str $str sending direct\n";
-	print "direct\n";
 	my ($format,$suffix) = ($1,$2);
 	print STDERR "got format $format suffix $suffix\n";
 	my $title;
@@ -63,7 +62,7 @@ if ($str =~ /^(\d+),(.+)/) {
 		print "$file\n";
 		exit(0);
 	}
-} else {
+} elsif ($str !~ /^http/ || $str =~ /channel/) {
 	print STDERR "str $str sending list\n";
 	print "list\n";
 	print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
@@ -100,6 +99,7 @@ if (!$debug) {
 my $suffix;
 if ($str =~ /^http/ && $str !~ /channel/) {
 	# Extrait les formats vidéos de la page
+	print "direct\n";
 	my ($title) = /<title>(.+?)<\/title/;
 	$title =~ s/ \- YouTube$//;
 
@@ -295,7 +295,7 @@ sub handle_tag {
 			if ($type !~ /^audio/) {
 				# Il faut garder le titre ici pour le bandeau d'info...
 				push @name,"$title $q $type $args{codecs}"; # on laisse tomber le bitrate
-				push @url,"$args{itag},$suffix";
+				push @url,"get,$args{itag},$suffix";
 			} else {
 				$audio = "$u";
 				print STDERR "*** addendum à $name[$#name] = $type\n";

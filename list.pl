@@ -607,9 +607,24 @@ sub read_list {
 				# Si ça commence par un +, base_flux est aussi reseté et
 				# contient ce qui suit le +
 				# Si y a un espace dans ce qui est retourné c'est pris pour
-				# une liste, sauf pour youtube (youtube passe le flux audio de
+				# une liste, sauf pour youtube (youtube passait le flux audio de
 				# cette façon).
 				# Un peu bordelique tout ça, mais bon, ça marche pas mal...
+				# mode_flux : paramètre optionnel, doit être la 1ère valeur
+				# retournée par le plugin (sauf encoding qui peut arriver
+				# avant). C'est donc soit :
+				# list -> veut dire que toute valeur passée après un
+				# libellé doit être retournée telle quelle au plugin si
+				# choisie
+				# direct -> les valeurs sont à lire (url vers un média ou
+				# fichier local).
+				# Si la valeur donnée dans une liste "direct" commence par
+				# get, alors le plugin est rappelé en passant ce lien get
+				# et ne doit retourner qu'une seule ligne, la valeur
+				# convertie. Ca permet de laisser le plugin charger lui
+				# même le média, utile pour les podcasts qui veulent un
+				# fichier local et pas une url distante, et youtube pour
+				# traiter le retour de youtube-dl.
 
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 				print "list: name $name,$serv,$flav,$audio,$video mode_flux $mode_flux base_flux $base_flux\n";
@@ -686,17 +701,6 @@ sub read_list {
 					$mode_flux = <F>;
 				}
 				chomp $mode_flux;
-				if ($mode_flux eq "direct") {
-					$_ = <F>;
-					chomp $_;
-					if (/\//) {
-						close(F);
-						$serv = $_;
-						print "list: shortcut sur direct serv $serv\n";
-						$source = "Enregistrements" if ($serv =~ /^records\//);
-						return load_file2($name,$serv,$flav,$audio,$video);
-					}
-				}
 			} else {
 				if (!open(F,"<flux/$base_flux")) {
 					return;
@@ -918,7 +922,7 @@ sub mount_dvd() {
 
 sub run_mplayer2 {
 	my ($name,$src,$serv,$flav,$audio,$video) = @_;
-	if ($serv =~ /^get,\d+:.+/) {
+	if ($serv =~ /^get,.+/) {
 		# lien get : download géré par le plugin
 		print "lien get détecté: $serv\n";
 		my ($b) = $base_flux =~ /(.+?)\/.+/;
@@ -1578,8 +1582,8 @@ sub commands {
 				$mode_flux = "";
 				print "base_flux = $name\n";
 				read_list();
-			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// ||
-					($serv =~ / / && $base_flux !~ /youtube/)) && $mode_flux)) {
+			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// && $serv !~ /^get/) ||
+					($serv =~ / / && $base_flux !~ /youtube/) && $mode_flux)) {
 				$name =~ s/\//-/g;
 				$base_flux .= "/$name";
 				$base_flux =~ s/pic:.+? //;
