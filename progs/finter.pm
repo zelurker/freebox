@@ -20,6 +20,7 @@ use HTML::Entities;
 
 my $debug = 0;
 our ($file,$use_json);
+our $latin = $ENV{LANG} !~ /utf/i;
 
 our %fb = (
 	"fbleu_loire_ocean" => "https://www.francebleu.fr/emissions/grille-programmes/loire-ocean",
@@ -191,7 +192,7 @@ sub insert {
 		$_ = decode_entities($_);
 		# utf8::decode(decode_entities($_));
 		s/\xe2\x80\x99/'/g;
-		Encode::from_to($_, "utf-8", "iso-8859-1") if (!$use_json);
+		Encode::from_to($_, "utf-8", "iso-8859-1") if (!$use_json && $latin);
 	}
 
 	my $fin = $$rtab2[3];
