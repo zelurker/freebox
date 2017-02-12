@@ -79,7 +79,10 @@ sub search {
 			foreach (keys %args) {
 				print "$_: $args{$_}\n";
 			}
-			exit(1);
+			# bon ça foire, google a du changer son format de page faudra
+			# voir ça + tard, en attendant on commente, les images ne
+			# marcheront pas mais au moins mplayer ne quittera pas !
+			# exit(1);
 			next;
 		}
 		if ($c =~ s/e\.src='([^']+?)';}}\)\(document.getElementsByName\('$args{tbnid}//){
