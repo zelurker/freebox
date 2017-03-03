@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use Cpanel::JSON::XS qw(decode_json);
+use HTML::Entities;
 use strict;
 require "http.pl";
 
@@ -92,17 +93,21 @@ if (!defined($day)) {
 my $page = myget($urls[$day],"cache/arte/j$day",1/24.0);
 my $capture = 0;
 my %json = ();
+# Partie délicate : extraire le json de la page html, c'est probablement la
+# parite la + susceptible de foirer si arte change quoi que ce soit à sa
+# génération html.
+# Donc pour l'instant on a du bol leurs catégories sont définies par des
+# paramètres d'un <div donc c'est assez facile à séparer, en eespérant que
+# ça dure... !
 foreach (split(/\n/,$page)) {
-	$capture = 1 if (/highlightedVideos/ || /videoSet/);
+	$capture = 1 if (/id="(home|container-collection)"/);
 	if ($capture) {
 		chomp;
-		if (/(\w+): ([\[\{].+),$/) {
-			$json{$1} = $2;
-		} elsif (/(\w+): ([\[\{].+)/) {
-			$json{$1} = $2;
+		if (/data-(\w+)="(.+)"/) {
+			$json{$1} = decode_entities($2);
 		}
+		last if (/\/div/);
 	}
-	last if ($capture && /\}\);/);
 }
 die "no capture\n" if ($capture == 0);
 foreach (sort { $a cmp $b } keys %json) {
