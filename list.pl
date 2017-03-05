@@ -1306,7 +1306,7 @@ sub commands {
 	undef $time_numero; # le timeout numéro viré pour toute commande
 	if (-f "list_coords" && $cmd eq "clear") {
 		out::clear("list_coords");
-		out::clear("info_coords");
+		out::send_cmd_info("clear") if (-f "info_coords"); # passe à info.pl pour virer les callbacks
 		close_mode() if ($mode_opened);
 		out::send_bmovl("image");
 		return;
