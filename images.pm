@@ -22,7 +22,7 @@ sub search {
 			# croyais que plus personne ne faisait ça ou presque, et bin si, la preuve!
 			# Si on envoie un agent récent, on obtient la version javascript de frime
 			# avec toutes les infos dedans !!! :))))
-			$mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
+			$mech->agent("Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0");
 			$mech->timeout(10);
 			$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 
@@ -36,6 +36,11 @@ sub search {
 			print "*** images.pm: got error $@\n";
 		}
 	} while ($@);
+	# Alors le nouveau google images semble mettre à jour ses pages par une
+	# url liée au scrolling et j'ai pas trouvé encore comment il la génère.
+	# Donc le + simple c'est de demander des données sur une hauteur
+	# ridiculement grande (ici 7220 !), comme ça on fait le plein en 1
+	# seule fois !
 	eval {
 		$mech->submit_form(
 			form_number => 1,
@@ -43,7 +48,7 @@ sub search {
 				site => "imghp",
 				q => $q,
 				biw => 1337,
-				bih => 722,
+				bih => 7220,
 			}
 		);
 	};
@@ -56,56 +61,62 @@ sub search {
 
 	# Décodage du js... !
 	my $c = $mech->content;
-	# $mech->save_content("page.html");
+	$mech->save_content("page_images.html");
 	my @vignette = ();
-	while ($c =~ s/a href="([^"]+?)"[^>]* class="?rg_l// ||
-		$c =~ s/a class="?rg_l" href="([^"]+?)"//) {
-		my $link = $1;
-		my @args = split(/&amp;/,$link);
-		$args[0] =~ s/^.+\?//; # Récupère le 1er argument
-		# il doit probablement y avoir une fonction dans libwww pour faire ça
-		# + directement, mais bon... !
+	my $saved = undef;
+	# Nouveau google images 2017 : plutôt bizarre, les tags de l'image sont
+	# contenus en json dans l'html puis apparemment convertis en html après
+	# chargement. Vu qu'on execute pas de javascript ici, on doit se taper
+	# le json à la main, ça reste très simple, en espérant que ça change
+	# pas trop dans l'avenir quoi... !
+	my %corresp = ( # correspondances nouveaux tags -> anciens
+		ow => "w",
+		oh => "h",
+		ou => "imgurl",
+		id => "tbnid"
+	);
+	while ($c =~ s/<div class="rg_meta">\{(.+?)\}//) {
+		my $tags = $1;
+		print "*** images trouvé une div tags $tags\n";
+		my @tags = split(/,/,$tags);
 		my %args;
-		print "found link $link\n" if ($debug);
-		foreach (@args) {
-			my ($name,$val) = split(/=/);
-			$args{$name} = $val;
+		foreach (@tags) {
+			my ($var,$val) = /(.+?):(.+)/;
+			$var =~ s/"//g;
+			$val =~ s/:$// if ($var eq "id");
+			$var = $corresp{$var} if ($corresp{$var});
+			$args{$var} = $val;
 		}
+		print "ajout img $args{width} x $args{height}\n";
+
 		push @tab,\%args; # on garde tout, pourquoi se priver ?!!!
 
-		# Bonus : on recherche la vignette
-		if (!$args{tbnid} || !$args{imgurl}) {
-			print "pas de tbnid ou d'imgurl, j'ai :\n";
-			foreach (keys %args) {
-				print "$_: $args{$_}\n";
-			}
-			# bon ça foire, google a du changer son format de page faudra
-			# voir ça + tard, en attendant on commente, les images ne
-			# marcheront pas mais au moins mplayer ne quittera pas !
-			# exit(1);
-			next;
-		}
-		if ($c =~ s/e\.src='([^']+?)';}}\)\(document.getElementsByName\('$args{tbnid}//){
-			my $b64 = $1;
-			my $name;
-			if ($b64 =~ /^data:image\/jpeg/) {
-				$name = "cache/vn_$args{tbnid}.jpg";
-				$name =~ s/://;
-			} else {
-				print "base64: file type not recognized : ",substr($b64,0,16),"\n";
-				next;
-			}
-			if (!-f $name) {
-				if (open(F,">$name")) {
-					$b64 =~ s/^.+?base64,//;
-					print F decode_base64($b64);
-					close(F);
-				}
-			} else {
-				utime(undef,undef,$name);
-			}
-			push @vignette,$name;
-		}
+#		# Pour l'instant j'ai pas les vignettes, y a l'id dans le code,
+#		mais bizarrement je vois pas où est la correspondance !
+#		Je garde quand même le code parce que c'était assez héroïque de
+#		faire le décodage dans l'html, ça peut éventuellement re-servir un
+#		de ces jours...
+#		if ($c =~ s/e\.src='([^']+?)';}}\)\(document.getElementsByName\('$args{tbnid}//){
+#			my $b64 = $1;
+#			my $name;
+#			if ($b64 =~ /^data:image\/jpeg/) {
+#				$name = "cache/vn_$args{tbnid}.jpg";
+#				$name =~ s/://;
+#			} else {
+#				print "base64: file type not recognized : ",substr($b64,0,16),"\n";
+#				next;
+#			}
+#			if (!-f $name) {
+#				if (open(F,">$name")) {
+#					$b64 =~ s/^.+?base64,//;
+#					print F decode_base64($b64);
+#					close(F);
+#				}
+#			} else {
+#				utime(undef,undef,$name);
+#			}
+#			push @vignette,$name;
+#		}
 	}
 	$self->{tab} = \@tab;
 	\@vignette;

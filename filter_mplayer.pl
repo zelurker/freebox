@@ -250,12 +250,12 @@ sub handle_images {
 		@cur_images = ($cur);
 		$cur =~ s/û/u/g; # Pour une raison inconnue allergie !
 		my $res = $agent->search($cur);
-		open(F,">vignettes");
-		foreach (@$res) {
-			print F $_,"\n";
-		}
-		close(F);
-		$has_vignettes = 1;
+#		open(F,">vignettes");
+#		foreach (@$res) {
+#			print F $_,"\n";
+#		}
+#		close(F);
+		# $has_vignettes = 1;
 		out::send_bmovl("vignettes") if ($has_vignettes);
 		my $result = $agent->{tab};
 		push @cur_images,$result;
