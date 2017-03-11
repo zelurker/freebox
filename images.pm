@@ -77,17 +77,16 @@ sub search {
 	);
 	while ($c =~ s/<div class="rg_meta">\{(.+?)\}//) {
 		my $tags = $1;
-		print "*** images trouvé une div tags $tags\n";
 		my @tags = split(/,/,$tags);
 		my %args;
 		foreach (@tags) {
 			my ($var,$val) = /(.+?):(.+)/;
 			$var =~ s/"//g;
+			$val =~ s/"//g;
 			$val =~ s/:$// if ($var eq "id");
 			$var = $corresp{$var} if ($corresp{$var});
 			$args{$var} = $val;
 		}
-		print "ajout img $args{width} x $args{height}\n";
 
 		push @tab,\%args; # on garde tout, pourquoi se priver ?!!!
 
