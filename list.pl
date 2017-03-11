@@ -3,6 +3,7 @@
 # Gestion des listes
 
 use strict;
+use v5.10; # say
 use Coro::Socket;
 use Coro;
 use Coro::Handle;
@@ -710,6 +711,7 @@ sub read_list {
 			my @pic = ();
 			my $last = undef;
 			while (<F>) {
+				say "list: from plugin : $_";
 				if (/encoding:/) {
 					$encoding = $_;
 					print "encoding: $encoding\n";

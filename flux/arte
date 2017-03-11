@@ -3,6 +3,7 @@
 use Cpanel::JSON::XS qw(decode_json);
 use HTML::Entities;
 use strict;
+use link_get;
 require "http.pl";
 
 # binmode STDOUT,":utf8";
@@ -62,12 +63,18 @@ if ($arg[$#arg] =~ /vid:(.+)/) {
 		next if ($h->{mediaType} eq "hls"); # hls c'est du m3u, on en veut pas!
 		print "$h->{mediaType} $h->{width}x$h->{height} @ $h->{bitrate}kbps $h->{versionLibelle}\n";
 		if ($h->{streamer}) {
-			print "$h->{streamer}$h->{url}\n";
+			print "get,$h->{streamer}$h->{url}\n";
 		} else {
-			print "$h->{url}\n";
+			print "get,$h->{url}\n";
 		}
 	}
 	exit(0);
+} elsif ($str =~ /^get,(.+)/) {
+	my $url = $1;
+	my ($file) = $url =~ /.+\/(.+?)$/;
+	$file = "cache/arte/$file";
+	print STDERR "arte: file $file from url $url\n";
+	link_get::link_get($file,$url);
 }
 
 my @urls = ("http://www.arte.tv/guide/fr/plus7/",

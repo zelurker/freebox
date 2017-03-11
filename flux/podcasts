@@ -7,7 +7,7 @@ use XML::Simple;
 use Data::Dumper;
 use WWW::Mechanize;
 use HTML::Entities;
-use POSIX qw(:sys_wait_h );
+use link_get;
 
 # Refonte complète, on abandonne podcasters qui est pourri finalement
 # et on ne va garder que des résultats google pour les recherches...
@@ -70,69 +70,34 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 	$file =~ s/\?.+//; # Vire tout ce qui suit d'éventuels params !
 	$file = "podcasts/$file";
 
-	# Vérification de la taille !!!
-	# Même un serveur comme radio france a l'air d'envoyer parfois des tailles
-	# totalement farfelues, on se demande comment leur truc est codé encore...
-
-	my $r = $mech->head($str);
-	if ($size != $r->header("Content-length") && $r->header("Content-length")) {
-		# print "podcast: taille du fichier pod invalide, on garde la taille head: ",$r->header("Content-length"),"\n";
-		$size = $r->header("Content-length");
+	if ($latin) {
+		open(F,"<:encoding(iso-8859-1)","pod") || die "peut pas lire pod\n";
+	} else {
+		open(F,"<:encoding(utf8)","pod") || die "peut pas lire pod\n";
 	}
-
-	if (!-f "$file" || -s $file != $size) {
-		print STDERR "lien get: taille != $size pour fichier $file\n";
-		$SIG{CHLD} = \&REAPER;
-		my $pid = fork();
-		if (!$pid) {
-			# Génération du fichier info
-			# pas terrible de relire pod ici, mais je ne vois pas d'autre moyen
-			# à priori...
-			if ($latin) {
-				open(F,"<:encoding(iso-8859-1)","pod") || die "peut pas lire pod\n";
-			} else {
-				open(F,"<:encoding(utf8)","pod") || die "peut pas lire pod\n";
-			}
-			# open(F,"<","pod") || die "peut pas lire pod\n";
-			@_ = <F>;
+	# open(F,"<","pod") || die "peut pas lire pod\n";
+	@_ = <F>;
+	close(F);
+	$_ = join("\n",@_);
+	my $ref = XMLin($_);
+	my $item = $ref->{channel}->{item};
+	my $found = 0;
+	foreach (@$item) {
+		if ($_->{enclosure}->{url} eq $str) {
+			print STDERR "génération $file.info\n";
+			$found = 1;
+			open(F,">$file.info");
+			my $img = $ref->{"channel"}->{image}->{url};
+			print F ($img ? "pic:$img " : ""),$_->{title},"\n",$_->{"itunes:subtitle"},"\n";
+			print F $_->{description},"\n";
 			close(F);
-			$_ = join("\n",@_);
-			my $ref = XMLin($_);
-			my $item = $ref->{channel}->{item};
-			my $found = 0;
-			foreach (@$item) {
-				if ($_->{enclosure}->{url} eq $str) {
-					print STDERR "génération $file.info\n";
-					$found = 1;
-					open(F,">$file.info");
-					my $img = $ref->{"channel"}->{image}->{url};
-					print F ($img ? "pic:$img " : ""),$_->{title},"\n",$_->{"itunes:subtitle"},"\n";
-					print F $_->{description},"\n";
-					close(F);
-					last;
-				}
-			}
-			if (!$found) {
-				print STDERR "problem, could not find url in pod file !\n";
-			}
-			print STDERR "execution wget -q -c -N $str\n" if ($debug);
-			# L'idée était d'utiliser -O $file, sauf que ce crétin de wget
-			# ne sait pas gèrer l'horodatage avec -O ! Y a des fois je me dis
-			# que je ferais mieux de ne pas utiliser du tout wget et plutôt
-			# faire le transfert en perl, mais bon c'est un bordel si on ne
-			# veut pas qu'il télécharge tout en ram... !!!
-			# Enfin vu qu'on est dans un child, le chdir n'a pas d'importance
-			exec("wget","-O",$file,"-q","-c","-N",$str);
-		} else {
-			my $n = 1;
-			my $dest = ($file =~ /mp3$/ ? 40*1024 : 7*1024*1024);
-			while ($n++ < 10 && -s $file < $dest) {
-				sleep(1);
-			}
+			last;
 		}
 	}
-	print "$file\n"; # Renvoie le nom du fichier à list.pl
-	exit(0);
+	if (!$found) {
+		print STDERR "problem, could not find url in pod file !\n";
+	}
+	link_get::link_get($file,$str,$size);
 }
 $str =~ s/ /\+/g;
 my ($r,$type);
@@ -283,13 +248,6 @@ sub header {
 	print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
 	print "Consulter une url xml...\nRecherche:url podcast xml\n"; # Transmis en mode list (ne contient pas //)
 	print "Abonnements\n+Abonnements\n" if (@abo);
-}
-
-sub REAPER {
-	my $child;
-	$SIG{CHLD} = \&REAPER;
-	while (($child = waitpid(-1,WNOHANG)) > 0) {
-	}
 }
 
 sub save_pods {

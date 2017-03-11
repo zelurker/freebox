@@ -254,13 +254,15 @@ sub disp_prog {
 			sub {
 				# Il faut recréer $sub -> disp_channel
 				disp_channel();
-			});
+			}
+		);
 	} elsif ($end < $time) {
 		# paradoxe reste négatif
 		$refresh = AnyEvent->timer(after=>15, cb =>
 			sub {
 				disp_channel();
-			});
+			}
+		);
 	} else {
 		undef $refresh;
 	}

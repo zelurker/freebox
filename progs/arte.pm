@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use progs::telerama;
 use Cpanel::JSON::XS qw(decode_json);
+use HTML::Entities;
 # require "http.pl";
 
 @progs::arte::ISA = ("progs::telerama");
@@ -59,14 +60,19 @@ sub get {
 	return undef if (!open($f,"<cache/arte/j$arg[0]"));
 	while (<$f>) {
 		chomp;
-		if (/$arg[1]: (.+),?$/) {
-			$json = $1;
-			$json =~ s/,$//;
+		if (/$arg[1]="(.+)"/) {
+			$json = decode_entities($1);
 			last;
 		}
 	}
 	close($f);
-	$json = decode_json($json);
+	eval {
+		$json = decode_json($json);
+	};
+	if ($@) {
+		print "progs/arte: decode_json error $! à partir de $json\n";
+		return undef;
+	}
 	my $hash = find_id($json,$code);
 	my $date = $hash->{scheduled_on};
 	my ($year,$mon,$day) = split(/\-/,$date);
@@ -81,7 +87,6 @@ sub get {
 		my $truc = join("\n",@_);
 		my $j = decode_json($truc);
 		$sum .= " ".$j->{videoJsonPlayer}{VDE};
-		print "ajouté $j->{videoJsonPlayer}{VDE}\n";
 	}
 
 	my @tab = (undef, # chan id
