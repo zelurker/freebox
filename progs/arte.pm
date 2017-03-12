@@ -11,6 +11,7 @@ use HTML::Entities;
 
 our $debug = 0;
 our @arg;
+our $latin = ($ENV{LANG} !~ /UTF/i);
 
 sub find_id {
 	$_ = shift;
@@ -41,6 +42,33 @@ sub find_id {
 		}
 	}
 	undef;
+}
+
+sub to_utf {
+	while (my $ref = shift @_) {
+		next if (!$$ref);
+		$$ref =~ s/\x{2019}/'/g;
+		$$ref =~ s/\x{0153}/oe/g;
+		if (!$latin) {
+			if ($$ref =~ /[\xc3\xc5]/) {
+				print "to_utf: reçu un truc en utf: $$ref\n";
+				next;
+			}
+			eval {
+				Encode::from_to($$ref,"iso-8859-1","utf8");
+			};
+			if ($@) {
+				print "to_utf: error encoding $$ref: $!, $@\n";
+			}
+		} elsif ($$ref =~ /[\xc3\xc5]/) {
+			eval {
+				Encode::from_to($$ref,"utf8","iso-8859-1");
+			};
+			if ($@) {
+				print "to_utf: error encoding $$ref: $!, $@\n";
+			}
+		}
+	}
 }
 
 sub get {
@@ -81,6 +109,8 @@ sub get {
 
 	# On vérifie si on a le fichier détaillé, sans le récupérer, il n'y a
 	# qu'un résumé + long utile dedans pour ça...
+	my $title = $hash->{title};
+	my $sub = $hash->{subtitle};
 	if (open(my $f,"<cache/arte/$code")) {
 		@_ = <$f>;
 		close($f);
@@ -88,12 +118,13 @@ sub get {
 		my $j = decode_json($truc);
 		$sum .= " ".$j->{videoJsonPlayer}{VDE};
 	}
+	to_utf(\$title,\$sub,\$sum);
 
 	my @tab = (undef, # chan id
-		"$source", $hash->{title},
+		"$source", $title,
 		undef, # début
 		undef, "", # fin
-		$hash->{subtitle}, # desc
+		$sub,
 		$sum, # details
 		"",
 		$hash->{thumbnail_url}, # img

@@ -256,7 +256,7 @@ sub disp_prog {
 				disp_channel();
 			}
 		);
-	} elsif ($end < $time) {
+	} elsif ($end && $end < $time) {
 		# paradoxe reste négatif
 		$refresh = AnyEvent->timer(after=>15, cb =>
 			sub {
@@ -300,6 +300,7 @@ sub disp_prog {
 	my $codec = $info{$tag}->{codec};
 	print $out " ($codec)" if ($codec);
 
+	$$sub[6] = "" if (!$$sub[6]);
 	print $out "\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
 	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
