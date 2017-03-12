@@ -46,7 +46,7 @@ sub update_prog_html($) {
 		return undef;
 	}
 	my ($status,$prog) = chaines::request($url);
-	print STDERR "update_prog: got status $status, prog $prog\n" if ($debug && $prog);
+	print STDERR "update_prog: got status $status\n" if ($debug && $prog);
 	return if (!$prog);
 	open(my $f,">cache/$file");
 	return if (!$f);
@@ -82,8 +82,9 @@ sub update_prog_json($) {
 		# $url = "http://www.france$url.fr/sites/default/files/lecteur_commun_json/timeline.json";
 		$url = "https://www.france$url.fr/programmes?xmlHttpRequest=1";
 	}
+	print STDERR "update_prog_json: file $file url $url\n" if ($debug);
 	my ($status,$prog) = chaines::request($url);
-	print STDERR "update_prog_json: got status $status, prog $prog\n" if ($debug && $prog);
+	print STDERR "update_prog_json: got status $status\n" if ($debug && $prog);
 	return if (!$prog);
 	if ($file !~ /(fip|le_mouv)/) {
 		open(my $f,">cache/$file");
@@ -100,6 +101,7 @@ sub update {
 	lc($channel) !~ /(le mouv|fip)/);
 	$offset = 0 if (!defined($offset));
 
+	print STDERR "finter:update called channel $channel\n" if ($debug);
 	my ($suffix) = $channel =~ /france (.+)/;
 	if ($suffix) {
 		$file = "f$suffix";
@@ -118,7 +120,8 @@ sub update {
 
 	my $res;
 	$use_json = 0;
-	for ($use_json = 0; $use_json <= 1; $use_json++) {
+	$file = "json-$file";
+	for ($use_json = 1; $use_json > -1; $use_json--) {
 		if (!-f "cache/$file") {
 			if ($use_json) {
 				$res = update_prog_json($file);
@@ -126,6 +129,7 @@ sub update {
 				$res = update_prog_html($file);
 			}
 		} else {
+			print "progs:finter lecture cache $file\n" if ($debug);
 			open(my $f,"<cache/$file");
 			# binmode $f; # ,":utf8";
 			return undef if (!$f);
@@ -133,7 +137,7 @@ sub update {
 			close($f);
 		}
 		if (!$res) {
-			$file = "json-$file";
+			$file =~ s/^json-//;
 		} else {
 			last;
 		}
@@ -192,7 +196,7 @@ sub insert {
 		$_ = decode_entities($_);
 		# utf8::decode(decode_entities($_));
 		s/\xe2\x80\x99/'/g;
-		Encode::from_to($_, "utf-8", "iso-8859-1") if (!$use_json && $latin);
+		# Encode::from_to($_, "utf-8", "iso-8859-1") if (!$use_json && $latin);
 	}
 
 	my $fin = $$rtab2[3];

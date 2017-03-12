@@ -44,33 +44,6 @@ sub find_id {
 	undef;
 }
 
-sub to_utf {
-	while (my $ref = shift @_) {
-		next if (!$$ref);
-		$$ref =~ s/\x{2019}/'/g;
-		$$ref =~ s/\x{0153}/oe/g;
-		if (!$latin) {
-			if ($$ref =~ /[\xc3\xc5]/) {
-				print "to_utf: reçu un truc en utf: $$ref\n";
-				next;
-			}
-			eval {
-				Encode::from_to($$ref,"iso-8859-1","utf8");
-			};
-			if ($@) {
-				print "to_utf: error encoding $$ref: $!, $@\n";
-			}
-		} elsif ($$ref =~ /[\xc3\xc5]/) {
-			eval {
-				Encode::from_to($$ref,"utf8","iso-8859-1");
-			};
-			if ($@) {
-				print "to_utf: error encoding $$ref: $!, $@\n";
-			}
-		}
-	}
-}
-
 sub get {
 	my ($p,$channel,$source,$base_flux,$serv) = @_;
 	# print "arte: channel $channel,$source,$base_flux,$serv\n";
@@ -118,7 +91,6 @@ sub get {
 		my $j = decode_json($truc);
 		$sum .= " ".$j->{videoJsonPlayer}{VDE};
 	}
-	to_utf(\$title,\$sub,\$sum);
 
 	my @tab = (undef, # chan id
 		"$source", $title,

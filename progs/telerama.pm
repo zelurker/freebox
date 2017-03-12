@@ -92,15 +92,6 @@ sub get_offset {
 	$d;
 }
 
-sub encode_sub {
-	my $rsub = shift;
-	if (!$latin) {
-		foreach (1,2,6,7,11) {
-			Encode::from_to($$rsub[$_], "iso-8859-1", "utf-8");
-		}
-	}
-}
-
 sub parse_prg($) {
 	# Interprête le résultat de la requête de programmes...
 	# et met à jour chaines{}
@@ -195,12 +186,10 @@ sub parse_prg($) {
 				# print "colision chaine $$colision[1] titre $$colision[2]\n";
 				$nb_collision++;
 			} else {
-				encode_sub(\@sub);
 				push @$rtab,\@sub;
 				push @fields2,$old;
 			}
 		} else {
-			encode_sub(\@sub);
 			$chaines{$chan} = [\@sub];
 			push @fields2,$old;
 		}

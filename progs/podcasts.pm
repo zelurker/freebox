@@ -21,7 +21,6 @@ sub mydecode {
 our $debug = 0;
 our @tab;
 our $last_chan;
-our $latin = ($ENV{LANG} !~ /UTF/i);
 
 sub get {
 	my ($p,$channel,$source,$base_flux) = @_;

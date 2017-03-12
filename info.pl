@@ -25,7 +25,6 @@ require "radios.pl";
 use progs::telerama;
 use progs::nolife;
 use progs::finter;
-use progs::labas;
 use progs::podcasts;
 use progs::files;
 use progs::series;
@@ -195,7 +194,6 @@ if ($have_dvb || $have_fb) {
 }
 push @prog, progs::nolife->new($net);
 push @prog, progs::finter->new($net);
-push @prog, progs::labas->new($net);
 push @prog, progs::podcasts->new($net);
 push @prog, progs::files->new($net);
 push @prog, progs::series->new($net);
@@ -234,6 +232,7 @@ sub disp_duree($) {
 sub disp_prog {
 	$cleared = 0;
 	my ($sub,$long) = @_;
+	encoding($sub);
 	if (!$sub) {
 		print "info: disp_prog sans sub !\n";
 		return;
@@ -438,6 +437,38 @@ sub commands {
 		$recordings->add($lastprog);
 	} else {
 		print "info: commande inconnue $cmd\n";
+	}
+}
+
+sub encoding {
+	my $sub = shift;
+	foreach (1,2,6,7,11) {
+		my $ref = \$$sub[$_];
+		if (!$$ref) {
+			$$ref = "";
+			next;
+		}
+		$$ref =~ s/\x{2019}/'/g;
+		$$ref =~ s/\x{0153}/oe/g;
+		if (!$latin) {
+			if ($$ref =~ /[\xc3\xc5]/) {
+				print "to_utf: reçu un truc en utf: $$ref\n";
+				next;
+			}
+			eval {
+				Encode::from_to($$ref,"iso-8859-1","utf8");
+			};
+			if ($@) {
+				print "to_utf: error encoding $$ref: $!, $@\n";
+			}
+		} elsif ($$ref =~ /[\xc3\xc5]/) {
+			eval {
+				Encode::from_to($$ref,"utf8","iso-8859-1");
+			};
+			if ($@) {
+				print "to_utf: error encoding $$ref: $!, $@\n";
+			}
+		}
 	}
 }
 
