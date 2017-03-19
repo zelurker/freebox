@@ -9,7 +9,7 @@
 # zap1 : transmet à list.pl pour zapper
 
 use strict;
-use warnings;
+use v5.10;
 use POSIX qw(:sys_wait_h);
 use Time::Local "timelocal_nocheck";
 use Coro::LWP;
@@ -316,7 +316,7 @@ sub commands {
 	my $old_long = $long;
 	($tab[0],$long) = split(/\:/,$tab[0]);
 	$cmd = join(" ",@tab);
-	$long = "" if (!$long); # Evite les warnings !
+	$long = "" if (!defined($long)); # Evite les warnings !
 	# A priori utile juste pour prog
 	$long = $old_long if ($cmd !~ /^prog /);
 
@@ -426,8 +426,6 @@ sub commands {
 			$serv = "";
 		}
 		$channel = $cmd;
-		# long n'est pas effacé par une commande prog
-		$long = $old_long if ($old_long);
 		# Note : prog appelle disp_channel pour recalculer le programme
 		# pas disp_prog qui réaffiche un programme qu'on a déjà !
 		disp_channel();

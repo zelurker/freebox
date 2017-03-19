@@ -12,6 +12,7 @@
 # rabattre sur select/sysread, et ça alourdit considérablement l'écriture...
 
 use strict;
+use v5.10;
 use Coro::LWP;
 use Coro;
 use Coro::Handle;
@@ -386,12 +387,12 @@ sub quit_mplayer {
 }
 
 sub send_cmd_prog {
-	# -f info_coords détecte si le bandeau d'infos est déjà affiché, dans
-	# ce cas là on veut un affichage fixe sinon un qui disparait au bout de
-	# quelques secondes.
-	# on ajoute un timeout pour contourner les sites qui envoient l'info 2
-	# fois de suite avec variation, genre une pub au bout la 2ème fois.
-	my $cmd = "prog";
+	# force long à 0 : ce long est un pb récurent, pas sûr que ça soit la
+	# bonne façon de faire, mais si on ne le force pas ici alors si on
+	# appuie sur i pendant qu'on regarde une chaine de télé le bandeau
+	# d'info reste en long et ne disparait plus tout seul quand on change
+	# de chaine !
+	my $cmd = "prog:0";
 	out::send_cmd_info("$cmd $chan&$source/$base_flux") if ($cmd);
 }
 
