@@ -119,9 +119,7 @@ sub update {
 	$file .= sprintf("-%d-%02d-%02d",$year+1900,$mon+1,$mday);
 
 	my $res;
-	$use_json = 0;
-	$file = "json-$file";
-	for ($use_json = 1; $use_json > -1; $use_json--) {
+	for ($use_json = 0; $use_json <= 1; $use_json++) {
 		if (!-f "cache/$file") {
 			if ($use_json) {
 				$res = update_prog_json($file);
@@ -137,7 +135,7 @@ sub update {
 			close($f);
 		}
 		if (!$res) {
-			$file =~ s/^json-//;
+			$file = "json-$file";
 		} else {
 			last;
 		}
