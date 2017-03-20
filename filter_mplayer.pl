@@ -661,7 +661,7 @@ while (1) {
 					get_lyrics($artist,$titre);
 				}
 				# out::send_cmd_info("progress $t2 ".($t3>0 ? int($t1*100/$t3) : "-")."%");
-				out::send_cmd_info("progress ".($t3>0 ? int($t1*100/$t3) : "-")."%");
+				out::send_cmd_info("progress ".int($t1*100/$t3)."%") if ($t3>0);
 			}
 		} elsif (/Starting playback/) {
 			if ($width && $height) {
