@@ -17,7 +17,11 @@ http://www.bide-et-musique.com/playlist-hq.m3u
 C9 Radio
 http://api.my-radios.com/v2/W/prod/request.php?action=gsu&key=915&q=13712&n=0&crypt=19405134684
 Chérie FM
-http://cdn.nrjaudio.fm/audio1/fr/40104/aac_64.mp3?listenerid=d05ae5637b482fcdedd54a2f9de72115&awparams=companionAds%3Atrue;playerid:&origine=playerweb
+http://cdn.nrjaudio.fm/audio1/fr/40104/aac_64.mp3?awparams=companionAds%3Atrue;playerid:&origine=playerweb
+Chérie 50 nuances de Grey
+http://cdn.nrjaudio.fm/audio1/fr/30355/aac_64.mp3?awparams=companionAds%3Atrue;playerid:&origine=playerweb
+Chérie Love Songs
+http://cdn.nrjaudio.fm/adwz1/fr/30207/aac_64.mp3?awparams=companionAds%3Atrue;playerid:CHERIE-LOVE-SONGS&origine=playerweb
 Classic 21 64k aac
 http://classic21.ice.rtbf.be/classic21-64.aac
 Classic 21 128k mp3
