@@ -1,23 +1,23 @@
 4U Classic Rock
 http://www.4uradios.com/classicrock.m3u
 Accent 4
-http://str0.creacast.com:900/listen.pls
+http://str0.creacast.com/accent4
 Ado
 http://start-adofm.ice.infomaniak.ch/start-adofm-high.mp3
 Alouette
 http://www.alouette.fr/alouette.m3u http://www.alouette.fr/zenon/xml_out/alouette_onair_drupal.php
 Alpes 1
-http://broadcast.infomaniak.ch/alpes1gap-high.mp3 http://grandgrenoble.alpes1.com/winradio/prog.xml
+http://alpes1gap.ice.infomaniak.ch/alpes1gap-high.mp3 http://grandgrenoble.alpes1.com/winradio/prog.xml
 Alternantes
 http://diffusion.lafrap.fr/alternantes.mp3
 BFM Business
-http://bfmbusiness.scdn.arkena.com/bfmbusiness.mp3
+http://chai5she.cdn.dvmr.fr/bfmbusiness
 Bide et Musique
 http://www.bide-et-musique.com/playlist-hq.m3u
 C9 Radio
-http://streaming.c9radio.eu/listen.m3u
+http://api.my-radios.com/v2/W/prod/request.php?action=gsu&key=915&q=13712&n=0&crypt=19405134684
 Chérie FM
-http://cdn.nrjaudio.fm/audio1/fr/30201/mp3_128.mp3
+http://cdn.nrjaudio.fm/audio1/fr/40104/aac_64.mp3?listenerid=d05ae5637b482fcdedd54a2f9de72115&awparams=companionAds%3Atrue;playerid:&origine=playerweb
 Classic 21 64k aac
 http://classic21.ice.rtbf.be/classic21-64.aac
 Classic 21 128k mp3
@@ -43,13 +43,13 @@ http://www.radiofg.com/streams/fgu.pls
 FG Vintage
 http://www.radiofg.com/streams/fgv.pls
 FIP
-http://audio.scdn.arkena.com/11016/fip-midfi128.mp3
+http://direct.fipradio.fr/live/fip-midfi.mp3
 Flash FM
 http://live140.impek.com:8000/listen.pls
 France bleu Gascogne
-http://audio.scdn.arkena.com/11375/fbgascogne-midfi128.mp3
+http://direct.francebleu.fr/live/fbgascogne-midfi.mp3
 France bleu loire ocean
-http://audio.scdn.arkena.com/11381/fbloireocean-midfi128.mp3
+http://direct.francebleu.fr/live/fbloireocean-midfi.mp3
 France Culture
 http://audio.scdn.arkena.com/11010/franceculture-midfi128.mp3
 France Info
@@ -61,7 +61,7 @@ http://audio.scdn.arkena.com/11012/francemusique-midfi128.mp3
 Frequence 3
 http://streams.frequence3.net/mp3-192.m3u
 Frequence Terre
-http://streaming208.radionomy.com/frequence-terre?group=172&countrycode=FR
+http://sv3.vestaradio.com:8010/;stream.mp3
 Fun Radio
 http://streaming.radio.funradio.fr:80/fun-1-44-96
 Generations
@@ -91,7 +91,7 @@ http://hd.lagrosseradio.info:8200/;stream.nsv
 La Grosse Radio Reggae
 http://hd.lagrosseradio.info:8300/;stream.nsv
 Le Mouv'
-http://audio.scdn.arkena.com/11014/mouv-midfi128.mp3
+http://direct.mouv.fr/ts/mouv-midfi.mp3
 M2 Radio
 http://www.m2radio.fr/pls/m2radio.m3u
 M2 Radio - Analog
@@ -133,7 +133,7 @@ http://mfm-wr3.ice.infomaniak.ch/mfm-wr2-128.mp3 http://mfmradio.fr/winradio/pro
 MFM Lady
 http://mfm-wr3.ice.infomaniak.ch/mfm-wr1-128.mp3 http://mfmradio.fr/winradio/prog4.xml
 NRJ
-http://cdn.nrjaudio.fm/audio1/fr/30001/mp3_128.mp3
+http://cdn.nrjaudio.fm/audio1/fr/30001/mp3_128.mp3?origine=frequence-radio
 Nostalgie
 http://cdn.nrjaudio.fm/audio1/fr/30601/mp3_128.mp3
 Oui FM
