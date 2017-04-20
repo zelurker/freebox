@@ -32,7 +32,6 @@ sub init_mech {
 	$mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
 	$mech->timeout(10);
 	$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
-	$mech->max_size(130000); # 65000 trop court pour google !
 	$mech;
 }
 
@@ -42,7 +41,7 @@ sub search_flux {
 	push @$visited,$url;
 	$mech = init_mech() if (!$mech);
 	say "search_flux: entering with url ",$url;
-	my $page = $mech->get($url);
+	$mech->get($url);
 	my $page = $mech->content;
 	if ($page =~ /(file|mp3|m4a): ["'](.+?)["']/ || $page =~ /(data-src)="(.+?)"/ || $page =~ /(url)&quot;:&quot;(http.+?)&quot;/) {
 		say "search_flux : found $1 info $2";
@@ -78,7 +77,9 @@ while (<$i>) {
 	};
 	if ($@ && $@ =~ /bad request/i) {
 		print "can't head, trying get... ";
+		$mech->max_size(10000);
 		$mech->get($url);
+		$mech->max_size();
 	}
 	if (!$@) {
 		say "ok";
