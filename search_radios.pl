@@ -43,7 +43,8 @@ sub search_flux {
 	say "search_flux: entering with url ",$url;
 	$mech->get($url);
 	my $page = $mech->content;
-	if ($page =~ /(file|mp3|m4a): ["'](.+?)["']/ || $page =~ /(data-src|data-url-live)="(.+?)"/ || $page =~ /(url)&quot;:&quot;(http.+?)&quot;/) {
+	if ($page =~ /(file|mp3|m4a): ?["'](.+?)["']/ || $page =~ /(data-src|data-url-live)="(.+?)"/ || $page =~ /(url)&quot;:&quot;(http.+?)&quot;/ ||
+		$page =~ /meta property="(og:audio)" content="(.+?)"/ || $page =~ /(source)":"(.+?)"/) {
 		say "search_flux : found $1 info $2";
 		return $2;
 	}
@@ -61,7 +62,7 @@ sub search_flux {
 my $mech = init_mech();
 
 open(my $i,"<flux/stations") || die "can't read stations\n";
-my $last = "Nostalgie";
+my $last = "";
 while (<$i>) {
 	chomp;
 	my $url = <$i>;

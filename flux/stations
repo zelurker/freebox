@@ -156,8 +156,6 @@ Oui FM Blues
 http://ouifm4.ice.infomaniak.ch/ouifm4.aac
 Oui FM Indé
 http://ouifm5.ice.infomaniak.ch/ouifm5.aac
-Oxyradio
-http://oxyradio.net:8000/hd.ogg
 Paris One Club
 http://www.paris-one.com/pls/radio.pls
 Paris One Reverse
@@ -178,32 +176,28 @@ Puls Radio - Version 9.0
 http://www.pulsradio.com/pls/pulsV90-adsl.m3u
 Puls Radio - Version Trance
 http://www.pulsradio.com/pls/pulstrance-adsl.m3u
-Radio Alpine Meilleure
-http://91.121.62.121:8310
 Radio Bresse
-http://91.121.62.121:7350/listen.pls
+http://91.121.62.121:7350/;
 Radio Classique
 http://players.creacast.com/creacast/classique/playlist.pls
 R'courchevel
-http://live76.laradiostation.fr:8888/listen.pls
+http://radio.doubleclic.fr/rcourchevel.mp3
 Radio Intensite
-http://radiointensite.free.fr/live128.m3u
+http://154.41.66.146:9010/;
 Radio Junior
-http://213.186.61.62:8080/listen.pls
+http://streaming.radionomy.com/RADIO-JUNIOR?_=1448767610
 Radio Latina
 http://broadcast.infomaniak.net/start-latina-high.mp3
 Radio Pulsar
-http://91.121.62.121:8100/listen.pls
+http://91.121.62.121:8100/;
 Radio RDL
-http://91.121.62.121:8300/listen.pls
-RDM - Lorraine
-http://213.186.61.62:7070/listen.pls
+http://radiobruaysis.ice.infomaniak.ch/radiobruaysis-64.aac?type=.flv&ua=Infomaniak%20Flash%20Player%20v2
 RFI Monde
-http://rfi-monde-64k.scdn.arkena.com/rfimonde.mp3
+http://live02.rfi.fr/rfimonde-64.mp3
 RFM
 http://rfm-live-mp3-64.scdn.arkena.com/rfm.mp3
 RMC
-http://rmc.scdn.arkena.com/rmc.mp3
+http://rmcinfo.cdn.dvmr.fr/rmcinfo
 RTL
 http://streaming.radio.rtl.fr/rtl-1-44-128 http://radio.rtl.fr/live.js
 RTL 2
