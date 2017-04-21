@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+
+use WWW::Mechanize;
+use v5.10;
+binmode STDOUT,":utf8";
+
+# sans paramètre affiche la liste des stations avec leur url
+# passer une url en paramètre pour obtenir l'url du flux (ch = "url" dans
+# la page).
+
+my $mech = WWW::Mechanize->new();
+$mech->agent_alias("Linux Mozilla");
+# $mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
+$mech->timeout(10);
+my $radio = shift @ARGV || "";
+$radio =~ s/^\/// if ($radio);
+$mech->get("http://www.ecouter-en-direct.com/$radio");
+$mech->save_content("page.html");
+
+my (%name,%rc);
+foreach (split /\n/,$mech->content) {
+	if (/ch = "(.+?)"/) {
+		say "url du flux : $1";
+	}
+	if (/href="(.+?)".+class="radio">(.+?)</) {
+		$name{$2} = $1;
+		say "got name $2 = $1";
+	}
+}
+
+
