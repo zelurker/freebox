@@ -491,7 +491,7 @@ sub disp_channel {
 	if (!$sub) {
 		my ($name,$src) = get_cur_name();
 		if ($name."&$src" eq conv($channel)) {
-			read_stream_info(time(),$cmd,$info{"$name&$src"});
+			read_stream_info(time(),$channel,$info{"$name&$src"});
 			return;
 		}
 	}
