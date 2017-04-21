@@ -30,7 +30,7 @@ sub init_mech {
 	my $mech = WWW::Mechanize->new();
 #$mech->agent_alias("Linux Mozilla");
 	$mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
-	$mech->timeout(10);
+	$mech->timeout(20);
 	$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 	$mech;
 }
@@ -43,7 +43,7 @@ sub search_flux {
 	say "search_flux: entering with url ",$url;
 	$mech->get($url);
 	my $page = $mech->content;
-	if ($page =~ /(file|mp3|m4a): ["'](.+?)["']/ || $page =~ /(data-src)="(.+?)"/ || $page =~ /(url)&quot;:&quot;(http.+?)&quot;/) {
+	if ($page =~ /(file|mp3|m4a): ["'](.+?)["']/ || $page =~ /(data-src|data-url-live)="(.+?)"/ || $page =~ /(url)&quot;:&quot;(http.+?)&quot;/) {
 		say "search_flux : found $1 info $2";
 		return $2;
 	}
@@ -61,7 +61,7 @@ sub search_flux {
 my $mech = init_mech();
 
 open(my $i,"<flux/stations") || die "can't read stations\n";
-my $last;
+my $last = "Nostalgie";
 while (<$i>) {
 	chomp;
 	my $url = <$i>;

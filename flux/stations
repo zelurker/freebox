@@ -55,13 +55,13 @@ http://direct.francebleu.fr/live/fbgascogne-midfi.mp3
 France bleu loire ocean
 http://direct.francebleu.fr/live/fbloireocean-midfi.mp3
 France Culture
-http://audio.scdn.arkena.com/11010/franceculture-midfi128.mp3
+http://direct.franceculture.fr/live/franceculture-midfi.mp3
 France Info
 http://chai5she.cdn.dvmr.fr/franceinfo-midfi.mp3
 France Inter
 http://direct.franceinter.fr/ts/franceinter-midfi.mp3
 France Musique
-http://audio.scdn.arkena.com/11012/francemusique-midfi128.mp3
+http://direct.francemusique.fr/live/francemusique-midfi.mp3
 Frequence 3
 http://streams.frequence3.net/mp3-192.m3u
 Frequence Terre
@@ -139,7 +139,13 @@ http://mfm-wr3.ice.infomaniak.ch/mfm-wr1-128.mp3 http://mfmradio.fr/winradio/pro
 NRJ
 http://cdn.nrjaudio.fm/audio1/fr/30001/mp3_128.mp3?origine=frequence-radio
 Nostalgie
-http://cdn.nrjaudio.fm/audio1/fr/30601/mp3_128.mp3
+http://cdn.nrjaudio.fm/audio1/fr/30601/mp3_128.mp3?origine=fluxradio
+Nostalgie le printemps qui chante
+http://cdn.nrjaudio.fm/adwz1/fr/55981/aac_64.mp3?awparams=companionAds%3Atrue;playerid:Nostalgie-Le-Printemps-Qui-Chante&origine=playerweb
+Nostalgie cette année là
+http://cdn.nrjaudio.fm/adwz1/fr/55673/aac_64.mp3?awparams=companionAds%3Atrue;playerid:Nostalgie-Cette-Annee-La&origine=playerweb
+Nostalgie Légendes
+http://cdn.nrjaudio.fm/adwz1/fr/55196/aac_64.mp3?awparams=companionAds%3Atrue;playerid:Nostalgie-Legendes&origine=playerweb
 Oui FM
 http://ouifm.ice.infomaniak.ch/ouifm-high.mp3
 Oui FM Alternatif
