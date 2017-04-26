@@ -1369,6 +1369,7 @@ sub commands {
 						print "left: $name,$serv,$flav,$audio,$video\n";
 						$serv =~ s/\/$//; # supprime un éventuel / à la fin
 						# Remet le "bon" service dans la liste
+                        $serv =~ s/get,.+//;
 						$serv =~ s/(\/http.+)/\/http/; # vire un http (direct)
 						# si $serv contient des /, alors il a déjà le
 						# chemin complet pour la sélection actuelle, du
