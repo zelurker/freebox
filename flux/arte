@@ -13,12 +13,14 @@ my $str = shift @ARGV;
 my @arg = split(/\//,$str);
 
 sub decode_prg {
-	$_ = shift;
-	if (ref($_) eq "ARRAY") {
+    $_ = shift;
+    if (ref($_) eq "ARRAY") {
         foreach (@$_) {
             if ($_->{programId}) {
                 say $_->{title};
-                say "$str/vid:$_->{programId}";
+                my $url = $_->{url};
+                $url =~ s/\//|/g; # pour que l'url puisse être passée en argument, on a pas le droit au /
+                    say "$str/vid:$_->{programId},$url";
             } else {
 # apparemment ça peut arriver... !
                 say STDERR "decode_prg: pas de programid pour ça : ".Dumper($_);
@@ -30,9 +32,9 @@ sub decode_prg {
 }
 
 sub decode_type {
-    # décodage catégorie
-	$_ = shift;
-	if (ref($_) eq "ARRAY") {
+# décodage catégorie
+    $_ = shift;
+    if (ref($_) eq "ARRAY") {
         foreach (@$_) {
             if ($_->{type}) { # catégories de vidéos
                 if (!$arg[0] && $_->{title}) {
@@ -54,9 +56,9 @@ sub decode_type {
 }
 
 sub decode_main {
-	$_ = shift;
-	if (ref($_) eq "HASH") {
-		my %hash = %$_;
+    $_ = shift;
+    if (ref($_) eq "HASH") {
+        my %hash = %$_;
         if ($hash{tvguide}) { # racine du nouveau hash 2017
             return decode_type($hash{page}{zones});
         } else {
@@ -67,34 +69,49 @@ sub decode_main {
 }
 
 if ($arg[$#arg] =~ /vid:(.+)/) {
-	# On demande une vidéo !
-	my $code = $1;
-	if (open(F,">cache/arte/last_serv")) {
-		print F $str;
-		close(F);
-	}
-	my $url = "https://api.arte.tv/api/player/v1/config/fr/$code?platform=ARTEPLUS7&lang=fr_FR";
-	my $streams = myget($url,"cache/arte/$code",7);
-	my $json = decode_json($streams);
-	my $hash = $json->{videoJsonPlayer}{VSR};
-	print "direct\n";
-	foreach (sort { $a cmp $b } keys %$hash) {
-		my $h = $hash->{$_};
-		next if ($h->{mediaType} eq "hls"); # hls c'est du m3u, on en veut pas!
-		print "$h->{mediaType} $h->{width}x$h->{height} @ $h->{bitrate}kbps $h->{versionLibelle}\n";
-		if ($h->{streamer}) {
-			print "get,$h->{streamer}$h->{url}\n";
-		} else {
-			print "get,$h->{url}\n";
-		}
-	}
-	exit(0);
+# On demande une vidéo !
+    my $code = $1;
+    my $url0;
+    ($code,$url0) = split(/,/,$code);
+    $url0 =~ s/\|/\//g;
+    say STDERR "url0 $url0";
+    if (open(F,">cache/arte/last_serv")) {
+        print F $str;
+        close(F);
+    }
+    my $url = "https://api.arte.tv/api/player/v1/config/fr/$code?platform=ARTEPLUS7&lang=fr_FR";
+    my $streams = myget($url,"cache/arte/$code",7);
+    my $json = decode_json($streams);
+    my $hash = $json->{videoJsonPlayer}{VSR};
+    print "direct\n";
+    if (!$hash || ref($hash) ne "HASH") {
+        say STDERR "vid: ref(hash) = ",ref($hash)," calling myget url0=$url0";
+# 1 on récupère la page html liée
+        my $html = myget($url0,"cache/arte/$code.html",7);
+# on récupère l'url de l'iframe video...
+        ($url) = $html =~ /iframe allow.+?src="(.+?)"/;
+        my $player = myget($url,"cache/arte/$code.player",7);
+        ($json) = $player =~ /js_json = (.+?);/;
+        $json = decode_json($json);
+        $hash = $json->{videoJsonPlayer}{VSR};
+    }
+    foreach (sort { $a cmp $b } keys %$hash) {
+        my $h = $hash->{$_};
+        next if ($h->{mediaType} eq "hls"); # hls c'est du m3u, on en veut pas!
+            print "$h->{mediaType} $h->{width}x$h->{height} @ $h->{bitrate}kbps $h->{versionLibelle}\n";
+        if ($h->{streamer}) {
+            print "get,$h->{streamer}$h->{url}\n";
+        } else {
+            print "get,$h->{url}\n";
+        }
+    }
+    exit(0);
 } elsif ($str =~ /^get,(.+)/) {
-	my $url = $1;
-	my ($file) = $url =~ /.+\/(.+?)$/;
-	$file = "cache/arte/$file";
-	print STDERR "arte: file $file from url $url\n";
-	link_get::link_get($file,$url);
+    my $url = $1;
+    my ($file) = $url =~ /.+\/(.+?)$/;
+    $file = "cache/arte/$file";
+    print STDERR "arte: file $file from url $url\n";
+    link_get::link_get($file,$url);
 }
 
 print "list\n";
