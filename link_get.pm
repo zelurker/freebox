@@ -72,7 +72,10 @@ sub link_get {
 				last if ($file !~ /mp3$/i && $found_audio && $found_video);
 			}
 
-			sleep(1);
+			# lien get sur le réseau, y a vraiment intérêt à lui laisser de
+			# l'avance, 1s ne semble pas assez dans tous les cas, va pour
+			# 1.5 alors...
+			select undef,undef,undef,1.5;
 		}
 	}
 	print "$file\n"; # Renvoie le nom du fichier à list.pl
