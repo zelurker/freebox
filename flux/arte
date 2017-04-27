@@ -136,9 +136,10 @@ if ($arg[$#arg] =~ /vid:(.+)/) {
     link_get::link_get($file,$url);
 }
 
-print "encoding: latin1\nlist\n";
-
 my $page = myget("http://www.arte.tv/guide/fr/plus7/","cache/arte/j0",1/24.0);
+# l'encoding doit être après le myget parce que si l'html est en utf8, le
+# json est en latin !!!
+print "encoding: latin1\nlist\n";
 my $capture = 0;
 my $json;
 # le json dans de l'html c'est toujours merdique, ça vient de changer en
