@@ -11,14 +11,16 @@ use Data::Dumper;
 # binmode STDOUT,":utf8";
 my $str = shift @ARGV;
 my @arg = split(/\//,$str);
+my $utf = $ENV{LANG} =~ /utf/i;
 
 sub decode_prg {
     $_ = shift;
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
             if ($_->{programId}) {
-                say $_->{title};
+                say $_->{title},($_->{subtitle} ? " - ".$_->{subtitle} : "");
                 my $url = $_->{url};
+				$url = "http://www.arte.tv$url" if ($url !~ /^http/);
                 $url =~ s/\//|/g; # pour que l'url puisse être passée en argument, on a pas le droit au /
                     say "$str/vid:$_->{programId},$url";
             } else {
@@ -83,18 +85,38 @@ if ($arg[$#arg] =~ /vid:(.+)/) {
     my $streams = myget($url,"cache/arte/$code",7);
     my $json = decode_json($streams);
     my $hash = $json->{videoJsonPlayer}{VSR};
-    print "direct\n";
     if (!$hash || ref($hash) ne "HASH") {
         say STDERR "vid: ref(hash) = ",ref($hash)," calling myget url0=$url0";
 # 1 on récupère la page html liée
         my $html = myget($url0,"cache/arte/$code.html",7);
 # on récupère l'url de l'iframe video...
         ($url) = $html =~ /iframe allow.+?src="(.+?)"/;
+		if (!$url) {
+			# dans ce cas là, c'est une page d'index probablement
+			if ($html =~ /__INITIAL_STATE__ = (.+);/) {
+				$json = decode_entities($1);
+				eval  {
+					$json = decode_json( $json);
+				};
+				if ($@) {
+					die "arte: couille dans le potage au niveau json $?:$@\n";
+				}
+			} else {
+				die "pas trouvé le json cache cache/arte/$code.html";
+			}
+			$str =~ s/\/vid:.+//;
+			say "encoding: latin1";
+			say "list";
+			say STDERR "flux/arte: calling decode_prog sur liste";
+			decode_prg($json->{collection}{videos});
+			exit(0);
+		}
         my $player = myget($url,"cache/arte/$code.player",7);
         ($json) = $player =~ /js_json = (.+?);/;
         $json = decode_json($json);
         $hash = $json->{videoJsonPlayer}{VSR};
     }
+    print "direct\n";
     foreach (sort { $a cmp $b } keys %$hash) {
         my $h = $hash->{$_};
         next if ($h->{mediaType} eq "hls"); # hls c'est du m3u, on en veut pas!
@@ -114,7 +136,7 @@ if ($arg[$#arg] =~ /vid:(.+)/) {
     link_get::link_get($file,$url);
 }
 
-print "list\n";
+print "encoding: latin1\nlist\n";
 
 my $page = myget("http://www.arte.tv/guide/fr/plus7/","cache/arte/j0",1/24.0);
 my $capture = 0;

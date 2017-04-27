@@ -712,7 +712,7 @@ sub read_list {
 			my $last = undef;
 			while (<F>) {
 				say "list: from plugin : $_";
-				if (/encoding:/) {
+				if (/^encoding:/) {
 					$encoding = $_;
 					print "encoding: $encoding\n";
 					next;
@@ -729,9 +729,12 @@ sub read_list {
 				eval {
 					if ($latin && $encoding =~ /utf/i) {
 						Encode::from_to($name, "utf-8", "iso-8859-1")
-					} elsif (!$latin && $encoding !~/utf/i) {
+					} elsif (!$latin && $encoding && $encoding !~/utf/i) {
 						Encode::from_to($name, "iso-8859-1","utf-8")
+					} else {
+						say "pas d'encoding";
 					}
+					$name =~ s/\xc3\x85\xc2\x93/oe/g;
 				};
 				if ($@) {
 					print "read_list: pb3 conv utf $name\n";

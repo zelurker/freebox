@@ -50,7 +50,9 @@ sub myget {
 	my $type = $r->header("Content-type");
 	print STDERR "myget: got type $type\n";
 	if ($type =~ /charset=(.+)/) {
-		print "encoding: $1\n";
+		# dangereux si on enchaine les requêtes... on supprime pour
+		# l'instant
+		# print "encoding: $1\n";
 	}
 	if ($cache) {
 		open(my $f,">$cache");
