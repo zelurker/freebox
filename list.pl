@@ -696,11 +696,13 @@ sub read_list {
 
 				print "list: execution plugin flux $b param $serv base_flux $base_flux\n";
 				open(F,"flux/$b \"$serv\"|");
-				$mode_flux = <F>;
-				if ($mode_flux =~ /encoding/) {
-					$encoding = $mode_flux;
+				do {
 					$mode_flux = <F>;
-				}
+					if ($mode_flux =~ /encoding/) {
+						$encoding = $mode_flux;
+						$mode_flux = <F>;
+					}
+				} while ($mode_flux =~ /encoding/);
 				chomp $mode_flux;
 			} else {
 				if (!open(F,"<flux/$base_flux")) {
