@@ -2,6 +2,8 @@
 
 use strict;
 use warnings;
+use Encode;
+use v5.10;
 
 # Récupérés par google images, voir le script search_radios.pl
 my %icons = (
@@ -17,7 +19,9 @@ my %icons = (
   "Bide et Musique" => "http://www.bide-et-musique.com/images/logo/logo-fondnoir.jpg",
   "C9 Radio" => "http://www.allzicradio.com/media/radios/c9-radio.jpg",
   "CambosFM" => "http://i.img.co/radio/87/92/19287_145.png",
-  "Chérie FM" => "https://upload.wikimedia.org/wikipedia/fr/3/32/Ch%25C3%25A9rie_FM_logo_2007.png",
+  "Chérie FM" => "http://players.nrjaudio.fm/live-metadata/player/img/player-files/cfm/logos/640x640/CHERIE_Default.png",
+  "Chérie 50 nuances de Grey" => "http://players.nrjaudio.fm/live-metadata/player/img/player-files/cfm/logos/640x640/P_LOGO_CHERIE_50_NUANCES_GREY.png",
+  "Chérie Love Songs" => "http://players.nrjaudio.fm/live-metadata/player/img/player-files/cfm/logos/640x640/CHERIE_LOVE_SONG_3.png",
   "Classic 21 128k mp3" => "http://bestradio.fm/uploads/posts/2014-07/thumbs/1405275475_classic-21-radio-online-fm-belgium.jpg",
   "Classic 21 64k aac" => "http://bestradio.fm/uploads/posts/2014-07/thumbs/1405275475_classic-21-radio-online-fm-belgium.jpg",
   "Clube Brazil" => "http://a2.ec-images.myspacecdn.com/images02/115/2553a924daf14c39967bca38bb319345/l.jpg",
@@ -134,7 +138,16 @@ my %icons = (
 
 sub get_radio_pic {
 	my ($name,$rpic) = @_;
+    if ($name =~ /[\xc3\xc5]/) { # détection utf8 à 2 balles...
+        # le source est en latin1, faut faire correspondre
+        eval {
+            Encode::from_to($name, "utf-8", "iso-8859-1");
+        };
+    }
 	my $url = $icons{$name};
+    if (!$url) {
+        say "get_radio_pic: pas d'icone pour $name";
+    }
 	my $test = 0;
 	if ($name =~ /rtl 2/i) {
 		$test = 1;
