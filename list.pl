@@ -2005,7 +2005,7 @@ sub disp_list {
 			if ($source =~ /(Enregistrement|livetv)/) {
 				out::send_cmd_info("prog $service&$source/$base_flux") if ($info);
 			} else {
-				out::send_cmd_info("prog $name&$source/$base_flux,$service") if ($info);
+				out::send_cmd_info("prog $name&$source/$base_flux|$service") if ($info);
 			}
 		}
 		$last_list = $cur;

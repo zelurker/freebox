@@ -6,7 +6,6 @@ use progs::telerama;
 use Cpanel::JSON::XS qw(decode_json);
 use HTML::Entities;
 use v5.10;
-use Data::Dumper;
 # require "http.pl";
 
 @progs::arte::ISA = ("progs::telerama");
@@ -25,7 +24,11 @@ sub find_id {
 	if (ref($_) eq "HASH") {
 		my %hash = %$_;
         if ($hash{tvguide}) { # racine du nouveau hash 2017
-            return find_id($hash{page}{zones},$id);
+			if ($hash{page}{zones}) {
+				return find_id($hash{page}{zones},$id);
+			} elsif ($hash{collection}{videos}) {
+				return find_id($hash{collection}{videos},$id);
+			}
 		}
 		return find_id($hash{teasers},$id) if ($hash{teasers});
 		if ($hash{programId} && $hash{programId} eq $id) {
@@ -40,24 +43,9 @@ sub find_id {
 	undef;
 }
 
-sub get {
-	my ($p,$channel,$source,$base_flux,$serv) = @_;
-	# print "arte: channel $channel,$source,$base_flux,$serv\n";
-	return undef if ($source !~ /flux/ || $base_flux !~ /^arte/);
-	if ($serv !~ /vid:(.+)/ && open(F,"<cache/arte/last_serv")) {
-		$serv = <F>;
-		chomp $serv;
-		close(F);
-	}
-	$serv =~ s/vid:(.+),.+/vid:$1/;
-	say "arte: serv $serv";
- 	return undef if ($serv !~ /vid:(.+)/);
- 	my $code = $1;
-
-	@arg = split(/\//,$serv);
-	my ($f,$json);
-	say "arte arg0 $arg[0]";
-	return undef if (!open($f,"<cache/arte/j0"));
+sub read_json {
+	my $f = shift;
+	my $json;
 	while (<$f>) {
 		chomp;
 		if (/__INITIAL_STATE__ = (.+);/) {
@@ -66,6 +54,39 @@ sub get {
 		}
 	}
 	close($f);
+	$json;
+}
+
+sub read_last_serv {
+	my $serv;
+	if (open(F,"<cache/arte/last_serv")) {
+		$serv = <F>;
+		chomp $serv;
+		close(F);
+	}
+	$serv;
+}
+
+sub get {
+	my ($p,$channel,$source,$base_flux,$serv) = @_;
+	# print "arte: channel $channel,$source,$base_flux,$serv\n";
+	return undef if ($source !~ /flux/ || $base_flux !~ /^arte/);
+	@arg = split(/\//,$serv);
+	if ($serv !~ /vid:(.+)/ && $#arg > 0) {
+		$serv = read_last_serv();
+	}
+	$serv =~ s/vid:(.+),.+/vid:$1/;
+ 	return undef if ($serv !~ /vid:(.+)/);
+ 	my $code = $1;
+
+	@arg = split(/\//,$serv);
+	my ($f,$json);
+
+	# ça se complique, on a 3 sources de json possibles, et les 3 ont des
+	# formats différents, bien sûr... !
+	# voilà le 1er, l'index principal du site...
+	return undef if (!open($f,"<cache/arte/j0"));
+	$json = read_json($f);
 	eval {
 		$json = decode_json($json);
 	};
@@ -73,26 +94,34 @@ sub get {
 		print "progs/arte: decode_json error $! à partir de $json\n";
 		return undef;
 	}
-	say "arte: find_id json ",ref($json)," code $code";
 	my $hash = find_id($json,$code);
-	say "arte: hash $hash";
+	if (!$hash) {
+
+		# si ça marche pas, on passe à la 2ème source : si on est sur une
+		# liste de vidéos genre concerts ou séries, dans ce cas là faut
+		# récupérer le bon serv de flux/arte.pm dans last_serv...
+		$serv = read_last_serv();
+		my ($id) = $serv =~ /vid:(.+?),/;
+		if ($id ne $code) {
+			if (open($f,"<cache/arte/$id.html")) {
+				$json = read_json($f);
+				$json = decode_json($json);
+			}
+		}
+		$hash = find_id($json,$code) if (!$hash);
+	}
 	my $date = $hash->{creationDate}; # pas sûr
-	my ($year,$mon,$day) = split(/\-/,$date);
-	$date = "$day/$mon/$year";
+	$date = $hash->{videoRightsBegin} if (!$date);
+	if ($date) {
+		my ($year,$mon,$day) = split(/\-/,$date);
+		$date = "$day/$mon/$year";
+	}
 	my $sum = $hash->{teaser};
 
 	# On vérifie si on a le fichier détaillé, sans le récupérer, il n'y a
 	# qu'un résumé + long utile dedans pour ça...
 	my $title = $hash->{title};
 	my $sub = $hash->{subtitle};
-	if (open(my $f,"<cache/arte/$code")) {
-		@_ = <$f>;
-		close($f);
-		my $truc = join("\n",@_);
-		my $j = decode_json($truc);
-		$sum .= " ".$j->{videoJsonPlayer}{VDE};
-	}
-
 	my $img = $hash->{images};
 	# les images sont un gros merdier dans la version 2017, c'est dingue
 	# d'en garder autant !
@@ -110,6 +139,27 @@ sub get {
 			last;
 		}
 	}
+	if (!$img || ref($img) eq "ARRAY") {
+		$img = $hash->{mainImage}{url};
+	}
+	if (open(my $f,"<cache/arte/$code")) {
+		# Et voilà la 3ème, en lecture directe d'une vidéo on a un hash
+		# pour le player d'un format totalement différent.
+		@_ = <$f>;
+		close($f);
+		my $truc = join("\n",@_);
+		my $j = decode_json(decode_entities($truc));
+		$title = $j->{videoJsonPlayer}{VTI} if (!$title);
+		$sub = $j->{videoJsonPlayer}{V7T} if (!$sub);
+		$sum .= " ".$j->{videoJsonPlayer}{VDE} if (!$sum);
+		$img = $j->{videoJsonPlayer}{VTU}{IUR} if (!$img || ref($img) eq "ARRAY");
+		# Note : apparemment il manque la date dans celui là, on peut la
+		# récupérer si on va lire le fichier .player, mais bon la date
+		# n'est pas vraiment super importante ici...
+	} elsif (!$title) {
+		return undef;
+	}
+
 	my @tab = (undef, # chan id
 		"$source", $title,
 		undef, # début

@@ -410,7 +410,7 @@ sub commands {
 	} elsif ($cmd =~ s/^prog //) { # on vire le prog, garde que la chaine
 		# Note : $long est passé collé à la commande par un :
 		# mais il est séparé avant même l'interprêtation, dès la lecture
-		# Nouvelle syntaxe prog[:long] chaine,source/base_flux
+		# Nouvelle syntaxe prog[:long] chaine&source/base_flux[|serv]
 		# ça devient obligatoire d'avoir la source liée à ça avec toutes les
 		# sources de programmes maintenant
 		$cmd =~ s/&(.+)//;
@@ -418,7 +418,7 @@ sub commands {
 		if ($source =~ s/\/(.+)//) {
 			$base_flux = $1;
 			$base_flux =~ s/^stations\/.+/stations/;
-			$base_flux =~ s/,(.+)//;
+			$base_flux =~ s/\|(.+)//;
 			$serv = $1;
 		} else {
 			$base_flux = "";
