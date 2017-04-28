@@ -68,7 +68,9 @@ if (!$have_fb || !$have_dvb) {
 
 my ($mode_opened,$mode_sel);
 
-my ($chan,$source,$serv,$flav) = out::get_current();
+my ($chan,$source,$serv,$flav,undef,undef,undef,@tab_serv) = out::get_current();
+$serv = $tab_serv[$#tab_serv] if (@tab_serv);
+say "tab_serv $tab_serv[0] fin $tab_serv[$#tab_serv]";
 # Si base_flux contient une recherche + quelque chose d'autre, tronque à la
 # recherche. On ne peut pas restaurer l'url d'une vidéo précise, il vaut mieux
 # retourner sur la recherche
@@ -628,6 +630,7 @@ sub read_list {
 				# traiter le retour de youtube-dl.
 
 				my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+				$serv = $tab_serv[$#tab_serv];
 				print "list: name $name,$serv,$flav,$audio,$video mode_flux $mode_flux base_flux $base_flux\n";
 				if ($base_flux =~ /result:/ && $base_flux !~ /result:.*\// &&
 					$serv =~ /http/) {
@@ -653,34 +656,27 @@ sub read_list {
 					}
 					$serv = "result:$serv";
 					$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
+					splice @tab_serv,2;
+					$tab_serv[1] = $serv;
 				} elsif ($serv =~ /^\+/) { # commence par + -> reset base_flux
 					$serv =~ s/^.//; # Supprime le + !
 					if ($serv !~ /http/) {
 						$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
+						splice @tab_serv,2;
+						$tab_serv[1] = $serv;
 					} else {
 						$base_flux =~ s/^(.+?)\/.+$/$1/;
+						splice @tab_serv,1;
 					}
 					print "après simplification base_flux $base_flux\n";
 				} elsif (!$mode_flux && $base_flux !~ /\//) {
 					# pas de mode (list ou direct)
 					$serv = "";
 					$base_flux =~ s/^(.+?)\/.+/$1/;
+					splice @tab_serv,1;
 				} elsif ($serv !~ /^(http|mms|prog)/ && $base_flux !~ /(podcasts|youtube)/ && $serv !~ /\//) {
-					# Endroit merdique : on se retrouve serv = valeur
-					# retournée et on veut l'arborescence des valeurs à la
-					# place, dispo dans base_flux sauf que base_flux
-					# utilise uniquement les libellés, pas les valeurs !!!
-					# Je ne suis pas sûr que la méthode ici soit fiable
-					# dans tous les cas, j'en doute même mais bon le
-					# principe c'est :
-					# on récupère base_flux, on vire l'entête (nom du
-					# plugin) et on remplace le dernier élément par la
-					# vraie valeur retournée.
-					# Attention en cas de retour (flèche gauche), serv ne
-					# vaut rien, cas particulier
-					#
-					# Solution à long terme : avoir une liste des valeurs
-					# en + de celles des libellés...
+					# ne devrait plus arriver maintenant qu'on a
+					# tab_serv...
 					print "serv valait $serv\n";
 					my @arg = split(/\//,$base_flux);
 					$arg[$#arg] = $serv if (defined($serv));
@@ -852,6 +848,7 @@ sub switch_mode {
 	$source = $modes[$found];
 	print "switch_mode: source = $source\n";
 	$base_flux = undef;
+	@tab_serv = ();
 	read_list();
 }
 
@@ -1099,6 +1096,7 @@ sub load_file2 {
 	if ($serv =~ /m3u$/) {
 		my $old_base = $base_flux;
 		$base_flux .= "/$name";
+		push @tab_serv,$serv;
 		my $tv = ($name =~ /TV/i);
 		my $radio = ($name =~ /radio/i);
 		if (!$tv && !$radio) {
@@ -1198,6 +1196,7 @@ sub load_file2 {
 		# oui je sais, c'est un bordel
 		# A nettoyer un de ces jours dans run_mp1/freebox
 		print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
+		print G join("\n",@tab_serv);
 		close(G);
 		print "sending quit\n";
 		unlink("id","stream_info","stream_info.0");
@@ -1366,24 +1365,11 @@ sub commands {
 			if ($source =~ "flux" && $base_flux) {
 				if ($base_flux =~ /\//) {
 					$base_flux =~ s/(.+)\/.+/$1/;
+					pop @tab_serv;
 					if ($base_flux =~ /\//) {
 						$mode_flux = "list";
 						my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-						print "left: $name,$serv,$flav,$audio,$video\n";
-						$serv =~ s/\/$//; # supprime un éventuel / à la fin
-						# Remet le "bon" service dans la liste
-                        $serv =~ s/get,.+//;
-						$serv =~ s/(\/http.+)/\/http/; # vire un http (direct)
-						# si $serv contient des /, alors il a déjà le
-						# chemin complet pour la sélection actuelle, du
-						# coup il faut virer 2 niveaux !
-						if (!($serv =~ s/^(.+)\/.+\/.+/$1/)) {
-							$base_flux =~ /.+\/(.+)/;
-							$serv = $1;
-							print "left: corr base_flux $serv\n";
-						} else {
-							print "left: replace $name,$serv\n";
-						}
+						$serv = $tab_serv[$#tab_serv];
 						$list[$found] = [[$found,$name,$serv,$flav,$audio,$video]];
 						($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 						print "left: après màj $name,$serv,$flav,$audio,$video\n";
@@ -1586,12 +1572,14 @@ sub commands {
 				$base_flux = $name;
 				$base_flux =~ s/pic:.+? //;
 				$mode_flux = "";
+				@tab_serv = ($serv);
 				print "base_flux = $name\n";
 				read_list();
 			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// && $serv !~ /^get/) ||
 					($serv =~ / / && $base_flux !~ /youtube/) && $mode_flux)) {
 				$name =~ s/\//-/g;
 				$base_flux .= "/$name";
+				push @tab_serv,$serv;
 				$base_flux =~ s/pic:.+? //;
 				read_list();
 			} else {
@@ -1629,6 +1617,7 @@ sub commands {
 				if (open(F,"<current")) { # On récupère le nom de fichier
 					(undef,undef,undef,undef,undef,undef,$serv) = <F>;
 					chomp $serv;
+					@tab_serv = <F>;
 					close(F);
 				}
 				print "lancement $name,$source,$serv,$flav,$audio,$video\n";
