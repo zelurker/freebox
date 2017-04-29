@@ -674,14 +674,6 @@ sub read_list {
 					$serv = "";
 					$base_flux =~ s/^(.+?)\/.+/$1/;
 					splice @tab_serv,1;
-				} elsif ($serv !~ /^(http|mms|prog)/ && $base_flux !~ /(podcasts|youtube)/ && $serv !~ /\//) {
-					# ne devrait plus arriver maintenant qu'on a
-					# tab_serv...
-					print "serv valait $serv\n";
-					my @arg = split(/\//,$base_flux);
-					$arg[$#arg] = $serv if (defined($serv));
-					$serv = join("/",@arg[1...$#arg]);
-					print "reconstitution serv = $serv\n";
 				}
 				if (!$serv && $base_flux =~ /\/result\:(.+)/) {
 					# Quand on relance freebox, get_name ne peut pas avoir la

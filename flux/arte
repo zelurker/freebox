@@ -22,11 +22,8 @@ sub decode_prg {
                 my $url = $_->{url};
 				$url = "http://www.arte.tv$url" if ($url !~ /^http/);
                 $url =~ s/\//|/g; # pour que l'url puisse être passée en argument, on a pas le droit au /
-                    say "$str/vid:$_->{programId},$url";
-            } else {
-# apparemment ça peut arriver... !
-                say STDERR "decode_prg: pas de programid pour ça : ".Dumper($_);
-            }
+				say "$str/vid:$_->{programId},$url";
+            } # note : certains programmes genre vod n'ont pas de programid, on affiche donc pas
         }
     } else {
         die "deocde_prg: pas de tableau ?";
@@ -36,17 +33,30 @@ sub decode_prg {
 sub decode_type {
 # décodage catégorie
     $_ = shift;
+	my $base = 0;
+	$base = 1 if ($arg[0] =~ /^vid:/);
+	$str .= "/" if ($str);
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
             if ($_->{type}) { # catégories de vidéos
-                if (!$arg[0] && $_->{title}) {
+                if (!$arg[$base] && $_->{title}) {
 # Note : y a des entrées sans titre avec comme type "banner", mais y en a
 # plusieurs. Je suppose que c'est lié aux vidéos
 # affichées dans la bannière de haut d'écran, on laisse
 # tomber à priori...
-                    print $_->{title}."\n$_->{code}\n";
-                } elsif ($_->{code} eq $arg[0] || $_->{title} eq $arg[0]) {
+                    print $_->{title}."\n$str$_->{code}\n";
+                } elsif ($_->{code} eq $arg[$base]) {
+					my ($code,$url);
+					if ($_->{link}{url}) {
+						$url = $_->{link}{url};
+						$code = $_->{link}{page};
+						$url =~ s:/:|:g;
+					}
                     decode_prg($_->{teasers});
+					if ($url) {
+						say "Plus...";
+						say "vid:$code,$url";
+					}
                 }
             } else {
                 die "deocde_type: reconnais pas ça : ".Dumper($_);
@@ -70,51 +80,61 @@ sub decode_main {
     die "decode_main: pas de hash ?";
 }
 
-if ($arg[$#arg] =~ /vid:(.+)/) {
+sub decode_html {
+	my ($code,$url0) = @_;
+	my $json;
+	my $html = myget($url0,"cache/arte/$code.html",7);
+# on récupère l'url de l'iframe video...
+	my ($url) = $html =~ /iframe allow.+?src="(.+?)"/;
+	if (!$url) {
+		# dans ce cas là, c'est une page d'index probablement
+		if ($html =~ /__INITIAL_STATE__ = (.+);/) {
+			$json = decode_entities($1);
+			eval  {
+				$json = decode_json( $json);
+			};
+			if ($@) {
+				die "arte: couille dans le potage au niveau json $?:$@\n";
+			}
+		} else {
+			die "pas trouvé le json cache cache/arte/$code.html";
+		}
+		say "encoding: latin1";
+		say "list";
+		if ($json->{collection}{videos}) {
+			decode_prg($json->{collection}{videos});
+		} else {
+			decode_main($json);
+		}
+		exit(0);
+	}
+	my $player = myget($url,"cache/arte/$code.player",7);
+	($json) = $player =~ /js_json = (.+?);/;
+	$json = decode_json($json);
+	$json->{videoJsonPlayer}{VSR};
+}
+
+if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 # On demande une vidéo !
     my $code = $1;
     my $url0;
     ($code,$url0) = split(/,/,$code);
     $url0 =~ s/\|/\//g;
-    say STDERR "url0 $url0";
     if (open(F,">cache/arte/last_serv")) {
         print F $str;
         close(F);
     }
-    my $url = "https://api.arte.tv/api/player/v1/config/fr/$code?platform=ARTEPLUS7&lang=fr_FR";
-    my $streams = myget($url,"cache/arte/$code",7);
-    my $json = decode_json($streams);
-    my $hash = $json->{videoJsonPlayer}{VSR};
+	my ($url,$streams,$json,$hash);
+	if ($code =~ /\d/) { # un code normal contient un nombre
+		$url = "https://api.arte.tv/api/player/v1/config/fr/$code?platform=ARTEPLUS7&lang=fr_FR";
+		$streams = myget($url,"cache/arte/$code",7);
+		$json = decode_json($streams);
+		$hash = $json->{videoJsonPlayer}{VSR};
+	}
     if (!$hash || ref($hash) ne "HASH") {
         say STDERR "vid: ref(hash) = ",ref($hash)," calling myget url0=$url0";
 # 1 on récupère la page html liée
-        my $html = myget($url0,"cache/arte/$code.html",7);
-# on récupère l'url de l'iframe video...
-        ($url) = $html =~ /iframe allow.+?src="(.+?)"/;
-		if (!$url) {
-			# dans ce cas là, c'est une page d'index probablement
-			if ($html =~ /__INITIAL_STATE__ = (.+);/) {
-				$json = decode_entities($1);
-				eval  {
-					$json = decode_json( $json);
-				};
-				if ($@) {
-					die "arte: couille dans le potage au niveau json $?:$@\n";
-				}
-			} else {
-				die "pas trouvé le json cache cache/arte/$code.html";
-			}
-			$str =~ s/\/vid:.+//;
-			say "encoding: latin1";
-			say "list";
-			say STDERR "flux/arte: calling decode_prog sur liste";
-			decode_prg($json->{collection}{videos});
-			exit(0);
-		}
-        my $player = myget($url,"cache/arte/$code.player",7);
-        ($json) = $player =~ /js_json = (.+?);/;
-        $json = decode_json($json);
-        $hash = $json->{videoJsonPlayer}{VSR};
+		$hash = decode_html($code,$url0);
     }
     print "direct\n";
     foreach (sort { $a cmp $b } keys %$hash) {
