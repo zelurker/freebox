@@ -55,7 +55,7 @@ sub decode_type {
                     decode_prg($_->{teasers});
 					if ($url) {
 						say "Plus...";
-						say "vid:$code,$url";
+						say "+vid:$code,$url";
 					}
                 }
             } else {
@@ -132,10 +132,10 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 		$hash = $json->{videoJsonPlayer}{VSR};
 	}
     if (!$hash || ref($hash) ne "HASH") {
-        say STDERR "vid: ref(hash) = ",ref($hash)," calling myget url0=$url0";
 # 1 on récupère la page html liée
 		$hash = decode_html($code,$url0);
     }
+	say "encoding: latin1"; # c'est toujours du json...
     print "direct\n";
     foreach (sort { $a cmp $b } keys %$hash) {
         my $h = $hash->{$_};

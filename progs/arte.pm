@@ -54,6 +54,13 @@ sub read_json {
 		}
 	}
 	close($f);
+	eval {
+		$json = decode_json($json);
+	};
+	if ($@) {
+		print "progs/arte: decode_json error $! à partir de $json\n";
+		return undef;
+	}
 	$json;
 }
 
@@ -75,9 +82,10 @@ sub get {
 	if ($serv !~ /vid:(.+)/ && $#arg > 0) {
 		$serv = read_last_serv();
 	}
-	$serv =~ s/vid:(.+),.+/vid:$1/;
- 	return undef if ($serv !~ /vid:(.+)/);
+	@arg = split(/\//,$serv);
+ 	return undef if ($arg[$#arg] !~ /vid:(.+)/);
  	my $code = $1;
+	$code =~ s/,.+//;
 
 	@arg = split(/\//,$serv);
 	my ($f,$json);
@@ -85,27 +93,37 @@ sub get {
 	# ça se complique, on a 3 sources de json possibles, et les 3 ont des
 	# formats différents, bien sûr... !
 	# voilà le 1er, l'index principal du site...
-	return undef if (!open($f,"<cache/arte/j0"));
-	$json = read_json($f);
-	eval {
-		$json = decode_json($json);
-	};
-	if ($@) {
-		print "progs/arte: decode_json error $! à partir de $json\n";
-		return undef;
+	# ou un sous-index à retrouver !
+	for (my $idx=$#arg-1; $idx >= 0; $idx--) {
+		if ($arg[$idx] =~ /^vid:(.+?),/) {
+			return undef if (!open($f,"<cache/arte/$1.html"));
+			last;
+		}
 	}
+	if (!$f) {
+		return undef if (!open($f,"<cache/arte/j0"));
+	}
+	$json = read_json($f);
+	return undef if (!$json);
 	my $hash = find_id($json,$code);
+	if (!$hash && $code !~ /\d/ && open(my $f,"<cache/arte/$code.html")) {
+		$json = read_json($f);
+		return undef if (!$json);
+		$hash = find_id($json,$code);
+	}
 	if (!$hash) {
 
 		# si ça marche pas, on passe à la 2ème source : si on est sur une
 		# liste de vidéos genre concerts ou séries, dans ce cas là faut
 		# récupérer le bon serv de flux/arte.pm dans last_serv...
+		my $old_serv = $serv;
 		$serv = read_last_serv();
-		my ($id) = $serv =~ /vid:(.+?),/;
-		if ($id ne $code) {
+		@arg = split(/\//,$serv);
+		my ($id) = $arg[$#arg] =~ /vid:(.+?),/;
+		if ($id && $id ne $code && $old_serv !~ $id) {
 			if (open($f,"<cache/arte/$id.html")) {
 				$json = read_json($f);
-				$json = decode_json($json);
+				return undef if (!$json);
 			}
 		}
 		$hash = find_id($json,$code) if (!$hash);
@@ -142,7 +160,7 @@ sub get {
 	if (!$img || ref($img) eq "ARRAY") {
 		$img = $hash->{mainImage}{url};
 	}
-	if (open(my $f,"<cache/arte/$code")) {
+	if ($code !~ /^RC/ && open(my $f,"<cache/arte/$code")) {
 		# Et voilà la 3ème, en lecture directe d'une vidéo on a un hash
 		# pour le player d'un format totalement différent.
 		@_ = <$f>;

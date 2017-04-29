@@ -660,14 +660,10 @@ sub read_list {
 					$tab_serv[1] = $serv;
 				} elsif ($serv =~ /^\+/) { # commence par + -> reset base_flux
 					$serv =~ s/^.//; # Supprime le + !
-					if ($serv !~ /http/) {
-						$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
-						splice @tab_serv,2;
-						$tab_serv[1] = $serv;
-					} else {
-						$base_flux =~ s/^(.+?)\/.+$/$1/;
-						splice @tab_serv,1;
-					}
+					my ($fin) = $base_flux =~ /.+\/(.+)/;
+					$base_flux =~ s/^(.+?)\/.+$/$1\/$fin/;
+					splice @tab_serv,2;
+					$tab_serv[1] = $serv;
 					print "après simplification base_flux $base_flux\n";
 				} elsif (!$mode_flux && $base_flux !~ /\//) {
 					# pas de mode (list ou direct)
