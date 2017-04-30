@@ -632,7 +632,7 @@ while (1) {
 				send_cmd_prog();
 				out::send_cmd_fifo("sock_list","reset_current");
 			}
-			handle_images("$artist - $titre") # ($album)")
+			handle_images("$artist - $titre") if ($titre); # ($album)")
 		} elsif (!$stream && /^A:[ \t]*(.+?) \((.+?)\..+?\) of (.+?) \((.+?)\)/) {
 			my ($t1,$t2,$t3,$t4) = ($1,$2,$3,$4);
 			$pos = $t1; # bookmark (podcast...)
