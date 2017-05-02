@@ -375,6 +375,8 @@ sub commands {
 		if (!$cleared && $name eq conv($channel) && $src !~ /^flux\/podcasts/) {
 			# Ne pas afficher de progress sur les podcasts, conflit avec
 			# l'info progs/podcasts
+            # A noter que ça pourrait être pas mal d'avoir le progress
+            # quand même... à voir un de ces jours !
 			read_stream_info(time(),$channel,$info{$name});
 		}
 	} elsif ($cmd =~ /^lyrics/) {
@@ -386,7 +388,10 @@ sub commands {
 		}
 		$fh->close();
 		$info{$name}->{lyrics} = $lyrics;
-		if (!$cleared && $name eq conv($channel)) {
+        # on reçoit des lyrics pour les podcasts des fois quand le mp3
+        # contient des tags, radio france le fait. On élimine l'affichage
+        # pour ça.
+		if (!$cleared && $name eq conv($channel) && $src !~ /^flux\/podcasts/) {
 			read_stream_info(time(),$channel,$info{$name});
 		}
 	} elsif ($cmd eq "time") {
