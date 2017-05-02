@@ -8,6 +8,7 @@ use Data::Dumper;
 use WWW::Mechanize;
 use HTML::Entities;
 use link_get;
+use v5.10;
 
 # Refonte complète, on abandonne podcasters qui est pourri finalement
 # et on ne va garder que des résultats google pour les recherches...
@@ -159,6 +160,7 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 	s/$char/\'/g;
 	$char = chr(8230); # apostrophe fermé apparemment, merdier windoze
 	s/$char/\'/g;
+	$_ = decode_entities($_);
 	if ($r && open(F,">","pod")) {
 		print F $_;
 		close(F);
@@ -244,6 +246,8 @@ sub get_date {
 
 sub header {
 	my $msg = shift;
+	# l'encodage change à chaque version de perl, un truc de dingue !
+	say "encoding: latin1";
 	print "$msg\n";
 	print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
 	print "Consulter une url xml...\nRecherche:url podcast xml\n"; # Transmis en mode list (ne contient pas //)

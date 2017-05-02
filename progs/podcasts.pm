@@ -7,7 +7,6 @@ use progs::telerama;
 use XML::Simple;
 use HTML::Entities;
 use Date::Parse;
-use Encode;
 
 @progs::podcasts::ISA = ("progs::telerama");
 
@@ -39,12 +38,6 @@ sub get {
 			@_ = <F>;
 			close(F);
 			$_ = join("",@_);
-			eval {
-				Encode::from_to($_, "iso-8859-1", "utf-8");
-			};
-			if ($@) {
-				print STDERR "encodage utf8 : $@\n";
-			}
 		} else {
 			die "pas de fichier pod ???\n";
 		}
