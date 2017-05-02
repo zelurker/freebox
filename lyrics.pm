@@ -134,6 +134,21 @@ sub handle_lyrics {
 			}
 		}
 		print "lyrics musixmatch.com : $lyrics\n";
+    } elsif ($u =~ /lyricsmania.com/) {
+		foreach (split /\n/,$_) {
+			if (/div class="fb-quotable"/) {
+				$start = 1;
+			} elsif ($start) {
+				s/\r//g;
+				s/^[ \t]+//;
+				s/[ \t]+$//s;
+				$start = 0 if (s/<\/div.+//);
+                s/<br.*?>/\n/g;
+                s/<.+?>//g;
+				$lyrics .= decode_entities($_);
+			}
+		}
+		print "lyrics lyricsmania.com : $lyrics\n";
 	} elsif ($u =~ /lyrics.wikia.com/) {
 		foreach (split /\n/,$_) {
 			if (s/<div class=.lyricbox.>//) {
@@ -163,6 +178,8 @@ sub pure_ascii {
 	s/ +/ /g;
 	s/^ +//;
 	s/ +$//;
+	# Et pendant qu'on y est, on va virer les ponctuations...
+	s/[\.,\?\;]//g;
 	$_;
 }
 
@@ -253,7 +270,7 @@ sub get_lyrics {
 		if ($u =~ /url.q=(http.+?)&/) {
 			$u = $1;
 			print $_->text,"\n$u\n";
-			if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com)/) {
+			if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com)/) {
 				my $old = $_;
 				my $text = pure_ascii($_->text);
 				if ($text =~ /$title/) {
