@@ -160,12 +160,14 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 	s/$char/\'/g;
 	$char = chr(8230); # apostrophe fermé apparemment, merdier windoze
 	s/$char/\'/g;
-	$_ = decode_entities($_);
+	# Ne surtout pas appeler ici decode_entities, le xml est très strict
+	# là-dessus
 	if ($r && open(F,">","pod")) {
 		print F $_;
 		close(F);
 	}
-	s/(&[^a])/&amp;/g;
+	# A priori c'est pas la peine de repasser le & ici...
+	# s/&([^a])/&amp;$1/g;
 	print STDERR "décodage xml\n" if ($debug);
 	# fichier xml podcast
 	my $found = 0;
@@ -207,7 +209,7 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 		# d'info. Je laisse quand même le code en commentaire au cas où...
 		# my $img = $_->{"media:thumbnail"}->{url};
 		# print "pic:$img " if ($img && $nb++ <= 10);
-		print $_->{title};
+		print decode_entities($_->{title});
 		my $date = $_->{pubDate};
 		$date = str2time($date) if ($date !~ /^\d+$/);
 		print " le ".get_date($date) if ($date);
@@ -246,7 +248,6 @@ sub get_date {
 
 sub header {
 	my $msg = shift;
-	# l'encodage change à chaque version de perl, un truc de dingue !
 	say "encoding: latin1";
 	print "$msg\n";
 	print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
