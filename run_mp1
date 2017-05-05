@@ -90,6 +90,7 @@ if [ $max -gt 0 ]; then
 				rm -f current player1.pid
 				ln -s $src$n/current
 				ln -s $src$n/player1.pid
+				echo $n > $src
 				exit 0
 			fi
 		fi
