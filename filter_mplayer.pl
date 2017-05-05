@@ -643,6 +643,7 @@ while (1) {
 					($titre) = $ogg->comment("TITLE");
 					($titre) = $ogg->comment("title") if (!$titre);
 					out::send_cmd_info("tracks\n$artist - $titre\n");
+					handle_images("$artist - $titre") if ($titre && $artist); # ($album)")
 				}
 				if (!$artist && !$titre && $chan =~ /(.+) - (.+)\..../) {
 					# Déduction de l'artiste et du titre sur le nom de fichier
