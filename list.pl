@@ -353,7 +353,7 @@ sub list_files {
 		}
 		push @list,[[$num++,$name,$service,-M $service]];
 	}
-	unlink "info_coords";
+	out::clear( "info_coords");
 	if ($conf{$tri} eq "date") {
 		@list = sort { $$a[0][3] <=> $$b[0][3] } @list;
 	} elsif ($conf{$tri} eq "hasard") {
