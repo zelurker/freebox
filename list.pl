@@ -1176,6 +1176,7 @@ sub load_file2 {
 	}
 	if ($serv) {
 		out::send_command("pause\n");
+		unlink("current");
 		open(G,">current");
 		my $src = $source; # ($source eq "cd" ? "flux" : $source);
 		$src .= "/$base_flux" if ($base_flux);

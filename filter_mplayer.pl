@@ -618,6 +618,7 @@ while (1) {
 			$titre = $list[$1];
 			print "filter: cddb: on prend titre = $titre artist $artist\n";
 			my $f;
+			unlink("current");
 			if (open($f,">current")) {
 				print $f "$titre ($duree[$1])\ncd/$artist - $album\ncddb://$1-99\n\n\ncddb://$1-99\n";
 				close($f);
