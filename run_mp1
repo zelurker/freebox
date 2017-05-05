@@ -67,6 +67,52 @@ echo run_mp1: src=$src video=$video audio=$audio flavour=$flavour service=$servi
 if [ "$src" == "flux" ]; then
 	exit 0
 fi
+if [ "$src" == "dvb" ]; then
+	max=`find /dev/dvb/adapter* -type d|wc -l`
+elif [ "$src" == "freeboxtv" ]; then
+	max=2
+fi
+# prépare un fichier current "de base" pour pouvoir comparer
+# les current éventuels déjà actifs...
+rm -f current player1.pid
+echo $chaine > current
+echo $src >> current
+echo $service >> current
+echo $flavour >> current
+if [ $max -gt 0 ]; then
+	for (( n=0; n<$max; n++ )); do
+		if ! [ -d $src$n ]; then
+			mkdir $src$n
+		fi
+		if [ -f $src$n/player1.pid ] && ps -p `cat $src$n/player1.pid` >& /dev/null; then
+			if [ "`head -n 4 $src$n/current`" == "`head -n 4 current`" ]; then
+				# On a trouvé !!!
+				rm -f current player1.pid
+				ln -s $src$n/current
+				ln -s $src$n/player1.pid
+				exit 0
+			fi
+		fi
+	done
+fi
+
+rm -f current # plus besoin du fichier current de base
+# on a pas de source déjà active, prochaine source à remplacer...
+if ! [ -f $src ]; then
+	nb=0
+else
+	nb=`cat $src`
+	nb=$(( $nb+1 ))
+	if [ "$nb" == "$max" ]; then
+		nb=0
+	fi
+fi
+if [ "$max" != "" ]; then
+	echo $nb > $src
+	ln -s $src$nb/player1.pid
+	ln -s $src$nb/current
+fi
+
 if [ -f player1.pid ] && ps -p `cat player1.pid` >& /dev/null; then
 	echo run_mp1: kill player1 `cat player1.pid`
 	kill `cat player1.pid` && rm -f player1.pid
@@ -95,7 +141,7 @@ while [ "$ok" == "0" ]; do
 	case $src in
 		dvb)
 			echo lancement mplayer -quiet -dumpfile "$name" -dumpstream dvb://"$service"
-			mplayer -quiet -dumpfile "$name" -dumpstream dvb://"$service" >& /dev/null &
+			mplayer -quiet -dumpfile "$name" -dumpstream dvb://$(( $nb+1 ))@"$service" >& /dev/null &
 			;;
 		freebox|freeboxtv|"radios freebox")
 			# On met -c 2 parce que j'ai une ligne trop pourrie en ce moment

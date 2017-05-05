@@ -1279,6 +1279,18 @@ read_list();
 
 sub quit {
    	unlink "info_list.pid";
+	while (<dvb?/player1.pid freeboxtv?/player1.pid>) {
+		open(F,"<$_");
+		my $pid = <F>;
+		chomp $pid;
+		close(F);
+		say "list quit: on efface $_";
+		unlink $_;
+		if (-d "/proc/$pid") {
+			kill "TERM" => $pid;
+			say "list quit: on kille $pid";
+		}
+	}
    	exit(0);
 }
 

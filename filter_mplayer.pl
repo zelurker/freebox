@@ -327,14 +327,6 @@ sub check_eof {
 		if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
 			print "filter: envoi nextchan exit $exit\n";
 			out::send_cmd_fifo("direct_sock_list","nextchan");
-		} elsif ($source =~ /(dvb|freebox)/) {
-			if ($pid_player1) {
-				print "pid player1 à tuer $pid_player1.\n";
-				kill "TERM",$pid_player1;
-				my $pid= `cat player1.pid`;
-				chomp $pid;
-				unlink "player1.pid" if ($pid == $pid_player1);
-			}
 		}
 
 		if ($length && $length>0 && ($pos-$start_pos)/$length<0.9 && $length > 300 &&
@@ -532,6 +524,8 @@ while (1) {
 			$height = $1;
 		} elsif (/ID_LENGTH=(.+)/) {
 			$length = $1;
+		} elsif (/ID_START_TIME=(.+)/) {
+			$start_pos = $1;
 		} elsif (/ID_AUDIO_CODEC=(.+)/) {
 			$codec = $1;
 			$codec =~ s/mpg123/mp3/;
@@ -664,6 +658,12 @@ while (1) {
 				out::send_cmd_info("progress ".int($t1*100/$t3)."%") if ($t3>0 && -f "info_coords");
 			}
 		} elsif (/Starting playback/) {
+			if (($source eq "dvb" || $source eq "freeboxtv") && $length) {
+				print "filter: starting playback, length = $length\n";
+				out::send_command("seek ".($length+$start_pos-5)." 2\n");
+			}
+			say "filter: start, source $source length $length";
+
 			if ($width && $height) {
 				open(F,">video_size") || die "can't write to video_size\n";
 				print "filter: init video $width x $height\n";
