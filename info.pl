@@ -232,11 +232,11 @@ sub disp_duree($) {
 sub disp_prog {
 	$cleared = 0;
 	my ($sub,$long) = @_;
-	encoding($sub);
 	if (!$sub) {
 		print "info: disp_prog sans sub !\n";
 		return;
 	}
+	encoding($sub);
 	print "disp_long : long:$long\n";
 	$lastprog = $sub;
 	$last_chan = $$sub[1];
