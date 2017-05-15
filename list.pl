@@ -216,11 +216,11 @@ sub cd_menu {
 
 sub apps_menu {
 	our %apps;
+	$encoding = "utf8";
 	@list = ();
 	if (!%apps) {
 		my $lang = lc($ENV{LANG});
 		my ($lang2) = ($lang =~ /^(..)_/);
-		print "test lang $lang,$lang2\n";
 		while (</usr/share/applications/*>) {
 			next if (!open(F,"<$_"));
 			my $file = $_;
@@ -242,6 +242,25 @@ sub apps_menu {
 					Encode::from_to($fields{name}, "utf-8", "iso-8859-1") if ($latin);
 				}
 			}
+			if ($fields{icon} !~ /\//) {
+				my $size = 0;
+				my $chosen = undef;
+				while ($_ = glob("/usr/share/pixmaps/$fields{icon}* /usr/share/icons/*/*/*/$fields{icon}*")) {
+					$fields{icon} = $_;
+					my ($sz) = $_ =~ /(\d+)x/;
+					if ($sz > $size) {
+						$size = $sz;
+						$chosen = $_;
+					}
+				}
+				if ($size) {
+					$fields{icon} = $chosen;
+				}
+			}
+			if ($fields{icon} !~ /\./) {
+				$fields{icon} .= ".png";
+			}
+			$fields{icon} = undef if (!-f $fields{icon});
 			push @{$apps{$fields{categories}}},[$fields{name},$fields{icon},$fields{exec}];
 			if (length($fields{categories}) < 2) {
 				print "categ $fields{categories}: $fields{name},$fields{icon},$fields{exec} fichier $file\n";
@@ -259,7 +278,7 @@ sub apps_menu {
 				push @list,[[1,$_,""]];
 			} elsif (!$_) {
 				foreach (@{$apps{$key}}) {
-					push @list,[[2,$$_[0],$$_[2]]];
+					push @list,[[2,$$_[0],$$_[2],undef,undef,undef,undef,$$_[1]]];
 				}
 			}
 		} elsif (!$base_flux) {
@@ -394,6 +413,7 @@ sub list_files {
 
 sub read_list {
 #	print "list: read_list source $source base_flux $base_flux mode_flux $mode_flux\n";
+	$encoding = "";
 	if (!$base_flux) {
 		$found = $conf{"sel_$source"};
 	}
@@ -1975,10 +1995,9 @@ sub disp_list {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
 			$info = 1;
 		}
-		if (!$latin && $source ne "flux" && $encoding !~ /utf/) {
-			# A priori il n'y a que les plugins de flux qui renvoient des
-			# trucs en utf8 ou qui convertissent autrement, tout le reste
-			# est en latin
+		if (!$latin && $source ne "flux" && $encoding && $encoding !~ /utf/) {
+			# on laisse tomber l'encodage par défaut, faut juste s'arranger
+			# pour initialiser correctement $encoding quand on arrive ici
 			eval {
 				Encode::from_to($cur, "iso-8859-1", "utf-8") ;
 			};

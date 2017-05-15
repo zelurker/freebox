@@ -948,11 +948,11 @@ static void handle_event(SDL_Event *event) {
     if (event->type != SDL_KEYDOWN) return;
     int input = event->key.keysym.sym;
     int unicode = event->key.keysym.unicode;
+    printf("reçu touche %d (%c) unicode %d %c scan %x\n",input,input,unicode,unicode,event->key.keysym.scancode);
     if (unicode && (input == 0 ||
 		((unicode >= 'a' && unicode <= 'z') || (unicode >= 'A' && unicode <= 'Z'))))
 	input = event->key.keysym.unicode;
     int mod = event->key.keysym.mod;
-    printf("reçu touche %d (%c) unicode %d %c\n",input,input,unicode,unicode);
     int n;
     if (mod & KMOD_SHIFT)
 	n=nb_keys; // skip the loop
