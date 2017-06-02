@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "step_property deinterlace
+get_property deinterlace" > fifo_cmd

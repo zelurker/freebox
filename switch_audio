@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo "switch_audio
+get_property switch_audio" > fifo_cmd
