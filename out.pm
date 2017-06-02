@@ -104,6 +104,7 @@ sub send_command {
 	my $cmd = shift;
 	if (sysopen(F,"fifo_cmd",O_WRONLY|O_NONBLOCK)) {
 		print "send_command : $cmd\n";
+		$cmd .= "\n" if ($cmd !~ /\n/);
 		print F $cmd;
 		close(F);
 	} else {
