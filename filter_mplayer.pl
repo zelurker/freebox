@@ -35,6 +35,7 @@ use lyrics;
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our $has_vignettes = undef;
 our ($child,$parent);
+our %setting;
 
 sub utf($) {
 	my $str = shift;
@@ -347,6 +348,14 @@ sub check_eof {
 		}
 	}
 	dbmclose %bookmarks;
+	if (%setting) {
+		if (open(F,">$ENV{HOME}/.freebox/$serv")) {
+			foreach (keys %setting) {
+				print F "$_ $setting{$_}\n";
+			}
+			close(F);
+		}
+	}
 	if (-f $args[1] && $args[1] =~ /^podcast/) {
 		utime(undef,undef,$args[1]); # touch sur le fichier pour les podcasts!
 	}
@@ -518,6 +527,11 @@ while (1) {
 		$_ = $1;
 		if (/^Server returned/) {
 			print "$_\n";
+		} elsif (/ANS_(.+)=(.+)/) {
+			my ($var,$val) = ($1,$2);
+			if ($source =~ /(dvb|freeboxtv)/) {
+				$setting{$var} = $val;
+			}
 		} elsif (/ID_VIDEO_WIDTH=(.+)/) {
 			$width = $1;
 		} elsif (/ID_VIDEO_HEIGHT=(.+)/) {
@@ -663,6 +677,17 @@ while (1) {
 			if (($source eq "dvb" || $source eq "freeboxtv") && $length) {
 				print "filter: starting playback, length = $length\n";
 				out::send_command("seek ".($length+$start_pos-5)." 2\n");
+				if (open(F,"<$ENV{HOME}/.freebox/$serv")) {
+					while (<F>) {
+						chomp;
+						my ($var,$val) = split / /,$_;
+						$setting{$var} = $val;
+						$val =~ s/yes/1/;
+						$val =~ s/^no$/0/;
+						out::send_command("set_property $var $val");
+					}
+					close(F);
+				}
 			}
 			say "filter: start, source $source length $length";
 
