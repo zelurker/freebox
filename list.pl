@@ -40,6 +40,7 @@ $inotify = new Linux::Inotify2;
 $inotify->blocking(0);
 
 our $net = out::have_net();
+say "list: have_net $net";
 our $have_fb = 0; # have_freebox
 $have_fb = out::have_freebox() if ($net);
 our $have_dvb = 1; # (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
@@ -90,6 +91,10 @@ our $updating = 0;
 
 sub update_pics {
 	my $rpic = shift;
+	if (!$net) {
+		say "update_pics: pas de réseau !";
+		return;
+	}
 	if (!@$rpic) {
 		print "update_pics: pas d'images\n";
 		return;

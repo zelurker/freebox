@@ -8,6 +8,7 @@ use Time::Local "timelocal_nocheck","timegm_nocheck";
 use chaines;
 require HTTP::Cookies;
 use Encode;
+use out;
 our $latin = ($ENV{LANG} !~ /UTF/i);
 
 # my @def_chan = ("France 2", "France 3", "France 4", "Arte", "TV5MONDE",
@@ -282,6 +283,7 @@ sub getListeProgrammes {
 
 		print "*** req_prog from getlisteprogrammes ***\n";
 	}
+	return undef if (!out::have_net());
 	my $response = req_prog($offset,$url);
 	return undef if (!$response->is_success);
 
@@ -305,6 +307,7 @@ sub update {
 		getListeProgrammes(0);
 		$p->{chaines} = \%chaines;
 	}
+	return undef if (!out::have_net());
 	for (my $n=0; $n<=$#chan; $n++) {
 		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
 		if ($channel eq $name && $num != 254) {
