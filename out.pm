@@ -118,9 +118,10 @@ sub have_net {
 		POSIX::sigaction(SIGALRM,
 			POSIX::SigAction->new(sub { die "alarm" }))
 			or die "Error setting SIGALRM handler: $!\n";
-		alarm(4);
-		my $p = new Net::Ping("syn",2);
-#		$p->port_number(80);
+		alarm(1);
+		my $p = new Net::Ping("tcp",2); # icmp demande root
+		# et pour le syn faut attendre explicitement la réponse
+		$p->port_number(53); # faut le port en tcp, 53 pour dns
 		# On passe l'ip pour éviter une résolution, ils doivent pas changer
 		# souvent de toutes façons
 		die "plus de google\n" if (!$p->ping("8.8.8.8"));
