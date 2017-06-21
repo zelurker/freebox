@@ -115,9 +115,7 @@ sub send_command {
 sub have_net {
 	my $net = 1;
 	eval {
-		POSIX::sigaction(SIGALRM,
-			POSIX::SigAction->new(sub { die "alarm" }))
-			or die "Error setting SIGALRM handler: $!\n";
+		local $SIG{ALRM} = sub { die "alarm exception" };
 		alarm(1);
 		my $p = new Net::Ping("tcp",2); # icmp demande root
 		# et pour le syn faut attendre explicitement la réponse
