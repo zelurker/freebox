@@ -7,6 +7,7 @@ use progs::telerama;
 use XML::Simple;
 use HTML::Entities;
 use Date::Parse;
+use v5.10;
 
 @progs::podcasts::ISA = ("progs::telerama");
 
@@ -34,13 +35,20 @@ sub get {
 
 	my $ref;
 	eval {
-		if (open(F,"<pod")) {
-			@_ = <F>;
-			close(F);
-			$_ = join("",@_);
-		} else {
-			die "pas de fichier pod ???\n";
-		}
+#		if ($latin) {
+#			open(F,"<:encoding(iso-8859-1)","pod") || die "peut pas lire pod\n";
+#		} else {
+#			open(F,"<:encoding(utf8)","pod") || die "peut pas lire pod\n";
+#		}
+		open(F,"<pod") || die "peut pas lire pod";
+		@_ = <F>;
+		close(F);
+		$_ = join("",@_);
+		# tsss, y a encore un pb d'encodage, on tâche de détecter si on a
+		# récupéré du latin en cherchant directement un code ascii de é ou
+		# de è, extrème mais on est un peu forcé là. Ca arrive sur le
+		# podcast de "le temps d'un bivouac"
+		Encode::from_to($_, "iso-8859-1","utf-8") if (/[\xe9\xea]/);
 		$ref	= XMLin($_);
 	};
 	if ($@) {
@@ -60,6 +68,7 @@ sub get {
 		my $date = $_->{pubDate};
 		$date = str2time($date) if ($date !~ /^\d+$/);
 		$title .= " le ".get_date($date) if ($date);
+		say "progs/podcasts: $title cmp $channel" if ($debug);
 		if ($title eq $channel) {
 			my $desc = mydecode($_->{"description"});
 			$date = get_date($date);
