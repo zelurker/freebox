@@ -58,11 +58,6 @@ int png_save_surface(char *filename, SDL_Surface *surf)
 	png_infop info_ptr;
 	int i, colortype;
 	png_bytep *row_pointers;
-	printf("png_save_surface shifts %d %d %d %d to %s\n",
-		surf->format->Rshift,
-		surf->format->Gshift,
-		surf->format->Bshift,
-		surf->format->Ashift,filename);
 
 	/* Opening output file */
 	fp = fopen(filename, "wb");
