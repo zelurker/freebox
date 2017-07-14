@@ -1,4 +1,4 @@
-WARNS = -Wno-write-strings -Wno-pointer-arith
+WARNS = -Wno-write-strings -Wno-pointer-arith -DSDL1
 # debug flags
 # CFLAGS=-Wall -g `sdl-config --cflags ` $(WARNS)
 

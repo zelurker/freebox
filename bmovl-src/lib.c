@@ -1,5 +1,10 @@
+#ifdef SDL1
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
+#else
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#endif
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -70,8 +75,9 @@ static int write_select(int fifo, void *buff, int len)
     return ret;
 }
 
-SDL_Surface *sdl_screen;
 static int desktop_w,desktop_h,desktop_bpp;
+#ifdef SDL1
+SDL_Surface *sdl_screen;
 
 static void get_video_info() {
   const SDL_VideoInfo *inf = SDL_GetVideoInfo();
@@ -79,18 +85,35 @@ static void get_video_info() {
   desktop_h = inf->current_h;
   desktop_bpp = inf->vfmt->BitsPerPixel;
 }
+#else
+SDL_Window *sdl_screen;
+SDL_Renderer *renderer;
+#endif
 
 void init_video() {
     if ( SDL_Init( SDL_INIT_VIDEO) < 0 ) {
 	fprintf(stderr, "Couldn't initialize SDL: %s\n",SDL_GetError());
 	exit(2);
     }
+#ifdef SDL1
     get_video_info();
     sdl_screen = SDL_SetVideoMode( desktop_w,desktop_h,
 	    desktop_bpp,SDL_SWSURFACE| SDL_ANYFORMAT|SDL_NOFRAME /* |SDL_FULLSCREEN */ );
-    SDL_ShowCursor(SDL_DISABLE);
     SDL_EnableUNICODE(1);
     SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
+#else
+    sdl_screen = SDL_CreateWindow("bmovl",
+	    SDL_WINDOWPOS_UNDEFINED,
+	    SDL_WINDOWPOS_UNDEFINED,
+	    0, 0,
+	    SDL_WINDOW_FULLSCREEN_DESKTOP);
+    renderer = SDL_CreateRenderer(sdl_screen, -1, 0);
+    SDL_Rect r;
+    SDL_RenderGetViewport(renderer,&r);
+    desktop_w = r.w;
+    desktop_h = r.h;
+#endif
+    SDL_ShowCursor(SDL_DISABLE);
     FILE *f = fopen("desktop","w");
     if (f) {
 	fprintf(f,"%d\n%d\n",desktop_w,desktop_h);
