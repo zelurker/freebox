@@ -1,6 +1,7 @@
 package progs::html::finter;
 
 use HTML::Entities;
+use v5.10;
 
 sub decode_html {
 	my ($p,$l,$name) = @_;
@@ -37,10 +38,12 @@ sub decode_html {
 					if ($class =~ /emission-title/) {
 						$title = $tit;
 						# Après faut sortir tout de suite de la boucle !!!
-						$pos = index($l,"<span>",$pos+1);
-						last;
-					} elsif ($class =~ /content-title/) {
+						# $pos = index($l,"<span>",$pos+1);
+						# last;
+					} elsif ($class =~ /content-title/ || !$class) {
 						$desc = $tit;
+					} else {
+						# print "title $tit pour class $class.\n";
 					}
 				}
 			} elsif (substr($l,$pos+1,3) eq "img") {
@@ -56,12 +59,15 @@ sub decode_html {
 			}
 		}
 		if (substr($l,$pos+1,4) eq "span") {
+			# print "ajout prog title $title desc $desc\n";
 			my @tab = (undef, $name, $title, $start,
 				$end, "",
 				$desc,
 				"","",$img,0,0,$date);
 			$p->insert(\@tab,$rtab,600);
 			redo;
+		} else {
+			# say "sorti de boucle avec ",substr($ll,$pos+1,4)," title $title";
 		}
 	}
 	$rtab;

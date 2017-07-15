@@ -120,6 +120,7 @@ sub update {
 
 	my $res;
 	for ($use_json = 0; $use_json <= 1; $use_json++) {
+		# print "use_json $use_json file $file\n";
 		if (!-f "cache/$file") {
 			if ($use_json) {
 				$res = update_prog_json($file);
@@ -146,7 +147,7 @@ sub update {
 	my $json;
     if (!$use_json) {
 		if ($file =~ /inter/) {
-			$rtab2 = progs::html::finter::decode_html($p,$res,$name);
+			$rtab2 = progs::html::finter::decode_html($p,$res,"$name (html)");
 		} elsif ($file =~ /bleu/) {
 			$rtab2 = progs::html::fb::decode_html($p,$res,$name);
 		}
@@ -161,7 +162,7 @@ sub update {
 		open(F,">json");
 		print F Dumper($json);
 		close(F);
-		$rtab2 = progs::json::decode_json($p,$json,$file,$name);
+		$rtab2 = progs::json::decode_json($p,$json,$file,"$name (json)");
 	}
 	if ($rtab) {
 		if ($$rtab2[0][3] < $$rtab[0][3]) {
