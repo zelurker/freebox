@@ -32,7 +32,7 @@ use progs::arte;
 
 our %info; # hash pour stocker les stream_info
 our $cleared = 1;
-our $displayed;
+our $to_disp;
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our $net = out::have_net();
 our $have_fb = 0; # have_freebox
@@ -231,7 +231,6 @@ sub disp_duree($) {
 }
 
 sub disp_prog {
-	$displayed = 1;
 	$cleared = 0;
 	my ($sub,$long) = @_;
 	if (!$sub) {
@@ -484,7 +483,7 @@ sub disp_channel {
 	$cleared = 0;
 	print "disp_channel: entrée avec channel=$channel long:$long\n";
 
-	$displayed = 0;
+	$to_disp = $channel;
 	my $sub = undef;
 # 1 les trucs spécialisés (séries, radios, etc).
 	for (my $n=$#prog; $n>=0; $n--) {
@@ -533,6 +532,6 @@ sub disp_channel {
 
 	# Si on arrive là, on a le texte à afficher dans sub, y a plus qu'à y
 	# aller !
-	disp_prog($sub,$long) if ($sub && !$displayed);
+	disp_prog($sub,$long) if ($sub && $to_disp eq $channel);
 }
 
