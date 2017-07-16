@@ -16,6 +16,7 @@ use Cpanel::JSON::XS qw(decode_json);
 use Data::Dumper;
 use Time::Local "timelocal_nocheck";
 use Encode;
+use v5.10;
 use HTML::Entities;
 
 my $debug = 0;
@@ -39,10 +40,15 @@ sub update_prog_html($) {
 	my ($base,$date) = $url =~ /^(.+?)-(.+)/;
 	if ($base eq "finter") {
 		$url = "https://www.franceinter.fr/programmes/$date";
+	} elsif ($base eq "fmusique") {
+		$url = "https://www.francemusique.fr/programmes/$date";
+	} elsif ($base eq "fculture") {
+		$url = "https://www.franceculture.fr/programmes/$date";
 	} elsif ($fb{$base}) {
 		$url = $fb{$base};
 	} else {
 		# html pas supporté !
+		say "prog html pas supporté : $base";
 		return undef;
 	}
 	my ($status,$prog) = chaines::request($url);
@@ -113,7 +119,7 @@ sub update {
 	my $name = $p->{name};
 
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
-	if ($hour < 5 && !$offset && $channel eq "france inter") { # Avant 5h c'est le prog de la veille
+	if ($hour < 5 && !$offset && $channel =~ /france /) { # Avant 5h c'est le prog de la veille
 		($sec,$min,$hour,$mday,$mon,$year) = localtime(time()-24*3600);
 	}
 	$file .= sprintf("-%d-%02d-%02d",$year+1900,$mon+1,$mday);
@@ -146,11 +152,7 @@ sub update {
 	my $rtab2;
 	my $json;
     if (!$use_json) {
-		if ($file =~ /inter/) {
-			$rtab2 = progs::html::finter::decode_html($p,$res,"$name (html)");
-		} elsif ($file =~ /bleu/) {
-			$rtab2 = progs::html::fb::decode_html($p,$res,$name);
-		}
+		$rtab2 = progs::html::finter::decode_html($p,$res,"$name (html)");
 	} else {
 		eval  {
 			$json = decode_json $res;
