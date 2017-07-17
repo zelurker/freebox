@@ -15,10 +15,10 @@ sub get_tag {
 sub find_closing_tag {
 	my ($body,$pos,$tag) = @_;
 	my $level = 1;
-	while ($level && ($pos = index($body,$tag,$pos+1))) {
-		if (substr($body,$pos-1,1) eq "/") {
+	while ($level && ($pos = index($body,$tag,$pos+1))>=0) {
+		if (substr($body,$pos-2,2) eq "</") {
 			$level--;
-		} else {
+		} elsif (substr($body,$pos-1,1) eq "<") {
 			$level++;
 		}
 	}
@@ -37,6 +37,7 @@ sub decode_html {
 		my ($start,$end);
 		my $sub = substr($l,$pos+1,$sub_pos-$pos-1);
 		my ($desc,$title,$img);
+		$pos = $sub_pos;
 
 		if ($instr eq "article") { # finter
 			# bien pratique france inter ils ont ajouté un tag <article>
@@ -69,7 +70,6 @@ sub decode_html {
 				}
 			}
 			if ($body =~ s/<img(.+?)>//s) {
-				print "handling image pour titre $title\n";
 				my $args = $1;
 				if ($args =~ /data-pagespeed-(.+?)-src="(.+?)"/) {
 					$img = $2;
@@ -77,21 +77,19 @@ sub decode_html {
 					$img = $1;
 				}
 			}
-			$pos = $sub_pos++;
 		} elsif ($instr eq "div") { # fmusique
 			$start = get_tag($sub,"data-start-time");
 			$end = get_tag($sub,"data-end-time"); # fculture
-			$pos = $sub_pos;
-			if (!$start) {
-				next;
-			}
+			next if (!$start);
 			my $body = substr($l,$sub_pos+1);
 			my $end_pos = find_closing_tag($body,0,"div");
+
 			# On ne fait pas pos += end_pos parce que quand il y a des sous
 			# programmes, appelés rubriques dans leur programme, ils
 			# apparaissent avec exactement le même format, donc autant les
 			# laisser se faire traiter par la boucle principale !
 			# $pos += $end_pos;
+
 			$body = substr($body,0,$end_pos);
 			($title) = $body =~ /<h2.*?>(.+?)<\/h2>/s;
 			($desc) = $body =~ /<h3.+?>(.+?)<\/h3>/s;
@@ -121,6 +119,31 @@ sub decode_html {
 			$desc =~ s/[\r\n]//g;
 			$title =~ s/^ +//;
 			$desc =~ s/^ +//;
+		} elsif ($instr eq "li") { # fbleu
+			next if ($sub !~ /class="emission/);
+			my $body = substr($l,$sub_pos+1);
+			my $end_pos = find_closing_tag($body,0,"li");
+			my ($time,$date) = $p->init_time();
+			$body = substr($body,0,$end_pos);
+			my ($hd,$hf) = $body =~ /div class="quand">(\d+h\d+).+?- (\d+h\d+)/s;
+			($title) = $body =~ /h3 class="titre">(.+?)<\/h3/;
+			my ($h,$m) = split(/h/,$hd);
+			$start = $time + $h*3600+$m*60;
+			($h,$m) = split(/h/,$hf);
+			$end = $time + $h*3600+$m*60;
+			$desc = "";
+			my $old_pos = $pos + $end_pos;
+			$pos = 0;
+			my $nb = 0;
+			while (($pos = index($body,'<li class="chronique',$pos+1)) >= 0) {
+				$end_pos = find_closing_tag($body,$pos+2,"li");
+				my $chro = substr($body,$pos,$end_pos-$pos);
+				$desc .= "$1 " if ($chro =~ /div class="horaire".+?(\d+h\d+)/s);
+				$desc .= "$1" if ($chro =~ /p class="titre.+?>(.+?)<\/p>/);
+				$desc .= " ($1)" if ($chro =~ /class="titre">(.+?)<\/a/);
+				$desc .= "\n";
+			}
+			$pos = $old_pos;
 		} else {
 			$pos++;
 			next;

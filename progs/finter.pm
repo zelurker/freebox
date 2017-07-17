@@ -225,6 +225,8 @@ sub get_date {
 }
 
 sub init_time {
+	# retourne time et date en fonction de l'heure indiquée dans le nom de
+	# fichier. time est à 0h le jour même.
 	my $p = shift;
 	my ($time,$date);
 	if ($file =~ /-(\d+)-(\d+)-(\d+)/) {
