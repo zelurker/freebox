@@ -65,7 +65,7 @@ sub decode_html {
 					# Après faut sortir tout de suite de la boucle !!!
 					# $pos = index($l,"<span>",$pos+1);
 					# last;
-				} elsif ($class =~ /content-title/ || !$class) {
+				} elsif ($class =~ /content-title/) { # || !$class) {
 					$desc = $tit;
 				}
 			}
