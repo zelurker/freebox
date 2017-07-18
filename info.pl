@@ -456,7 +456,7 @@ sub encoding {
 		$$ref =~ s/\x{0153}/oe/g;
 		if (!$latin) {
 			if ($$ref =~ /[\xc3\xc5]/) {
-				print "to_utf: reçu un truc en utf: $$ref\n";
+				# print "to_utf: reçu un truc en utf: $$ref\n";
 				next;
 			}
 			eval {

@@ -152,7 +152,7 @@ sub update {
 	my $rtab2;
 	my $json;
     if (!$use_json) {
-		$rtab2 = progs::html::finter::decode_html($p,$res,"$name (html)");
+		$rtab2 = progs::html::finter::decode_html($p,$res,"$name");
 	} else {
 		eval  {
 			$json = decode_json $res;
