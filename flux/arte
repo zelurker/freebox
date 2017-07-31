@@ -71,10 +71,11 @@ sub decode_main {
     $_ = shift;
     if (ref($_) eq "HASH") {
         my %hash = %$_;
-        if ($hash{tvguide}) { # racine du nouveau hash 2017
+        if ($hash{tvguide} || $hash{creative}) { # racine du nouveau hash 2017
+			# remplacé par creative en juillet 2017
             return decode_type($hash{page}{zones});
         } else {
-            die "decode_main: pas de tvguide";
+            die "decode_main: pas de tvguide : ".Dumper($_);
         }
     }
     die "decode_main: pas de hash ?";
@@ -159,7 +160,8 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 my $page = myget("http://www.arte.tv/guide/fr/plus7/","cache/arte/j0",1/24.0);
 # l'encoding doit être après le myget parce que si l'html est en utf8, le
 # json est en latin !!!
-print "encoding: latin1\nlist\n";
+say "encoding: latin1";
+say "list";
 my $capture = 0;
 my $json;
 # le json dans de l'html c'est toujours merdique, ça vient de changer en
