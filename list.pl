@@ -1570,7 +1570,8 @@ sub commands {
 				}
 				read_list();
 			} else {
-				$serv =~ s/ .+//; # Ne garde que la commande
+				$serv =~ s/ (.+)//; # Ne garde que la commande
+				my $args = $1;
 				if (open(F,"<desktop")) {
 					my ($width,$height);
 					($width,$height) = <F>;
@@ -1585,10 +1586,16 @@ sub commands {
 					my ($g) = $l =~ /(\-\-?geometry)/;
 
 					$serv .= " $g $width"."x".$height."+$margew+$margeh" if ($g);
+					$serv .= " $args";
 				} else {
 					print "pas de fichier desktop\n";
 				}
 				print "list: exec $serv\n";
+				# utilise xdotool pour placer la souris en 100,100, ce qui
+				# donne le focus à l'appli lancée si elle occupe moins que
+				# la moitié de l'écran et qu'on a pas de gestionnaire de
+				# fenêtre
+				system("xdotool mousemove 100 100") if (`which xdotool`);
 				out::send_command("pause\n");
 				system("$serv");
 			}
