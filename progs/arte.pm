@@ -86,6 +86,7 @@ sub get {
  	return undef if ($arg[$#arg] !~ /vid:(.+)/);
  	my $code = $1;
 	$code =~ s/,.+//;
+	# say "progs/arte: code $code";
 
 	@arg = split(/\//,$serv);
 	my ($f,$json);
@@ -97,11 +98,13 @@ sub get {
 	for (my $idx=$#arg-1; $idx >= 0; $idx--) {
 		if ($arg[$idx] =~ /^vid:(.+?),/) {
 			return undef if (!open($f,"<cache/arte/$1.html"));
+			# say "progs/arte: lecture $1.html";
 			last;
 		}
 	}
 	if (!$f) {
 		return undef if (!open($f,"<cache/arte/j0"));
+		# say "progs/arte: lecture j0";
 	}
 	$json = read_json($f);
 	return undef if (!$json);
@@ -110,6 +113,7 @@ sub get {
 		$json = read_json($f);
 		return undef if (!$json);
 		$hash = find_id($json,$code);
+		# say "progs/arte: lecture $code.html";
 	}
 	if (!$hash) {
 
@@ -123,6 +127,7 @@ sub get {
 		if ($id && $id ne $code && $old_serv !~ $id) {
 			if (open($f,"<cache/arte/$id.html")) {
 				$json = read_json($f);
+				# say "progs/arte: lecture $id.html";
 				return undef if (!$json);
 			}
 		}
@@ -168,6 +173,11 @@ sub get {
 		my $truc = join("\n",@_);
 		my $j = decode_json(decode_entities($truc));
 		$title = $j->{videoJsonPlayer}{VTI} if (!$title);
+		$sub = $j->{videoJsonPlayer}{subtitle} if (!$sub);
+		# V7T n'est pas vraiment un sous titre, + une espèce de
+		# présentation de la série pour les séries, ça ne devrait peut-être
+		# pas aller dans $sub, pour l'instant je garde comme ça pour avoir
+		# de la comparaison, mais en laissant la priorité à subtitle
 		$sub = $j->{videoJsonPlayer}{V7T} if (!$sub);
 		$sum .= " ".$j->{videoJsonPlayer}{VDE} if (!$sum);
 		$img = $j->{videoJsonPlayer}{VTU}{IUR} if (!$img || ref($img) eq "ARRAY");
