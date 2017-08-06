@@ -477,7 +477,8 @@ sub encoding {
 			if ($@) {
 				print "to_utf: error encoding $$ref: $!, $@\n";
 			}
-		} elsif ($$ref =~ /[\xc3\xc5]/) {
+		} elsif ($$ref =~ /[\xc3\xc5]/ || $max_ord > 255) {
+			utf8::encode($$ref) if ($max_ord > 255);
 			eval {
 				Encode::from_to($$ref,"utf8","iso-8859-1");
 			};
