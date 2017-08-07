@@ -301,7 +301,9 @@ sub disp_prog {
 	print $out " ($codec)" if ($codec);
 
 	$$sub[6] = "" if (!$$sub[6]);
-	print $out "\n$$sub[2]\n\n$$sub[6]\n$$sub[7]\n";
+	# Bizarrerie utf : sub[6] doit être séparé par des virgules et pas
+	# directement entre les guillemets... Différence de format ?
+	print $out "\n$$sub[2]\n\n",$$sub[6],"\n$$sub[7]\n";
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
 	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
 	out::close_fifo($out);
