@@ -73,6 +73,9 @@ sub decode_main {
         my %hash = %$_;
         if ($hash{tvguide} || $hash{creative}) { # racine du nouveau hash 2017
 			# remplacé par creative en juillet 2017
+			if ($str =~ /^result:/) {
+				return decode_prg($hash{search}{teasers});
+			}
             return decode_type($hash{page}{zones});
         } else {
             die "decode_main: pas de tvguide : ".Dumper($_);
@@ -157,11 +160,18 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
     link_get::link_get($file,$url);
 }
 
-my $page = myget("http://www.arte.tv/guide/fr/plus7/","cache/arte/j0",1/24.0);
+my $page;
+if ($str =~ /^result:(.+)/) {
+	my $url = "http://www.arte.tv/fr/search/?q=$1";
+	$page = myget($url);
+} else {
+	$page = myget("http://www.arte.tv/guide/fr/plus7/","cache/arte/j0",1/24.0);
+}
 # l'encoding doit être après le myget parce que si l'html est en utf8, le
 # json est en latin !!!
 say "encoding: latin1";
 say "list";
+say "Recherche\nRecherche";
 my $capture = 0;
 my $json;
 # le json dans de l'html c'est toujours merdique, ça vient de changer en
@@ -175,7 +185,7 @@ eval  {
     $json = decode_json( $json);
 };
 if ($@) {
-    print STDERR "arte: couille dans le potage au niveau json $?:$@\n";
+    print STDERR "arte: couille dans le potage au niveau json $?:$@, json: $json\n";
     exit(0);
 }
 decode_main($json);
