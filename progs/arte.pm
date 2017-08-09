@@ -5,6 +5,7 @@ use warnings;
 use progs::telerama;
 use Cpanel::JSON::XS qw(decode_json);
 use HTML::Entities;
+use Time::Local "timelocal_nocheck","timegm_nocheck";
 use v5.10;
 # require "http.pl";
 
@@ -72,6 +73,17 @@ sub read_last_serv {
 		close(F);
 	}
 	$serv;
+}
+
+sub parse_time {
+	my $t = shift;
+	return undef if (!$t);
+	my ($d,$h) = split(/ /,$t);
+	my ($j,$m,$a) = split(/\//,$d);
+	$a -= 1900;
+	$m--;
+	my ($hr,$min,$sec) = split(/:/,$h);
+	return timegm_nocheck($sec,$min,$hr,$j,$m,$a);
 }
 
 sub get {
@@ -165,6 +177,7 @@ sub get {
 	if (!$img || ref($img) eq "ARRAY") {
 		$img = $hash->{mainImage}{url};
 	}
+	my ($debut,$fin);
 	if ($code !~ /^RC/ && open(my $f,"<cache/arte/$code")) {
 		# Et voilà la 3ème, en lecture directe d'une vidéo on a un hash
 		# pour le player d'un format totalement différent.
@@ -181,6 +194,8 @@ sub get {
 		$sub = $j->{videoJsonPlayer}{V7T} if (!$sub);
 		$sum .= " ".$j->{videoJsonPlayer}{VDE} if (!$sum);
 		$img = $j->{videoJsonPlayer}{VTU}{IUR} if (!$img || ref($img) eq "ARRAY");
+		$debut = parse_time($j->{videoJsonPlayer}{VRA});
+		$fin = parse_time($j->{videoJsonPlayer}{VRU});
 		# Note : apparemment il manque la date dans celui là, on peut la
 		# récupérer si on va lire le fichier .player, mais bon la date
 		# n'est pas vraiment super importante ici...
@@ -190,8 +205,8 @@ sub get {
 
 	my @tab = (undef, # chan id
 		"$source", $title,
-		undef, # début
-		undef, "", # fin
+		$debut,
+		$fin, "", # fin
 		$sub,
 		$sum, # details
 		"",

@@ -226,7 +226,12 @@ sub disp_duree($) {
 		sprintf("%d min",$duree/60);
 	} else {
 		my $h = sprintf("%d",$duree/3600);
-		sprintf("%dh%02d",$h,($duree-$h*3600)/60);
+		if ($h > 24) {
+			my $d = int($h / 24);
+			sprintf("$d jours, %dh%02d",$h % 24,($duree-$h*3600)/60);
+		} else {
+			sprintf("%dh%02d",$h,($duree-$h*3600)/60);
+		}
 	}
 }
 
