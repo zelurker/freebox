@@ -131,9 +131,9 @@ while [ "$ok" == "0" ]; do
 		done
 		echo fifo_list ok
 		if [ "$src" == "dvb" ]; then
-			chaine=`echo name $service |socat stdio unix:/home/manu/free/sock_list`
+			chaine=`echo name $service |socat stdio unix:./sock_list`
 		else
-			chaine=`echo name "$service" $flavour $audio |socat stdio unix:/home/manu/free/sock_list`
+			chaine=`echo name "$service" $flavour $audio |socat stdio unix:./sock_list`
 		fi
 	fi
 	chaine2=`echo $chaine|sed 's/\//_/g'`

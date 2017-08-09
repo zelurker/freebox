@@ -1,4 +1,4 @@
 #!/bin/sh
 
-echo switch_mode |socat stdio unix:/home/manu/free/sock_list
+echo switch_mode |socat stdio unix:./sock_list
 

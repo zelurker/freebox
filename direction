@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ -f list_coords ]; then
-	echo $* |socat stdio unix:/home/manu/free/sock_list
+	echo $* |socat stdio unix:./sock_list
 	exit 0
 elif [ -f info_coords ] && ! [ -f stream_info ] && ! head -n 2 current|tail -n 1|grep -q Fichiers; then
 	echo "$*" | socat stdio unix:sock_info

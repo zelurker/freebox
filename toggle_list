@@ -1,7 +1,7 @@
 #!/bin/sh
 
 if [ -f list_coords ]; then
-	echo clear |socat stdio unix:/home/manu/free/sock_list
+	echo clear |socat stdio unix:./sock_list
 else
-	echo list |socat stdio unix:/home/manu/free/sock_list
+	echo list |socat stdio unix:./sock_list
 fi
