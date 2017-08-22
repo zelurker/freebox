@@ -9,6 +9,7 @@ use chaines;
 require HTTP::Cookies;
 use Encode;
 use out;
+use v5.10;
 our $latin = ($ENV{LANG} !~ /UTF/i);
 
 # my @def_chan = ("France 2", "France 3", "France 4", "Arte", "TV5MONDE",
@@ -221,18 +222,23 @@ sub req_prog($$) {
 	print "req_prog: url $url\n" if ($debug);
 	my $response = $browser->get($url);
 	if (! $response->is_success) {
-	    print "$url error: $response->status_line\n";
+	    print "$url error: ",$response->status_line,"\n";
 	} elsif ($debug) {
 		print "req_prog: is_success\n";
 	}
 	$response;
 }
 
+sub error {
+	my ($p,$msg) = @_;
+	$p->{err} = $msg;
+}
+
 sub getListeProgrammes {
 	# Lecture des caches (fichiers day*), et éventuellement mise à jour
 	# si selected_channels contient quelque chose
 
-	my $offset = shift;
+	my ($p,$offset) = @_;
 	# date YYYY-MM-DD
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
 	print "utilisation date $mday/",$mon+1,"/",$year+1900,"\n" if ($debug);
@@ -285,7 +291,10 @@ sub getListeProgrammes {
 	}
 	return undef if (!out::have_net());
 	my $response = req_prog($offset,$url);
-	return undef if (!$response->is_success);
+	if (!$response->is_success) {
+		$p->error($response->status_line);
+		return undef;
+	}
 
 	my $program_text = $response->content;
 
@@ -302,9 +311,10 @@ sub getListeProgrammes {
 
 sub update {
 	my ($p,$channel,$offset) = @_;
+	$p->error();
 	$offset = 0 if (!defined($offset));
 	if (!%chaines) {
-		getListeProgrammes(0);
+		$p->getListeProgrammes(0);
 		$p->{chaines} = \%chaines;
 	}
 	return undef if (!out::have_net());
@@ -313,7 +323,10 @@ sub update {
 		if ($channel eq $name && $num != 254) {
 			print "*** req_prog loop request ***\n" if ($debug);
 			my $response = req_prog($offset,$num);
-			last if (!$response->is_success);
+			if (!$response->is_success) {
+				$p->error($response->status_line);
+				last;
+			}
 			my $res = $response->content;
 			my $program_text = ($p->{chaines}->{$channel} ? join('$$$',$p->{chaines}->{$channel}) : "");
 			if ($res && index($program_text,$res) < 0 && $res =~ /$num/) {

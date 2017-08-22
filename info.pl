@@ -511,6 +511,15 @@ sub disp_channel {
 		if ($sub) {
 			$reader = $n;
 			last;
+		} elsif ($prog[$n]->{err}) { # il renvoie rien, mais y a une erreur !
+			my $out = out::setup_output("bmovl-src/bmovl","",$long);
+			($sec,$min,$hour) = localtime(time());
+			print $out "\n\n";
+			print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n";
+			print $out "Erreur : ",$prog[$n]->{err},"\n";
+			out::close_fifo($out);
+			setup_fadeout($long);
+			return;
 		}
 	}
 	$lastprog = undef;
