@@ -122,7 +122,7 @@ sub have_net {
 		$p->port_number(53); # faut le port en tcp, 53 pour dns
 		# On passe l'ip pour éviter une résolution, ils doivent pas changer
 		# souvent de toutes façons
-		die "plus de google\n" if (!$p->ping("8.8.8.8"));
+		die "plus d'oleane\n" if (!$p->ping("194.2.0.20"));
 	};
 	alarm(0);
 	$net = 0 if ($@);

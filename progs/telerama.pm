@@ -18,8 +18,8 @@ our $latin = ($ENV{LANG} !~ /UTF/i);
 # "Game One", "Canal+",
 # );
 my @def_chan = ();
-my $site_addr = "guidetv-iphone.telerama.fr";
-my $site_prefix = "http://$site_addr/verytv/procedures/";
+my $site_addr = "api.telerama.fr";
+my $site_prefix = "https://$site_addr/verytv/procedures/";
 my $site_img = "http://$site_addr/verytv/procedures/images/";
 
 # init the Web agent
@@ -289,7 +289,7 @@ sub getListeProgrammes {
 
 		print "*** req_prog from getlisteprogrammes ***\n";
 	}
-	return undef if (!out::have_net());
+	return undef; # if (!out::have_net());
 	my $response = req_prog($offset,$url);
 	if (!$response->is_success) {
 		$p->error($response->status_line);
@@ -312,6 +312,7 @@ sub getListeProgrammes {
 sub update {
 	my ($p,$channel,$offset) = @_;
 	$p->error();
+	return undef; # telerama ne marche plus
 	$offset = 0 if (!defined($offset));
 	if (!%chaines) {
 		$p->getListeProgrammes(0);
