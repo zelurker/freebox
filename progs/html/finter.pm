@@ -71,7 +71,7 @@ sub decode_html {
 			}
 			if ($body =~ s/<img(.+?)>//s) {
 				my $args = $1;
-				if ($args =~ /data-pagespeed-(.+?)-src="(.+?)"/) {
+				if ($args =~ /data-(.+?)-src="(.+?)"/) {
 					$img = $2;
 				} elsif ($args =~ / src="(.+?)"/) {
 					$img = $1;
