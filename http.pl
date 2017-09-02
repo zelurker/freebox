@@ -25,9 +25,9 @@ sub myget {
 	if ($cache) {
 		$age = 1 if (!$age);
 		my ($dir) = $cache =~ /^(.+)\//;
-		make_path($dir) if (!-d $dir);
+		make_path($dir) if ($dir && !-d $dir);
 		if (-f $cache && -M $cache < $age) {
-			print STDERR "http.pl: cache hit, age ",(-M $cache),"\n";
+			print STDERR "http.pl: cache hit fichier $cache, age ",(-M $cache),"\n";
 			open(my $f,"<$cache") || die "can't open $cache\n";
 			@_ = <$f>;
 			close($f);
