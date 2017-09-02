@@ -7,12 +7,17 @@ use Cpanel::JSON::XS qw(decode_json);
 use Data::Dumper;
 use out;
 use v5.10;
+use Encode;
 
 our %chan;
+our $latin = ($ENV{LANG} !~ /UTF/i);
 
 sub conv_channel {
 	my $channel = shift;
 	# chaine passée -> chaine dans liste_chaines
+	if ($channel =~ /[\xc3\xc5]/ && !$latin) {
+		Encode::from_to($channel,"utf8","iso-8859-1");
+	}
 	my %corresp =
 	(
 		"Poker Channel" => "The Poker Channel",
