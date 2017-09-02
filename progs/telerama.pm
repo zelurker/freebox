@@ -5,12 +5,12 @@ use LWP;
 use Data::Dumper;
 use POSIX qw(strftime);
 use Time::Local "timelocal_nocheck","timegm_nocheck";
+use Cpanel::JSON::XS qw(decode_json);
 use chaines;
 require HTTP::Cookies;
 use Encode;
 use out;
 use v5.10;
-our $latin = ($ENV{LANG} !~ /UTF/i);
 
 # my @def_chan = ("France 2", "France 3", "France 4", "Arte", "TV5MONDE",
 # "Direct 8", "TMC", "NT1", "NRJ 12",
@@ -35,7 +35,7 @@ $browser->default_header(
 	]
 );
 
-our (@selected_channels,@chan,$net);
+our (@selected_channels,$chan,$net);
 our ($date);
 our $debug = 0;
 our (%chaines);
@@ -45,35 +45,16 @@ sub new {
 	my $p = bless {
 		chaines => (),
 	},$class;
-	$p->init_selected_channels($mynet);
-	$net = $mynet;
-	$p;
-}
-
-sub init_selected_channels($) {
-	my ($p,$net) = @_;
-	my $channels_text = chaines::getListeChaines($net);
-	@chan = split(/\:\$\$\$\:/,$channels_text);
-	my $sel = "";
-	foreach (@def_chan) {
-		s/\+/\\+/g;
-		my $found = 0;
-		for (my $n=0; $n<=$#chan; $n++) {
-			my ($num,$name) = split(/\$\$\$/,$chan[$n]);
-			if ($name =~ /^$_$/i) {
-				$sel .= ",$num";
-				$found = 1;
-				last;
-			}
-		}
-		if (!$found) {
-			print "didn't find default channel $_ in list $channels_text\n";
-			$channels_text = undef;
-		}
+	if ($class =~ /telerama/) {
+		# Init spécifique à télérama, mais il y a des classes qui
+		# surchargent donc faut faire attention !!!
+		$chan = chaines::getListeChaines($net);
+		$p->{chaines} = \%chaines;
+		mkdir "cache/telerama";
+		$net = $mynet;
+		$p->getListeProgrammes(0);
 	}
-	$sel =~ s/^\,//;
-
-	@selected_channels = split(/,/,$sel);
+	$p;
 }
 
 sub init_date {
@@ -94,108 +75,107 @@ sub get_offset {
 	$d;
 }
 
-sub parse_prg($) {
+sub parse_date {
+	# convertit un champ date de télérama en heure gmt
+	my $d = shift;
+	my ($an,$mois,$jour,$h,$m,$s) = $d =~ /(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)/;
+	$an -= 1900; $mois--;
+	timelocal_nocheck($s,$m,$h,$jour,$mois,$an);
+}
+
+sub get_date {
+	# ne renvoie que la partie date, pour la compatibilité avec le vieux
+	# champ "airdate" qu'il faudrait peut-être virer un de ces 4...
+	my $d = shift;
+	my ($an,$mois,$jour) = $d =~ /(\d+)-(\d+)-(\d+)/;
+	"$jour/$mois/$an";
+}
+
+sub dump_details {
+	my ($details,$lib,$cont) = @_;
+	$details .= "\n" if ($details);
+	$details .= $lib;
+	$details .= "s" if ($cont =~ /,/);
+	$details .= " : $cont.";
+	$details;
+}
+
+sub parse_prg {
 	# Interprête le résultat de la requête de programmes...
 	# et met à jour chaines{}
 	# Attention la valeur retournée est un tableau de chaines
 	# prévu pour être renvoyé dans les fichiers day*. Il faut relire chaines{}
 	# après ça si on veut récupérer le tableau à 2 dimensions des programmes
-	my ($program_text) = @_;
-	$program_text =~ s/(:\$CH\$:|;\$\$\$;)//g; # on se fiche de ce sparateur !
-	my @fields = split(/\:\$\$\$\:/,$program_text);
-	if (!@fields) {
-		print "gros problème requête programmes, aucun champ obtenu, on ignore le réseau\n";
-		$net = 0;
+	my ($program_text,$num,$label) = @_;
+
+	my $chan = lc($label);
+	my $json;
+	eval {
+		$json = decode_json($program_text);
+	};
+	if ($@) {
+		print "parse_prg: decode_json error $! à partir de $program_text\n";
+		return undef;
 	}
-	shift @fields if (!$fields[0]);
+	foreach (@{$json->{donnees}}) {
 
-	my $date_offset = 0;
-	# Les collisions : je laisse ce code qui fait des stats sur leur nombre et
-	# le temps que ça prend à traiter. En fait on obtient de l'ordre de 1200
-	# collisions pour une seule journée, mais ça prend moins de 2s à récupérer,
-	# et moins d'1s à convertir dans un format utilisable en interne. Résultat
-	# ça serait probablement + long de faire 1 requète par chaine pour éviter
-	# les collisions. Tant pis pour eux, peut-être qu'un jour ils corrigeront
-	# leur code qui fait toutes ces collisions !
-	my $nb_collision = 0;
-	my @fields2 = ();
-	init_date() if (!$date);
-	my $date0 = $date;
-
-	# Voilà en commentaire les champs récupérés
-	# chanid => 0,
-	# chan_name => 1,
-	# title => 2,
-	# start => 3,
-	# stop => 4,
-	# category => 5,
-	# desc => 6,
-	# details => 7,
-	# rating => 8,
-	# image => 9,
-	# stars => 10,
-	# crit => 11,
-	# airdate => 12,
-	# showview => 13
-	foreach (@fields) {
-		my $old = $_;
-		my @sub = split(/\$\$\$/);
-		my $chan = lc($sub[1]);
-		my ($hour,$min,$sec) = split(/\:/,$sub[3]);
-		if (1) { # !$date_offset || $sub[12] ne $date) {
-			# Correction gravement inefficace des changements d'heure (été)
-			# le jour du changement d'heure, le date_offset varie dans la
-			# journée vu qu'ils ne font pas le changement à minuit mais vers
-			# 3h du mat. Du coup si on veut des heures fiables, il faut
-			# recalculer le time_offset en fonction de l'heure demandée
-			# 364 jours sur 365 ça ne sert absolument à rien, ça fait une
-			# surcharge non négligeable, mais bon, comme ça on devrait avoir
-			# la paix avec ces foutus changements d'heures (ça aurait été
-			# bien qu'ils mettent un champ heure universelle quand même...).
-			$date = $sub[12];
-			if (!$date) {
-				print "*** format de fichier programmes incorrect, on va essayer de corriger\n";
-				$program_text = "";
-				return undef;
+		# Voilà en commentaire les champs récupérés
+		# chanid => 0,
+		# chan_name => 1,
+		# title => 2,
+		# start => 3,
+		# stop => 4,
+		# category => 5,
+		# desc => 6,
+		# details => 7,
+		# rating => 8,
+		# image => 9,
+		# stars => 10,
+		# crit => 11,
+		# airdate => 12,
+		# showview => 13
+		my $details = $_->{resume};
+		my ($lib,$cont);
+		foreach (@{$_->{intervenants}}) {
+			if ($lib eq $_->{libelle}) {
+				$cont .= ", ";
+			} else {
+				if ($lib) {
+					$details = dump_details($details,$lib,$cont);
+				}
+				$cont = "";
+				$lib = $_->{libelle};
 			}
-			my ($mday,$mon,$year) = split(/\//,$sub[12]);
-			$mon--;
-			$year -= 1900;
-			$date_offset = timelocal_nocheck(0,0,$hour,$mday,$mon,$year)-($hour*3600);
+			$cont .= "$_->{prenom} $_->{nom}";
 		}
-		my $start = $date_offset + $sec + 60*$min + 3600*$hour;
-		if ($sub[9]) {
-			my @date = split(/\//,$sub[12]);
-			my $img = "$date[2]-$date[1]-$date[0]_$sub[0]_$hour:$min.jpg";
-			$sub[9] = $site_img.$img;
+		$details = dump_details($details,$lib,$cont) if ($lib);
+
+		my $rating = "";
+		foreach (@{$_->{csa_full}}) {
+			$rating .= ", " if ($rating);
+			$rating .= $_->{nom_long};
 		}
-		($hour,$min,$sec) = split(/\:/,$sub[4]);
-		my $end = $date_offset + $sec + 60*$min + 3600*$hour;
-		$end += 3600*24 if ($end < $start); # stupid
-		$sub[3] = $start; $sub[4] = $end;
+		my @sub = ($num,$label,$_->{titre},
+			parse_date($_->{horaire}->{debut}),parse_date($_->{horaire}->{fin}),
+			$_->{genre_specifique},$_->{soustitre},$details,
+			$rating,
+			# pour l'image, ils ont 4 tailles, équivalentes 2 à 2, mais en
+			# fait petite est très petite (124x96), et grande est du 720p!
+			# Idéalement pour des images ici il faudrait le double de
+			# petite et ça serait quand même dans les 4 fois moins large
+			# que grande !
+			$_->{vignettes}->{grande},
+			$_->{note_telerama}, # stars
+			$_->{critique},
+			get_date($_->{horaire}->{debut}),$_->{showview});
 		my $rtab = $chaines{$chan};
 		if ($rtab) {
-			my $colision = undef;
-			foreach (@$rtab) {
-				if ($$_[3] == $start && $$_[4] == $end) {
-					$colision = $_;
-					last;
-				}
-			}
-			if ($colision) {
-				# Le nombre de colisions est hallucinant !
-				# un vrai gaspillage de bande passante leur truc !
-				# print "colision chaine $$colision[1] titre $$colision[2]\n";
-				$nb_collision++;
-			} else {
-				push @$rtab,\@sub;
-				push @fields2,$old;
-			}
+			push @$rtab,\@sub;
 		} else {
 			$chaines{$chan} = [\@sub];
-			push @fields2,$old;
 		}
 	}
+	say "parse_prg: stockage dans $chan." if ($debug);
 	foreach (keys %chaines) {
 		eval {
 			my @tab = sort { $$a[3] <=> $$b[3] } @{$chaines{$_}};
@@ -206,19 +186,15 @@ sub parse_prg($) {
 			Dumper($chaines{$_});
 		}
 	}
-
-
-	print scalar localtime," fin traitement fichier, $nb_collision collisions\n" if ($debug);
-	if ($date0 ne $date) {
-		init_date();
-	}
-	\@fields2;
+	# quand l'interprétation est bonne, on renvoie le texte original qui
+	# est éventuellement stocké dans un fichier
+	return $program_text;
 }
 
 sub req_prog($$) {
 	my ($offset,$url) = @_;
 	my $date = strftime("%Y-%m-%d", localtime(time()+(24*3600*$offset)) );
-	$url = $site_prefix.'LitProgrammes1JourneeDetail.php?date='.$date.'&chaines='.$url;
+	$url = "https://api.telerama.fr/v1/programmes/telechargement?dates=$date&nb_par_page=100&id_chaines=".$url;
 	print "req_prog: url $url\n" if ($debug);
 	my $response = $browser->get($url);
 	if (! $response->is_success) {
@@ -235,17 +211,20 @@ sub error {
 }
 
 sub getListeProgrammes {
-	# Lecture des caches (fichiers day*), et éventuellement mise à jour
-	# si selected_channels contient quelque chose
+	# Lecture des caches (fichiers day*)
+	# Très grosse différence par rapport aux versions précédentes : les
+	# fichiers ne sont lus qu'au lancement du programme. Il risque d'y
+	# avoir un problème si le programme est lancé avant minuit et met des
+	# données à jour après minuit, ce n'est pas traité pour l'instant...
 
 	my ($p,$offset) = @_;
 	# date YYYY-MM-DD
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
 	print "utilisation date $mday/",$mon+1,"/",$year+1900,"\n" if ($debug);
 	my $d0 = timegm_nocheck(0,0,0,$mday,$mon,$year);
-	my $found = undef;
-	while (<day*>) {
+	while (<cache/telerama/day*>) {
 		my $name = $_;
+		my ($num) = $name =~ /day\d-(\d+)/;
 		my $text = "";
 		next if (!open(my $f,"<$_"));
 		print "lecture fichier $_\n" if ($debug);
@@ -253,119 +232,89 @@ sub getListeProgrammes {
 			$text .= $_;
 		}
 		close($f);
-		my @fields = split(/\:\$\$\$\:/,$text);
-		my @sub = split(/\$\$\$/,$fields[0]);
-		my ($j,$m,$a) = split(/\//,$sub[12]);
-		$a -= 1900;
-		$m--;
-		print "comparaison à $sub[12] $mday et $j $mon et $m $year et $a\n" if ($debug);
-		my $d = timegm_nocheck(0,0,0,$j,$m,$a);
+		my ($a,$m,$j) = $text =~ /debut":"(\d+)-(\d+)-(\d+)/;
+		my $d = timegm_nocheck(0,0,0,$j,$m-1,$a-1900);
 		my $off = ($d-$d0)/(24*3600);
 		print "$name -> $off\n" if ($debug);
-		my $new = "day$off";
+		my $new = "cache/telerama/day$off-$num";
 		if ($name ne $new) {
 			if ($off < -1 || -f $new) {
 				unlink $name;
+				next;
 			} else {
 				rename $name,$new;
 			}
 		}
-		if ($off == $offset) {
-			$found = $text;
+		my $lib;
+		foreach (keys %$chan) {
+			if ($chan->{$_}[0] == $num) {
+				$lib = $chan->{$_}[2];
+				last;
+			}
 		}
+		parse_prg($text,$num,$lib) if ($lib);
 	}
-	return parse_prg($found) if ($found);
-	return undef if (!$net || !@selected_channels);
-
-	my $url = "";
-	for (my $i =0 ; $i < @selected_channels ; $i++ ) {
-		$url = $url.$selected_channels[$i];
-		if ($i < (@selected_channels - 1)) {
-			$url = $url.",";
-		}
-	}
-	if ($debug) {
-		print scalar localtime," récupération $url\n";
-
-		print "*** req_prog from getlisteprogrammes ***\n";
-	}
-	return undef; # if (!out::have_net());
-	my $response = req_prog($offset,$url);
-	if (!$response->is_success) {
-		$p->error($response->status_line);
-		return undef;
-	}
-
-	my $program_text = $response->content;
-
-	my $prg = parse_prg($program_text);
-	$program_text = join(':$$$:',@$prg);
-
-	open(F,">day".($offset));
-	print "fichier day$offset créé à partir de getlisteprogrammes\n" if ($debug);
-	print F $program_text;
-	close(F);
-	print scalar localtime," fichier écrit\n" if ($debug);
-	$program_text;
 }
 
 sub update {
+	# Généralement appelé par get
+	# channel est déjà converti en minuscules (appel à conv_channel de
+	# chaines.pm)
 	my ($p,$channel,$offset) = @_;
 	$p->error();
-	return undef; # telerama ne marche plus
 	$offset = 0 if (!defined($offset));
-	if (!%chaines) {
-		$p->getListeProgrammes(0);
-		$p->{chaines} = \%chaines;
-	}
 	return undef if (!out::have_net());
-	for (my $n=0; $n<=$#chan; $n++) {
-		my ($num,$name) = split(/\$\$\$/,$chan[$n]);
-		if ($channel eq $name && $num != 254) {
-			print "*** req_prog loop request ***\n" if ($debug);
-			my $response = req_prog($offset,$num);
-			if (!$response->is_success) {
-				$p->error($response->status_line);
-				last;
-			}
-			my $res = $response->content;
-			my $program_text = ($p->{chaines}->{$channel} ? join('$$$',$p->{chaines}->{$channel}) : "");
-			if ($res && index($program_text,$res) < 0 && $res =~ /$num/) {
-				my $res0 = parse_prg($res);
-				if (!$res0) {
-					print "could not parse req_prg: $res\n";
-					last;
-				} else {
-					$res = $res0;
-				}
-				if (open(F,">>day$offset")) {
-					print "fichier day$offset mis à jour de update\n" if ($debug);
-					seek(F,0,2); # A la fin
-					print F ':$$$:' if (-s "day$offset");
-					print F join(':$$$:',@$res);
-					close(F);
-				}
-				print "programme lu à la volée $name ",length($program_text),"\n" if ($debug);
-			} else {
-				print "rien pu lire pour $channel $num\n" if ($debug);
-				if ($res !~ $num) {
-					print "renvoi résultat nul\n" if ($debug);
-				} else {
-					open(F,">debug");
-					print F "$res\n";
-					close(F);
-					open(F,">debug2");
-					print F "$program_text\n";
-					close(F);
-					print "fichier debug créé, on quitte\n";
-					exit(1);
-				}
-			}
-			$res = $p->{chaines}->{$channel};
-			print "update: returning $res\n" if ($debug);
-			return $res;
+	my $num = $chan->{$channel}[0];
+	if (!$num) {
+		say "update: pas trouvé de numéro pour $channel";
+		return undef;
+	}
+
+	my $response = req_prog($offset,$num);
+	if (!$response->is_success) {
+		$p->error($response->status_line);
+		return;
+	}
+	my $res = $response->content;
+	my $program_text = $p->{chaines}->{$channel};
+	if ($res && index($program_text,$res) < 0) {
+		my $res0 = parse_prg($res,$num,$chan->{$channel}[2]);
+		if (!$res0) {
+			print "could not parse req_prg: $res\n";
+			return;
+		} else {
+			$res = $res0;
+		}
+		# Dans le format initial de télérama, les données étaient juste à
+		# la suite, séparées par des :$$$:, donc on pouvait ajouter autant
+		# de chaiens qu'on voulait sans problème dans le même fichier.
+		# Maintenant c'est du json, ça serait pas impossible, mais quand
+		# même nettement + compliqué. Donc on va changer à la place, et on
+		# va prendre comme format day<numéro d'offset>-<numéro de chaine>
+		# pour les fichiers de cache
+		if (open(F,">cache/telerama/day$offset-$num")) {
+			print "fichier day$offset-$num mis à jour de update\n" if ($debug);
+			print F $res;
+			close(F);
+		}
+	} else {
+		print "rien pu lire pour $channel $num\n" if ($debug);
+		if ($res !~ $num) {
+			print "renvoi résultat nul\n" if ($debug);
+		} else {
+			open(F,">debug");
+			print F "$res\n";
+			close(F);
+			open(F,">debug2");
+			print F "$program_text\n";
+			close(F);
+			print "fichier debug créé, on quitte\n";
+			exit(1);
 		}
 	}
+	$res = $p->{chaines}->{$channel};
+	print "update: returning $res\n" if ($debug);
+	return $res;
 }
 
 sub get {
@@ -394,6 +343,7 @@ sub get {
 	my $min_n = $#$rtab;
 	if ($$rtab[0][3] > $time) {
 		# Heure de début du 1er prog dans le futur -> récupérer l'offset d'avant
+		print "update channel too recent\n" if ($debug);
 		my $offset = get_offset($$rtab[0][12])-1;
 		$p->update($channel,$offset);
 	}
