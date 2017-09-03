@@ -20,27 +20,28 @@ sub conv_channel {
 	}
 	my %corresp =
 	(
+		# Note : la plupart de ces conversions sont vieilles et je
+		# soupçonne telerama d'avoir complètement changé toute sa base,
+		# donc il est fort possible que tout ça soit périmé !
+		"NT1" => "NT 1",
+		"France Ô" => "france ô",
+		"L'Equipe 21" => "L'Equipe",
 		"Poker Channel" => "The Poker Channel",
 		"RTL9" => "RTL 9",
 		"Luxe.TV" => "Luxe TV",
 		"AB 1" => "AB1",
 		"IDF 1" => "IDF1",
-		"i>TELE" => "iTélé",
-		"i> TELE" => "iTélé",
 		"TV5 Monde" => "TV5MONDE",
-		"France ô" => "France Ô",
 		"france o" => "France Ô",
-		"Télénantes Nantes 7" => "Nantes 7",
 		"NRJ12" => "NRJ 12",
 		"LCP" => "La chaîne parlementaire",
 		"Onzeo" => "Onzéo",
 		"TEVA" => "Téva",
 		"Equidia live" => "Equidia",
 		"Luxe.TV" => "Luxe TV",
-		"telenantes" => "Télé Nantes",
+		"telenantes" => "Télénantes",
 		"NUMERO 23" => "Numéro 23",
 		"RMC DECOUVERTE" => "RMC Découverte",
-		"LCI" => "LCI - La Chaîne Info",
 		"PARIS PREMIERE" => "PARIS Première",
 	);
 	$channel =~ s/ \(.+\)//;
@@ -120,14 +121,7 @@ sub request {
 sub getListeChaines($) {
 	my $net = shift;
 	my $r;
-	if (!$net && -f "liste_chaines") {
-		open(F,"<liste_chaines");
-		@_ = <F>;
-		close(F);
-		$r = join("",@_);
-	} else {
-		$r = myget("https://api.telerama.fr/v1/application/initialisation","liste_chaines",30);
-	}
+	$r = myget("https://api.telerama.fr/v1/application/initialisation","liste_chaines",30);
 	my $json;
 	eval {
 		$json = decode_json($r);

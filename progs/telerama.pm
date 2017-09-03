@@ -147,6 +147,7 @@ sub parse_prg {
 				$lib = $_->{libelle};
 			}
 			$cont .= "$_->{prenom} $_->{nom}";
+			$cont .= " ($_->{role})" if ($_->{role});
 		}
 		$details = dump_details($details,$lib,$cont) if ($lib);
 
@@ -155,9 +156,12 @@ sub parse_prg {
 			$rating .= ", " if ($rating);
 			$rating .= $_->{nom_long};
 		}
+		my $sub = $_->{soustitre};
+		$sub .= "\nSaison $_->{serie}->{saison} Episode $_->{serie}->{numero_episode}" if ($_->{serie});
+
 		my @sub = ($num,$label,$_->{titre},
 			parse_date($_->{horaire}->{debut}),parse_date($_->{horaire}->{fin}),
-			$_->{genre_specifique},$_->{soustitre},$details,
+			$_->{genre_specifique},$sub,$details,
 			$rating,
 			# pour l'image, ils ont 4 tailles, équivalentes 2 à 2, mais en
 			# fait petite est très petite (124x96), et grande est du 720p!
