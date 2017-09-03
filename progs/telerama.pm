@@ -228,7 +228,7 @@ sub getListeProgrammes {
 	my $d0 = timegm_nocheck(0,0,0,$mday,$mon,$year);
 	while (<cache/telerama/day*>) {
 		my $name = $_;
-		my ($num) = $name =~ /day\d-(\d+)/;
+		my ($num) = $name =~ /day.*-(\d+)/;
 		my $text = "";
 		next if (!open(my $f,"<$_"));
 		print "lecture fichier $_\n" if ($debug);
