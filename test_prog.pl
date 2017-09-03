@@ -7,7 +7,8 @@ use strict;
 use warnings;
 use chaines;
 
-open(F,"<cache/telerama/day0-4");
+my $file = $ARGV[0] || "cache/telerama/day0-4";
+open(F,"<$file");
 @_ = <F>;
 close(F);
 my $res = join("",@_);
