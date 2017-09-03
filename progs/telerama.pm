@@ -159,6 +159,9 @@ sub parse_prg {
 		my $sub = $_->{soustitre};
 		$sub .= "\nSaison $_->{serie}->{saison} Episode $_->{serie}->{numero_episode}" if ($_->{serie});
 
+		my $critique = $_->{critique};
+		$critique =~ s/<.+?>//g; # vire tous les tags html
+
 		my @sub = ($num,$label,$_->{titre},
 			parse_date($_->{horaire}->{debut}),parse_date($_->{horaire}->{fin}),
 			$_->{genre_specifique},$sub,$details,
@@ -170,7 +173,7 @@ sub parse_prg {
 			# que grande !
 			$_->{vignettes}->{grande},
 			$_->{note_telerama}, # stars
-			$_->{critique},
+			$critique,
 			get_date($_->{horaire}->{debut}),$_->{showview});
 		my $rtab = $chaines{$chan};
 		if ($rtab) {
