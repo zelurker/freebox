@@ -261,13 +261,6 @@ sub disp_prog {
 				disp_channel();
 			}
 		);
-	} elsif ($end && $end < $time) {
-		# paradoxe reste négatif
-		$refresh = AnyEvent->timer(after=>15, cb =>
-			sub {
-				disp_channel();
-			}
-		);
 	} else {
 		undef $refresh;
 	}
@@ -405,8 +398,10 @@ sub commands {
 	} elsif ($cmd eq "time") {
 		out::send_command("osd_show_property_text ".get_time(time())." 3000\n");
 	} elsif ($cmd eq "nextprog" || $cmd eq "right") {
+		undef $refresh;
 		disp_prog($prog[$reader]->next($last_chan),$last_long);
 	} elsif ($cmd eq "prevprog" || $cmd eq "left") {
+		undef $refresh;
 		disp_prog($prog[$reader]->prev($last_chan),$last_long);
 	} elsif ($cmd =~ /^(next|prev)$/) {
 	    # Ces commandes sont juste passées à bmovl sans rien changer
