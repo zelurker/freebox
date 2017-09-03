@@ -150,6 +150,19 @@ sub parse_prg {
 			$cont .= " ($_->{role})" if ($_->{role});
 		}
 		$details = dump_details($details,$lib,$cont) if ($lib);
+		if ($_->{notule}) {
+			# leur notule a l'air d'être une présentation de la série pour
+			# les séries, mais c'est aussi le contenu d'une rencontre
+			# sportive... ça va faire long de l'ajouter à ce qu'il y a
+			# déjà, mais des fois c'est la seule info dispo. A essayer, on
+			# verra bien...
+			$details .= "\n" if ($details);
+			$details .= $_->{notule};
+			# en fait y a pas que de l'html, y a <+>texte<+> pour mettre
+			# texte en "exposant", genre 8<+>e<+> pour 8e avec le e en
+			# hauteur. On se contente de dégager les balises...
+			$details =~ s/<.+?>//g; # vire tous les tags html
+		}
 
 		my $rating = "";
 		foreach (@{$_->{csa_full}}) {
