@@ -163,6 +163,10 @@ sub parse_prg {
 			# hauteur. On se contente de dégager les balises...
 			$details =~ s/<.+?>//g; # vire tous les tags html
 		}
+		if ($_->{annee_realisation}) {
+			$details .= "\n" if ($details);
+			$details .= "Année de réalisation : $_->{annee_realisation}";
+		}
 
 		my $rating = "";
 		foreach (@{$_->{csa_full}}) {
