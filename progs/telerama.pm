@@ -10,6 +10,7 @@ use chaines;
 require HTTP::Cookies;
 use Encode;
 use out;
+use Digest::HMAC_SHA1 qw(hmac_sha1_hex);
 use v5.10;
 
 # my @def_chan = ("France 2", "France 3", "France 4", "Arte", "TV5MONDE",
@@ -23,7 +24,7 @@ my $site_prefix = "https://$site_addr/verytv/procedures/";
 my $site_img = "http://$site_addr/verytv/procedures/images/";
 
 # init the Web agent
-my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
+my $useragt = 'okhttp/3.2.0';
 my $browser = LWP::UserAgent->new(keep_alive => 0,
 	agent =>$useragt);
 $browser->cookie_jar(HTTP::Cookies->new(file => "$ENV{HOME}/.$site_addr.cookie"));
@@ -215,14 +216,35 @@ sub parse_prg {
 	return $program_text;
 }
 
+sub myhash {
+	my $url = shift;
+	my ($base,$args) = split(/\?/,$url);
+	my @args = split /\&/,$args;
+	my $l;
+	# le truc de merde, ils font un hash, mais au lieu de le faire sur
+	# l'url ce qui serait quand même + simple, ils le font sur les
+	# arguments mais sans le =, et le tout avec quand même la base de l'url
+	# collée, vraiment du délire... !
+	foreach (sort @args) {
+		s/\=//;
+		$l .= $_;
+	}
+	$l = $base.$l;
+
+	hmac_sha1_hex($l, 'Eufea9cuweuHeif');
+}
+
 sub req_prog($$) {
 	my ($offset,$url) = @_;
 	my $date = strftime("%Y-%m-%d", localtime(time()+(24*3600*$offset)) );
-	$url = "https://api.telerama.fr/v1/programmes/telechargement?dates=$date&nb_par_page=100&id_chaines=".$url;
+	my $server = "https://api.telerama.fr";
+	$url = "/v1/programmes/telechargement?dates=$date&nb_par_page=100&id_chaines=".$url;
+	$url .= "&appareil=android_tablette";
+	$url .= "&api_signature=".myhash($url)."&api_cle=apitel-5304b49c90511";
 	print "req_prog: url $url\n" if ($debug);
-	my $response = $browser->get($url);
+	my $response = $browser->get($server.$url);
 	if (! $response->is_success) {
-	    print "$url error: ",$response->status_line,"\n";
+	    print "$server$url error: ",$response->status_line,"\n";
 	} elsif ($debug) {
 		print "req_prog: is_success\n";
 	}
