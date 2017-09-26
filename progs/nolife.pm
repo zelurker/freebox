@@ -1,22 +1,4 @@
 package progs::nolife;
-#
-#===============================================================================
-#
-#         FILE: nolife.pm
-#
-#  DESCRIPTION: Ca fait un bon exemple d'héritage de la telerama
-#  Seule méthode surchargée : update. new, next et prev doivent marcher tout
-#  seuls !
-#
-#        FILES: ---
-#         BUGS: ---
-#        NOTES: ---
-#       AUTHOR: Emmanuel Anne (), emmanuel.anne@gmail.com
-# ORGANIZATION: 
-#      VERSION: 1.0
-#      CREATED: 05/03/2013 12:57:07
-#     REVISION: ---
-#===============================================================================
 
 use progs::telerama;
 @ISA = ("progs::telerama");
@@ -25,7 +7,7 @@ use warnings;
 use Time::Local "timegm_nocheck";
 use Encode;
 use chaines;
- 
+
 my $last_time;
 my $debug = 0;
 
@@ -49,7 +31,7 @@ sub conv_date {
 
 sub get_date {
 	my $time = shift;
-	my ($sec,$min,$hour,$mday,$mon,$year) = gmtime($time); 
+	my ($sec,$min,$hour,$mday,$mon,$year) = gmtime($time);
 	sprintf("%d/%02d/%02d",$mday,$mon+1,$year+1900);
 }
 
@@ -150,7 +132,8 @@ sub update {
 		# Apparemment le nouveau programme de nolife s'étend sur une 20aine
 		# de jours, donc là on peut forcer une update
 		if (update_noair()) {
-			return $p->get($channel);
+			print "nolife: périmé, on boucle sur update\n" if ($debug);
+			return $p->update($channel);
 		}
 	}
 	# Test le dernier programme !
