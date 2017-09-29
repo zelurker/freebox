@@ -273,11 +273,14 @@ sub get_lyrics {
 			if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com)/) {
 				my $old = $_;
 				my $text = pure_ascii($_->text);
-				if ($text =~ /$title/) {
+				if ($text =~ /$title/ || $text =~ /$title $artist/i || $text =~ /$artist $title/i || $u =~ /lyricsfreak.com/) {
+					# exception sur lyricsfreak : ces cons mélangent titre,
+					# artiste et la mention lyrics dans le titre de la page
+					# ce qui la rend très difficile à identifier !
 					$lyrics = handle_lyrics($mech,$u);
 					last if ($lyrics);
 				} else {
-					print "lyrics: rejet sur le titre, texte : $text, title $title.\n";
+					print "lyrics: rejet sur le titre, texte : $text, title $title, artist $artist.\n";
 				}
 				$_ = $old;
 			}
