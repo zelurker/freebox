@@ -75,7 +75,7 @@ sub search {
 		ou => "imgurl",
 		id => "tbnid"
 	);
-	while ($c =~ s/<div class="rg_meta.+?">\{(.+?)\}//) {
+	while ($c =~ s/class="rg_meta.+?">\{(.+?)\}//) {
 		my $tags = $1;
 		my @tags = split(/,/,$tags);
 		my %args;
