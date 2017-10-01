@@ -179,7 +179,7 @@ sub pure_ascii {
 	$_ = shift;
 	$_ = lc($_);
 	s/[()]//g;
-	s/[àâ]/a/g;
+	s/([àâ]|\xc3\xa0)/a/g;
 	s/([éèêë]|\xc3\xa9)/e/g;
 	s/ô/o/g;
 	s/[ùû]/u/g;
@@ -264,6 +264,9 @@ sub get_lyrics {
 		return undef;
 	}
 	my $r;
+	my $orig = $title;
+	$title = pure_ascii($title);
+	say "lyrics: envoie requête : lyrics $artist - $title";
 	eval {
 		$r = $mech->submit_form(
 			form_number => 1,
@@ -276,8 +279,6 @@ sub get_lyrics {
 		print "lyrics: foirage sur le submit $!: $@\n";
 		return undef;
 	}
-	my $orig = $title;
-	$title = pure_ascii($title);
 
 	my $u;
 	foreach ($mech->links) {
