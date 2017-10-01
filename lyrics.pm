@@ -33,11 +33,7 @@ sub handle_lyrics {
 	# Par contre si on le laisse faire sa conversion foireuse en latin1
 	# bmovl appelle la fonction pour afficher du texte utf et ça foire !
 
-	if ($u !~ /paroles-musique.com/) {
-		$_ = $mech->content(decoded_by_headers => 1);
-	} else {
-		$_ = $mech->content();
-	}
+	$_ = $mech->content(decoded_by_headers => 1);
 	my $lyrics = "";
 	my $start = undef;
 	if ($u =~ /lyricsfreak.com/) {
@@ -81,6 +77,7 @@ sub handle_lyrics {
 			s/\r//;
 			if (s/<div id="lyrics">//) {
 				$lyr = 1;
+				next;
 			}
 			if ($lyr) {
 				s/<br>/\n/g;
@@ -90,7 +87,6 @@ sub handle_lyrics {
 				$lyrics .= decode_entities($_);
 			}
 		}
-		say "paroles-musique.com : $lyrics";
 	} elsif ($u =~ /parolesmania.com/) {
 		foreach (split /\n/,$_) {
 			if (/<strong>Paroles/) {
