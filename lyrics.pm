@@ -9,6 +9,7 @@ use HTML::Entities;
 use Ogg::Vorbis::Header;
 use MP3::Tag;
 use utf8;
+use v5.10;
 
 sub handle_lyrics {
 	my ($mech,$u) = @_;
@@ -62,15 +63,19 @@ sub handle_lyrics {
 		my $lyr = 0;
 		my $div = 0;
 		my $start_div;
+		my $mute = 0;
 		foreach (split /\n/,$_) {
 			s/\r//;
-			$div++ if (/<div/);
-			$div-- if (/<\/div/);
 			if (s/<div class="song-text">//) {
 				$lyr = 1;
 				$start_div = $div-1;
 			}
 			if ($lyr) {
+				while (s/<div.+?>//) { $div++; }
+				while (s/<\/div>//) { $div--; }
+				while (s/<script.+?>// || s/<script>//) { $mute++; }
+				while (s/<\/script>//) { $mute--; }
+
 				if (s/<\/div>// && $div == $start_div) {
 					$lyr = 0;
 				}
@@ -78,8 +83,9 @@ sub handle_lyrics {
 				s/[ \t]+$//;
 				s/\r//;
 				s/<br>/\n/g;
+				s/<.+?>//g; # filtrage tags...
 				# Filtrage des pubs en plein milieu de la chanson !!!
-				$lyrics .= decode_entities($_) if (!/<\/?(div|script)/ && $div-1 <= $start_div);
+				$lyrics .= decode_entities($_) if (!$mute && $div-1 <= $start_div);
 			}
 		}
 		$lyrics =~ s/\n$//s;
@@ -171,15 +177,21 @@ sub pure_ascii {
 	$_ = shift;
 	$_ = lc($_);
 	s/[àâ]/a/g;
-	s/[éèêë]/e/g;
+	s/([éèêë]|\xc3\xa9)/e/g;
 	s/ô/o/g;
 	s/[ùû]/u/g;
+	s/(ç|\xc3\xa7)/c/g;
 	s/[!,?;\-]/ /g;
 	s/ +/ /g;
 	s/^ +//;
 	s/ +$//;
 	# Et pendant qu'on y est, on va virer les ponctuations...
 	s/[\.,\?\;]//g;
+	say "pure ascii: $_";
+	for (my $n=0; $n<length($_); $n++) {
+		print sprintf("%02x ",ord(substr($_,$n,1)));
+	}
+	print "\n";
 	$_;
 }
 
@@ -273,10 +285,14 @@ sub get_lyrics {
 			if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com)/) {
 				my $old = $_;
 				my $text = pure_ascii($_->text);
-				if ($text =~ /$title/ || $text =~ /$title $artist/i || $text =~ /$artist $title/i || $u =~ /lyricsfreak.com/) {
+				if ($text =~ /$title/ || $u =~ /lyricsfreak.com/ || $text =~ /^En cache/i) {
 					# exception sur lyricsfreak : ces cons mélangent titre,
 					# artiste et la mention lyrics dans le titre de la page
 					# ce qui la rend très difficile à identifier !
+					if ($text =~ /^En cache/i) {
+						say "Traitement du cache...";
+						$u =~ s/\%(..)/chr(hex($1))/ge;
+					}
 					$lyrics = handle_lyrics($mech,$u);
 					last if ($lyrics);
 				} else {
