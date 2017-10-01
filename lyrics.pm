@@ -352,6 +352,15 @@ sub get_lyrics {
 			print F "$lyrics";
 			close(F);
 			print "lyrics file created\n";
+			# Exception pour paroles.net : le décodage interne habituel
+			# foire pour celui là, si on le laisse retourner les $lyrics
+			# normales on obtient un warning wide character sur Coro au
+			# moment de les transmettre et ça interrompt mplayer2. Donc
+			# contournement : on relit ce qu'on vient juste d'écrire ! De
+			# cette façon le wide character disparait, il y a probablement
+			# une fonction très obscure et qui marche une fois tous les 36
+			# du mois qui sait faire ça aussi, mais là de cette façon on
+			# est sûr que ça marchera tout le temps... enfin on espère !!!
 			$lyrics = "";
 			open(F,"<$file.lyrics");
 			while (<F>) {
