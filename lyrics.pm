@@ -33,7 +33,11 @@ sub handle_lyrics {
 	# Par contre si on le laisse faire sa conversion foireuse en latin1
 	# bmovl appelle la fonction pour afficher du texte utf et ça foire !
 
-	$_ = $mech->content(decoded_by_headers => 1);
+	if ($u !~ /paroles-musique.com/) {
+		$_ = $mech->content(decoded_by_headers => 1);
+	} else {
+		$_ = $mech->content();
+	}
 	my $lyrics = "";
 	my $start = undef;
 	if ($u =~ /lyricsfreak.com/) {
@@ -56,39 +60,37 @@ sub handle_lyrics {
 				$lyrics .= $_;
 			}
 		}
-	} elsif ($u =~ /paroles.net/) {
-		# Le 1er que j'ai trouvé en fr, mais il a des fautes flagrantes et
-		# des fois il manque carrément la fin de la chanson ! Donc à éviter
-		# si possible, parolesmania est mieux.
+	} elsif ($u =~ /genius.com/) {
 		my $lyr = 0;
-		my $div = 0;
-		my $start_div;
-		my $mute = 0;
 		foreach (split /\n/,$_) {
 			s/\r//;
-			if (s/<div class="song-text">//) {
+			last if (/<\/div>/);
+			if (s/<div class="lyrics">//) {
 				$lyr = 1;
-				$start_div = $div-1;
 			}
 			if ($lyr) {
-				while (s/<div.+?>//) { $div++; }
-				while (s/<\/div>//) { $div--; }
-				while (s/<script.+?>// || s/<script>//) { $mute++; }
-				while (s/<\/script>//) { $mute--; }
-
-				if (s/<\/div>// && $div == $start_div) {
-					$lyr = 0;
-				}
-				s/^[ \t]+//;
-				s/[ \t]+$//;
-				s/\r//;
 				s/<br>/\n/g;
 				s/<.+?>//g; # filtrage tags...
 				# Filtrage des pubs en plein milieu de la chanson !!!
-				$lyrics .= decode_entities($_) if (!$mute && $div-1 <= $start_div);
+				$lyrics .= decode_entities($_);
 			}
 		}
-		$lyrics =~ s/\n$//s;
+	} elsif ($u =~ /paroles-musique.com/) {
+		my $lyr = 0;
+		foreach (split /\n/,$_) {
+			s/\r//;
+			if (s/<div id="lyrics">//) {
+				$lyr = 1;
+			}
+			if ($lyr) {
+				s/<br>/\n/g;
+				$lyr = 0 if (s/<\/div>//); # collé à la dernière ligne !
+				s/<.+?>//g; # filtrage tags...
+				# Filtrage des pubs en plein milieu de la chanson !!!
+				$lyrics .= decode_entities($_);
+			}
+		}
+		say "paroles-musique.com : $lyrics";
 	} elsif ($u =~ /parolesmania.com/) {
 		foreach (split /\n/,$_) {
 			if (/<strong>Paroles/) {
@@ -176,6 +178,7 @@ sub pure_ascii {
 	# Vire les accents et la ponctuation
 	$_ = shift;
 	$_ = lc($_);
+	s/[()]//g;
 	s/[àâ]/a/g;
 	s/([éèêë]|\xc3\xa9)/e/g;
 	s/ô/o/g;
@@ -282,7 +285,7 @@ sub get_lyrics {
 		if ($u =~ /url.q=(http.+?)&/) {
 			$u = $1;
 			print $_->text,"\n$u\n";
-			if ($u =~ /(paroles.net|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com)/) {
+			if ($u =~ /(paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com)/) {
 				my $old = $_;
 				my $text = pure_ascii($_->text);
 				if ($text =~ /$title/ || $u =~ /lyricsfreak.com/ || $text =~ /^En cache/i) {
@@ -349,6 +352,12 @@ sub get_lyrics {
 			print F "$lyrics";
 			close(F);
 			print "lyrics file created\n";
+			$lyrics = "";
+			open(F,"<$file.lyrics");
+			while (<F>) {
+				$lyrics .= $_;
+			}
+			close(F);
 		}
 	}
 	return $lyrics;
