@@ -15,8 +15,10 @@ use Coro::Handle;
 use Coro;
 use Cwd;
 use Encode;
+use v5.10;
 
 our $cwd = getcwd();
+our $latin = ($ENV{LANG} !~ /UTF/i);
 
 sub send_bmovl {
 	my $cmd = shift;
@@ -205,6 +207,9 @@ sub get_current {
 	foreach (@_) {
 		chomp;
 		$_ = 0 if (!$_);
+		if (/\xc3/ && !$latin) {
+			utf8::decode($_);
+		}
 	}
 	@_;
 }

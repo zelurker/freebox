@@ -151,6 +151,7 @@ sub read_stream_info {
 			print $out "$pics\n$pic\n";
 			my ($sec,$min,$hour) = localtime($time);
 
+			mydecode(\$cmd);
 			print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec);
 			if ($cur) {
 				print $out "\n$cur $progress\n";
@@ -446,6 +447,46 @@ sub commands {
 	}
 }
 
+sub mydecode {
+	my $ref = shift;
+	$$ref =~ s/\x{2019}/'/g;
+	$$ref =~ s/\x{0153}/oe/g;
+	# Ok, on va chercher l'encodage de la chaine puisqu'on ne peut
+	# faire confiance à is_utf8. L'idée c'est de se fier aux codes
+	# ascii, on cherche le maxi dans la chaine.
+	# Si il est < 128 alors c'est de l'ascii standard, pas besoin
+	# d'encodage
+	# Si c'est < 256 alors c'est du latin1
+	# Si c'est > 256 alors c'est de l'utf8 (j'espère !)
+	my $max_ord = 0;
+	for (my $n=0; $n<length($$ref); $n++) {
+		$max_ord = ord(substr($$ref,$n,1)) if (ord(substr($$ref,$n,1)) > $max_ord);
+	}
+	say "decode max_ord $max_ord pour $$ref";
+	return if ($max_ord < 128);
+	if (!$latin) {
+		if ($$ref =~ /[\xc3\xc5]/ || $max_ord > 255) {
+			# print "to_utf: reçu un truc en utf: $$ref\n";
+			say "decode: on change rien";
+			return;
+		}
+		eval {
+			Encode::from_to($$ref,"iso-8859-1","utf8");
+		};
+		if ($@) {
+			print "to_utf: error encoding $$ref: $!, $@\n";
+		}
+	} elsif ($$ref =~ /[\xc3\xc5]/ || $max_ord > 255) {
+		utf8::encode($$ref) if ($max_ord > 255);
+		eval {
+			Encode::from_to($$ref,"utf8","iso-8859-1");
+		};
+		if ($@) {
+			print "to_utf: error encoding $$ref: $!, $@\n";
+		}
+	}
+}
+
 sub encoding {
 	my $sub = shift;
 	foreach (1,2,6,7,11) {
@@ -454,40 +495,7 @@ sub encoding {
 			$$ref = "";
 			next;
 		}
-		$$ref =~ s/\x{2019}/'/g;
-		$$ref =~ s/\x{0153}/oe/g;
-		# Ok, on va chercher l'encodage de la chaine puisqu'on ne peut
-		# faire confiance à is_utf8. L'idée c'est de se fier aux codes
-		# ascii, on cherche le maxi dans la chaine.
-		# Si il est < 128 alors c'est de l'ascii standard, pas besoin
-		# d'encodage
-		# Si c'est < 256 alors c'est du latin1
-		# Si c'est > 256 alors c'est de l'utf8 (j'espère !)
-		my $max_ord = 0;
-		for (my $n=0; $n<length($$ref); $n++) {
-			$max_ord = ord(substr($$ref,$n,1)) if (ord(substr($$ref,$n,1)) > $max_ord);
-		}
-		next if ($max_ord < 128);
-		if (!$latin) {
-			if ($$ref =~ /[\xc3\xc5]/ || $max_ord > 255) {
-				# print "to_utf: reçu un truc en utf: $$ref\n";
-				next;
-			}
-			eval {
-				Encode::from_to($$ref,"iso-8859-1","utf8");
-			};
-			if ($@) {
-				print "to_utf: error encoding $$ref: $!, $@\n";
-			}
-		} elsif ($$ref =~ /[\xc3\xc5]/ || $max_ord > 255) {
-			utf8::encode($$ref) if ($max_ord > 255);
-			eval {
-				Encode::from_to($$ref,"utf8","iso-8859-1");
-			};
-			if ($@) {
-				print "to_utf: error encoding $$ref: $!, $@\n";
-			}
-		}
+		mydecode($ref);
 	}
 }
 
@@ -541,6 +549,8 @@ sub disp_channel {
 		}
 		print $out "$pic\n\n";
 		($sec,$min,$hour) = localtime($time);
+		mydecode(\$cmd);
+		say "*** affichage après decode: $cmd";
 
 		print $out "$cmd : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec),"\n";
 #		if (-f "stream_lyrics") {
