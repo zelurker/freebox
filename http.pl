@@ -44,7 +44,7 @@ sub myget {
 	my $useragt = "Mozilla/5.0 (X11; Linux x86_64; rv:41.0) Gecko/20100101 Firefox/41.0";
 	my $ua = LWP::UserAgent->new(keep_alive => 0,
 		agent =>$useragt);
-	$ua->timeout(10);
+	$ua->timeout(15);
 	$ua->cookie_jar($cookie_jar);
 	my $r = $ua->get($url);
 	my $type = $r->header("Content-type");

@@ -8,6 +8,7 @@ use Data::Dumper;
 use out;
 use v5.10;
 use Encode;
+use progs::telerama;
 
 our %chan;
 our $latin = ($ENV{LANG} !~ /UTF/i);
@@ -121,7 +122,11 @@ sub request {
 sub getListeChaines($) {
 	my $net = shift;
 	my $r;
-	$r = myget("https://api.telerama.fr/v1/application/initialisation","liste_chaines",30);
+	my $server = "https://api.telerama.fr";
+	my $url = "/v1/application/initialisation";
+	$url .= "?appareil=android_tablette";
+	$url .= "&api_signature=".progs::telerama::myhash($url)."&api_cle=apitel-5304b49c90511";
+	$r = myget("$server$url","liste_chaines",30);
 	my $json;
 	eval {
 		$json = decode_json($r);
