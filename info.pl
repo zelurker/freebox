@@ -329,15 +329,14 @@ sub commands {
 		$cleared = 1;
 	} elsif ($cmd eq "tracks") {
 		my ($name,$src) = get_cur_name();
-		print "tracks: name $name, src $src.\n";
 		$name .= "&$src";
 		my @tracks = ();
 		my $rtracks = $info{$name}->{tracks};
 		while (<$fh>) {
 			chomp;
 			if ($_) {
+				mydecode(\$_);
 				push @tracks,$_ ;
-				print "tracks: reçu $_.\n";
 			}
 		}
 		close($fh);
