@@ -393,8 +393,9 @@ sub send_cmd_prog {
 	# appuie sur i pendant qu'on regarde une chaine de télé le bandeau
 	# d'info reste en long et ne disparait plus tout seul quand on change
 	# de chaine !
-	my $cmd = "prog:0";
-	out::send_cmd_info("$cmd $chan&$source/$base_flux") if ($cmd);
+	my $cmd = "prog:0 $chan&$source";
+	$cmd .= "/$base_flux" if ($base_flux);
+	out::send_cmd_info("$cmd") if ($cmd);
 }
 
 sub update_codec_info {
