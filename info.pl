@@ -461,12 +461,10 @@ sub mydecode {
 	for (my $n=0; $n<length($$ref); $n++) {
 		$max_ord = ord(substr($$ref,$n,1)) if (ord(substr($$ref,$n,1)) > $max_ord);
 	}
-	say "decode max_ord $max_ord pour $$ref";
 	return if ($max_ord < 128);
 	if (!$latin) {
 		if ($$ref =~ /[\xc3\xc5]/ || $max_ord > 255) {
 			# print "to_utf: reçu un truc en utf: $$ref\n";
-			say "decode: on change rien";
 			return;
 		}
 		eval {
