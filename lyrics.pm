@@ -56,15 +56,29 @@ sub handle_lyrics {
 				$lyrics .= $_;
 			}
 		}
+	} elsif ($u =~ /musique.ados.fr/) {
+		my $lyr = 0;
+		foreach (split /\n/,$_) {
+			$lyr = 1 if (/<div class="contenu/);
+			if ($lyr > 0 && $lyr < 2) {
+				$lyr = 2 if (/<\/script/); # la pub collée !
+				next;
+			}
+			if ($lyr == 2) {
+				last if (/<\/div/);
+				s/<br.+/\n/;
+				$lyrics .= $_;
+			}
+		}
 	} elsif ($u =~ /genius.com/) {
 		my $lyr = 0;
 		foreach (split /\n/,$_) {
 			s/\r//;
-			last if (/<\/div>/);
 			if (s/<div class="lyrics">//) {
 				$lyr = 1;
 			}
 			if ($lyr) {
+				last if (/<\/div>/);
 				s/<br>/\n/g;
 				s/<.+?>//g; # filtrage tags...
 				# Filtrage des pubs en plein milieu de la chanson !!!
@@ -167,6 +181,13 @@ sub handle_lyrics {
 		}
 		print "lyrics lyrics.wikia.com : $lyrics\n";
 	}
+	my ($site) = $u =~ /https?:\/\/(.+?)\//;
+	$site =~ s/^www\.//;
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
+	$mon++;
+	$year += 1900;
+	$lyrics .= "\nParoles provenant de $site, le $mday/$mon/$year";
+
 	$lyrics;
 }
 
@@ -186,11 +207,6 @@ sub pure_ascii {
 	s/ +$//;
 	# Et pendant qu'on y est, on va virer les ponctuations...
 	s/[\.,\?\;]//g;
-	say "pure ascii: $_";
-	for (my $n=0; $n<length($_); $n++) {
-		print sprintf("%02x ",ord(substr($_,$n,1)));
-	}
-	print "\n";
 	$_;
 }
 
@@ -282,7 +298,7 @@ sub get_lyrics {
 		if ($u =~ /url.q=(http.+?)&/) {
 			$u = $1;
 			print $_->text,"\n$u\n";
-			if ($u =~ /(paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com)/) {
+			if ($u =~ /(musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com)/) {
 				my $old = $_;
 				my $text = pure_ascii($_->text);
 				if ($text =~ /$title/ || $u =~ /lyricsfreak.com/ || $text =~ /^En cache/i) {
