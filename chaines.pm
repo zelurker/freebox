@@ -45,7 +45,7 @@ sub conv_channel {
 		"RMC DECOUVERTE" => "RMC Découverte",
 		"PARIS PREMIERE" => "PARIS Première",
 	);
-	$channel =~ s/ \(.+\)//;
+	$channel =~ s/ \(hd\)//i;
 	$channel =~ s/ ?hd$//i;
 	$channel =~ s/ sat$//i;
 	$channel =~ s/^Télénantes //;
