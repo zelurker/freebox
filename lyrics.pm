@@ -181,12 +181,23 @@ sub handle_lyrics {
 		}
 		print "lyrics lyrics.wikia.com : $lyrics\n";
 	}
+	if ($lyrics =~ /paroles ne sont plus dispo/i) {
+		# paroles-musique.net renvoie ça de temps en temps !
+		return undef;
+	}
 	my ($site) = $u =~ /https?:\/\/(.+?)\//;
 	$site =~ s/^www\.//;
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
 	$mon++;
 	$year += 1900;
 	$lyrics .= "\nParoles provenant de $site, le $mday/$mon/$year";
+	if ($site =~ /webcache/) {
+		# pour le cache google ajoute le site original
+		$u =~ s/https?:\/\/(.+?)\///;
+		($site) = $u =~ /https?:\/\/(.+?)\//;
+		$site =~ s/^www\.//;
+		$lyrics .= " (de $site)";
+	}
 
 	$lyrics;
 }
