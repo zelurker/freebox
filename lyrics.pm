@@ -199,6 +199,11 @@ sub handle_lyrics {
 		$lyrics .= " (de $site)";
 	}
 
+	$lyrics =~ s/^ +//;
+	# ça c'est un mystère : pourquoi cette apostrophe n'apparait pas ?
+	# Normalement c'est bien de l'utf8, et pourtant pas moyen de l'afficher
+	# avec la fonction utf de freetype...
+	$lyrics =~ s/\xe2\x80\x99/'/g;
 	$lyrics;
 }
 
@@ -259,6 +264,8 @@ sub get_lyrics {
 		# d'être ok. Bah en tous cas ça peut être lit/écrit par ce script !
 		$lyrics = $mp3->select_id3v2_frame_by_descr('COMM(fre,fra,eng,#0)[USLT]');
 		print "mp3: title $title track $track artist $artist album $album comment $comment year $year genre $genre\n";
+		$lyrics =~ s/^ +//;
+		$lyrics =~ s/\xe2\x80\x99/'/g;
 		if ($lyrics) {
 			return $lyrics;
 		}
