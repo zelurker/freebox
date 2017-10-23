@@ -140,7 +140,7 @@ sub handle_lyrics {
 		print "lyrics flashlyrics.com : $lyrics\n";
 	} elsif ($u =~ /musixmatch.com/) {
 		foreach (split /\n/,$_) {
-			if (s/^.+p class=".+?lyrics.+?content".+?>//) {
+			if (s/^.+p class=".+?lyrics.+?content ?">//) {
 				$start = 1;
 			}
 			if ($start) {
@@ -190,8 +190,15 @@ sub handle_lyrics {
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
 	$mon++;
 	$year += 1900;
+	$lyrics =~ s/^ +//;
+	if ($lyrics eq "") {
+		say "lyrics rejected - empty";
+		return undef;
+	}
 	$lyrics .= "\nParoles provenant de $site, le $mday/$mon/$year";
 	if ($site =~ /webcache/) {
+		$lyrics =~ s/<b.+?>//g; # les marques de google cache
+		$lyrics =~ s/<\/b>//g;
 		# pour le cache google ajoute le site original
 		$u =~ s/https?:\/\/(.+?)\///;
 		($site) = $u =~ /https?:\/\/(.+?)\//;
@@ -199,7 +206,6 @@ sub handle_lyrics {
 		$lyrics .= " (de $site)";
 	}
 
-	$lyrics =~ s/^ +//;
 	# ça c'est un mystère : pourquoi cette apostrophe n'apparait pas ?
 	# Normalement c'est bien de l'utf8, et pourtant pas moyen de l'afficher
 	# avec la fonction utf de freetype...
@@ -296,6 +302,7 @@ sub get_lyrics {
 	my $r;
 	my $orig = $title;
 	$title = pure_ascii($title);
+	$title =~ s/ en duo.+//; # à tout hasard... !
 	say "lyrics: envoie requête : lyrics $artist - $title";
 	eval {
 		$r = $mech->submit_form(
@@ -346,39 +353,14 @@ sub get_lyrics {
 	$lyrics =~ s/\x{2019}/'/g;
 	$lyrics =~ s/\x{0153}/oe/g; # bizarre c'est sensé être supporté par perl5...
 
-	if ($mp3) {
-		my $lang;
-		# Les paroles dans le mp3 c'est pourquoi faire simple quand on peut
-		# faire compliqué ! En gros y a un commité de standardisation qui s'est
-		# penché là-dessus et ça se voit !
-		if ($lyrics =~ /[éèêàù]/) {
-			# Déjà le langage, idiot comme info, on est obligé de deviner
-			# ici...
-			$lang = "fre";
-		} else {
-			$lang = "eng";
-		}
-		# Ensuite ils veulent de la normalization !
-		eval 'require Normalize::Text::Music_Fields';
-		for my $elt ( qw( title track artist album comment year genre
-			title_track artist_collection person ) ) {
-			no strict 'refs';
-			MP3::Tag->config("translate_$elt", \&{"Normalize::Text::Music_Fields::normalize_$elt"})
-			if defined &{"Normalize::Text::Music_Fields::normalize_$elt"};
-		}
-		MP3::Tag->config("short_person", \&Normalize::Text::Music_Fields::short_person)
-		if defined &Normalize::Text::Music_Fields::short_person;
-		# Enfin c'est mieux de lui dire d'autoriser l'écriture du v24 même si
-		# normalement c'est du 2.3 apparemment ! Note les caractères utf8 ne
-		# sont pas lus correctement par la commande id3v2 mais bon elle a des
-		# lacunes il parait... !
-		$mp3->config(write_v24 => 1);
-		$mp3->select_id3v2_frame_by_descr("COMM($lang)[USLT]", $lyrics);
-		$mp3->update_tags();
-	} elsif ($file !~ /^http/) {
+	if ($file !~ /^http/) {
 		# Sans déconner, vu la complexité des tags mp3 je me demande si je
 		# devrais pas plutôt stocker dans un fichier .lyrics pour tout le
 		# monde ? Enfin bon...
+		# nb : ça y est c'est fait, ça marchait en mp3 mais en cas d'erreur
+		# quand les paroles sont mauvaises c'est super merdique à corriger
+		# et quand le mp3 vient d'un torrent ça change le fichier, donc
+		# finalement les .lyrics pour tout le monde, c'est bien !
 		if (open(F,">","$file.lyrics")) {
 			print F "$lyrics";
 			close(F);
