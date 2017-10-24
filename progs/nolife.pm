@@ -7,6 +7,7 @@ use warnings;
 use Time::Local "timegm_nocheck";
 use Encode;
 use chaines;
+use v5.10;
 
 my $last_time;
 my $debug = 0;
@@ -42,11 +43,21 @@ sub get_field {
 }
 
 sub update {
-	my ($p,$channel) = @_;
-	print "nolife: update $channel\n" if ($debug);
+	my ($p,$channel,$offset) = @_;
+	print "*** nolife: update $channel\n" if ($debug);
 	return undef if (lc($channel) ne "nolife");
+	$offset = 0 if (!defined($offset));
 
 	my $f;
+	if (-M "air.xml" >= 2) {
+		# les progs de nolife peuvent parfois contenir 2 semaines de
+		# programmes d'un coup ! Par contre + c'est vieux, et + c'est
+		# imprécis, parfois carrément faux à 2 semaines. Aucune idée du
+		# délai raisonnable, peut-être 7 jours, ou la fin de la semaine? On
+		# va mettre 2 jours, comme ça y aura de la marge...
+		say "air.xml trop vieux, on update" if ($debug);
+		update_noair();
+	}
 	if (!open($f,"<air.xml")) {
 		update_noair();
 		if (!open($f,"<air.xml")) {
@@ -127,21 +138,21 @@ sub update {
 			$desc .= " $d" if ($d);
 		}
 	}
-	if ($date < time()) {
-		# programme périmé !
-		# Apparemment le nouveau programme de nolife s'étend sur une 20aine
-		# de jours, donc là on peut forcer une update
-		if (update_noair()) {
-			print "nolife: périmé, on boucle sur update\n" if ($debug);
-			return $p->update($channel);
-		}
-	}
 	# Test le dernier programme !
 	my @tab = (1500, "Nolife", $old_title, $start, $date, $old_cat,
 		$desc,"","",$old_shot,0,0,get_date($start));
 
 	push @$rtab,\@tab;
 	$p->{chaines}->{nolife} = $rtab;
+	if ($date < time()) {
+		# programme périmé !
+		# Apparemment le nouveau programme de nolife s'étend sur une 20aine
+		# de jours, donc là on peut forcer une update
+		if (update_noair()) {
+			print "nolife: périmé, on boucle sur update\n" if ($debug);
+			return $p->update($channel,$offset);
+		}
+	}
 	$rtab;
 }
 
