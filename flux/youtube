@@ -19,14 +19,18 @@ if ($str =~ /^get,(\d+),(.+)/) {
 	if (open(F,"<cache/yt/$suffix")) {
 		$title = <F>;
 		chomp $title;
+		$title =~ s/^pic:.+? //;
 		close(F);
 		print STDERR "got title $title\n";
 	} else {
 		die "could not get title from $suffix\n";
 	}
-	if (! -f "~/bin/youtube-dl") {
-		mkdir "~/bin";
-		system("wget -q -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl");
+	if (! -f "$ENV{HOME}/bin/youtube-dl") {
+		mkdir "$ENV{HOME}/bin";
+		# apparemment le binaire est modifié après execution, on lui retire
+		# les droits d'écriture, pas sûr que ça suffise mais ça vaut le
+		# coup de voir...
+		system("wget -q -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl && chmod -w ~/bin/youtube-dl");
 	}
 	my $pid = fork();
 	if (!$pid) {
@@ -115,8 +119,9 @@ if ($str =~ /^http/ && $str !~ /channel/) {
 	my ($upload) = $_ =~ /div id="watch-uploader-info">(.+?)<\/div/;
 	my ($info) = $_ =~ /div id="watch-description-text".*?>(.+?)<\/div/;
 	$info = decode_entities($info);
+	my $img = "http://i.ytimg.com/vi/$suffix/mqdefault.jpg";
 	open(F,">cache/yt/$suffix");
-	print F "$title\nUploader : $upload\n$info\n";
+	print F "pic:$img $title\nUploader : $upload\n$info\n";
 	close(F);
 	exit(0);
 }
