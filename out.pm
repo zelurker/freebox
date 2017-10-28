@@ -298,6 +298,8 @@ sub get_cache($) {
 		make_path($base);
 		$file = $base.$file;
 		print STDERR "cache $file\n";
+	} elsif (-f $pic) { # un nom de fichier direct ?
+		return $pic;
 	} elsif ($pic =~ /.+\/(.+)/) {
 		# Par défaut : nom directement dans cache
 		$file = "cache/$1";

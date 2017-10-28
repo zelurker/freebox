@@ -4,6 +4,7 @@ package progs::files;
 
 use strict;
 use progs::telerama;
+use v5.10;
 
 @progs::files::ISA = ("progs::telerama");
 
@@ -25,16 +26,25 @@ sub get {
 	$channel =~ s/ \d+ Mo$//; # supprime la taille en suffixe éventuelle
 	return undef if ($source !~ /(livetv|Enregistrement)/);
 
-	return undef if (!-f "$channel.info");
-	open(F,"<$channel.info");
-	my $title = <F>;
-	my $sub = <F>;
-	my $desc = "";
-	chomp $sub;
-	while (<F>) {
-		$desc .= $_;
+	return undef if (!-f "$channel.info" && !-f "$channel.png");
+	my ($title,$pic,$sub,$desc) = ();
+	if (open(F,"<$channel.info")) {
+		$title = <F>;
+		$pic = "";
+		if ($title =~ s/pic:(http.+?) //) {
+			$pic = $1;
+		}
+		$sub = <F>;
+		$desc = "";
+		chomp $sub;
+		while (<F>) {
+			$desc .= $_;
+		}
+		close(F);
 	}
-	close(F);
+	if (!$pic && -f "$channel.png") {
+		$pic = "$channel.png";
+	}
 	my ($dev,$ino,$mode,$nlink,$uid,$gid,$rdev,$size,
 		$atime,$mtime,$ctime,$blksize,$blocks) = stat($channel);
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =
@@ -49,7 +59,7 @@ sub get {
 		undef, "", # fin
 		$desc, # desc
 		"","",
-		"", # img
+		$pic, # img
 		0,0,
 		$date);
 	return \@tab;
