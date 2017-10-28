@@ -350,13 +350,18 @@ static int info(int fifo, int argc, char **argv)
 		}
 		nb_indents = 0;
 		if (pic) {
-			if (r.y + pic->h < sf->h) {
-			    indents[nb_indents++] = r.y;
-			    indents[nb_indents++] = r.x+pic->w+4;
-			    SDL_BlitSurface(pic,NULL,sf,&r);
-			    r.y += pic->h+8;
-			}
-			SDL_FreeSurface(pic);
+		    int pw = pic->w, ph = pic->h;
+		    if (r.y + ph >= sf->h) {
+			/* Le ratio de l'image est calculé d'après une approx, on peut se retrouver avec une hauteur trop grande ici
+			 * donc on clippe plutôt que de ne rien afficher */
+			ph = sf->h-r.y-1;
+		    }
+		    SDL_Rect pr = { 0, 0, pw, ph };
+		    indents[nb_indents++] = r.y;
+		    indents[nb_indents++] = r.x+pic->w+4;
+		    SDL_BlitSurface(pic,&pr,sf,&r);
+		    r.y += pic->h+8;
+		    SDL_FreeSurface(pic);
 		}
 		indents[nb_indents++] = r.y;
 		indents[nb_indents++] = 4;
