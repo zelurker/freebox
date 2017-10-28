@@ -65,6 +65,7 @@ open(my $i,"<flux/stations") || die "can't read stations\n";
 my $last = "";
 while (<$i>) {
 	chomp;
+	next if (/^encoding/);
 	my $url = <$i>;
 	my $prog;
 	($url,$prog) = split(/ /,$url);
@@ -122,7 +123,12 @@ while (<$i>) {
 	foreach ($mech->links) {
 		my ($sub) = $_->url =~ /q=(.+?)\&/;
 		($sub) = $_->url =~ /url=(.+?)\&/ if (!$sub);
+		if ($sub) {
+			$sub =~ s/cache:(.+?)://;
+			$sub =~ s/\+$//;
+		}
 		if ($sub && $sub =~ /(png|jpg|jpeg)$/i) {
+			say "trying link for logo : $sub";
 			eval {
 				$mech->head($sub);
 			};
@@ -135,10 +141,10 @@ while (<$i>) {
 			}
 			print "ok:$sub\n";
 		}
-		print "found ",$sub,"\n" if ($sub && $sub =~ /wiki/);
+		print "found $sub\n" if ($sub && $sub =~ /wiki/);
 	}
 	if (!$icons{$station}) {
-		print "rien trouvé ?\n";
+		die "rien trouvé ?\n";
 		$mech->save_content("page.html");
 		open(F,">links");
 		foreach ($mech->links) {
