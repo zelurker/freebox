@@ -80,7 +80,6 @@ sub handle_lyrics {
 			if ($lyr) {
 				last if (/<\/div>/);
 				s/<br>/\n/g;
-				s/<.+?>//g; # filtrage tags...
 				# Filtrage des pubs en plein milieu de la chanson !!!
 				$lyrics .= decode_entities($_);
 			}
@@ -96,7 +95,6 @@ sub handle_lyrics {
 			if ($lyr) {
 				s/<br>/\n/g;
 				$lyr = 0 if (s/<\/div>//); # collé à la dernière ligne !
-				s/<.+?>//g; # filtrage tags...
 				# Filtrage des pubs en plein milieu de la chanson !!!
 				$lyrics .= decode_entities($_);
 			}
@@ -181,6 +179,7 @@ sub handle_lyrics {
 		}
 		print "lyrics lyrics.wikia.com : $lyrics\n";
 	}
+	$lyrics =~ s/<.+?>//g; # filtrage tags...
 	if ($lyrics =~ /paroles ne sont plus dispo/i) {
 		# paroles-musique.net renvoie ça de temps en temps !
 		return undef;
