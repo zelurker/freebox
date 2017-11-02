@@ -2,8 +2,8 @@
 
 use strict;
 require "http.pl";
-use File::Glob 'bsd_glob'; # le glob dans perl c'est n'importe quoi !
 use HTML::Entities;
+use v5.10;
 
 binmode STDERR; # ,":utf8";
 binmode STDOUT; # ,":utf8";
@@ -34,25 +34,26 @@ if ($str =~ /^get,(\d+),(.+)/) {
 	}
 	my $pid = fork();
 	if (!$pid) {
+		say STDERR "*** lancement youtube-dl -q -f $format $suffix";
 		chdir("records");
 		exec("~/bin/youtube-dl -q -f $format $suffix 1> /dev/null");
 	} else {
 		my $tries = 0;
-		$title =~ s/\[/\\\[/g;
-		$title =~ s/\]/\\\]/g;
-		$title = decode_entities($title);
-		$title =~ s/\&#(\d+);/chr($1)/ge;
-		while (!bsd_glob("records/$title*") && $tries < 10) {
+		$title = `~/bin/youtube-dl -f $format $suffix --get-filename`;
+		chomp $title;
+		$| = 1;
+		while (!-f "records/$title" && $tries < 10) {
 			$tries++;
+			say "pas de fichier records/$title try $tries";
 			sleep 1;
 		}
 		if ($tries == 10) {
-			print STDERR "pas trouvé le fichier attendu racine:records/$title*. on va essayer en aveugle\n";
+			print STDERR "pas trouvé le fichier attendu racine:records/$title. on va essayer en aveugle\n";
 			print "records/$title*\n";
 			exit(0);
 		}
 		print STDERR "trouvé le fichier après $tries secondes\n";
-		my $file = bsd_glob("records/$title*");
+		my $file = "records/$title";
 		print STDERR "file = $file\n";
 		my $r = $file;
 		$r =~ s/.part$//;
