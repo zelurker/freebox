@@ -51,7 +51,7 @@ find cache/ -mtime +3 -delete
 find podcasts/ -mtime +7 -delete
 find livetv/ -mtime +1 -delete
 find chaines/ radios/ -atime +90 -delete
-rm -f pod desktop
+rm -f pod desktop video_size
 if ! [ -f info_pl.pid ] || ! ( ps -p `cat info_pl.pid` >& /dev/null ); then
 	perl info.pl &
 fi
