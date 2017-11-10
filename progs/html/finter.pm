@@ -6,7 +6,10 @@ use v5.10;
 
 sub get_tag {
 	my ($s,$t) = @_;
-	if ($s =~ /$t"?="?(.+?)"?([ >]|$)/) {
+	if ($s =~ /$t"?="(.+?)"/) { # la version normale, avec des "
+		return $1;
+	}
+	if ($s =~ /$t"?="?(.+?)"?([ >]|$)/) { # sinon on essaye de deviner !
 		return $1;
 	}
 	undef;
@@ -45,6 +48,8 @@ sub decode_html {
 			# Par contre y a ni heure de fin, ni durée, donc faut deviner,
 			# un peu le bordel... Y des zolies images par contre ! :)
 			$start = get_tag($sub,"data-start-time");
+			my $class0 = get_tag($sub,"class");
+			my $rubrique = $class0 =~ / step/;
 			my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start+3600);
 			$date = sprintf("$mday/%d/%d",$mon+1,$year+1900);
 			$end = timelocal_nocheck(0,0,$hour,$mday,$mon,$year);
@@ -76,6 +81,13 @@ sub decode_html {
 				} elsif ($args =~ / src="(.+?)"/) {
 					$img = $1;
 				}
+			}
+			if ($rubrique) {
+				# donc les rubriques d'une émission, le titre et l'image
+				# sont récupérées dans l'émission, càd le dernier programme
+				# stocké dans $rtab
+				$img = $$rtab[$#$rtab][9];
+				$title = $$rtab[$#$rtab][2];
 			}
 		} elsif ($instr eq "div") { # fmusique
 			$start = get_tag($sub,"data-start-time");
