@@ -307,6 +307,7 @@ sub update {
 	# channel est déjà converti en minuscules (appel à conv_channel de
 	# chaines.pm)
 	my ($p,$channel,$offset) = @_;
+	say "update $channel offset $offset";
 	$p->error();
 	$offset = 0 if (!defined($offset));
 	return undef if (!out::have_net());
@@ -426,9 +427,13 @@ sub next {
 		$p->{last_prog}++;
 		return $$rtab[$p->{last_prog}];
 	}
-	my $offset = get_offset($$rtab[$#$rtab][12])+1;
+	# note : nouveau télérama, on ne fait plus $offset+1 ici parce qu'on a
+	# toujours un bout du jour suivant quand on demande les 100 programmes
+	# d'une date donnée, à priori ils ont l'air d'aller de 6h jour actuel à
+	# 6h jour suivant (on se demande bien pourquoi ils n'ont pas pris 0h !)
+	my $offset = get_offset($$rtab[$#$rtab][12]);
 	my $old = $#$rtab;
-	print "A récupérer offset $offset\n" if ($debug);
+	print "A récupérer offset $offset de $$rtab[$#$rtab][12]\n" if ($debug);
 	$p->update($channel,$offset);
 	$rtab = $p->{chaines}->{$p->{last_chan}};
 	if ($old == $#$rtab) {
