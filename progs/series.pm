@@ -5,6 +5,7 @@ use warnings;
 use progs::telerama;
 use WWW::Mechanize;
 use HTML::Entities;
+use v5.10;
 
 @progs::series::ISA = ("progs::telerama");
 
@@ -57,9 +58,10 @@ sub get {
 	if (!-f "cache/$channel.info") {
 		my $mech = WWW::Mechanize->new();
 		$mech->agent_alias("Linux Mozilla");
+		# $mech->agent("Mozilla/5.0 (X11; Linux x86_64; rv:57.0) Gecko/20100101 Firefox/57.0");
 		$mech->timeout(12);
 		$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
-		$mech->get("https://www.google.fr/");
+		$mech->get("https://www.duckduckgo.com/");
 		eval {
 			$mech->submit_form(
 				form_number => 1,
@@ -76,17 +78,16 @@ sub get {
 		my $dump = 0;
 		my $actor = 0;
 		my $u;
-		$u = $mech->find_link( text_regex => qr/Episodes /);
+		$u = $mech->find_link( url_regex => qr/allocine.fr/);
+		if (!$u) {
+			say "series : pas trouvé de regex, on sauve";
+			$mech->save_content("goog.html");
+		}
 		return undef if (!$u);
 #		foreach ($mech->links) {
 			$u = $u->url;
-			if ($u =~ /url.q=(http.+?)&/) {
-				$u = $1;
-				# last;
-			} else {
-				print STDERR "series: pas trouvé lien Episodes\n";
-				return undef;
-			}
+			# avec duckduckgo, plus la peine de traiter les liens, c'est du
+			# lien direct !
 #		}
 		for (my $page=1; $page<=2; $page++) {
 			print STDERR "url $u page $page\n" if ($debug);
