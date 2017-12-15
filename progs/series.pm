@@ -55,21 +55,23 @@ sub get {
 	my $sub;
 
 	if (!-f "cache/$channel.info") {
-		if (!open(F,">:encoding(utf8)","cache/$channel.info")) {
-			print STDERR "séries : impossible de créer cache/$channel.info\n";
-			return undef;
-		}
 		my $mech = WWW::Mechanize->new();
 		$mech->agent_alias("Linux Mozilla");
 		$mech->timeout(12);
 		$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 		$mech->get("https://www.google.fr/");
-		my $r = $mech->submit_form(
-			form_number => 1,
-			fields      => {
-				q => "allocine $titre saison $saison",
-			}
-		);
+		eval {
+			$mech->submit_form(
+				form_number => 1,
+				fields      => {
+					"q" => "allocine $titre saison $saison",
+				}
+			);
+		};
+		if ($@) {
+			$p->error("error google : $@ status ".$mech->res()->status_line);
+			return;
+		}
 		# On récupère le lien du haut du résultat :
 		my $dump = 0;
 		my $actor = 0;
@@ -143,6 +145,10 @@ sub get {
 			} else {
 				($cast,$img) = find_actor($mech);
 			}
+		}
+		if (!open(F,">:encoding(utf8)","cache/$channel.info")) {
+			print STDERR "séries : impossible de créer cache/$channel.info\n";
+			return undef;
 		}
 		print F "$titre Saison $saison Episode $episode\n$sub\n";
 		if ($img) {
