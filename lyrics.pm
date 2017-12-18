@@ -10,6 +10,7 @@ use Ogg::Vorbis::Header;
 use MP3::Tag;
 use utf8;
 use v5.10;
+use search;
 
 sub handle_lyrics {
 	my ($mech,$u) = @_;
@@ -286,31 +287,12 @@ sub get_lyrics {
 		return $lyrics;
 	}
 
-	my $mech = WWW::Mechanize->new();
-	$mech->agent_alias("Linux Mozilla");
-	# $mech->agent("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71");
-	$mech->timeout(10);
-	# $mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
-	eval {
-		$mech->get("https://www.google.fr/");
-	};
-	if ($@) {
-		print "lyrics: got error $!: $@\n";
-		return undef;
-	}
 	my $r;
 	my $orig = $title;
 	$title = pure_ascii($title);
 	$title =~ s/ en duo.+//; # à tout hasard... !
 	say "lyrics: envoie requête : lyrics $artist - $title";
-	eval {
-		$r = $mech->submit_form(
-			form_number => 1,
-			fields      => {
-				q => "lyrics $artist - $title",
-			}
-		);
-	};
+	my $mech = search::search("lyrics $artist $title");
 	if ($@) {
 		print "lyrics: foirage sur le submit $!: $@\n";
 		return undef;
@@ -319,29 +301,25 @@ sub get_lyrics {
 	my $u;
 	foreach ($mech->links) {
 		$u = $_->url;
-		if ($u =~ /url.q=(http.+?)&/) {
-			$u = $1;
-			print $_->text,"\n$u\n";
-			if ($u =~ /(musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com)/) {
-				my $old = $_;
-				my $text = pure_ascii($_->text);
-				if ($text =~ /$title/ || $u =~ /lyricsfreak.com/ || $text =~ /^En cache/i) {
-					# exception sur lyricsfreak : ces cons mélangent titre,
-					# artiste et la mention lyrics dans le titre de la page
-					# ce qui la rend très difficile à identifier !
-					if ($text =~ /^En cache/i) {
-						say "Traitement du cache...";
-						$u =~ s/\%(..)/chr(hex($1))/ge;
-					}
-					$lyrics = handle_lyrics($mech,$u);
-					last if ($lyrics);
-				} else {
-					print "lyrics: rejet sur le titre, texte : $text, title $title, artist $artist.\n";
+		if ($u =~ /(musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com)/) {
+			my $old = $_;
+			my $text = pure_ascii($_->text);
+			if ($text =~ /$title/ || $u =~ /lyricsfreak.com/ || $text =~ /^En cache/i) {
+				# exception sur lyricsfreak : ces cons mélangent titre,
+				# artiste et la mention lyrics dans le titre de la page
+				# ce qui la rend très difficile à identifier !
+				if ($text =~ /^En cache/i) {
+					say "Traitement du cache...";
+					$u =~ s/\%(..)/chr(hex($1))/ge;
 				}
-				$_ = $old;
+				$lyrics = handle_lyrics($mech,$u);
+				last if ($lyrics);
+			} else {
+				print "lyrics: rejet sur le titre, texte : $text, title $title, artist $artist.\n";
 			}
-			next if ($_->text =~ /youtube/i || $u =~ /youtube/);
+			$_ = $old;
 		}
+		next if ($_->text =~ /youtube/i || $u =~ /youtube/);
 	}
 	if (!$lyrics) {
 		print "get_lyrics: url inconnue : $u pas de paroles ?\n";

@@ -3,9 +3,9 @@ package progs::series;
 use strict;
 use warnings;
 use progs::telerama;
-use WWW::Mechanize;
 use HTML::Entities;
 use v5.10;
+use search;
 
 @progs::series::ISA = ("progs::telerama");
 
@@ -56,20 +56,7 @@ sub get {
 	my $sub;
 
 	if (!-f "cache/$channel.info") {
-		my $mech = WWW::Mechanize->new();
-		$mech->agent_alias("Linux Mozilla");
-		# $mech->agent("Mozilla/5.0 (X11; Linux x86_64; rv:57.0) Gecko/20100101 Firefox/57.0");
-		$mech->timeout(12);
-		$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
-		$mech->get("https://www.duckduckgo.com/");
-		eval {
-			$mech->submit_form(
-				form_number => 1,
-				fields      => {
-					"q" => "allocine $titre saison $saison",
-				}
-			);
-		};
+		my $mech = search::search("allocine $titre saison $saison");
 		if ($@) {
 			$p->error("error google : $@ status ".$mech->res()->status_line);
 			return;
