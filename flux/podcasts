@@ -9,6 +9,7 @@ use WWW::Mechanize;
 use HTML::Entities;
 use link_get;
 use v5.10;
+use search;
 
 # Refonte complète, on abandonne podcasters qui est pourri finalement
 # et on ne va garder que des résultats google pour les recherches...
@@ -112,17 +113,8 @@ if ($debug && !$str) {
 		$mech->get($1);
 	} elsif ($str && $str !~ /^http/) {
 		print STDERR "requête de recherche sur $str\n"; # if ($debug);
-		$mech->get("https://www.google.fr/");
-		$r = $mech->submit_form(
-			form_number => 1,
-			fields      => {
-				# Note qu'on peut ajouter filetype:xml pour avoir les
-				# résultats xml de google, sauf que certains sites genre
-				# radiofrance utilisent un robots.txt pour exclure ces
-				# pages des résultats de recherche !
-				q => "podcast $str",
-			}
-		);
+		$str =~ s/\+/ /g;
+		$mech = search::search("podcast rss $str");
 	} elsif ($str) {
 		print STDERR "debug: get $str\n" if ($debug);
 		$r = $mech->get($str);
@@ -229,12 +221,18 @@ if ($u =~ /google\./) {
 			print $_->text,"\n$u\n";
 		}
 	}
+} elsif ($u =~ /duckduckgo/) {
+	foreach ($mech->links) {
+		my $u = $_->url;
+		next if ($u !~ /^http/ || $_->text =~ /^ *$/);
+		say STDERR "*duck: ",$_->text,"\n$u";
+		print $_->text,"\n$u\n";
+	}
 } else {
 	my ($host) = $u =~ /https?:\/\/(.+?)\//;
 	print STDERR "host for filtering $host\n";
 	foreach ($mech->links) {
 		my $u = $_->url;
-		next if ($u =~ /$host/);
 		next if ($u !~ /^http/ || $u !~ /xml$/);
 		print $_->text,"\n$u\n";
 	}
