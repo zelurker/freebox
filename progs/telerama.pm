@@ -179,8 +179,10 @@ sub parse_prg {
 
 		my $critique = $_->{critique};
 		$critique =~ s/<.+?>//g; # vire tous les tags html
+		my $title = $_->{titre};
+		$title .= " (original : $_->{titre_original})" if ($_->{titre_original} && $_->{titre_original} ne $_->{titre});
 
-		my @sub = ($num,$label,$_->{titre},
+		my @sub = ($num,$label,$title,
 			parse_date($_->{horaire}->{debut}),parse_date($_->{horaire}->{fin}),
 			$_->{genre_specifique},$sub,$details,
 			$rating,
