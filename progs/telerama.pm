@@ -236,12 +236,14 @@ sub myhash {
 	hmac_sha1_hex($l, 'Eufea9cuweuHeif');
 }
 
-sub req_prog($$) {
-	my ($offset,$url) = @_;
+sub req_prog {
+	my ($offset,$u,$page) = @_;
 	my $date = strftime("%Y-%m-%d", localtime(time()+(24*3600*$offset)) );
 	my $server = "https://api.telerama.fr";
-	$url = "/v1/programmes/telechargement?dates=$date&nb_par_page=100&id_chaines=".$url;
+	$page = 1 if (!$page);
+	my $url = "/v1/programmes/telechargement?dates=$date&nb_par_page=25&id_chaines=".$u;
 	$url .= "&appareil=android_tablette";
+	$url .= "&page=$page" if ($page);
 	$url .= "&api_signature=".myhash($url)."&api_cle=apitel-5304b49c90511";
 	print "req_prog: url $url\n" if ($debug);
 	my $response = $browser->get($server.$url);
@@ -249,6 +251,23 @@ sub req_prog($$) {
 	    print "$server$url error: ",$response->status_line,"\n";
 	} elsif ($debug) {
 		print "req_prog: is_success\n";
+	}
+	my $c = $response->content;
+	if ($c =~ /nb_sur_page":25/) { # on arrive à saturation
+		if (!$page) {
+			$page = 2;
+		} else {
+			$page++;
+		}
+		print "telerama: req page $page\n";
+		my $r = req_prog($offset,$u,$page);
+		if ($r->is_success) {
+			my $c2 = $r->content;
+			my ($d) = $c2 =~ /donnees":\[(.+)\],"pagin/;
+			$c =~ s/donnees":\[(.+)\],"pagin/donnees":\[$1,$d\],"pagin/;
+			print "telerama: create new response...\n";
+			$response = HTTP::Response->new(200,"",undef,$c);
+		}
 	}
 	$response;
 }
