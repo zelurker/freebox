@@ -151,7 +151,22 @@ sub parse_prg {
 			$cont .= " ($_->{role})" if ($_->{role});
 		}
 		$details = dump_details($details,$lib,$cont) if ($lib);
-		if ($_->{notule}) {
+		my $l = length($_->{notule});
+		$l = 100 if ($l > 100);
+		# parfois la notule est quasiment le même texte que le résumé, mais
+		# il y a des différences, à croire qu'ils ont été tapés séparément
+		# et pas recopiés. Pour tâcher de filtrer les différences je fais
+		# une comparaison sur les 100ers caractères... Ca ne filtre pas
+		# tout, mais ça en filtre pas mal
+		if ($_->{notule} && substr($_->{notule},0,$l) ne substr($_->{resume},0,$l)) {
+			say "notule : ",$_->{notule},".";
+			say "résumé : ",substr($_->{resume},0,length($_->{notule})),".";
+			for (my $n=0; $n<length($_->{notule}); $n++) {
+				if (substr($_->{notule},$n,1) ne substr($_->{resume},$n,1)) {
+					say "diff en $n ",substr($_->{notule},$n-5,6);
+					last;
+				}
+			}
 			# leur notule a l'air d'être une présentation de la série pour
 			# les séries, mais c'est aussi le contenu d'une rencontre
 			# sportive... ça va faire long de l'ajouter à ce qu'il y a
