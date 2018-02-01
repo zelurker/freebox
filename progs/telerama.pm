@@ -159,11 +159,8 @@ sub parse_prg {
 		# une comparaison sur les 100ers caractères... Ca ne filtre pas
 		# tout, mais ça en filtre pas mal
 		if ($_->{notule} && substr($_->{notule},0,$l) ne substr($_->{resume},0,$l)) {
-			say "notule : ",$_->{notule},".";
-			say "résumé : ",substr($_->{resume},0,length($_->{notule})),".";
 			for (my $n=0; $n<length($_->{notule}); $n++) {
 				if (substr($_->{notule},$n,1) ne substr($_->{resume},$n,1)) {
-					say "diff en $n ",substr($_->{notule},$n-5,6);
 					last;
 				}
 			}
@@ -256,7 +253,7 @@ sub req_prog {
 	my $date = strftime("%Y-%m-%d", localtime(time()+(24*3600*$offset)) );
 	my $server = "https://api.telerama.fr";
 	$page = 1 if (!$page);
-	my $url = "/v1/programmes/telechargement?dates=$date&nb_par_page=25&id_chaines=".$u;
+	my $url = "/v1/programmes/telechargement?dates=$date&nb_par_page=100&id_chaines=".$u;
 	$url .= "&appareil=android_tablette";
 	$url .= "&page=$page" if ($page);
 	$url .= "&api_signature=".myhash($url)."&api_cle=apitel-5304b49c90511";
@@ -268,7 +265,7 @@ sub req_prog {
 		print "req_prog: is_success\n";
 	}
 	my $c = $response->content;
-	if ($c =~ /nb_sur_page":25/) { # on arrive à saturation
+	if ($c =~ /nb_sur_page":100/ && $page < 10) { # on arrive à saturation
 		if (!$page) {
 			$page = 2;
 		} else {
