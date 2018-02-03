@@ -340,8 +340,8 @@ sub update {
 	# channel est déjà converti en minuscules (appel à conv_channel de
 	# chaines.pm)
 	my ($p,$channel,$offset) = @_;
-	say "update $channel offset $offset";
 	$p->error();
+	say STDERR "update $channel offset $offset";
 	$offset = 0 if (!defined($offset));
 	return undef if (!out::have_net());
 	my $num = $chan->{$channel}[0];
@@ -411,7 +411,12 @@ sub get {
 	if ($debug && !$rtab) {
 		print "get: rien trouvé pour $channel\n";
 	}
-	return undef if (!$rtab || $#$rtab < 0);
+	if (!$rtab || $#$rtab < 0) {
+		if (ref($p) =~ /telerama/ && ($source eq "dvb" || $source eq "freeboxtv")) {
+			$p->error("Chaine inconnue : ".$p->{name});
+		}
+		return undef;
+	}
 	my $time = time();
 	if ($time > $$rtab[$#$rtab][4]) {
 		# Si le cache dans chaines{} est trop vieux, on met à jour
