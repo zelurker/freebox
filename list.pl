@@ -1957,6 +1957,7 @@ sub exec_file {
 			my ($name) = get_name($list[$n]);
 			if ($name eq $old) {
 				$found = $n;
+				store_conf($serv);
 				last;
 			}
 		}
