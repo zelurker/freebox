@@ -12,6 +12,8 @@ use utf8;
 use v5.10;
 use search;
 
+our $latin = ($ENV{LANG} !~ /UTF/i);
+
 sub handle_lyrics {
 	my ($mech,$u) = @_;
 	eval {
@@ -176,6 +178,15 @@ sub handle_lyrics {
 				s/<\/?(br|p)( \/)?>/\n/gs;
 				s/\r//sg;
 				$lyrics .= decode_entities($_)."\n";
+			}
+		}
+		if ($lyrics =~ /\xe9/ && !$latin) {
+			say "y a du latin1...";
+			eval {
+				Encode::from_to($lyrics, "iso-8859-15","utf-8");
+			};
+			if ($@) {
+				say "décodage utf8: $!: $@";
 			}
 		}
 		print "lyrics lyrics.wikia.com : $lyrics\n";
