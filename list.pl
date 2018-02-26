@@ -32,6 +32,7 @@ use Data::Dumper;
 # est toujours le 0...
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
+our %dir = ();
 our $dvd;
 our $encoding;
 our ($inotify,$watch);
@@ -127,27 +128,38 @@ sub read_conf {
 		while (<F>) {
 			chomp;
 			if (/(.+) = (.+)/) {
-				$conf{$1} = $2;
+				my ($key,$val) = ($1,$2);
+				next if ($key =~ /^Fichiers.+_/); # Y a un bug, il ne devrait pas y avoir de base_flux pour les fichiers
+				$conf{$key} = $val;
+			}
+		}
+		close(F);
+	}
+	if (open(F,"<$ENV{HOME}/.freebox/dirs")) {
+		while (<F>) {
+			chomp;
+			if (/(.+) = (.+)/) {
+				my ($key,$val) = ($1,$2);
+				my ($found,$time) = split /\;/,$val;
+				next if (time() - $time > 30*24*3600); # expiration au bout d'1 mois
+				$dir{$key} = $val;
 			}
 		}
 		close(F);
 	}
 }
 
-sub save_conf {
+sub store_conf {
+	my $serv = shift;
 	return if ($base_flux =~ /youtube/);
 	if ($base_flux) {
 		$conf{"sel_$source\_$base_flux"} = $found;
 	} else {
 		$conf{"sel_$source"} = $found;
 	}
-	my $dir = "$ENV{HOME}/.freebox";
-	mkdir $dir;
-	if (open(F,">$dir/conf")) {
-		foreach (keys %conf) {
-			print F "$_ = $conf{$_}\n";
-		}
-		close(F);
+	if ($source =~ /^Fichiers/) {
+		my ($dir,$file) = $serv =~ /^(.+)\/(.+)/;
+		$dir{$dir} = "$file;".time();
 	}
 }
 
@@ -1305,6 +1317,20 @@ read_list();
 
 sub quit {
    	unlink "info_list.pid";
+	my $dir = "$ENV{HOME}/.freebox";
+	mkdir $dir;
+	if (open(F,">$dir/conf")) {
+		foreach (keys %conf) {
+			print F "$_ = $conf{$_}\n";
+		}
+		close(F);
+	}
+	if (open(F,">$dir/dirs")) {
+		foreach (keys %dir) {
+			say F "$_ = $dir{$_}";
+		}
+		close(F);
+	}
 	while (<dvb?/player1.pid freeboxtv?/player1.pid>) {
 		open(F,"<$_");
 		my $pid = <F>;
@@ -1326,6 +1352,7 @@ my $path = getcwd()."/sock_list";
 our $server = out::setup_server($path,\&commands);
 
 commands(undef,"list");
+our $sigterm = AnyEvent->signal( signal => "TERM", cb => \&quit);
 EV::run;
 
 sub commands {
@@ -1529,9 +1556,9 @@ sub commands {
 		}
 		close_numero();
 		my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+		store_conf($serv) if ($serv ne "..");
 		# Attention : fermer mode APRES get_name !!!
 		close_mode if ($mode_opened);
-		save_conf() if ($serv ne "..");
 		if ($source eq "menu") {
 			$source = $name;
 			read_list();
@@ -1918,6 +1945,9 @@ sub exec_file {
 			$conf{$path} = "/" if (!$conf{$path});
 		} else {
 			$conf{$path} = $serv;
+			if ($dir{$serv} =~ /(.+);(\d+)/) {
+				$old = $1;
+			}
 		}
 		my $n;
 		print "exec_file: calling read_list\n";
