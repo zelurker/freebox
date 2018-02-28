@@ -421,8 +421,10 @@ sub commands {
 		# Nouvelle syntaxe prog[:long] chaine&source/base_flux[|serv]
 		# ça devient obligatoire d'avoir la source liée à ça avec toutes les
 		# sources de programmes maintenant
-		$cmd =~ s/&(.+)//;
-		$source = $1;
+		# Note sur la regex : le 1er (.+) sert à être sûr qu'on prend la
+		# chaine la + longue, au cas où le nom de fichier contient un &
+		$cmd =~ s/(.+)&(.+)/$1/;
+		$source = $2;
 		if ($source =~ s/\/(.+)//) {
 			$base_flux = $1;
 			$base_flux =~ s/^stations\/.+/stations/;
