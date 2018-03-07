@@ -1175,9 +1175,9 @@ sub load_file2 {
 					$pic = get_radio_pic($name,\@pic);
 				}
 				print "push $num,$name,$serv (tv $tv radio $radio)\n";
-				my @cur = ($num++,$name,$serv,undef,undef,undef,undef,$pic);
+				my @cur = ($num++,"$name $serv",$serv,undef,undef,undef,undef,$pic);
 				push @list,[\@cur];
-				$name = undef;
+				# $name = undef;
 			} elsif (-f "$serv$_") { # liste de fichiers locaux
 				push @list,[[$num++,$_,"$serv$_"]];
 			} else {

@@ -4,6 +4,7 @@
 
 use Coro::LWP;
 use strict;
+use v5.10;
 
 my $debug = 0;
 
@@ -24,9 +25,12 @@ sub get_mms {
 	$browser->max_size(65000);
 	my ($page,$type);
 	if (!$debug) {
-		my $response = $browser->get($url);
-		return undef if (!$response->is_success);
+		my $response = $browser->head($url);
 		$type = $response->header("Content-type");
+		if (!$response->is_success) {
+			say "get_mms error : ",$response->status_line;
+		}
+		return undef if (!$response->is_success);
 		if ($type =~ /(audio|video)/ && $type !~ /charset/) {
 			# audio/xxx est quand même prenable !
 			print "url is not text : $type\n";
