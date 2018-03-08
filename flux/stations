@@ -18,15 +18,13 @@ http://www.bide-et-musique.com/playlist-hq.m3u
 C9 Radio
 http://stream.c9.fr/c9.mp3
 Chérie FM
-http://cdn.nrjaudio.fm/audio1/fr/40104/aac_64.mp3?awparams=companionAds%3Atrue;playerid:&origine=playerweb
-Chérie été à la plage
-http://cdn.nrjaudio.fm/adwz1/fr/55629/aac_64.mp3?awparams=companionAds%3Atrue;playerid:CHERIE-ETE-PLAGE&origine=playerweb
-Chérie Love Songs
-http://cdn.nrjaudio.fm/adwz1/fr/30207/aac_64.mp3?awparams=companionAds%3Atrue;playerid:CHERIE-LOVE-SONGS&origine=playerweb
-Classic 21 64k aac
-http://classic21.ice.rtbf.be/classic21-64.aac
-Classic 21 128k mp3
-http://classic21.ice.rtbf.be/classic21-128.mp3
+http://cdn.nrjaudio.fm/audio1/fr/30201/aac_64.mp3?awparams=companionAds:true;playerid:&origine=playercherie
+Chérie ZEN
+http://cdn.nrjaudio.fm/adwz1/fr/30203/aac_64.mp3?awparams=companionAds:true;playerid:CHERIE-ZEN&origine=playercherie
+Chérie pop love
+http://cdn.nrjaudio.fm/adwz1/fr/56237/aac_64.mp3?awparams=companionAds:true;playerid:CHERIE-POP-LOVE&origine=playercherie
+Chérie love songs
+http://cdn.nrjaudio.fm/adwz1/fr/30207/aac_64.mp3?awparams=companionAds:true;playerid:CHERIE-LOVE-SONGS&origine=playercherie
 Contact
 http://radio-contact.ice.infomaniak.ch/radio-contact-high.mp3
 Enjoy Station
