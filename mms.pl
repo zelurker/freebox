@@ -29,11 +29,9 @@ sub get_mms {
 		$type = $response->header("Content-type");
 		if (!$response->is_success) {
 			say "get_mms error : ",$response->status_line;
-			if ($response->status_line =~ /bad request/i) {
-				say "trying get (max size = 65000)...";
-				$response = $browser->get($url);
-				$type = $response->header("Content-type");
-			}
+			say "trying get (max size = 65000)...";
+			$response = $browser->get($url);
+			$type = $response->header("Content-type");
 		}
 		return undef if (!$response->is_success);
 		if ($type =~ /(audio|video)/ && $type !~ /charset/) {
