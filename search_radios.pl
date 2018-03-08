@@ -6,6 +6,7 @@ use WWW::Mechanize;
 require "radios.pl";
 use Data::Dumper;
 use v5.10;
+use search;
 use strict;
 
 $| = 1;
@@ -78,7 +79,7 @@ while (<$i>) {
 		$mech->head($url);
 	};
 	if ($@ && $@ =~ /bad request/i) {
-		print "can't head, trying get... ";
+		print "can't head : $@ trying get... ";
 		$mech->max_size(10000);
 		$mech->get($url);
 		$mech->max_size();
@@ -90,7 +91,7 @@ while (<$i>) {
 		$mech = search_station("radio $station");
 		foreach ($mech->links) {
 			next if ($_->url =~ /(streama|ecouterradio|ecouter-en-direct.com|ecouter-la-radio.fr)/);
-			if ($_->text && $_->text =~ /(coutez|player|direct)/i) {
+			if ($_->text && $_->text =~ /(coutez|player|direct)/i && $_->url !~ /radioguide/) {
 				my $flux = search_flux($_->url);
 				$flux{$station} = $flux.($prog ? " $prog" : "");
 				last;
@@ -121,13 +122,8 @@ while (<$i>) {
 	}
 	$mech = search_station("logo $station".(/radio/i ? "" : " radio"));
 	foreach ($mech->links) {
-		my ($sub) = $_->url =~ /q=(.+?)\&/;
-		($sub) = $_->url =~ /url=(.+?)\&/ if (!$sub);
-		if ($sub) {
-			$sub =~ s/cache:(.+?)://;
-			$sub =~ s/\+$//;
-		}
-		if ($sub && $sub =~ /(png|jpg|jpeg)$/i) {
+		my $sub = $_->url;
+		if ($sub && $sub =~ /(png|jpg|jpeg)$/i && $sub =~ /^http/) {
 			say "trying link for logo : $sub";
 			eval {
 				$mech->head($sub);
@@ -144,7 +140,7 @@ while (<$i>) {
 		print "found $sub\n" if ($sub && $sub =~ /wiki/);
 	}
 	if (!$icons{$station}) {
-		die "rien trouvé ?\n";
+		say "rien trouvé pour station $station";
 		$mech->save_content("page.html");
 		open(F,">links");
 		foreach ($mech->links) {
@@ -156,33 +152,7 @@ while (<$i>) {
 
 sub search_station {
 	my ($texte) = @_;
-	my $q = $texte;
-	my $r;
-	my $mech = init_mech();
-	do {
-		eval {
-			$mech->get("https://www.google.fr/");
-			$r = $mech->submit_form(
-				form_number => 1,
-				fields      => {
-					q => $q,
-				}
-			);
-		};
-		if ($@) {
-			print "Erreur $!: $@\n";
-			my @forms = $mech->forms;
-			for (my $n=0; $n<=$#forms; $n++) {
-				print "$n: ",Dumper($forms[$n]),"\n";
-			}
-			print "sleeping 3s... ";
-			sleep 3;
-			print "\n";
-			undef $mech;
-			$mech = init_mech();
-		}
-	} while ($@);
-	$mech;
+	return search::search($texte);
 }
 
 END {
