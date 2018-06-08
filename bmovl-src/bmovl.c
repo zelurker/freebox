@@ -1,8 +1,15 @@
 #include <fcntl.h>
+#ifdef SDL1
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include <SDL/SDL_image.h>
 #include <SDL/SDL_rotozoom.h>
+#else
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_ttf.h>
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL2_rotozoom.h>
+#endif
 #include "savesurf.h"
 #include "lib.h"
 #include <sys/types.h>
@@ -31,6 +38,7 @@ static int must_clear_screen;
 static void clear_screen() {
     if (sdl_screen) {
 
+#ifdef SDL1
 	if (SDL_MUSTLOCK(sdl_screen))
 	    SDL_LockSurface(sdl_screen);
 	*bg_pic = 0;
@@ -42,6 +50,11 @@ static void clear_screen() {
 	    SDL_UnlockSurface(sdl_screen);
 
 	SDL_UpdateRect(sdl_screen,0,0,sdl_screen->w,sdl_screen->h);
+#else
+	SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+	SDL_RenderClear(renderer);
+	SDL_RenderPresent(renderer);
+#endif
     }
 }
 
@@ -723,15 +736,20 @@ static int list(int fifo, int argc, char **argv)
 	    h = oldy - y;
 	    infoy = oldy;
 	}
-	int maxy = (infoy ? infoy : sdl_screen->h);
+	int maxy = (infoy ? infoy : desktop_h);
 	SDL_Rect r;
 	r.x = (mode_list ? x : 0);
 	r.y = y + sf->h;
 	r.w = sf->w + (mode_list ? 0 : x);
 	r.h = maxy - r.y;
 	if (maxy > r.y) {
+#ifdef SDL1
 	    SDL_FillRect(sdl_screen,&r,0);
 	    SDL_UpdateRects(sdl_screen,1,&r);
+#else
+	    SDL_RenderFillRect(renderer,&r); // color set when clearing the screen
+	    SDL_RenderPresent(renderer);
+#endif
 	}
     }
     // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
@@ -841,7 +859,24 @@ static void read_inputs() {
 	else if (!strcasecmp(buff,"SPACE"))
 	    keys[nb_keys] = SDLK_SPACE;
 	else if (!strncasecmp(buff,"KP",2))
+#ifdef SDL1
 	    keys[nb_keys] = SDLK_KP0 + atoi(&buff[2]);
+#else
+	// les scancodes sont inversés pour le pavé numérique et non linéaires, par rangées
+	// du coup il faut faire un case...
+	switch(atoi(&buff[2])) {
+	case 0: keys[nb_keys] = SDLK_KP_0; break;
+	case 1: keys[nb_keys] = SDLK_KP_1; break;
+	case 2: keys[nb_keys] = SDLK_KP_2; break;
+	case 3: keys[nb_keys] = SDLK_KP_3; break;
+	case 4: keys[nb_keys] = SDLK_KP_4; break;
+	case 5: keys[nb_keys] = SDLK_KP_5; break;
+	case 6: keys[nb_keys] = SDLK_KP_6; break;
+	case 7: keys[nb_keys] = SDLK_KP_7; break;
+	case 8: keys[nb_keys] = SDLK_KP_8; break;
+	case 9: keys[nb_keys] = SDLK_KP_9; break;
+	}
+#endif
 	else {
 	    printf("touche inconnue %s commande %s\n",buff,c+1);
 	    continue;
@@ -865,8 +900,8 @@ static int numero(int fifo, int argc, char **argv) {
 	fscanf(f,"%d\n",&height);
 	fclose(f);
     } else {
-	width = sdl_screen->w;
-	height = sdl_screen->h;
+	width = desktop_w;
+	height = desktop_h;
     }
     int margew = width/36;
     int margeh = height/36;
@@ -952,12 +987,16 @@ static void handle_event(SDL_Event *event) {
     if (!nb_keys) read_inputs();
     if (event->type != SDL_KEYDOWN) return;
     int input = event->key.keysym.sym;
+#ifdef SDL1
     int unicode = event->key.keysym.unicode;
     printf("reçu touche %d (%c) unicode %d %c scan %x\n",input,input,unicode,unicode,event->key.keysym.scancode);
     if (unicode && (input == 0 ||
 		((unicode >= 'a' && unicode <= 'z') || (unicode >= 'A' && unicode <= 'Z'))))
 	input = event->key.keysym.unicode;
     int mod = event->key.keysym.mod;
+#else
+    int mod = SDL_GetModState();
+#endif
     int n;
     if (mod & KMOD_SHIFT)
 	n=nb_keys; // skip the loop
@@ -980,6 +1019,7 @@ static void handle_event(SDL_Event *event) {
     }
     if (n >= nb_keys) { // Pas trouvé
 	char buf[80];
+#ifdef SDL1
 	if (input > 255) {
 	    /* Pas la peine d'essayer de renvoyer un code > 255, il est
 	     * perdu. Ca olibge à une réinterprétation tordue ici */
@@ -1010,7 +1050,9 @@ static void handle_event(SDL_Event *event) {
 		send_cmd("sock_list",buf);
 	    }
 	    return;
-	} else if (input >= 'a' && input <= 'z' && (mod & KMOD_SHIFT)) {
+	} else
+#endif
+	    if (input >= 'a' && input <= 'z' && (mod & KMOD_SHIFT)) {
 	    // Particularité : shift + touche alphabétique pour naviguer par
 	    // lettre dans les listes
 	    input -= 32;
@@ -1029,8 +1071,8 @@ static void handle_event(SDL_Event *event) {
 
 static void get_free_coords(int &x, int &y, int &w, int &h) {
     int infoy=0;
-    x = sdl_screen->w/36;
-    y = sdl_screen->h/36;
+    x = desktop_w/36;
+    y = desktop_h/36;
     FILE *f;
     f = fopen("list_coords","r");
     if (f) {
@@ -1053,8 +1095,8 @@ static void get_free_coords(int &x, int &y, int &w, int &h) {
 	fclose(f);
 	infoy = oldy;
     }
-    int maxy = (infoy ? infoy : sdl_screen->h-sdl_screen->h/36);
-    w = sdl_screen->w - sdl_screen->w/36 - x;
+    int maxy = (infoy ? infoy : desktop_h-desktop_h/36);
+    w = desktop_w - desktop_w/36 - x;
     h = maxy - y;
 }
 
@@ -1072,34 +1114,58 @@ static int vignettes(int argc, char **argv) {
     get_free_coords(x,y,w,h);
     int x0 = x,maxh=0;
     SDL_Rect r = {x,y,w,h};
+#ifdef SDL1
     SDL_FillRect(sdl_screen,&r,0);
+#else
+    SDL_RenderFillRect(renderer,&r); // color set when clearing the screen
+#endif
     while (!feof(f)) {
 	char buf[1024];
 	buf[0] = 0;
 	myfgets((unsigned char*)buf,1024,f);
 	buf[1023] = 0;
+#ifdef SDL1
 	SDL_Surface *pic = IMG_Load(buf);
+	int picw = pic->w, pich = pic->h;
+#else
+	SDL_Texture *pic = IMG_LoadTexture(renderer,buf);
+	int access,picw,pich;
+	Uint32 format;
+	SDL_QueryTexture(pic, &format, &access, &picw, &pich);
+#endif
 	if (!pic) {
 	    printf("vignettes: couldn't load %s\n",buf);
 	    continue;
 	}
-	if (x+pic->w > x0+w) {
+	if (x+picw > x0+w) {
 	    x = x0;
 	    y += maxh;
 	    h -= maxh;
 	    maxh = 0;
 	}
-	if (pic->w <= w && pic->h <= h) {
+	if (picw <= w && pich <= h) {
 	    SDL_Rect dst;
 	    dst.x = x; dst.y = y;
+#ifdef SDL1
 	    SDL_BlitSurface(pic,NULL,sdl_screen,&dst);
-	    x += pic->w;
-	    if (pic->h > maxh) maxh = pic->h;
+#else
+	    SDL_RenderCopy(renderer,pic,NULL,&dst);
+#endif
+	    x += picw;
+	    if (pich > maxh) maxh = pich;
 	}
+#ifdef SDL1
 	SDL_FreeSurface(pic);
+#else
+	SDL_DestroyTexture(pic);
+#endif
     }
     fclose(f);
+#ifdef SDL1
     SDL_UpdateRects(sdl_screen,1,&r);
+#else
+    SDL_RenderPresent(renderer);
+#endif
     return 0;
 }
 
@@ -1158,26 +1224,34 @@ static int image(int argc, char **argv) {
     r.x = 0; r.y = 0; r.w = s->w; r.h = s->h;
     if (s->w > w) r.w = w;
     if (s->h > h) r.h = h;
-    if (x + s->w < sdl_screen->w) {
+    if (x + s->w < desktop_w) {
 	// Il peut un rester un bout de l'ancienne image à droite
 	SDL_Rect r;
 	r.x = x+s->w;
-	r.w = sdl_screen->w-r.x;
+	r.w = desktop_w-r.x;
 	r.y = 0;
 	r.h = maxy;
+#ifdef SDL1
 	SDL_FillRect(sdl_screen,&r,0);
+#else
+	SDL_RenderFillRect(renderer,&r); // color set when clearing the screen
+#endif
 	printf("on vire le bout à droite : %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
     } else {
-	printf("rien à virer à droite : %d + %d >= %d\n",x,w,sdl_screen->w);
+	printf("rien à virer à droite : %d + %d >= %d\n",x,w,desktop_w);
     }
     if (y + s->h < maxy) {
 	// Et en dessous ?
 	SDL_Rect r;
 	r.x = x;
-	r.w = sdl_screen->w-r.x;
+	r.w = desktop_w-r.x;
 	r.y = y+s->h;
 	r.h = maxy - r.y;
+#ifdef SDL1
 	SDL_FillRect(sdl_screen,&r,0);
+#else
+	SDL_RenderFillRect(renderer,&r); // color set when clearing the screen
+#endif
     }
     SDL_Rect dst;
     dst.x = x; dst.y = y;

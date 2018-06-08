@@ -75,7 +75,7 @@ static int write_select(int fifo, void *buff, int len)
     return ret;
 }
 
-static int desktop_w,desktop_h,desktop_bpp;
+int desktop_w,desktop_h,desktop_bpp;
 #ifdef SDL1
 SDL_Surface *sdl_screen;
 

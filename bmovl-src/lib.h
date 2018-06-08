@@ -6,6 +6,7 @@ extern SDL_Window *sdl_screen;
 extern SDL_Renderer *renderer;
 #endif
 
+extern int desktop_w,desktop_h,desktop_bpp;
 void
 blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear);
 int send_command(int fifo,char *cmd);
