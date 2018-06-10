@@ -256,10 +256,11 @@ sub disp_prog {
 	my $reste = undef;
 	if ($start && $time > $start && $time < $end) {
 		$reste = $end-$time;
+		my $source0 = $source;
 		$refresh = AnyEvent->timer(after=>($reste > 60 ? 60 : $reste+1), cb =>
 			sub {
 				# Il faut recréer $sub -> disp_channel
-				disp_channel();
+				disp_channel() if ($source eq $source0);
 			}
 		);
 	} else {
