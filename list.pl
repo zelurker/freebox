@@ -394,10 +394,28 @@ sub list_files {
 		@list = sort { $$a[0][3] <=> $$b[0][3] } @list;
 	} elsif ($conf{$tri} eq "hasard") {
 		my @list2;
+		my @rand;
+		my @from;
+		if ($conf{rand}) {
+			@from = split(/\,/,$conf{rand});
+		}
+		my $rand;
 		while (@list) {
-			push @list2,splice(@list,rand($#list+1),1);
+			if (@from) {
+				$rand = shift @from;
+			} else {
+				$rand = int(rand($#list+1));
+				push @rand,$rand;
+			}
+			push @list2,splice(@list,$rand,1);
 		}
 		@list = @list2;
+		if (!$conf{rand}) {
+			$conf{rand} = join(",",@rand);
+			store_conf();
+		} else {
+			delete $conf{rand};
+		}
 	}
 	if ($conf{$path} ne "/") {
 		unshift @list,[[$num++,"../",".."]];
