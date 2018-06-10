@@ -1289,6 +1289,11 @@ sub disp_modes {
 	print $out "modes\n";
 	foreach (@{$list[$found]}) {
 		my ($num,$name,$serv,$flav) = @{$_};
+		if (!$latin) {
+			eval {
+				Encode::from_to($name, "iso-8859-1", "utf-8") ;
+			};
+		}
 		if ($mode_sel == $n++) {
 			print $out "*";
 		} else {
