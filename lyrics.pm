@@ -168,6 +168,18 @@ sub handle_lyrics {
 			}
 		}
 		print "lyrics lyricsmania.com : $lyrics\n";
+	} elsif ($u =~ /greatsong.net/) {
+		my $start = undef;
+		foreach (split /\n/,$_) {
+			if (/<div class="share-lyrics/) {
+				$start = 1;
+			} elsif ($start) {
+				last if (/<\/div>/);
+				s/<br>/\n/g;
+				$lyrics .= decode_entities($_);
+			}
+		}
+		say "lyrics greatsong.net $lyrics";
 	} elsif ($u =~ /lyrics.wikia.com/) {
 		foreach (split /\n/,$_) {
 			if (s/<div class=.lyricbox.>//) {
@@ -312,7 +324,12 @@ sub get_lyrics {
 	my $u;
 	foreach ($mech->links) {
 		$u = $_->url;
-		if ($u =~ /(musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com)/) {
+		# Censure genius.com pour nuit : paroles sans accents, le pire
+		# c'est qu'un autre site a exactement les mêmes ! Difficile à
+		# détecter, le + simple c'est de l'écarter explicitement pour
+		# l'instant
+		next if ($u =~ /genius.com/ && $title =~ /^nuit$/i);
+		if ($u =~ /(musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/) {
 			my $old = $_;
 			my $text = pure_ascii($_->text);
 			if ($text =~ /$title/ || $u =~ /lyricsfreak.com/ || $text =~ /^En cache/i) {
