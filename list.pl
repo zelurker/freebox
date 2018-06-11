@@ -425,6 +425,7 @@ sub list_files {
 		[$num++,"Tri aléatoire", "tri par hasard"]];
 	if (!$watch || $watch->{dirs}[0] ne $conf{$path}) {
 		print "màj watch\n";
+		$watch->cancel if ($watch);
 		undef $watch;
 		print "undef ok\n";
 		$watch = $inotify->watch($conf{$path},IN_MODIFY|IN_CREATE|IN_DELETE,
@@ -892,6 +893,10 @@ sub switch_mode {
 	print "switch_mode: source = $source\n";
 	$base_flux = undef;
 	@tab_serv = ();
+	if ($watch) {
+		$watch->cancel;
+		undef $watch;
+	}
 	read_list();
 }
 
