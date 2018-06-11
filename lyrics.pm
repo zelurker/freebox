@@ -171,11 +171,13 @@ sub handle_lyrics {
 	} elsif ($u =~ /greatsong.net/) {
 		my $start = undef;
 		foreach (split /\n/,$_) {
+			next if (/^ *$/);
+			s/^ +//;
 			if (/<div class="share-lyrics/) {
 				$start = 1;
 			} elsif ($start) {
 				last if (/<\/div>/);
-				s/<br>/\n/g;
+				s/<br( \/)?>/\n/g;
 				$lyrics .= decode_entities($_);
 			}
 		}
@@ -288,16 +290,6 @@ sub get_lyrics {
 			$comment = $mp3->comment();
 			print "comment fixed\n" if ($comment);
 		}
-		# On essaye de suivre le standard mp3 pour stocker les paroles mais vu
-		# que je fais ça sans aucun fichier d'exemple je ne suis pas certain
-		# d'être ok. Bah en tous cas ça peut être lit/écrit par ce script !
-		$lyrics = $mp3->select_id3v2_frame_by_descr('COMM(fre,fra,eng,#0)[USLT]');
-		print "mp3: title $title track $track artist $artist album $album comment $comment year $year genre $genre\n";
-		$lyrics =~ s/^ +//;
-		$lyrics =~ s/\xe2\x80\x99/'/g;
-		if ($lyrics) {
-			return $lyrics;
-		}
 	}
 	if (!$lyrics && open(F,"<","$file.lyrics")) {
 		while (<F>) {
@@ -314,6 +306,10 @@ sub get_lyrics {
 	my $orig = $title;
 	$title = pure_ascii($title);
 	$title =~ s/ en duo.+//; # à tout hasard... !
+	if ($title =~ /jeanine medicament blues/i) {
+		$artist = "Jean-jacques Goldman";
+	}
+debut:
 	say "lyrics: envoie requête : lyrics $artist - $title";
 	my $mech = search::search("lyrics $artist $title");
 	if ($@) {
@@ -328,7 +324,7 @@ sub get_lyrics {
 		# c'est qu'un autre site a exactement les mêmes ! Difficile à
 		# détecter, le + simple c'est de l'écarter explicitement pour
 		# l'instant
-		next if ($u =~ /genius.com/ && $title =~ /^nuit$/i);
+		next if ($u =~ /genius.com/ && $title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres)$/i);
 		if ($u =~ /(musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/) {
 			my $old = $_;
 			my $text = pure_ascii($_->text);
@@ -348,6 +344,10 @@ sub get_lyrics {
 			$_ = $old;
 		}
 		next if ($_->text =~ /youtube/i || $u =~ /youtube/);
+	}
+	if (!$lyrics && $artist eq "Fredericks Goldman Jones") {
+		$artist = "Jean-jacques Goldman";
+		goto debut;
 	}
 	if (!$lyrics) {
 		print "get_lyrics: url inconnue : $u pas de paroles ?\n";
