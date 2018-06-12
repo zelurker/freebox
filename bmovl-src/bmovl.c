@@ -32,7 +32,11 @@ static int fifo;
 static char *fifo_str;
 static int server,infoy,listy,listh,old_size;
 static char bg_pic[FILENAME_MAX];
+#ifdef SDL1
 static SDL_Surface *pic;
+#else
+static SDL_Texture *pic;
+#endif
 static int must_clear_screen;
 
 static void clear_screen() {
@@ -98,7 +102,11 @@ static void myconnect(int signal) {
 	fifo = 0;
     }
     if (fifo > 0 && pic) {
+#ifdef SDL1
 	SDL_FreeSurface(pic);
+#else
+	SDL_DestroyTexture(pic);
+#endif
 	pic = NULL;
     }
 }
@@ -1206,10 +1214,19 @@ static int image(int argc, char **argv) {
 	size = buf.st_size;
     }
     if (strcmp(bmp,bg_pic) || size != old_size) {
+#ifdef SDL1
 	SDL_Surface *pic2 = IMG_Load(bmp);
+#else
+	SDL_Texture *pic2 = IMG_LoadTexture(renderer,bmp);
+#endif
 	if (pic2) {
-	    if (pic)
+	    if (pic) {
+#ifdef SDL1
 		SDL_FreeSurface(pic);
+#else
+		SDL_DestroyTexture(pic);
+#endif
+	    }
 	    pic = pic2;
 	    strcpy(bg_pic,bmp);
 	    old_size = size;
@@ -1230,19 +1247,27 @@ static int image(int argc, char **argv) {
 	lastw = w;
 	lasth = h;
     }
+    int access,picw,pich;
+    Uint32 format;
+    SDL_QueryTexture(pic, &format, &access, &picw, &pich);
 
-    double ratio = w*1.0/pic->w;
-    if (h*1.0/pic->h < ratio) ratio = h*1.0/pic->h;
+    double ratio = w*1.0/picw;
+    if (h*1.0/pich < ratio) ratio = h*1.0/pich;
     if (ratio > 4.0) ratio = 4.0;
-    SDL_Surface *s = zoomSurface(pic,ratio,ratio,SMOOTHING_ON);
     SDL_Rect r;
-    r.x = 0; r.y = 0; r.w = s->w; r.h = s->h;
+    r.x = 0; r.y = 0;
+#ifdef SDL1
+    SDL_Surface *s = zoomSurface(pic,ratio,ratio,SMOOTHING_ON);
+    r.w = s->w; r.h = s->h;
     if (s->w > w) r.w = w;
     if (s->h > h) r.h = h;
-    if (x + s->w < desktop_w) {
+#else
+    r.w = picw; r.h = pich;
+#endif
+    if (x + picw*ratio < desktop_w) {
 	// Il peut un rester un bout de l'ancienne image à droite
 	SDL_Rect r;
-	r.x = x+s->w;
+	r.x = x+picw*ratio;
 	r.w = desktop_w-r.x;
 	r.y = 0;
 	r.h = maxy;
@@ -1251,16 +1276,13 @@ static int image(int argc, char **argv) {
 #else
 	SDL_RenderFillRect(renderer,&r); // color set when clearing the screen
 #endif
-	printf("on vire le bout à droite : %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
-    } else {
-	printf("rien à virer à droite : %d + %d >= %d\n",x,w,desktop_w);
     }
-    if (y + s->h < maxy) {
+    if (y + pich*ratio < maxy) {
 	// Et en dessous ?
 	SDL_Rect r;
 	r.x = x;
 	r.w = desktop_w-r.x;
-	r.y = y+s->h;
+	r.y = y+pich*ratio;
 	r.h = maxy - r.y;
 #ifdef SDL1
 	SDL_FillRect(sdl_screen,&r,0);
@@ -1271,16 +1293,16 @@ static int image(int argc, char **argv) {
     SDL_Rect dst;
     dst.x = x; dst.y = y;
 #ifndef SDL1
-    SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer,s);
-    SDL_RenderCopy(renderer,tex,&r,&dst);
-    SDL_DestroyTexture(tex);
+    dst.w = r.w*ratio; dst.h = r.h*ratio;
+    // SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer,s);
+    SDL_RenderCopy(renderer,pic,&r,&dst);
+    // SDL_DestroyTexture(tex);
     SDL_RenderPresent(renderer);
 #else
     SDL_BlitSurface(s,&r,sdl_screen,&dst);
     SDL_UpdateRect(sdl_screen,0,0,0,0);
-#endif
-    printf("image %d,%d,%d,%d\n",x,y,s->w,s->h);
     SDL_FreeSurface(s);
+#endif
     return(0);
 }
 
