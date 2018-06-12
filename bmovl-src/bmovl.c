@@ -988,7 +988,6 @@ static void handle_event(SDL_Event *event) {
 #ifndef SDL1
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_EXPOSED) {
 	SDL_RenderPresent(renderer);
-	printf("exposed\n");
 	return;
     }
 #endif
@@ -1028,12 +1027,20 @@ static void handle_event(SDL_Event *event) {
     }
     if (n >= nb_keys) { // Pas trouvé
 	char buf[80];
-#ifdef SDL1
 	if (input > 255) {
 	    /* Pas la peine d'essayer de renvoyer un code > 255, il est
 	     * perdu. Ca olibge à une réinterprétation tordue ici */
-	    if (input >= SDLK_KP0 && input <= SDLK_KP9) {
+#ifdef SDL1
+	    if (input >= SDLK_KP0 && input <= SDLK_KP9)
+#else
+	    if (input >= SDLK_KP_0 && input <= SDLK_KP_9)
+#endif
+	    {
+#ifdef SDL1
 		buf[0] = input-SDLK_KP0+'0';
+#else
+		buf[0] = input-SDLK_KP_0+'0';
+#endif
 		buf[1] = 0;
 		send_cmd("sock_list",buf);
 		return;
@@ -1060,7 +1067,6 @@ static void handle_event(SDL_Event *event) {
 	    }
 	    return;
 	} else
-#endif
 	    if (input >= 'a' && input <= 'z' && (mod & KMOD_SHIFT)) {
 	    // Particularité : shift + touche alphabétique pour naviguer par
 	    // lettre dans les listes
