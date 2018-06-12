@@ -288,7 +288,7 @@ static int info(int fifo, int argc, char **argv)
 		int len = 0;
 		// Carrier returns are included, a loop is mandatory then
 		while (!feof(stdin) && len < 8191) {
-			fgets((char*)&buff[len],8192-len,stdin); // we keep the eol here
+			char *dummy = fgets((char*)&buff[len],8192-len,stdin); // we keep the eol here
 			while (buff[len]) len++;
 		}
 		while (len > 0 && buff[len-1] < 32) buff[--len] = 0; // remove the last one though
@@ -420,7 +420,7 @@ static int info(int fifo, int argc, char **argv)
 	f = fopen("info_coords","r");
 	if (f) {
 	    int oldx,oldy,oldw,oldh;
-	    fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	    int dummy = fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
 	    fclose(f);
 	    if (list_opened && oldy < listy+listh) {
 		oldy = listy+listh;
@@ -689,7 +689,7 @@ static int list(int fifo, int argc, char **argv)
 
     FILE *f = fopen("list_coords","r");
     if (f) {
-	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
+	int dummy = fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
 	fclose(f);
 	if (!mode_list) {
 	    if (oldh > sf->h) {
@@ -731,7 +731,7 @@ static int list(int fifo, int argc, char **argv)
 	f = fopen("info_coords","r");
 	if (f) {
 	    int oldx,oldy,oldw,oldh;
-	    fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	    int dummy = fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
 	    fclose(f);
 	    h = oldy - y;
 	    infoy = oldy;
@@ -803,7 +803,7 @@ static void read_inputs() {
     char buff[80];
     int nb_alloc = 0;
     while (!feof(f)) {
-	fgets(buff,80,f);
+	char *dummy = fgets(buff,80,f);
 	if (buff[0] == '#' || !buff[0])
 	    continue;
 	char *c = strchr(buff,' ');
@@ -896,8 +896,8 @@ static int numero(int fifo, int argc, char **argv) {
     int width,height;
     FILE *f = fopen("video_size","r");
     if (f) {
-	fscanf(f,"%d\n",&width);
-	fscanf(f,"%d\n",&height);
+	int dummy = fscanf(f,"%d\n",&width);
+	dummy = fscanf(f,"%d\n",&height);
 	fclose(f);
     } else {
 	width = desktop_w;
@@ -961,7 +961,7 @@ static void send_cmd(char *fifo, char *cmd) {
 	buffer[255] = 0;
 	if (strlen(buffer) < 255)
 	    strcat(buffer,"\012");
-	write(socket_fd, buffer, strlen(buffer));
+	size_t dummy = write(socket_fd, buffer, strlen(buffer));
 
 	close(socket_fd);
 
@@ -971,7 +971,7 @@ static void send_cmd(char *fifo, char *cmd) {
 	strcat(buf,"\n");
     int file = open(fifo,O_WRONLY|O_NONBLOCK);
     if (file > 0) {
-	write(file,buf,strlen(buf));
+	size_t dummy = write(file,buf,strlen(buf));
 	close(file);
     } else {
 	// printf("could not send command %s\n",buf);
@@ -985,6 +985,13 @@ static void send_cmd(char *fifo, char *cmd) {
 
 static void handle_event(SDL_Event *event) {
     if (!nb_keys) read_inputs();
+#ifndef SDL1
+    if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_EXPOSED) {
+	SDL_RenderPresent(renderer);
+	printf("exposed\n");
+	return;
+    }
+#endif
     if (event->type != SDL_KEYDOWN) return;
     int input = event->key.keysym.sym;
 #ifdef SDL1
@@ -1005,9 +1012,11 @@ static void handle_event(SDL_Event *event) {
 	    if (input == keys[n] && command[n][0] != '{') {
 		// Evite les commandes style {dvdnav}
 		printf("touche trouvée, commande %s\n",command[n]);
-		if (!strncmp(command[n],"run",3))
-		    system(&command[n][4]);
-		else {
+		if (!strncmp(command[n],"run",3)) {
+		    int ret = system(&command[n][4]);
+		    if (ret)
+			printf("system %d returned %d\n",command[n][4],ret >> 8);
+		} else {
 		    if (fifo)
 			send_cmd("fifo_cmd",command[n]);
 		    else
@@ -1077,21 +1086,21 @@ static void get_free_coords(int &x, int &y, int &w, int &h) {
     f = fopen("list_coords","r");
     if (f) {
 	int oldx,oldy,oldw,oldh,oldsel;
-	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
+	int dummy = fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
 	fclose(f);
 	x = oldx + oldw;
     }
     f = fopen("mode_coords","r");
     if (f) {
 	int oldx,oldy,oldw,oldh,oldsel;
-	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
+	int dummy = fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
 	fclose(f);
 	y = oldy + oldh;
     }
     f = fopen("info_coords","r");
     if (f) {
 	int oldx,oldy,oldw,oldh;
-	fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	int dummy = fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
 	fclose(f);
 	infoy = oldy;
     }
@@ -1255,9 +1264,16 @@ static int image(int argc, char **argv) {
     }
     SDL_Rect dst;
     dst.x = x; dst.y = y;
+#ifndef SDL1
+    SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer,s);
+    SDL_RenderCopy(renderer,tex,&r,&dst);
+    SDL_DestroyTexture(tex);
+    SDL_RenderPresent(renderer);
+#else
     SDL_BlitSurface(s,&r,sdl_screen,&dst);
-    printf("image %d,%d,%d,%d\n",x,y,s->w,s->h);
     SDL_UpdateRect(sdl_screen,0,0,0,0);
+#endif
+    printf("image %d,%d,%d,%d\n",x,y,s->w,s->h);
     SDL_FreeSurface(s);
     return(0);
 }

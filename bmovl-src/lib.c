@@ -130,18 +130,29 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear)
 	}
 	SDL_Rect r;
 	r.x = xpos; r.y = ypos;
-	if (xpos + bmp->w > sdl_screen->w)
-	    r.x = sdl_screen->w - bmp->w;
-	if (ypos + bmp->h > sdl_screen->h)
-	    r.y = sdl_screen->h - bmp->h;
-	if (bmp->w > sdl_screen->w || bmp->h > sdl_screen->h) {
+	if (xpos + bmp->w > desktop_w)
+	    r.x = desktop_w - bmp->w;
+	if (ypos + bmp->h > desktop_h)
+	    r.y = desktop_h - bmp->h;
+	if (bmp->w > desktop_w || bmp->h > desktop_h) {
 	    printf("blit too big for the screen !\n");
 	    return;
 	}
-	if (clear) memset(sdl_screen->pixels,0,sdl_screen->w*sdl_screen->h*
+#ifdef SDL1
+	if (clear) memset(sdl_screen->pixels,0,desktop_w*desktop_h*
 		sdl_screen->format->BytesPerPixel);
 	SDL_BlitSurface(bmp,NULL,sdl_screen,&r);
 	SDL_UpdateRect(sdl_screen,r.x,r.y,bmp->w,bmp->h);
+#else
+	if (clear)
+	    SDL_RenderClear(renderer);
+	SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer,bmp);
+	// il faut initialiser w & h ici
+	r.w = bmp->w; r.h = bmp->h;
+	SDL_RenderCopy(renderer,tex,NULL,&r);
+	SDL_RenderPresent(renderer);
+	SDL_DestroyTexture(tex);
+#endif
     } else {
 	char str[100];
 	int  nbytes;
@@ -165,9 +176,15 @@ int send_command(int fifo,char *cmd) {
     if (!fifo) {
 	if (!strncmp(cmd,"CLEAR",5)) {
 	    SDL_Rect r;
+#ifdef SDL1
 	    sscanf(cmd+6,"%hd %hd %hd %hd",&r.w,&r.h,&r.x,&r.y);
 	    SDL_FillRect(sdl_screen,&r,0);
 	    SDL_UpdateRect(sdl_screen,r.x,r.y,r.w,r.h);
+#else
+	    sscanf(cmd+6,"%d %d %d %d",&r.w,&r.h,&r.x,&r.y);
+	    SDL_SetRenderDrawColor(renderer,0,0,0,SDL_ALPHA_OPAQUE);
+	    SDL_RenderFillRect(renderer,&r);
+#endif
 	}
 	return strlen(cmd);
     }
