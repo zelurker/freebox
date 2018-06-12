@@ -32,28 +32,29 @@ if ($str =~ /^get,(\d+),(.+)/) {
 		# coup de voir...
 		system("wget -q -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl && chmod -w ~/bin/youtube-dl");
 	}
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
+	my $file = sprintf("%d%02d%02d-%02d%02d.mp4",$year+1900,$mon+1,$mday,$hour,$min);
 	my $pid = fork();
 	if (!$pid) {
-		say STDERR "*** lancement youtube-dl -q -f $format $suffix";
+		say STDERR "*** lancement youtube-dl -q -o $file -f $format https://www.youtube.com/watch?v=$suffix";
 		chdir("records");
-		exec("~/bin/youtube-dl -q -f $format $suffix 1> /dev/null");
+		exec("~/bin/youtube-dl -q -o $file -f $format https://www.youtube.com/watch?v=$suffix 1> /dev/null");
 	} else {
 		my $tries = 0;
-		$title = `~/bin/youtube-dl -f $format $suffix --get-filename`;
-		chomp $title;
 		$| = 1;
-		while (!-f "records/$title" && $tries < 10) {
+		while (!-f "records/$file.part" && !-f "records/$file" && $tries < 10) {
 			$tries++;
-			say "pas de fichier records/$title try $tries";
+			say STDERR "pas de fichier records/$file\[.part] try $tries";
 			sleep 1;
 		}
 		if ($tries == 10) {
-			print STDERR "pas trouvé le fichier attendu racine:records/$title. on va essayer en aveugle\n";
-			print "records/$title*\n";
+			print STDERR "pas trouvé le fichier attendu racine:records/$file. on va essayer en aveugle\n";
+			print "records/$file*\n";
 			exit(0);
 		}
 		print STDERR "trouvé le fichier après $tries secondes\n";
-		my $file = "records/$title";
+		$file = "records/$file";
+		$file .= ".part" if (! -f $file);
 		print STDERR "file = $file\n";
 		my $r = $file;
 		$r =~ s/.part$//;

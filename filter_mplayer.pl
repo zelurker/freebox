@@ -104,7 +104,9 @@ our $init = 0;
 our $prog;
 our ($codec,$bitrate,$lyrics);
 our $titre = "";
-if (open(F,"<$args[1].info")) {
+my $a1 = $args[1];
+$a1 =~ s/.part$//;
+if (open(F,"<$a1.info")) {
 	# Si il y a un fichier info pour ce qu'on lit (podcast par exemple)
 	# alors récupère le titre dedans !
 	$titre = <F>;
@@ -394,7 +396,14 @@ sub send_cmd_prog {
 	# d'info reste en long et ne disparait plus tout seul quand on change
 	# de chaine !
 	my $cmd = "prog:0 $chan&$source";
+	if ($chan =~ / video\// && $chan !~ /\....?$/) { # chan youtube
+		# quand on arrive là généralement on nous passe le titre ce qui ne
+		# donne rien pour retrouver l'info, il vaut mieux passer par le
+		# fichier à la place !
+		$cmd = "prog:0 $args[1]&$source";
+	}
 	$cmd .= "/$base_flux" if ($base_flux);
+	say STDERR "filter: sending command $cmd";
 	out::send_cmd_info("$cmd") if ($cmd);
 }
 

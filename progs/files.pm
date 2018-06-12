@@ -11,7 +11,7 @@ use v5.10;
 our $debug = 0;
 
 sub get {
-	my ($p,$channel,$source,$base_flux) = @_;
+	my ($p,$channel,$source,$base_flux,$serv) = @_;
 	if ($source eq "Enregistrements" && $channel !~ /^records/) {
 		$channel = "records/$channel";
 	}
@@ -24,7 +24,9 @@ sub get {
 		}
 	}
 	$channel =~ s/ \d+ Mo$//; # supprime la taille en suffixe éventuelle
-	return undef if ($source !~ /(livetv|Enregistrement)/);
+	$channel =~ s/.part$//; # supprime un éventuel . part à la fin
+	say STDERR "info/files: source $source channel $channel base_flux $base_flux serv $serv";
+	return undef if ($source !~ /(livetv|Enregistrement|flux)/);
 
 	return undef if (!-f "$channel.info" && !-f "$channel.png");
 	my ($title,$pic,$sub,$desc) = ();
