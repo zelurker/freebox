@@ -972,6 +972,7 @@ sub mount_dvd() {
 
 sub run_mplayer2 {
 	my ($name,$src,$serv,$flav,$audio,$video) = @_;
+	out::clear("list_coords");
 	if ($serv =~ /^get,.+/) {
 		# lien get : download géré par le plugin
 		print "lien get détecté: $serv\n";
