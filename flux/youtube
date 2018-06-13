@@ -11,9 +11,10 @@ my $str = shift @ARGV;
 my $debug = 0; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
-if ($str =~ /^get,(\d+),(.+)/) {
+if ($str =~ /^get,(\d+),(.+?),(.+)/) {
 	print STDERR "str $str sending direct\n";
-	my ($format,$suffix) = ($1,$2);
+	my ($format,$codec,$suffix) = ($1,$2,$3);
+	$codec =~ s/video\///;
 	print STDERR "got format $format suffix $suffix\n";
 	my $title;
 	if (open(F,"<cache/yt/$suffix")) {
@@ -32,8 +33,11 @@ if ($str =~ /^get,(\d+),(.+)/) {
 		# coup de voir...
 		system("wget -q -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl && chmod -w ~/bin/youtube-dl");
 	}
-	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
-	my $file = sprintf("%d%02d%02d-%02d%02d.mp4",$year+1900,$mon+1,$mday,$hour,$min);
+	my $file = $title;
+	$file =~ s/ /_/g;
+	$file =~ s/\&\#(..)\;/chr($1)/ge;
+	while ($file =~ s/[^a-zA-Z0-9-_.éèêàù]//g) {}
+	$file .= ".$codec";
 	my $pid = fork();
 	if (!$pid) {
 		say STDERR "*** lancement youtube-dl -q -o $file -f $format https://www.youtube.com/watch?v=$suffix";
@@ -302,7 +306,7 @@ sub handle_tag {
 			if ($type !~ /^audio/) {
 				# Il faut garder le titre ici pour le bandeau d'info...
 				push @name,"$title $q $type $args{codecs}"; # on laisse tomber le bitrate
-				push @url,"get,$args{itag},$suffix";
+				push @url,"get,$args{itag},$type,$suffix";
 			} else {
 				$audio = "$u";
 				print STDERR "*** addendum à $name[$#name] = $type\n";
