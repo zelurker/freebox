@@ -405,6 +405,7 @@ sub send_cmd_prog {
 	$cmd .= "/$base_flux" if ($base_flux);
 	say STDERR "filter: sending command $cmd";
 	out::send_cmd_info("$cmd") if ($cmd);
+	# out::send_cmd_fifo("direct_sock_info",$cmd);
 }
 
 sub update_codec_info {
@@ -707,7 +708,7 @@ while (1) {
 				print F "$width\n$height\n";
 				close(F);
 				print "filter: envoi USR1 à $pid\n";
-				unlink("list_coords","video_coords","info_coords","numero_coords","mode_coords");
+				out::clear("list_coords","video_coords","info_coords","numero_coords","mode_coords");
 				kill "USR1",$pid;
 				$connected = 1;
 			}
