@@ -11,10 +11,10 @@
 
 use strict;
 use warnings;
-use Coro::LWP;
 use LWP::UserAgent;
 use HTTP::Cookies;
 use File::Path qw(make_path);
+use Coro::LWP;
 
 # Un get qui stocke les cookies et tient compte de l'utf dans le content-type
 sub myget {
