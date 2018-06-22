@@ -74,8 +74,8 @@ sub link_get {
 
 			# lien get sur le réseau, y a vraiment intérêt à lui laisser de
 			# l'avance, 1s ne semble pas assez dans tous les cas, va pour
-			# 1.5 alors...
-			select undef,undef,undef,1.5;
+			# 2 alors...
+			select undef,undef,undef,2;
 		}
 	}
 	print "$file\n"; # Renvoie le nom du fichier à list.pl
