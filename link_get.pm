@@ -3,6 +3,7 @@ package link_get;
 use WWW::Mechanize;
 use POSIX qw(:sys_wait_h );
 use strict;
+use v5.10;
 
 our $debug = 0;
 
@@ -32,7 +33,17 @@ sub link_get {
 	$mech->timeout(10);
 	$mech->default_header('Accept-Encoding' => scalar HTTP::Message::decodable());
 
-	my $r = $mech->head($url);
+	my $r;
+	eval {
+		$r = $mech->head($url);
+	};
+	if ($@) {
+		# method head not allowed très probablement...
+		# dans ce cas là c'est du streaming et il faut que le player gère
+		# ça directement...
+		say $url;
+		exit(0);
+	}
 	if ($size != $r->header("Content-length") && $r->header("Content-length")) {
 		# print "podcast: taille du fichier pod invalide, on garde la taille head: ",$r->header("Content-length"),"\n";
 		$size = $r->header("Content-length");

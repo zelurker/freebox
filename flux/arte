@@ -180,26 +180,15 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 				next;
 			} elsif (/^http/) {
 				$count++;
-				if (/\.m3u/) {
-					my $m3u = myget($_,"cache/arte/$code.m3u$count",7);
-					# du m3u dans du m3u, non mais là ils utilisent un truc
-					# qui en génère en masse c'est clair, ça sent le machin
-					# apple ça... !
-					# bon alors apparemment y a des urls à la suite avec
-					# toutes la même légende mais un numéro de segment
-					# différent. Je suppose que c'est leur pseudo méthode
-					# pour reprendre un flux + loin... bah on va garder que
-					# la 1ère url pour l'instant...
-					foreach (split /\n/,$m3u) {
-						next if (/^#/);
-						if (/^http/) {
-							say "get,$_";
-							last;
-						}
-					}
-				} else {
-					say "get,$_";
-				}
+				# en fait cet m3u est TRES spécial, c'est du m3u de
+				# streaming ça doit être traité en temps réel par le
+				# lecteur vidéo il est sensé récupérer les urls des
+				# streams à jouer lui même.
+				# mplayer2 sait pas faire, voir avec mplayer, ffplayer
+				# ou mpv.
+				# Il faut que je tente mon interface pour mpv bientôt
+				# moi... en attendant on va y aller avec mplayer...
+				say "get,$_";
 			} elsif ($_ ne "") {
 				say STDERR "m3u: ligne non reconnue : $_.";
 			}
