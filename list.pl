@@ -1000,7 +1000,7 @@ sub run_mplayer2 {
 	}
 	if ($serv =~ /^https/) {
 		# Apparemment mplayer2 ne peut pas lire de l'https !!!
-		$player = "mplayer";
+		$player = "mpv";
 	}
 	if ($src =~ /cd/) {
 		$quiet = "-quiet";
@@ -1075,15 +1075,20 @@ sub run_mplayer2 {
 		close(F);
 		$player = "mplayer" if (!$found_video);
 	}
+	$filter = "bmovl=1:0:fifo$filter" if ($player =~ /^mplayer/); # pas de bmovl dans mpv, un sacré merdier...
+	$filter .= "," if ($filter);
+	$filter .= "screenshot";
 	my @list = ("perl","filter_mplayer.pl",$player,$dvd1,$serv,
 		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
 		# Apparemment options interdites avec vdpau, sinon on perd la synchro !
 #			"-framedrop", # "-nocorrect-pts",
 #	   	"-autosync",10,
 		"-fs",
-		"-stop-xscreensaver","-identify",$quiet,"-input",
-		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd","-vf",
-		"bmovl=1:0:fifo$filter,screenshot",@dvd2);
+		$quiet,"-vf",
+		$filter,@dvd2);
+	push @list,("-identify","-stop-xscreensaver","-input",
+		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
+	push @list,("-stop-screensaver") if ($player =~ /^mpv/);
 	if ($audio) {
 		if ($src =~ /youtube/) {
 			push @list,("-audiofile",$audio);
