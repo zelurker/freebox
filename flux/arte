@@ -52,7 +52,7 @@ sub decode_type {
 						$code = $_->{link}{page};
 						$url =~ s:/:|:g;
 					}
-                    decode_prg($_->{teasers});
+                    decode_prg($_->{data});
 					if ($url) {
 						say "Plus...";
 						say "+vid:$code,$url";
@@ -71,12 +71,14 @@ sub decode_main {
     $_ = shift;
     if (ref($_) eq "HASH") {
         my %hash = %$_;
-        if ($hash{tvguide} || $hash{creative}) { # racine du nouveau hash 2017
-			# remplacé par creative en juillet 2017
+        if ($hash{pages}) { # racine du nouveau hash 2017
+			# et encore après ça...
 			if ($str =~ /^result:/) {
 				return decode_prg($hash{search}{teasers});
 			}
-            return decode_type($hash{page}{zones});
+			# non mais sans déconner, on se demande bien d'où vient se
+			# HOME_fr_{} à la con ???
+            return decode_type($hash{pages}{list}{"HOME_fr_{}"}{zones});
         } else {
             die "decode_main: pas de tvguide : ".Dumper($_);
         }
@@ -141,16 +143,68 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
     }
 	say "encoding: latin1"; # c'est toujours du json...
     print "direct\n";
+	# say STDERR "dumper : ".Dumper($hash);
+	my $count = 0;
+	$url = undef;
     foreach (sort { $a cmp $b } keys %$hash) {
         my $h = $hash->{$_};
-        next if ($h->{mediaType} eq "hls"); # hls c'est du m3u, on en veut pas!
-            print "$h->{mediaType} $h->{width}x$h->{height} @ $h->{bitrate}kbps $h->{versionLibelle}\n";
-        if ($h->{streamer}) {
-            print "get,$h->{streamer}$h->{url}\n";
-        } else {
-            print "get,$h->{url}\n";
-        }
+		# next if ($h->{mediaType} eq "hls"); # hls c'est du m3u, on en veut pas!
+		if ($h->{mediaType} ne "hls") {
+			$count++;
+			print "$h->{mediaType} $h->{width}x$h->{height} @ $h->{bitrate}kbps $h->{versionLibelle}\n";
+			if ($h->{streamer}) {
+				print "get,$h->{streamer}$h->{url}\n";
+			} else {
+				print "get,$h->{url}\n";
+			}
+		} else {
+			if ($h->{streamer}) {
+				$url = $h->{streamer}.$h->{url};
+			} else {
+				$url = $h->{url};
+			}
+		}
     }
+	if ($count == 0 && $url) {
+		# On a une url m3u et rien d'autre, ça semble ête la mode en 2018 !
+		my $m3u = myget($url,"cache/arte/$code.m3u",7);
+		$count = 0;
+		foreach (split /\n/,$m3u) {
+			next if (/^#EXTM3U/);
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=128000,CODECS="mp4a.40.2"
+			if (/^#EXT.X.STREAM.INF.*BANDWIDTH=(\d+),RESOLUTION=(.+?),CODECS="(.+?)"/) {
+				say "$2 ".($1/1000)."kbps codecs:$3";
+				next;
+			} elsif (/^#EXT.X.STREAM.INF.*BANDWIDTH=(\d+),CODECS="(.+?)"/) {
+				say "audio only: ".($1/1000)."kbps codecs:$2";
+				next;
+			} elsif (/^http/) {
+				$count++;
+				if (/\.m3u/) {
+					my $m3u = myget($_,"cache/arte/$code.m3u$count",7);
+					# du m3u dans du m3u, non mais là ils utilisent un truc
+					# qui en génère en masse c'est clair, ça sent le machin
+					# apple ça... !
+					# bon alors apparemment y a des urls à la suite avec
+					# toutes la même légende mais un numéro de segment
+					# différent. Je suppose que c'est leur pseudo méthode
+					# pour reprendre un flux + loin... bah on va garder que
+					# la 1ère url pour l'instant...
+					foreach (split /\n/,$m3u) {
+						next if (/^#/);
+						if (/^http/) {
+							say "get,$_";
+							last;
+						}
+					}
+				} else {
+					say "get,$_";
+				}
+			} elsif ($_ ne "") {
+				say STDERR "m3u: ligne non reconnue : $_.";
+			}
+		}
+	}
     exit(0);
 } elsif ($str =~ /^get,(.+)/) {
     my $url = $1;
@@ -165,7 +219,7 @@ if ($str =~ /^result:(.+)/) {
 	my $url = "http://www.arte.tv/fr/search/?q=$1";
 	$page = myget($url);
 } else {
-	$page = myget("http://www.arte.tv/guide/fr/plus7/","cache/arte/j0",1/24.0);
+	$page = myget("https://www.arte.tv/fr/","cache/arte/j0",1/24.0);
 }
 # l'encoding doit être après le myget parce que si l'html est en utf8, le
 # json est en latin !!!
