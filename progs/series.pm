@@ -16,20 +16,27 @@ sub find_actor($) {
 	$_ = $mech->content;
 	my $first = 0;
 	my ($actor,$img,$cast);
+	my $div;
 	foreach (split /\n/,$_) {
-		if (/itemprop="actor"/ || /div class=".*Actors/) {
+		if (/div class=".*card-person/) {
 			$actor = 1;
+			$div = 0;
 			next;
 		} elsif ($actor) {
-			if (/\/li/) {
-				$actor = 0;
-				next;
+			$div++ if (/<div/i);
+			if (/<\/div/i) {
+				$div--;
+				if ($div < 0) {
+					$actor = 0;
+					next;
+				}
 			}
-			if (/img src='(http.+?)'/) {
+			if (/<img .*data-src="(http.+?)"/i) {
 				$img = $1 if (!$img);
-			} elsif (/alt='(.+?)'/) {
-				$cast .= "/ " if ($cast);
-				$cast .= decode_entities("$1 ");
+				if (/alt="(.+?)"/i) {
+					$cast .= "/ " if ($cast);
+					$cast .= decode_entities("$1 ");
+				}
 			} elsif (/(Rôle .+?)<\//) {
 				$cast .= decode_entities("$1 ");
 			}
@@ -48,6 +55,7 @@ sub get {
 		return undef;
 	}
 	my ($titre,$saison,$episode) = ($1,$2,$3);
+	$titre =~ s/[\. ]us$//i;
 	$episode =~ s/^0//; # tronque le 0 éventuel de l'épisode, pour allocine
 	$saison =~ s/^0//;
 	my $sum = "";
@@ -88,33 +96,31 @@ sub get {
 				return undef;
 			}
 			$_ = $mech->content;
-			my $first = 0;
+			my $search = sprintf("s%02de%02d",$saison,$episode);
+			my $syn = 0;
 			foreach (split /\n/,$_) {
-				if (/Ep\. $episode /) {
+				if (/<img.*data-src="(http.+?)"/i) {
+					$img = $1;
+				} elsif (/$search/i) {
 					s/\<.+?\>//g;
-					$sum .= decode_entities($_);
+					$sub = decode_entities($_);
 					$dump = 1;
 					next;
-				} elsif ($dump) {
-					if (/\/td/) {
-						$dump = 0;
-						next;
+				} elsif ($dump && /<div class="synopsis/i) {
+					$syn = 1;
+					next;
+				} elsif ($syn) {
+					if (/<\/div/i) {
+						$syn = 0;
+						last;
+					} else {
+						$sum .= decode_entities($_);
 					}
-					s/\<.+?\>//g;
-					if ($sum =~ /\w$/) {
-						if (!$first) {
-							$first = 1;
-							$sub = $sum;
-							print STDERR "sub $sub\n";
-							$sum = "";
-						} else {
-							$sum .= "\n";
-						}
-					}
-					$sum .= decode_entities($_);
 				}
 			} # foreach
-			($cast,$img) = find_actor($mech);
+			my $img2;
+			($cast,$img2) = find_actor($mech);
+			$img = $img2 if (!$img);
 			last if ($sum ne "");
 		}
 		if (!$cast) {
@@ -123,6 +129,7 @@ sub get {
 			# find_link / follow_link. A priori toutes les urls respectent
 			# qu'il faut insérer /casting dedans pour obtenir le casting, donc
 			# on va faire ça...
+			say STDERR "series: pas de cast, il y a surement des problèmes !!!";
 			my $s = $u;
 			$s =~ s/\/saison/\/casting\/saison/;
 			eval {
