@@ -709,8 +709,10 @@ while (1) {
 				close(F);
 				print "filter: envoi USR1 à $pid\n";
 				out::clear("list_coords","video_coords","info_coords","numero_coords","mode_coords");
-				kill "USR1",$pid;
-				$connected = 1;
+				if ($args[0] !~ /mpv/) {
+					kill "USR1",$pid;
+					$connected = 1;
+				}
 			}
 			$started = 1;
 			send_cmd_prog();
