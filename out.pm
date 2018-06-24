@@ -105,7 +105,9 @@ sub send_list {
 
 sub send_command {
 	my $cmd = shift;
-	if (sysopen(F,"fifo_cmd",O_WRONLY|O_NONBLOCK)) {
+	my $fifo = "fifo_cmd";
+	$fifo = "mpvsocket" if (-e "mpvsocket");
+	if (sysopen(F,$fifo,O_WRONLY|O_NONBLOCK)) {
 		print "send_command : $cmd\n";
 		$cmd .= "\n" if ($cmd !~ /\n/);
 		print F $cmd;

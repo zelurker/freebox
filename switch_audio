@@ -1,4 +1,8 @@
 #!/bin/sh
 
-echo "switch_audio
+if [ -e mpvsocket ]; then
+	echo switch_audio |socat - unix:./mpvsocket
+else
+	echo "switch_audio
 get_property switch_audio" > fifo_cmd
+fi
