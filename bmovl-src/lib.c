@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h> // unix domain socket
+#include <fcntl.h>
 #include "lib.h"
 
 #define DEBUG 0
@@ -22,17 +25,36 @@ SDL_Surface *create_surface(int w, int h)
 
 	/* SDL interprets each pixel as a 32-bit number, so our masks must depend
 	 *         on the endianness (byte order) of the machine */
+	int mpv = access("mpvsocket",R_OK | W_OK);
+	/* Gros emmerdement : mplayer & mplayer2 prennent un format rgba32 uniquement
+	 * et mpv bgra32 uniquement ! Du coup faut jongler entre les 2 pour l'instant.
+	 * Je suppose qu'à terme on ne gardera que mpv mais pour l'instant... on jongle ! */
+	if (mpv < 0) {
 #if SDL_BYTEORDER == SDL_BIG_ENDIAN
-	rmask = 0xff000000;
-	gmask = 0x00ff0000;
-	bmask = 0x0000ff00;
-	amask = 0x000000ff;
+	    rmask = 0xff000000;
+	    gmask = 0x00ff0000;
+	    bmask = 0x0000ff00;
+	    amask = 0x000000ff;
 #else
-	rmask = 0x000000ff;
-	gmask = 0x0000ff00;
-	bmask = 0x00ff0000;
-	amask = 0xff000000;
+	    rmask = 0x000000ff;
+	    gmask = 0x0000ff00;
+	    bmask = 0x00ff0000;
+	    amask = 0xff000000;
 #endif
+	} else {
+	    // mpv version
+#if SDL_BYTEORDER == SDL_BIG_ENDIAN
+	    rmask = 0x0000ff00;
+	    gmask = 0x00ff0000;
+	    bmask = 0xff000000;
+	    amask = 0x000000ff;
+#else
+	    rmask = 0x00ff0000;
+	    gmask = 0x0000ff00;
+	    bmask = 0x000000ff;
+	    amask = 0xff000000;
+#endif
+	}
 	SDL_Surface *sf = SDL_CreateRGBSurface(SDL_SWSURFACE,w,
 			h,32,rmask,gmask,bmask,amask);
 	int bg = get_bg(sf);
@@ -121,10 +143,78 @@ void init_video() {
     }
 }
 
+char* send_cmd(char *fifo, char *cmd) {
+    char *buf = strdup(cmd);
+    static char reply[256];
+    if (!strncmp(fifo,"sock",4) || !strncmp(fifo,"mpvsock",7)) {
+	struct sockaddr_un address;
+	int  socket_fd, nbytes;
+	char buffer[256];
+
+	socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
+	if(socket_fd < 0)
+	{
+	    printf("bmovl: send_cmd socket() failed\n");
+	    return NULL;
+	}
+
+	/* start with a clean address structure */
+	memset(&address, 0, sizeof(struct sockaddr_un));
+
+	address.sun_family = AF_UNIX;
+	strncpy(address.sun_path, fifo, sizeof(address.sun_path) - 1);
+
+	if(connect(socket_fd,
+		    (struct sockaddr *) &address,
+		    sizeof(struct sockaddr_un)) != 0)
+	{
+	    printf("bmovl: send_cmd connect() failed\n");
+	    return NULL;
+	}
+
+	strncpy(buffer,cmd,256);
+	buffer[255] = 0;
+	if (strlen(buffer) < 255)
+	    strcat(buffer,"\012");
+	size_t dummy = write(socket_fd, buffer, strlen(buffer));
+	dummy = read(socket_fd,reply,256);
+
+	close(socket_fd);
+
+	return reply;
+    }
+    if (buf[strlen(buf)-1] >= 32)
+	strcat(buf,"\n");
+    int file = open(fifo,O_WRONLY|O_NONBLOCK);
+    if (file > 0) {
+	size_t dummy = write(file,buf,strlen(buf));
+	reply[0] = 0;
+	close(file);
+    } else {
+	// printf("could not send command %s\n",buf);
+	if (strcmp(fifo,"sock_list")) {
+	    printf("trying to send to sock_list instead...\n");
+	    send_cmd("sock_list",cmd);
+	}
+    }
+    free(buf);
+    return reply;
+}
+
+typedef struct {
+    int x,y;
+} sblit;
+
+static sblit type_blit[3];
+
 void
-blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear)
+blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear, int id)
 {
-    if (!fifo) {
+    // id is an integer id for which part is drawn : 0 for list, 1 for info, 2 for numero
+    // used only by mpv
+    int mpv = access("mpvsocket",R_OK | W_OK);
+
+    if (!fifo && mpv < 0) {
 	if (!sdl_screen) {
 	    init_video();
 	}
@@ -153,6 +243,22 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear)
 	SDL_RenderPresent(renderer);
 	SDL_DestroyTexture(tex);
 #endif
+    } else if (!mpv) {
+	/* There is a way to pass a pointer or a file handle directly, but for that to work it needs to be the same process, that is, using libmpv becomes mandatory.
+	 * I'd like to try to do without libmpv for now to try to keep things simple, maybe later... */
+	FILE *f = fopen("surface","wb");
+	fwrite(bmp->pixels,1,bmp->h*bmp->pitch,f);
+	fclose(f);
+	char buffer[256];
+	sprintf(buffer,"{ \"command\": [\"overlay-add\", %d, %d, %d, \"surface\", 0, \"bgra\", %d, %d, %d ] }\n",id,xpos,ypos,
+		bmp->w, bmp->h,bmp->pitch);
+	char *reply = send_cmd("mpvsocket",buffer);
+	if (reply)
+	    printf("bmovl: blit received reply %s\n",reply);
+	else
+	    printf("bmovl: blit got null reply\n");
+	type_blit[id].x = xpos;
+	type_blit[id].y = ypos;
     } else {
 	char str[100];
 	int  nbytes;
@@ -173,18 +279,44 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear)
 }
 
 int send_command(int fifo,char *cmd) {
+    int mpv = access("mpvsocket",R_OK | W_OK);
     if (!fifo) {
 	if (!strncmp(cmd,"CLEAR",5)) {
 	    SDL_Rect r;
 #ifdef SDL1
 	    sscanf(cmd+6,"%hd %hd %hd %hd",&r.w,&r.h,&r.x,&r.y);
-	    SDL_FillRect(sdl_screen,&r,0);
-	    SDL_UpdateRect(sdl_screen,r.x,r.y,r.w,r.h);
+	    if (mpv<0) {
+		SDL_FillRect(sdl_screen,&r,0);
+		SDL_UpdateRect(sdl_screen,r.x,r.y,r.w,r.h);
+	    }
 #else
 	    sscanf(cmd+6,"%d %d %d %d",&r.w,&r.h,&r.x,&r.y);
-	    SDL_SetRenderDrawColor(renderer,0,0,0,SDL_ALPHA_OPAQUE);
-	    SDL_RenderFillRect(renderer,&r);
+	    if (mpv < 0) {
+		SDL_SetRenderDrawColor(renderer,0,0,0,SDL_ALPHA_OPAQUE);
+		SDL_RenderFillRect(renderer,&r);
+	    }
 #endif
+	    if (mpv == 0) {
+		int found = 0;
+		int n;
+		for (n=0; n<3; n++) {
+		    if (type_blit[n].x == r.x && type_blit[n].y == r.y) {
+			found = 1;
+			break;
+		    }
+		}
+		if (found) {
+		    char buffer[256];
+		    sprintf(buffer,"{ \"command\": [\"overlay-remove\", %d ] }\n",n);
+		    char *reply = send_cmd("mpvsocket",buffer);
+		    if (reply)
+			printf("bmovl clear: got reply %s\n",reply);
+		    else
+			printf("bmovl clear: null reply\n");
+		    type_blit[n].x = type_blit[n].y = -1;
+		} else
+		    printf("bmovl clear: type_blit not found\n");
+	    }
 	}
 	return strlen(cmd);
     }
@@ -247,12 +379,15 @@ int direct_string(SDL_Surface *sf, TTF_Font *font, int x, int y,
     SDL_Rect dest;
     int maxh = sf->h-8;
     dest.x = x; dest.y = y;
-    SDL_Color *col = (SDL_Color*)&color; // dirty hack !
+    SDL_Color col;
+    col.r = (color & sf->format->Rmask) >> sf->format->Rshift;
+    col.g = (color & sf->format->Gmask) >> sf->format->Gshift;
+    col.b = (color & sf->format->Bmask) >> sf->format->Bshift;
     SDL_Surface *tf;
     if (utf)
-	tf = TTF_RenderUTF8_Solid(font,text,*col);
+	tf = TTF_RenderUTF8_Solid(font,text,col);
     else
-	tf = TTF_RenderText_Solid(font,text,*col);
+	tf = TTF_RenderText_Solid(font,text,col);
     if (!tf) return 0;
     int ret = 0;
     if (y + tf->h <= maxh) {

@@ -443,7 +443,7 @@ static int info(int fifo, int argc, char **argv)
 	}
 	/* printf("bmovl: blit %d %d %d %d avec width %d height %d\n",
 			sf->w,sf->h,x,y,width,height); */
-	blit(fifo, sf, x, y, -40, 0);
+	blit(fifo, sf, x, y, -40, 0,1);
 	infoy = y; // pour mode_list
 	send_command(fifo,"SHOW\n");
 	// printf("bmovl: show done\n");
@@ -763,7 +763,7 @@ static int list(int fifo, int argc, char **argv)
     // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
     // apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
     // Pour l'instant le meilleur contournement c'est ça.
-    blit(fifo, sf, x, y, -40, 1);
+    blit(fifo, sf, x, y, -40, 1,0);
     listy = y; listh = sf->h;
 
     // Clean up
@@ -920,7 +920,7 @@ static int numero(int fifo, int argc, char **argv) {
     int fg = get_fg(sf);
     put_string(sf,font,8,8,argv[1],fg,NULL);
     int x = width-margew-sf->w, y = margeh*2;
-    blit(fifo, sf, x, y, -40, 0);
+    blit(fifo, sf, x, y, -40, 0,2);
     f = fopen("list_coords","r");
     if (!f) f = fopen("info_coords","r");
     if (f)
@@ -935,60 +935,6 @@ static int numero(int fifo, int argc, char **argv) {
     }
     SDL_FreeSurface(sf);
     return 0;
-}
-
-static void send_cmd(char *fifo, char *cmd) {
-    char *buf = strdup(cmd);
-    if (!strncmp(fifo,"sock",4)) {
-	struct sockaddr_un address;
-	int  socket_fd, nbytes;
-	char buffer[256];
-
-	socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
-	if(socket_fd < 0)
-	{
-	    printf("bmovl: send_cmd socket() failed\n");
-	    return ;
-	}
-
-	/* start with a clean address structure */
-	memset(&address, 0, sizeof(struct sockaddr_un));
-
-	address.sun_family = AF_UNIX;
-	strncpy(address.sun_path, fifo, sizeof(address.sun_path) - 1);
-
-	if(connect(socket_fd,
-		    (struct sockaddr *) &address,
-		    sizeof(struct sockaddr_un)) != 0)
-	{
-	    printf("bmovl: send_cmd connect() failed\n");
-	    return ;
-	}
-
-	strncpy(buffer,cmd,256);
-	buffer[255] = 0;
-	if (strlen(buffer) < 255)
-	    strcat(buffer,"\012");
-	size_t dummy = write(socket_fd, buffer, strlen(buffer));
-
-	close(socket_fd);
-
-	return ;
-    }
-    if (buf[strlen(buf)-1] >= 32)
-	strcat(buf,"\n");
-    int file = open(fifo,O_WRONLY|O_NONBLOCK);
-    if (file > 0) {
-	size_t dummy = write(file,buf,strlen(buf));
-	close(file);
-    } else {
-	// printf("could not send command %s\n",buf);
-	if (strcmp(fifo,"sock_list")) {
-	    printf("trying to send to sock_list instead...\n");
-	    send_cmd("sock_list",cmd);
-	}
-    }
-    free(buf);
 }
 
 static void handle_event(SDL_Event *event) {
@@ -1194,6 +1140,7 @@ static int vignettes(int argc, char **argv) {
 
 static int image(int argc, char **argv) {
     static int lastx,lasty,lastw,lasth;
+    static int picw,pich;
     if (argc != 2 && argc != 1) {
 	printf("image: argc = %d\n",argc);
 	return(1);
@@ -1228,6 +1175,13 @@ static int image(int argc, char **argv) {
 #endif
 	    }
 	    pic = pic2;
+#ifdef SDL1
+	    picw = pic->w; pich = pic->h;
+#else
+	    int access;
+	    Uint32 format;
+	    SDL_QueryTexture(pic, &format, &access, &picw, &pich);
+#endif
 	    strcpy(bg_pic,bmp);
 	    old_size = size;
 	}
@@ -1247,9 +1201,6 @@ static int image(int argc, char **argv) {
 	lastw = w;
 	lasth = h;
     }
-    int access,picw,pich;
-    Uint32 format;
-    SDL_QueryTexture(pic, &format, &access, &picw, &pich);
 
     double ratio = w*1.0/picw;
     if (h*1.0/pich < ratio) ratio = h*1.0/pich;

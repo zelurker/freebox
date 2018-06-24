@@ -8,7 +8,7 @@ extern SDL_Renderer *renderer;
 
 extern int desktop_w,desktop_h,desktop_bpp;
 void
-blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear);
+blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear, int id);
 int send_command(int fifo,char *cmd);
 
 void get_size(TTF_Font *font, char *text, int *w, int *h, int maxw);
@@ -27,3 +27,5 @@ int get_fg(SDL_Surface *sf);
 int get_bg(SDL_Surface *sf);
 char *get_next_string();
 void init_video();
+char* send_cmd(char *fifo, char *cmd);
+
