@@ -986,8 +986,6 @@ sub run_mplayer2 {
 			close(F);
 		}
 	}
-	unlink "fifo_cmd","fifo";
-	system("mkfifo fifo_cmd fifo");
 	my $player = "mplayer2";
 	my $cache = 100;
 	my $filter = "";
@@ -1060,6 +1058,8 @@ sub run_mplayer2 {
 		}
 	}
 
+	unlink "fifo_cmd","fifo","mpvsocket";
+	system("mkfifo fifo_cmd fifo") if ($player =~ /^mplayer/);
 	if ($player eq "mplayer2" && $serv =~ /(avi|mkv$)/ &&
 		# Dilemne : mplayer2 ne supporte pas le x265, mais mplayer est
 		# bourré de bugs ! Donc on continue à avoir mplayer2 par défaut
@@ -1078,7 +1078,9 @@ sub run_mplayer2 {
 	$filter = "bmovl=1:0:fifo$filter" if ($player =~ /^mplayer/); # pas de bmovl dans mpv, un sacré merdier...
 	$filter .= "," if ($filter);
 	$filter .= "screenshot";
-	my @list = ("perl","filter_mplayer.pl",$player,$dvd1,$serv,
+	my @list;
+	@list = ("perl","filter_mplayer.pl") if ($player =~ /mplayer/); # pour mpv à priori filter_mplayer va devenir inutile !
+	push @list, ($player,$dvd1,$serv,
 		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
 		# Apparemment options interdites avec vdpau, sinon on perd la synchro !
 #			"-framedrop", # "-nocorrect-pts",
@@ -1088,7 +1090,7 @@ sub run_mplayer2 {
 		$filter,@dvd2);
 	push @list,("-identify","-stop-xscreensaver","-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
-	push @list,("-stop-screensaver") if ($player =~ /^mpv/);
+	push @list,("-stop-screensaver","--input-ipc-server=mpvsocket","--script","observe.lua") if ($player =~ /^mpv/);
 	if ($audio) {
 		if ($src =~ /youtube/) {
 			push @list,("-audiofile",$audio);
@@ -1131,7 +1133,7 @@ sub check_player2 {
 			print "list: fin de mplayer, pid $pid, status $status\n";
 			$pid_player2 = 0;
 			$child_checker = undef;
-			unlink("fifo","fifo_cmd");
+			unlink("fifo","fifo_cmd","mpvsocket");
 		});
 }
 
