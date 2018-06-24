@@ -1,5 +1,6 @@
 #!/bin/sh
 
+# e16 &
 if ! [ -f bmovl-src/bmovl ]; then
 	cd bmovl-src && make && cd -
 fi
@@ -51,7 +52,7 @@ find cache/ -mtime +3 -delete
 find podcasts/ -mtime +7 -delete
 find livetv/ -mtime +1 -delete
 find chaines/ radios/ -atime +90 -delete
-rm -f pod desktop video_size
+rm -f pod desktop video_size mpvsocket
 if ! [ -f info_pl.pid ] || ! ( ps -p `cat info_pl.pid` >& /dev/null ); then
 	perl info.pl &
 fi
