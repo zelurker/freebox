@@ -212,7 +212,8 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear, int i
 {
     // id is an integer id for which part is drawn : 0 for list, 1 for info, 2 for numero
     // used only by mpv
-    int mpv = access("mpvsocket",R_OK | W_OK);
+    // En fait on teste video_size et pas mpvsocket parce qu'ici ce qui nous intéresse c'est une fenêtre de vidéo ouverte !
+    int mpv = access("video_size",R_OK | W_OK);
 
     if (!fifo && mpv < 0) {
 	if (!sdl_screen) {

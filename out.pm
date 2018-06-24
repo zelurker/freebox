@@ -38,7 +38,7 @@ sub send_cmd_fifo {
 	$cmd .= "\012";
 	$cmd =~ s/\x{2019}/'/g;
 	$cmd =~ s/\x{0153}/oe/g; # bizarre c'est sensé être supporté par perl5...
-	if ($fifo =~ /^sock_/) {
+	if ($fifo =~ /^sock_/ || $fifo =~ /^mpvsocket/) {
 		if (!-S "$cwd/$fifo") {
 			print "pas de socket $cwd/$fifo, on attend 1s...\n";
 			my $tries = 0;
@@ -106,7 +106,9 @@ sub send_list {
 sub send_command {
 	my $cmd = shift;
 	my $fifo = "fifo_cmd";
-	$fifo = "mpvsocket" if (-e "mpvsocket");
+	if (-e "mpvsocket") {
+		return send_cmd_fifo("mpvsocket",$cmd);
+	}
 	if (sysopen(F,$fifo,O_WRONLY|O_NONBLOCK)) {
 		print "send_command : $cmd\n";
 		$cmd .= "\n" if ($cmd !~ /\n/);

@@ -1107,7 +1107,7 @@ sub run_mplayer2 {
 		push @list,("-cache",$cache) if ($serv !~ /^(\/|livetv|records)/ && $cache > 100);
 	}
 	# hr-mp3-seek : lent, surtout quand on revient en arrière, mais
-	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/);
+	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/ && $player =~ /^mplayer/);
 	push @list,("-demuxer","lavf") if ($player eq "mplayer" && $serv =~ /\.ts$/);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
