@@ -2,6 +2,8 @@
 
 if [ -f info_coords ]; then
 	echo prev | socat stdio unix:sock_info
+elif [ -e mpvsocket ]; then
+	echo seek 600 |socat - unix:./mpvsocket
 else
 	echo seek 600 > fifo_cmd
 fi

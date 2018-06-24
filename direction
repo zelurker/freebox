@@ -8,12 +8,23 @@ elif [ -f info_coords ] && ! [ -f stream_info ] && ! head -n 2 current|tail -n 1
 	exit 0
 fi
 
-case "$1" in
-	right) echo seek 10 > fifo_cmd;;
-	left) echo seek -10 > fifo_cmd;;
-	up) echo seek +60 > fifo_cmd;;
-	down) echo seek -60 > fifo_cmd;;
-home) echo pt_up_step 1 > fifo_cmd;;
-end) echo pt_up_step -1 > fifo_cmd;;
+if [ -e mpvsocket ]; then
+	case "$1" in
+		right) echo seek 10 |socat - unix:./mpvsocket;;
+		left) echo seek -10 |socat - unix:./mpvsocket;;
+		up) echo seek +60 |socat - unix:./mpvsocket;;
+		down) echo seek -60 |socat - unix:./mpvsocket;;
+		home) echo pt_up_step 1 |socat - unix:./mpvsocket;;
+	end) echo pt_up_step -1 |socat - unix:./mpvsocket;;
 esac
+else
+	case "$1" in
+		right) echo seek 10 > fifo_cmd;;
+		left) echo seek -10 > fifo_cmd;;
+		up) echo seek +60 > fifo_cmd;;
+		down) echo seek -60 > fifo_cmd;;
+		home) echo pt_up_step 1 > fifo_cmd;;
+	end) echo pt_up_step -1 > fifo_cmd;;
+esac
+fi
 
