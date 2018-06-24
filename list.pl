@@ -1033,9 +1033,6 @@ sub run_mplayer2 {
 # 				$filter = ",kerndeint";
 # 			}
 			$cache = 5000;
-		} elsif ($src =~ /(freeboxtv|dvb|livetv)/) {
-#			$filter = ",kerndeint";
-			$player = "mplayer2";
 		}
 	}
 	my ($dvd1,@dvd2);
