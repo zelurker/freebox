@@ -1052,7 +1052,7 @@ sub run_mplayer2 {
 		}
 	}
 
-	unlink "fifo_cmd","fifo","mpvsocket";
+	unlink "fifo_cmd","fifo","mpvsocket","video_size";
 	system("mkfifo fifo_cmd fifo") if ($player =~ /^mplayer/);
 	if ($player eq "mplayer2" && $serv =~ /(avi|mkv$)/ &&
 		# Dilemne : mplayer2 ne supporte pas le x265, mais mplayer est
@@ -1128,7 +1128,7 @@ sub check_player2 {
 			print "list: fin de mplayer, pid $pid, status $status\n";
 			$pid_player2 = 0;
 			$child_checker = undef;
-			unlink("fifo","fifo_cmd","mpvsocket");
+			unlink("fifo","fifo_cmd","mpvsocket","video_size");
 		});
 }
 
