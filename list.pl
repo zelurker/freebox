@@ -986,7 +986,8 @@ sub run_mplayer2 {
 			close(F);
 		}
 	}
-	my $player = "mplayer2";
+	# mpv devient le lecteur par défaut, on verra à l'usage !
+	my $player = "mpv";
 	my $cache = 100;
 	my $filter = "";
 	my $cd = "";
@@ -995,10 +996,6 @@ sub run_mplayer2 {
 	if ($serv =~ /(mms|rtmp|rtsp)/ || $src =~ /youtube/ || ($serv =~ /:\/\// &&
 		$serv =~ /(mp4|avi|asf|mov)$/)) {
 		$cache = 1000;
-	}
-	if ($serv =~ /^https/) {
-		# Apparemment mplayer2 ne peut pas lire de l'https !!!
-		$player = "mpv";
 	}
 	if ($src =~ /cd/) {
 		$quiet = "-quiet";
