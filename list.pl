@@ -1084,7 +1084,8 @@ sub run_mplayer2 {
 		$filter,@dvd2);
 	push @list,("-identify","-stop-xscreensaver","-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
-	push @list,("-stop-screensaver","--input-ipc-server=mpvsocket","--script","observe.lua","-input-conf","input-mpv.conf") if ($player =~ /^mpv/);
+	push @list,("-stop-screensaver","--input-ipc-server=mpvsocket","--script","observe.lua",
+		"-input-conf","input-mpv.conf","--quiet") if ($player =~ /^mpv/);
 	if ($audio) {
 		if ($src =~ /youtube/) {
 			push @list,("-audiofile",$audio);
