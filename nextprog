@@ -2,6 +2,8 @@
 
 if [ -f info_coords ]; then
   echo nextprog | socat stdio unix:sock_info
+elif [ -e mpvsocket ]; then
+	echo "add volume 1"|socat - unix:./mpvsocket
 else
   echo vol 1 > fifo_cmd
 fi
