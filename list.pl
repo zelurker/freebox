@@ -1054,6 +1054,7 @@ sub run_mplayer2 {
 
 	unlink "fifo_cmd","fifo","mpvsocket","video_size";
 	system("mkfifo fifo_cmd fifo") if ($player =~ /^mplayer/);
+	out::clear("list_coords","info_coords","numero_coords");
 	if ($player eq "mplayer2" && $serv =~ /(avi|mkv$)/ &&
 		# Dilemne : mplayer2 ne supporte pas le x265, mais mplayer est
 		# bourré de bugs ! Donc on continue à avoir mplayer2 par défaut
@@ -1084,8 +1085,18 @@ sub run_mplayer2 {
 		$filter,@dvd2);
 	push @list,("-identify","-stop-xscreensaver","-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
-	push @list,("-stop-screensaver","--input-ipc-server=mpvsocket","--script","observe.lua",
-		"-input-conf","input-mpv.conf","--quiet") if ($player =~ /^mpv/);
+	if ($player =~ /^mpv/) {
+		push @list,("-stop-screensaver","--input-ipc-server=mpvsocket","--script","observe.lua",
+			"-input-conf","input-mpv.conf","--quiet");
+		if ($serv !~ /^get,/) {
+			my %bookmarks;
+			dbmopen %bookmarks,"bookmarks.db",0666;
+			if ($bookmarks{$serv}) {
+				push @list,("--start=$bookmarks{$serv}");
+			}
+			dbmclose %bookmarks;
+		}
+	}
 	if ($audio) {
 		if ($src =~ /youtube/) {
 			push @list,("-audiofile",$audio);
@@ -1397,6 +1408,15 @@ sub commands {
 		out::send_cmd_info("clear") if (-f "info_coords"); # passe à info.pl pour virer les callbacks
 		close_mode() if ($mode_opened);
 		out::send_bmovl("image");
+		return;
+	} elsif ($cmd =~ /^bookmark (\d+)/) {
+		my %bookmarks;
+		if ($serv !~ /^get,/) {
+			dbmopen %bookmarks,"bookmarks.db",0666;
+			$bookmarks{$serv} = $1;
+			dbmclose %bookmarks;
+			say "list: bookmark prévu pour \"$serv\" : $1";
+		}
 		return;
 	} elsif ($cmd eq "refresh") {
 		my $found0 = $found;

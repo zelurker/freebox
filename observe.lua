@@ -12,15 +12,30 @@ function on_width_change(name,value)
 		file = io.open("video_size", "w")
 		file:write(string.format("%d\n%d\n",value,height))
 		file:close()
+		if exists then
+			return
+		end
+		os.remove("info_coords")
+		os.execute("./info")
 	end
-	if exists then
-		return
-	end
-	os.remove("list_coords")
-	os.remove("info_coords")
-	os.remove("numero_coords")
-	os.execute("./info")
 end
 
 mp.observe_property("osd-width","number",on_width_change)
+
+mp.add_hook("on_unload", 10, function ()
+	pos = mp.get_property_number("percent-pos")
+	if (pos < 90) then
+		-- gestion basique des bookmarks :
+		-- on ne semble pas pouvoir modifier directement le fichier
+		-- en lua, donc on transmet la commande à list.pl
+		pos = mp.get_property("time-pos")
+		socket = require"socket"
+		socket.unix = require"socket.unix"
+		c = assert(socket.unix())
+		assert(c:connect("sock_list"))
+		c:send("bookmark " .. pos .. "\n")
+		c:close()
+	end
+end)
+
 
