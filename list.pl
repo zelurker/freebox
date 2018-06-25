@@ -1072,7 +1072,7 @@ sub run_mplayer2 {
 	}
 	$filter = "bmovl=1:0:fifo$filter" if ($player =~ /^mplayer/); # pas de bmovl dans mpv, un sacré merdier...
 	$filter .= "," if ($filter);
-	$filter .= "screenshot";
+	$filter .= "screenshot" if ($player !~ /^mpv/);
 	my @list;
 	@list = ("perl","filter_mplayer.pl") if ($player =~ /mplayer/); # pour mpv à priori filter_mplayer va devenir inutile !
 	push @list, ($player,$dvd1,$serv,
@@ -1081,8 +1081,9 @@ sub run_mplayer2 {
 #			"-framedrop", # "-nocorrect-pts",
 #	   	"-autosync",10,
 		"-fs",
-		$quiet,"-vf",
-		$filter,@dvd2);
+		$quiet,
+		@dvd2);
+	push @list,("-vf", $filter) if ($filter);
 	push @list,("-identify","-stop-xscreensaver","-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
 	if ($player =~ /^mpv/) {
