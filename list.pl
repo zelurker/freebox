@@ -598,12 +598,27 @@ sub read_list {
 		@list = ();
 		my $num = 1;
 		my @pic = ();
+		my $chan = chaines::getListeChaines($net);
+		$encoding = "latin1";
+		my @tnt;
+		for (my $n=1; $n<=27; $n++) {
+			foreach (keys %$chan) {
+				my ($id,$logo,$nom,$num) = @{$chan->{$_}};
+				if ($num == $n) {
+					push @tnt,$nom;
+					last;
+				}
+			}
+		}
 		while (<$f>) {
 			chomp;
 			my @fields = split(/\:/);
 			my $service = $fields[0];
 			my $name = $service;
 			$name =~ s/\(.+\)//; # name sans le transpondeur
+			if ($num <= 27 && $name ne $tnt[$num-1]) {
+				$name = $tnt[$num-1];
+			}
 			my $pic = chaines::get_chan_pic($name,\@pic);
 			push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
 		}
@@ -1052,8 +1067,9 @@ sub run_mplayer2 {
 		}
 	}
 
-	unlink "fifo_cmd","fifo","mpvsocket";
+	unlink "fifo_cmd","fifo","mpvsocket","video_size";
 	system("mkfifo fifo_cmd fifo") if ($player =~ /^mplayer/);
+	out::clear("list_coords","info_coords","numero_coords");
 	if ($player eq "mplayer2" && $serv =~ /(avi|mkv$)/ &&
 		# Dilemne : mplayer2 ne supporte pas le x265, mais mplayer est
 		# bourré de bugs ! Donc on continue à avoir mplayer2 par défaut
@@ -1071,7 +1087,7 @@ sub run_mplayer2 {
 	}
 	$filter = "bmovl=1:0:fifo$filter" if ($player =~ /^mplayer/); # pas de bmovl dans mpv, un sacré merdier...
 	$filter .= "," if ($filter);
-	$filter .= "screenshot";
+	$filter .= "screenshot" if ($player !~ /^mpv/);
 	my @list;
 	@list = ("perl","filter_mplayer.pl") if ($player =~ /mplayer/); # pour mpv à priori filter_mplayer va devenir inutile !
 	push @list, ($player,$dvd1,$serv,
@@ -1080,12 +1096,23 @@ sub run_mplayer2 {
 #			"-framedrop", # "-nocorrect-pts",
 #	   	"-autosync",10,
 		"-fs",
-		$quiet,"-vf",
-		$filter,@dvd2);
+		$quiet,
+		@dvd2);
+	push @list,("-vf", $filter) if ($filter);
 	push @list,("-identify","-stop-xscreensaver","-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
-	push @list,("-stop-screensaver","--input-ipc-server=mpvsocket","--script","observe.lua",
-		"-input-conf","input-mpv.conf","--quiet") if ($player =~ /^mpv/);
+	if ($player =~ /^mpv/) {
+		push @list,("-stop-screensaver","--input-ipc-server=mpvsocket","--script","observe.lua",
+			"-input-conf","input-mpv.conf","--quiet");
+		if ($serv !~ /^get,/) {
+			my %bookmarks;
+			dbmopen %bookmarks,"bookmarks.db",0666;
+			if ($bookmarks{$serv}) {
+				push @list,("--start=$bookmarks{$serv}");
+			}
+			dbmclose %bookmarks;
+		}
+	}
 	if ($audio) {
 		if ($src =~ /youtube/) {
 			push @list,("-audiofile",$audio);
@@ -1107,7 +1134,7 @@ sub run_mplayer2 {
 		push @list,("-cache",$cache) if ($serv !~ /^(\/|livetv|records)/ && $cache > 100);
 	}
 	# hr-mp3-seek : lent, surtout quand on revient en arrière, mais
-	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/);
+	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/ && $player =~ /^mplayer/);
 	push @list,("-demuxer","lavf") if ($player eq "mplayer" && $serv =~ /\.ts$/);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
@@ -1128,7 +1155,7 @@ sub check_player2 {
 			print "list: fin de mplayer, pid $pid, status $status\n";
 			$pid_player2 = 0;
 			$child_checker = undef;
-			unlink("fifo","fifo_cmd","mpvsocket");
+			unlink("fifo","fifo_cmd","mpvsocket","video_size");
 		});
 }
 
@@ -1397,6 +1424,18 @@ sub commands {
 		out::send_cmd_info("clear") if (-f "info_coords"); # passe à info.pl pour virer les callbacks
 		close_mode() if ($mode_opened);
 		out::send_bmovl("image");
+		return;
+	} elsif ($cmd =~ /^bookmark (.+)/) {
+		my %bookmarks;
+		my @arg = split(/ /,$cmd);
+		say "list: commande $cmd serv = $serv";
+		dbmopen %bookmarks,"bookmarks.db",0666;
+		if ($arg[2] =~ /^del/) {
+			delete $bookmarks{$serv};
+		} else {
+			$bookmarks{$arg[1]} = $arg[2];
+		}
+		dbmclose %bookmarks;
 		return;
 	} elsif ($cmd eq "refresh") {
 		my $found0 = $found;

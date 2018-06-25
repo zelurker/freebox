@@ -135,9 +135,48 @@ sub getListeChaines($) {
 		print "chaines: decode_json error $! à partir de $r\n";
 		return undef;
 	}
+	my %ordre = ();
+	my $num = 1;
+	# alors bizarrement telerama fournit la liste des chaines tnt, mais pas
+	# tout à fait dans l'ordre !!!
+	# m6 & arte sont inversées, tmc & france 4 aussi !
+	# Du coup je recopie leur liste retouchée ici, je suppose que les ids
+	# des chaines ne changent jamais contrairement aux noms !
+	my @tnt = (
+               192,
+               4,
+               80,
+               34,
+               47,
+               118,
+               111,
+               445,
+               119,
+               195,
+               446,
+               444,
+               234,
+               78,
+               481,
+               226,
+               458,
+               482,
+               160,
+               1404,
+               1401,
+               1403,
+               1402,
+               1400,
+               1399,
+               112,
+               2111
+		   );
+	foreach (@tnt) {
+		$ordre{$_} = $num++;
+	}
 	foreach (@{$json->{donnees}->{chaines}}) {
 		# say $_->{id}," ",$_->{nom};
-		$chan{lc($_->{nom})} = [$_->{id},$_->{logo},$_->{nom}];
+		$chan{lc($_->{nom})} = [$_->{id},$_->{logo},$_->{nom},$ordre{$_->{id}}];
 	}
 	return \%chan;
 }

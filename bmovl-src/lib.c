@@ -212,7 +212,8 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear, int i
 {
     // id is an integer id for which part is drawn : 0 for list, 1 for info, 2 for numero
     // used only by mpv
-    int mpv = access("mpvsocket",R_OK | W_OK);
+    // En fait on teste video_size et pas mpvsocket parce qu'ici ce qui nous intéresse c'est une fenêtre de vidéo ouverte !
+    int mpv = access("video_size",R_OK | W_OK);
 
     if (!fifo && mpv < 0) {
 	if (!sdl_screen) {
@@ -253,10 +254,8 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear, int i
 	sprintf(buffer,"{ \"command\": [\"overlay-add\", %d, %d, %d, \"surface\", 0, \"bgra\", %d, %d, %d ] }\n",id,xpos,ypos,
 		bmp->w, bmp->h,bmp->pitch);
 	char *reply = send_cmd("mpvsocket",buffer);
-	if (reply)
-	    printf("bmovl: blit received reply %s\n",reply);
-	else
-	    printf("bmovl: blit got null reply\n");
+	if (reply && strstr(reply,"error\":\"success"))
+	    unlink("surface");
 	type_blit[id].x = xpos;
 	type_blit[id].y = ypos;
     } else {
@@ -309,10 +308,6 @@ int send_command(int fifo,char *cmd) {
 		    char buffer[256];
 		    sprintf(buffer,"{ \"command\": [\"overlay-remove\", %d ] }\n",n);
 		    char *reply = send_cmd("mpvsocket",buffer);
-		    if (reply)
-			printf("bmovl clear: got reply %s\n",reply);
-		    else
-			printf("bmovl clear: null reply\n");
 		    type_blit[n].x = type_blit[n].y = -1;
 		} else
 		    printf("bmovl clear: type_blit not found\n");
