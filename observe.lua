@@ -24,18 +24,20 @@ mp.observe_property("osd-width","number",on_width_change)
 
 mp.add_hook("on_unload", 10, function ()
 	pos = mp.get_property_number("percent-pos")
+	socket = require"socket"
+	socket.unix = require"socket.unix"
+	c = assert(socket.unix())
+	assert(c:connect("sock_list"))
 	if (pos < 90) then
 		-- gestion basique des bookmarks :
 		-- on ne semble pas pouvoir modifier directement le fichier
 		-- en lua, donc on transmet la commande à list.pl
 		pos = mp.get_property("time-pos")
-		socket = require"socket"
-		socket.unix = require"socket.unix"
-		c = assert(socket.unix())
-		assert(c:connect("sock_list"))
 		c:send("bookmark " .. pos .. "\n")
-		c:close()
+	else
+		c:send("bookmark del\n")
 	end
+	c:close()
 end)
 
 

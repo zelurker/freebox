@@ -1409,13 +1409,17 @@ sub commands {
 		close_mode() if ($mode_opened);
 		out::send_bmovl("image");
 		return;
-	} elsif ($cmd =~ /^bookmark (\d+)/) {
+	} elsif ($cmd =~ /^bookmark (.+)/) {
 		my %bookmarks;
+		my $arg = $1;
 		if ($serv !~ /^get,/) {
 			dbmopen %bookmarks,"bookmarks.db",0666;
-			$bookmarks{$serv} = $1;
+			if ($arg =~ /^del/) {
+				delete $bookmarks{$serv};
+			} else {
+				$bookmarks{$serv} = $arg;
+			}
 			dbmclose %bookmarks;
-			say "list: bookmark prévu pour \"$serv\" : $1";
 		}
 		return;
 	} elsif ($cmd eq "refresh") {
