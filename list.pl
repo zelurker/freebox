@@ -1412,16 +1412,15 @@ sub commands {
 		return;
 	} elsif ($cmd =~ /^bookmark (.+)/) {
 		my %bookmarks;
-		my $arg = $1;
-		if ($serv !~ /^get,/) {
-			dbmopen %bookmarks,"bookmarks.db",0666;
-			if ($arg =~ /^del/) {
-				delete $bookmarks{$serv};
-			} else {
-				$bookmarks{$serv} = $arg;
-			}
-			dbmclose %bookmarks;
+		my @arg = split(/ /,$cmd);
+		say "list: commande $cmd serv = $serv";
+		dbmopen %bookmarks,"bookmarks.db",0666;
+		if ($arg[2] =~ /^del/) {
+			delete $bookmarks{$serv};
+		} else {
+			$bookmarks{$arg[1]} = $arg[2];
 		}
+		dbmclose %bookmarks;
 		return;
 	} elsif ($cmd eq "refresh") {
 		my $found0 = $found;
