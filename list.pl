@@ -598,12 +598,27 @@ sub read_list {
 		@list = ();
 		my $num = 1;
 		my @pic = ();
+		my $chan = chaines::getListeChaines($net);
+		$encoding = "latin1";
+		my @tnt;
+		for (my $n=1; $n<=27; $n++) {
+			foreach (keys %$chan) {
+				my ($id,$logo,$nom,$num) = @{$chan->{$_}};
+				if ($num == $n) {
+					push @tnt,$nom;
+					last;
+				}
+			}
+		}
 		while (<$f>) {
 			chomp;
 			my @fields = split(/\:/);
 			my $service = $fields[0];
 			my $name = $service;
 			$name =~ s/\(.+\)//; # name sans le transpondeur
+			if ($num <= 27 && $name ne $tnt[$num-1]) {
+				$name = $tnt[$num-1];
+			}
 			my $pic = chaines::get_chan_pic($name,\@pic);
 			push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
 		}
