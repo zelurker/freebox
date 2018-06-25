@@ -54,7 +54,7 @@ sub send_cmd_fifo {
 		}
        tcp_connect "unix/", "$cwd/$fifo", sub {
           my ($fh) = @_;
-		  binmode $fh,":utf8" if ($fh);
+		  binmode $fh,":utf8" if ($fh && !$latin);
 		  async {
 			  $fh = unblock $fh;
 			  if (!$fh) {
