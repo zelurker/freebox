@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# script utilisé pour passer les touches de mpv à list.pl, c'est laborieux!
+
+echo $1 | socat - unix:./sock_list
+
