@@ -1425,10 +1425,9 @@ sub commands {
 		close_mode() if ($mode_opened);
 		out::send_bmovl("image");
 		return;
-	} elsif ($cmd =~ /^bookmark (.+)/) {
+	} elsif ($cmd =~ /^bookmark (.+) (.+)/) {
 		my %bookmarks;
-		my @arg = split(/ /,$cmd);
-		say "list: commande $cmd serv = $serv";
+		my @arg = ("bookmark",$1,$2);
 		dbmopen %bookmarks,"bookmarks.db",0666;
 		if ($arg[2] =~ /^del/) {
 			delete $bookmarks{$serv};
