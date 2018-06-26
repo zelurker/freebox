@@ -1364,8 +1364,8 @@ sub close_mode {
 
 sub close_numero {
 	$time_numero = undef;
+	out::clear("numero_coords");
 	if (defined($numero)) {
-		out::clear("numero_coords");
 		$numero = undef;
 	}
 }
@@ -1869,10 +1869,14 @@ sub commands {
 				last;
 			}
 		}
+		# Il faut fermer fh ici sinon la commande numéro va restée bloquée
+		# jusqu'à ce que le callback se déclenche !!!
+		$fh->close();
 		$time_numero = AnyEvent->timer(after=>3, cb =>
 			sub {
 				async {
-					commands($fh,"zap1");
+					# On a plus de fh, on passe undef, ça a l'air d'aller !
+					commands(undef,"zap1");
 					close_numero();
 				};
 			});
