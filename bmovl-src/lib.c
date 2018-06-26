@@ -293,6 +293,7 @@ int send_command(int fifo,char *cmd) {
 	    if (mpv < 0) {
 		SDL_SetRenderDrawColor(renderer,0,0,0,SDL_ALPHA_OPAQUE);
 		SDL_RenderFillRect(renderer,&r);
+		SDL_RenderPresent(renderer);
 	    }
 #endif
 	    if (mpv == 0) {

@@ -835,6 +835,8 @@ static void read_inputs() {
 	    keys[nb_keys] = SDLK_KP_DIVIDE;
 	else if (buff[1] == 0)
 	    keys[nb_keys] = buff[0]; // touche alphanumérique (1 caractère)
+	else if (!strcasecmp(buff,"BS"))
+	    keys[nb_keys] = SDLK_BACKSPACE;
 	else if (!strcasecmp(buff,"UP"))
 	    keys[nb_keys] = SDLK_UP;
 	else if (!strcasecmp(buff,"DOWN"))
@@ -987,13 +989,15 @@ static void handle_event(SDL_Event *event) {
 #ifdef SDL1
 	    if (input >= SDLK_KP0 && input <= SDLK_KP9)
 #else
-	    if (input >= SDLK_KP_0 && input <= SDLK_KP_9)
+	    if (input >= SDLK_KP_1 && input <= SDLK_KP_0)
+
 #endif
 	    {
 #ifdef SDL1
 		buf[0] = input-SDLK_KP0+'0';
 #else
-		buf[0] = input-SDLK_KP_0+'0';
+		if (input == SDLK_KP_0) buf[0] = '0';
+		else buf[0] = input - SDLK_KP_1 + '1';
 #endif
 		buf[1] = 0;
 		send_cmd("sock_list",buf);
