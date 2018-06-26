@@ -16,7 +16,7 @@ function on_width_change(name,value)
 			return
 		end
 		os.remove("info_coords")
-		os.execute("./info")
+		os.execute("./info short")
 	end
 end
 
@@ -24,6 +24,10 @@ mp.observe_property("osd-width","number",on_width_change)
 
 mp.add_hook("on_unload", 10, function ()
 	pos = mp.get_property_number("percent-pos")
+	if not pos then
+		-- si on lit une url, on aura pas de pos ici
+		return
+	end
 	socket = require"socket"
 	socket.unix = require"socket.unix"
 	c = assert(socket.unix())
@@ -36,9 +40,8 @@ mp.add_hook("on_unload", 10, function ()
 		name = mp.get_property("path")
 		c:send("bookmark " .. name .. " " .. pos .. "\n")
 	else
-		c:send("bookmark del\n")
+		c:send("bookmark " .. name .. " del\n")
 	end
 	c:close()
 end)
-
 
