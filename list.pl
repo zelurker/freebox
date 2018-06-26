@@ -1104,13 +1104,16 @@ sub run_mplayer2 {
 	if ($player =~ /^mpv/) {
 		push @list,("-stop-screensaver","--input-ipc-server=mpvsocket","--script","observe.lua",
 			"-input-conf","input-mpv.conf","--quiet");
-		if ($serv !~ /^get,/) {
+		if ($serv !~ /^get,/ && $source !~ /(dvb|freeboxtv)/) {
 			my %bookmarks;
 			dbmopen %bookmarks,"bookmarks.db",0666;
 			if ($bookmarks{$serv}) {
 				push @list,("--start=$bookmarks{$serv}");
 			}
 			dbmclose %bookmarks;
+		}
+		if ($source =~ /(dvb|freeboxtv)/) {
+			push @list,("-ss","-3","--keep-open");
 		}
 	}
 	if ($audio) {
