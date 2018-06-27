@@ -123,13 +123,13 @@ sub have_net {
 	my $net = 1;
 	eval {
 		local $SIG{ALRM} = sub { die "alarm exception" };
-		alarm(1);
+		alarm(3);
 		my $p = new Net::Ping("tcp",2); # icmp demande root
 		# et pour le syn faut attendre explicitement la réponse
 		$p->port_number(53); # faut le port en tcp, 53 pour dns
 		# On passe l'ip pour éviter une résolution, ils doivent pas changer
 		# souvent de toutes façons
-		die "plus d'oleane\n" if (!$p->ping("194.2.0.20"));
+		die "plus d'oleane\n" if (!$p->ping("8.8.8.8"));
 	};
 	alarm(0);
 	$net = 0 if ($@);
