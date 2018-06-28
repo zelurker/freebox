@@ -397,7 +397,11 @@ sub commands {
 			read_stream_info(time(),$channel,$info{$name});
 		}
 	} elsif ($cmd eq "time") {
-		out::send_command("osd_show_property_text ".get_time(time())." 3000\n");
+		if (-e "mpvsocket") {
+			out::send_command("show-text ".get_time(time())." 3000\n");
+		} else {
+			out::send_command("osd_show_property_text ".get_time(time())." 3000\n");
+		}
 	} elsif ($cmd eq "nextprog" || $cmd eq "right") {
 		undef $refresh;
 		disp_prog($prog[$reader]->next($last_chan),$last_long);

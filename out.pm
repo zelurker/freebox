@@ -107,6 +107,7 @@ sub send_command {
 	my $cmd = shift;
 	my $fifo = "fifo_cmd";
 	if (-e "mpvsocket") {
+		$cmd = "cycle $cmd" if ($cmd =~ /^pause/);
 		return send_cmd_fifo("mpvsocket",$cmd);
 	}
 	if (sysopen(F,$fifo,O_WRONLY|O_NONBLOCK)) {
