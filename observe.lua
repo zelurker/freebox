@@ -22,7 +22,7 @@ function on_width_change(name,value)
 		os.remove("info_coords")
 		-- on insère l'appel dans une pause de 1s parce que la video se
 		-- configure 2 fois très rapidement quand lancé en plein écran !
-		mp.add_timeout(1,function ()
+		mp.add_timeout(0.2,function ()
 			os.execute("./info short")
 		end)
 	end
