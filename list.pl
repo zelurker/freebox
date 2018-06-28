@@ -1113,7 +1113,7 @@ sub run_mplayer2 {
 			dbmclose %bookmarks;
 		}
 		if ($source =~ /(dvb|freeboxtv)/) {
-			push @list,("-ss","-3","--keep-open");
+			push @list,("-ss","-3","--keep-open","--deinterlace=yes");
 		}
 	}
 	if ($audio) {
@@ -1729,8 +1729,7 @@ sub commands {
 			chomp($s,$f,$a,$v,$src);
 			$src =~ s/\/.+//;
 			if ($s ne $serv || $flav ne $f || $audio ne $a || $v ne $video || $src ne $source) {
-				unlink( "list_coords","info_coords","stream_info",
-					"numero_coords");
+				unlink( "stream_info");
 				$flav = 0 if (!$flav);
 				$video = 0 if (!$video);
 				$audio = 0 if (!$audio);
