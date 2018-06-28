@@ -26,7 +26,7 @@ sub decode_prg {
             } # note : certains programmes genre vod n'ont pas de programid, on affiche donc pas
         }
     } else {
-        die "deocde_prg: pas de tableau ?";
+        die "decode_prg: pas de tableau ?";
     }
 }
 
@@ -38,7 +38,10 @@ sub decode_type {
 	$str .= "/" if ($str);
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
-            if ($_->{type}) { # catégories de vidéos
+			# say STDERR "decode_type: type : $_->{type}, argbase $arg[$base]";
+			if ($_->{type} eq "listing") {
+				decode_prg($_->{data});
+			} elsif ($_->{type}) { # catégories de vidéos
                 if (!$arg[$base] && $_->{title}) {
 # Note : y a des entrées sans titre avec comme type "banner", mais y en a
 # plusieurs. Je suppose que c'est lié aux vidéos
@@ -79,6 +82,7 @@ sub decode_main {
 			# non mais sans déconner, on se demande bien d'où vient se
 			# HOME_fr_{} à la con ???
 			my $code = $hash{pages}{currentCode};
+			# say STDERR "decode_main: code $code";
             return decode_type($hash{pages}{list}{"$code"}{zones}) if ($code);
             return decode_type($hash{pages}{list}{"HOME_fr_{}"}{zones});
         } else {
@@ -91,6 +95,7 @@ sub decode_main {
 sub decode_html {
 	my ($code,$url0) = @_;
 	my $json;
+	# say STDERR "decode_html: myget pour $code.html $url0";
 	my $html = myget($url0,"cache/arte/$code.html",7);
 # on récupère l'url de l'iframe video...
 	my ($url) = $html =~ /iframe allow.+?src="(.+?)"/;
@@ -109,7 +114,7 @@ sub decode_html {
 		}
 		say "encoding: latin1";
 		say "list";
-		#		say STDERR "dumper : ".Dumper($json);
+		# say STDERR "dumper : ".Dumper($json);
 		if ($json->{collection}{videos}) {
 			decode_prg($json->{collection}{videos});
 		} else {
@@ -117,6 +122,7 @@ sub decode_html {
 		}
 		exit(0);
 	}
+	# say STDERR "decode_html: myget pour $code.player : $url";
 	my $player = myget($url,"cache/arte/$code.player",7);
 	($json) = $player =~ /js_json = (.+?);/;
 	$json = decode_json($json);
