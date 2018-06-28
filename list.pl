@@ -1917,6 +1917,10 @@ sub commands {
 		my $nb = $1-2;
 		if ($nb > $#modes || $nb == 14) {
 			$source = "menu";
+			if ($watch) {
+				$watch->cancel;
+				undef $watch;
+			}
 			read_list();
 		} else {
 			switch_mode($nb);
