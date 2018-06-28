@@ -38,6 +38,7 @@ static SDL_Surface *pic;
 static SDL_Texture *pic;
 #endif
 static int must_clear_screen;
+static SDL_Surface *sf;
 
 static void clear_screen() {
     if (sdl_screen) {
@@ -182,7 +183,6 @@ static int info(int fifo, int argc, char **argv)
 #define MAX_PREV 10
 	static char *desc, *next, *prev[MAX_PREV], *str;
 	static TTF_Font *font;
-	static SDL_Surface *sf;
 	static SDL_Rect r;
 	int x,y;
 	static int indents[6], nb_indents;
@@ -793,10 +793,42 @@ int clear(int fifo, int argc, char **argv)
 
 int alpha(int fifo, int argc, char **argv)
 {
-	char buff[2048];
-	sprintf(buff,"ALPHA %s %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4],
-			argv[5]);
-	return send_command(fifo, buff) != strlen(buff);
+    int mpv = access("video_size",R_OK | W_OK);
+    if (!mpv && sf) {
+	// cas mpv
+	// c'est un peu différent de blit
+	// Là on va vraiment multiplier les composantes rgb par alpha pour forcer l'alpha
+	unsigned char trans = atoi(argv[5]) & 0xff;
+	unsigned char *p = (unsigned char *)sf->pixels;
+	int n = sf->h*sf->w;
+	unsigned char *q = (unsigned char *)malloc(n*4);
+	unsigned char *orig = q;
+	while (n-- > 0) {
+	    q[0] = p[0]*trans/255;
+	    q[1] = p[1]*trans/255;
+	    q[2] = p[2]*trans/255;
+	    q[3] = trans;
+	    q += 4;
+	    p += 4;
+	}
+	FILE *f = fopen("surface","wb");
+	fwrite(orig,1,sf->h*sf->pitch,f);
+	fclose(f);
+	free(orig);
+	char buffer[256];
+	sprintf(buffer,"{ \"command\": [\"overlay-add\", 1, %s, %s, \"surface\", 0, \"bgra\", %d, %d, %d ] }\n",argv[3],argv[4],
+		sf->w, sf->h,sf->pitch);
+	char *reply = send_cmd("mpvsocket",buffer);
+	if (reply && strstr(reply,"error\":\"success")) {
+	    unlink("surface");
+	    return 0;
+	}
+	return 1;
+    }
+    char buff[2048];
+    sprintf(buff,"ALPHA %s %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4],
+	    argv[5]);
+    return send_command(fifo, buff) != strlen(buff);
 }
 
 static int nb_keys,*keys;

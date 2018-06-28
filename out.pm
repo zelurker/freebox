@@ -195,6 +195,7 @@ sub alpha {
 		close(F);
 		for(my $i=$start; $i != $stop; $i+=$step) {
 			send_bmovl("ALPHA $coords $i");
+			select undef,undef,undef, 0.04;
 			cede;
 		}
 		send_bmovl("ALPHA $coords $stop");

@@ -245,6 +245,19 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear, int i
 	SDL_DestroyTexture(tex);
 #endif
     } else if (!mpv) {
+	// Bon on va essayer d'appliquer l'alpha...
+	// C'est un truc tordu, le composant alpha n'a pas le droit d'être > à l'une des composantes rgb
+	unsigned char trans = alpha & 0xff;
+	unsigned char *p = (unsigned char *)bmp->pixels;
+	int n = bmp->h*bmp->w;
+	while (n-- > 0) {
+	    if (p[0] < trans && p[1] < trans && p[2] < trans)
+		p[3] = trans;
+	    else
+		p[3] = 255;
+	    p += 4;
+	}
+
 	/* There is a way to pass a pointer or a file handle directly, but for that to work it needs to be the same process, that is, using libmpv becomes mandatory.
 	 * I'd like to try to do without libmpv for now to try to keep things simple, maybe later... */
 	FILE *f = fopen("surface","wb");
