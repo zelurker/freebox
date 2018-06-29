@@ -291,7 +291,7 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear, int i
 }
 
 int send_command(int fifo,char *cmd) {
-    int mpv = access("mpvsocket",R_OK | W_OK);
+    int mpv = access("video_size",R_OK | W_OK);
     if (!fifo) {
 	if (!strncmp(cmd,"CLEAR",5)) {
 	    SDL_Rect r;
