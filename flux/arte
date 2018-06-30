@@ -17,6 +17,7 @@ sub decode_prg {
     $_ = shift;
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
+			return decode_prg($_->{data}) if ($_->{data});
             if ($_->{programId}) {
                 say $_->{title},($_->{subtitle} ? " - ".$_->{subtitle} : "");
                 my $url = $_->{url};
@@ -77,7 +78,7 @@ sub decode_main {
         if ($hash{pages}) { # racine du nouveau hash 2017
 			# et encore après ça...
 			if ($str =~ /^result:/) {
-				return decode_prg($hash{search}{teasers});
+				return decode_prg($hash{pages}{list}{SEARCH}{zones});
 			}
 			# non mais sans déconner, on se demande bien d'où vient se
 			# HOME_fr_{} à la con ???
