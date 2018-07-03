@@ -112,7 +112,7 @@ sub update_pics {
 				$f->print($cont);
 				$f->close();
 				if ($cont) {
-					disp_list();
+					disp_list() if (-f "list_coords");
 				} else {
 					print "pas de contenu, pas de disp_list\n";
 				}
@@ -1114,6 +1114,8 @@ sub run_mplayer2 {
 		}
 		if ($source =~ /(dvb|freeboxtv)/) {
 			push @list,("-ss","-3","--keep-open","--deinterlace=yes");
+		} elsif ($source =~ /livetv/) {
+			push @list,("--deinterlace=yes");
 		}
 	}
 	if ($audio) {
