@@ -18,6 +18,7 @@ use LWP::Simple;
 use EV;
 # use Time::HiRes qw(gettimeofday tv_interval);
 use records;
+use lyrics;
 
 use out;
 require "radios.pl";
@@ -53,9 +54,9 @@ our $refresh;
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
-	my ($name,$source) = out::get_current();
+	my ($name,$source,$serv) = out::get_current();
 	$source =~ s/flux\/stations\/.+/flux\/stations/;
-	return (lc($name),$source);
+	return (lc($name),$source,$serv);
 }
 
 sub myget {
@@ -356,6 +357,22 @@ sub commands {
 			if (!$cleared && $name eq conv($channel)) {
 				read_stream_info(time(),$channel,$info{$name});
 			}
+		}
+	} elsif ($cmd =~ /^metadata (.+?) (.+)/) {
+		my ($i,$v) = ($1,$2);
+		my ($name,$src,$serv) = get_cur_name();
+		my $name0 = $name;
+		$name .= "&$src";
+		$info{$name}->{metadata}->{$i} = $v;
+		if ($info{$name}->{metadata}->{artist} &&
+			$info{$name}->{metadata}->{title} && !$info{$name}->{tracks}) {
+			my @track = ($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
+			$info{$name}->{tracks} = \@track;
+			$channel = $name0;
+			$source = $src;
+			my $lyrics = lyrics::get_lyrics($serv,$info{$name}->{metadata}->{artist},$info{$name}->{metadata}->{title});
+			$info{$name}->{lyrics} = $lyrics;
+			disp_channel();
 		}
 	} elsif ($cmd =~ /^codec/) {
 		my ($codec,$bitrate);

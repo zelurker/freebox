@@ -30,7 +30,13 @@ end
 
 function metadata(name,value)
 	for i,v in pairs(value) do
-		print(i,v)
+		local c = assert(socket.unix())
+		if (c:connect("sock_info")) then
+			c:send("metadata " .. i .. " " .. v)
+			c:close()
+		else
+			print(i,v)
+		end
 	end
 end
 
