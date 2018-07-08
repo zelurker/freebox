@@ -42,6 +42,9 @@ end
 
 function on_abitrate(name,value)
 	local vcodec = mp.get_property("video-codec")
+	if not value then
+		return
+	end
 	if not vcodec then
 		local acodec = mp.get_property("audio-codec-name")
 		if not acodec then
