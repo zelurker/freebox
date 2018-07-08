@@ -153,6 +153,7 @@ sub read_stream_info {
 			my ($sec,$min,$hour) = localtime($time);
 
 			mydecode(\$cmd);
+			$cmd = substr($cmd,0,50)."..." if (length($cmd) > 50);
 			print $out "$cmd ($info) : ".sprintf("%02d:%02d:%02d",$hour,$min,$sec);
 			if ($cur) {
 				print $out "\n$cur $progress\n";
@@ -360,6 +361,7 @@ sub commands {
 		}
 	} elsif ($cmd =~ /^metadata (.+?) (.+)/) {
 		my ($i,$v) = ($1,$2);
+		$i = lc($i); # tsss... !
 		my ($name,$src,$serv) = get_cur_name();
 		my $name0 = $name;
 		$name .= "&$src";
