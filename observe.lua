@@ -73,7 +73,8 @@ mp.add_hook("on_unload", 10, function ()
 	local c = assert(socket.unix())
 	if (c:connect("sock_list")) then
 		name = mp.get_property("path")
-		if (pos < 90 or pos > 100) then
+		local duration = mp.get_property_number("duration")
+		if (pos < 90 or pos > 100) and duration > 300 then
 			-- gestion basique des bookmarks :
 			-- on ne semble pas pouvoir modifier directement le fichier
 			-- en lua, donc on transmet la commande à list.pl
