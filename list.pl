@@ -45,7 +45,8 @@ say "list: have_net $net";
 our $have_fb = 0; # have_freebox
 $have_fb = out::have_freebox() if ($net);
 our $have_dvb = 1; # (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
-our $pid_player2;
+our ($pid_player2,$quit_mplayer);
+$quit_mplayer = 0;
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
 close(F);
@@ -1158,9 +1159,18 @@ sub check_player2 {
 	$child_checker = AnyEvent->child(pid => $pid_player2, cb => sub {
 			my ($pid,$status) = @_;
 			print "list: fin de mplayer, pid $pid, status $status\n";
-			$pid_player2 = 0;
-			$child_checker = undef;
-			unlink("fifo","fifo_cmd","mpvsocket","video_size");
+			if ($pid == $pid_player2 && !$quit_mplayer) {
+				if  ($source =~ /^(Fichiers son|cd)/) {
+					commands(\*STDERR,"nextchan");
+				}
+			} elsif ($quit_mplayer) {
+				$quit_mplayer = 0;
+			}
+			if ($pid == $pid_player2) { # qui a pu changer à cause de l'appel à commands...
+				$pid_player2 = 0;
+				$child_checker = undef;
+				unlink("fifo","fifo_cmd","mpvsocket","video_size");
+			}
 		});
 }
 
@@ -1973,6 +1983,7 @@ sub commands {
 		print "list: commande quit\n";
 		if ($pid_player2) {
 			print "c'était pour mplayer ! ($pid_player2)\n";
+			$quit_mplayer = 1;
 			out::send_command("quit\n");
 		} else {
 			system("kill `cat info.pid`");

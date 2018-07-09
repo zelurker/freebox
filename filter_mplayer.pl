@@ -327,11 +327,6 @@ sub check_eof {
 		quit_mplayer();
 	}
 	if ($started) {
-		if ($source =~ /^(cd|Fichiers son)/ && $exit !~ /ID_EXIT=QUIT/ && $exit ne "") {
-			print "filter: envoi nextchan exit $exit\n";
-			out::send_cmd_fifo("direct_sock_list","nextchan");
-		}
-
 		if ($length && $length>0 && ($pos-$start_pos)/$length<0.9 && $length > 300 &&
 			# problème des bookmarks sur les ts (flux livetv tnt ou freebox :
 			# l'index des temps est mort et ne commence pas à 0. On peut mettre - $start_pos
