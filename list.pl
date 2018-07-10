@@ -921,11 +921,12 @@ sub reset_current {
 	my $f;
 	my ($name,$src) = out::get_current();
 	if ($name) {
-		$src =~ s/\/(.+)//;
-		if ($1 && $base_flux ne $1) {
-			$base_flux = $1;
-			print "reset_current: read_list sur base_flux $base_flux\n";
-			read_list();
+		if ($src =~ s/\/(.+)//) {
+			if ($1 && $base_flux ne $1) {
+				$base_flux = $1;
+				print "reset_current: read_list sur base_flux $base_flux\n";
+				read_list();
+			}
 		}
 		if ($src ne $source) {
 			print "reset_current: reseting to $src\n";
