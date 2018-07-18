@@ -1446,7 +1446,7 @@ sub commands {
 		my @arg = ("bookmark",$1,$2);
 		dbmopen %bookmarks,"bookmarks.db",0666;
 		if ($arg[2] =~ /^del/) {
-			delete $bookmarks{$serv};
+			delete $bookmarks{$arg[1]};
 		} else {
 			$bookmarks{$arg[1]} = $arg[2];
 		}

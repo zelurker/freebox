@@ -362,6 +362,7 @@ sub commands {
 	} elsif ($cmd =~ /^metadata (.+?) (.+)/) {
 		my ($i,$v) = ($1,$2);
 		$i = lc($i); # tsss... !
+		$v =~ s/\xc2\x92/'/g;
 		my ($name,$src,$serv) = get_cur_name();
 		my $name0 = $name;
 		$name .= "&$src";
