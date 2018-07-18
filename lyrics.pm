@@ -324,7 +324,7 @@ debut:
 		# c'est qu'un autre site a exactement les mêmes ! Difficile à
 		# détecter, le + simple c'est de l'écarter explicitement pour
 		# l'instant
-		next if ($u =~ /genius.com/ && $title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres)$/i);
+		next if ($u =~ /genius.com/ && $title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour)$/i);
 		if ($u =~ /(musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/) {
 			my $old = $_;
 			my $text = pure_ascii($_->text);
