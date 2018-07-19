@@ -22,6 +22,7 @@ use HTML::Entities;
 use Cwd;
 use EV;
 use Data::Dumper;
+use AnyEvent::HTTP;
 
 # Un mot sur le format interne de @list :
 # chaque élément est un tableau de tableau, c'est parce qu'à l'origine
@@ -108,16 +109,32 @@ sub update_pics {
 			if (open(my $f,">$$rpic[$n]")) {
 				print "*** update_pic, updating $n\n";
 				$f = unblock $f;
-				my ($type,$cont) = chaines::request($$rpic[$n+1]);
-				print "debug: url $$rpic[$n+1] -> type $type\n";
-				$f->print($cont);
-				$f->close();
-				if ($cont) {
-					disp_list() if (-f "list_coords");
-				} else {
-					print "pas de contenu, pas de disp_list\n";
-				}
-				cede;
+				my $nb = $n; # il faut garder une copie pour le callback en cas d'erreur
+				http_get $$rpic[$n+1],sub {
+					my ($body,$hdr) = @_;
+					if ($hdr->{Status} =~ /^2/) { # ok
+						$f->print($body);
+						$f->close();
+						if (-f "list_coords") {
+							say "disp_list...";
+							disp_list();
+						}
+					} else {
+						say $$rpic[$nb]," pas ok ",$$rpic[$nb+1]," rpic $rpic n $nb";
+						$f->close();
+						unlink($$rpic[$nb]);
+					}
+				};
+# 				my ($type,$cont) = chaines::request($$rpic[$n+1]);
+# 				print "debug: url $$rpic[$n+1] -> type $type\n";
+# 				$f->print($cont);
+# 				$f->close();
+# 				if ($cont) {
+# 					disp_list() if (-f "list_coords");
+# 				} else {
+# 					print "pas de contenu, pas de disp_list\n";
+# 				}
+# 				cede;
 			}
 		}
 		$updating = 0;
