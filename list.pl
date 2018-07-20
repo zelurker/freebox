@@ -1699,8 +1699,10 @@ sub commands {
 				}
 				read_list();
 			} else {
-				$serv =~ s/ (.+)//; # Ne garde que la commande
-				my $args = $1;
+				my $args = "";
+				if ($serv =~ s/ (.+)//) { # Ne garde que la commande
+					$args = $1;
+				}
 				if (open(F,"<desktop")) {
 					my ($width,$height);
 					($width,$height) = <F>;
