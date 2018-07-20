@@ -1709,14 +1709,18 @@ sub commands {
 					chomp $width;
 					chomp $height;
 					close(F);
-					my $margew = sprintf("%d",$width/36);
-					my $margeh = sprintf("%d",$height/36);
+					# ces marges ne sont absolument pas génériques !
+					# C'est testé uniquement en 1280x720, avec e16 comme
+					# window manager, et avec une appli qui respecte la
+					# syntaxe -geometry widthxheight+xoff+yoff !
+					my $margew = 24;
+					my $margeh = 16;
 					$width -= 2*$margew;
 					$height -= 2*$margeh;
 					my $l = `$serv -h|grep geometry`;
 					my ($g) = $l =~ /(\-\-?geometry)/;
 
-					$serv .= " $g $width"."x".$height."+$margew+$margeh" if ($g);
+					$serv .= " $g $width"."x".$height."+".($margew/3*2)."+".($margeh) if ($g);
 					$serv .= " $args";
 				} else {
 					print "pas de fichier desktop\n";
