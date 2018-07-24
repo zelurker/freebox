@@ -1717,9 +1717,10 @@ sub commands {
 					my $margeh = 16;
 					$width -= 2*$margew;
 					$height -= 2*$margeh;
+					my $t = time();
 					my $l = `$serv -h|grep geometry`;
 					my ($g) = $l =~ /(\-\-?geometry)/;
-
+					return if ((time() - $t) > 2); # + de 2s -> ligne de commande ignorée !
 					$serv .= " $g $width"."x".$height."+".($margew/3*2)."+".($margeh) if ($g);
 					$serv .= " $args";
 				} else {
