@@ -3,7 +3,8 @@ j'aimais pas, après avoir testé mythtv que j'ai trouvé lourd et rempli de
 bugs. L'idée c'est d'avoir un truc simple, le + court possible, et
 facilement extensible, et utilisable entièrement au clavier, j'utiliser un
 clavier sans fil comme télécommande en fait. C'est essentiellement écrit en
-perl, avec un peu de C, et ça utilise principalement mplayer/mplayer2.
+perl, avec un peu de C, et ça utilise principalement mpv depuis juillet
+2018.
 Les fonctionnalités :
 
  - chaines de télé par carte dvb ou à partir d'une freebox si les flux
@@ -15,23 +16,26 @@ Les fonctionnalités :
    que toute chaine regardée est automatiquement enregistrée, et
    l'enregistrement conservé pendant 24h dans un répertoire livetv, donc si on
    veut revoir ou garder ça + tard, on peut toujours déplacer le fichier hors
-   du répertoire livetv.
+   du répertoire livetv. Avec mpv, les chaines sont enfin désentrelacées
+   par défaut, vu que toute chaine en France est entrelacée, hd ou pas.
+   C'est géré en hardware par la carte vidéo, mais il faut quand même une
+   carte récente pour que ça marche.
  - Evidemment on peut aussi voir des fichiers vidéo, tout ce qui est
-   accessible par le système de fichier, que ça soit distant ou pas, tant
+   accessible par le système de fichiers, que ça soit distant ou pas, tant
    que c'est décodable par mplayer, ça marche aussi avec le h265, et ça
    permet d'utiliser la sortie audio optique si on en a une. Sauvegarde de
    là où on en est de la lecture et reprise automatique.
  - les chansons en local, avec affichage des paroles dans le bandeau d'info
    et d'images en rapport avec la chanson récupérées sur google images
    pendant la lecture (ça marche aussi avec les radios et les cds audios).
- - Les flux réseau : arte (arte+7), youtube (qui me pose toujours des
-   problèmes j'ai pas pigé comment marche le changement de leur clé, il
-   faudra que je prenne le temps de voir ça un de ces 4), radios du web (+
-   d'1 centaine actuellement, on peut facilement en ajouter d'autres),
-   podcasts avec recherche utilisant google, shoutcast. Pour les radios, la
-   plupart n'indiquent leur programme que dans le flux transmis donc c'est
-   du temps réel, mais on a le programme de la journée pour les radio
-   france (inter, culture, musique, france bleu).
+ - Les flux réseau : arte (arte+7), youtube (par youtube-dl maintenant),
+   radios du web (+ d'1 centaine actuellement, on peut facilement en
+   ajouter d'autres), podcasts avec recherche utilisant google, shoutcast.
+   Pour les radios, la plupart n'indiquent leur programme que dans le flux
+   transmis donc c'est du temps réel, mais on a le programme de la journée
+   pour les radio france (inter, culture, musique, france bleu).
+ - lancement d'applis ! Ca a l'air bête, mais vu que le pc est sans souris,
+   c'est pratique de pouvoir lancer des trucs comme des jeux.
 
 Il faut avoir un minimum configuré mplayer en local du genre mettre au
 moins dans ~/.mplayer/config :
@@ -53,17 +57,6 @@ mixer-channel=0,0 # pour aller avec la conf alsa pour régler le volume avec
 # les 2 touches du haut du pavé numérique
 --- fin ---
 
-Il y a aussi des patches optionnels pour mplayer et mplayer2, c'est mieux
-avec mais on peut s'en passer dans la plupart des cas. J'ai aussi un fork
-sur github de mplayer2 vu qu'il n'est plus maintenu pour le rendre
-compatible avec la dernière libavcodec... note que cette version a des
-bugs, entre autres les copies d'écran ne marchent plus. Chaint à corriger,
-peut-être + tard (c'est pas une priorité, la vidéo et l'audio marchent
-bien).
-mplayer2 est utilisé par défaut sauf quand on est obligé d'utiliser mplayer.
-On peut éventuellement utiliser vlc pour la lecture dvd mais il n'est pas
-pratique au clavier... !
-
 La commande à lancer pour lancer tout ça c'est freebox.
 On peut éventuellement lancer ça à la place d'un gestionnaire de fenêtres
 en mettant dans son .xsession :
@@ -71,6 +64,22 @@ cd ~/free
 ./freebox >& freebox.log
 
 ça permet d'avoir un pc spécialisé pour ça.
+Note que certaines applis n'aiment pas qu'on aie pas de gestionnaire de
+fenêtre, donc dernièrement j'utilise e16 pour en avoir un de base. Entre
+autres elles ne passent plus en plein écran sans gestionnaire de fenêtre,
+tu parles d'un truc bugué !
+
+Je dirais que son problème essentiel c'est le paquet de modules externes
+qu'elle utilise pour perl. Le script de lancement vérifie que les scripts
+principaux peuvent se lancer, mais il faudrait une méthode "user friendly"
+pour installer tous les mods nécessaires... Du coup pour l'instant ça
+demande quand même une connaissance minimale de perl pour y arriver. A part
+ça, elle utilise aussi zenity, et pour youtube-dl elle le télécharge elle
+même.
+Le programme C qui sert d'interface écran quand il n'y a pas de lecteur
+vidéo actif, bmovl, support sdl ou sdl2, mais la version sdl2 est encore
+considérée comme expérimentale, ça marche mais je continue à utiliser sdl1
+par habitude.
 
 En fait vu que ma télé dans la salle n'a pas de tuner tnt, la seule façon
 de regarder la télé est d'utiliser cette interface, donc je continue à
