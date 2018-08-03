@@ -51,6 +51,16 @@ sub link_get {
 
 	if (!-f "$file" || -s $file != $size) {
 		print STDERR "lien get: taille != $size pour fichier $file\n";
+		if (open(F,"ps ax|")) {
+			while (<F>) {
+				if (/wget.*$file/) {
+					say STDERR "déjà un wget à s'en occuper...";
+					say $file;
+					exit(0);
+				}
+			}
+			close(F);
+		}
 		$SIG{CHLD} = \&REAPER;
 		my $pid = fork();
 		if (!$pid) {
