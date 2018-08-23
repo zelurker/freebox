@@ -327,6 +327,7 @@ sub disp_prog {
 sub commands {
 	my $fh = shift;
 	$cmd = shift;
+	mydecode(\$cmd);
 	my @tab = split(/ /,$cmd);
 	my $old_long = $long;
 	($tab[0],$long) = split(/\:/,$tab[0]);
