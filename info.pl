@@ -388,6 +388,7 @@ sub commands {
 			$channel = $name0;
 			$source = $src;
 			my $lyrics = lyrics::get_lyrics($serv,$info{$name}->{metadata}->{artist},$info{$name}->{metadata}->{title});
+			mydecode(\$lyrics);
 			$info{$name}->{lyrics} = $lyrics;
 			disp_channel();
 			handle_images($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
