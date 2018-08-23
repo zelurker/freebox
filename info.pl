@@ -19,6 +19,7 @@ use EV;
 # use Time::HiRes qw(gettimeofday tv_interval);
 use records;
 use lyrics;
+use AnyEvent::HTTP;
 
 use out;
 require "radios.pl";
@@ -30,12 +31,21 @@ use progs::podcasts;
 use progs::files;
 use progs::series;
 use progs::arte;
+use images;
 
 our %info; # hash pour stocker les stream_info
 our $cleared = 1;
 our $to_disp;
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our $net = out::have_net();
+our ($images,$agent,@cur_images);
+our $time;
+our $old_titre = "";
+our $has_vignettes = undef;
+if ($net) {
+	$images = 1;
+	$agent = images->new();
+}
 our $have_fb = 0; # have_freebox
 $have_fb = out::have_freebox() if ($net);
 our $have_dvb = 1; # (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
@@ -376,6 +386,7 @@ sub commands {
 			my $lyrics = lyrics::get_lyrics($serv,$info{$name}->{metadata}->{artist},$info{$name}->{metadata}->{title});
 			$info{$name}->{lyrics} = $lyrics;
 			disp_channel();
+			handle_images($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
 		}
 	} elsif ($cmd =~ /^codec/) {
 		my ($codec,$bitrate);
@@ -591,5 +602,112 @@ sub disp_channel {
 	# Si on arrive là, on a le texte à afficher dans sub, y a plus qu'à y
 	# aller !
 	disp_prog($sub,$long) if ($sub && $to_disp eq $channel);
+}
+
+sub handle_result {
+	my $result = shift;
+	my $image;
+	if (!$result) {
+		print "handle_result sans result ???\n";
+		return;
+	}
+	while (1) {
+		$image = shift @$result;
+		last if (!$image);
+		if ($image->{w} >= 320 || !$image) {
+			last;
+		} else {
+			print "image trop petite (",$image->{w},"), on passe... reste $#$result\n";
+		}
+	}
+	if ($image) {
+		my $name = "cache/".$image->{tbnid};
+		$name =~ s/://;
+		$image = $image->{imgurl};
+
+		my ($pic);
+		my $url = $image;
+		my $ext = $url;
+		$ext =~ s/.+\.//;
+		$ext = substr($ext,0,3); # On ne garde que les 3 1ers caractères !
+		$name .= ".$ext";
+		if (-f $name) {
+			utime(undef,undef,$name);
+			print "handle_result: using cache $name\n";
+			out::send_bmovl("image $name");
+		} else {
+			my $referer = $url;
+			$referer =~ s/(.+)\/.+?$/$1\//;
+			print "get image $url, referer $referer\n";
+			http_get $url,headers => { "referer" => $referer },sub {
+				my ($body,$hdr) = @_;
+				if ($hdr->{Status} =~ /^2/) { # ok
+					open(F,">$name");
+					print F $body;
+					close(F);
+					$pic = $name;
+					my $ftype = `file $pic`;
+					chomp $ftype;
+					if ($ftype =~ /gzip/) {
+						print "gzip content detected\n";
+						rename($pic,"$pic.gz");
+						system("gunzip $pic.gz");
+						$ftype = `file $pic`;
+						chomp $ftype;
+					}
+					if ($ftype =~ /error/i || $ftype =~ /HTML/) {
+						unlink "$pic";
+						print "filter: type image $ftype\n";
+						handle_images();
+						return;
+					}
+					print "handle_result: calling image $pic\n";
+					out::send_bmovl("image $pic");
+				} else {
+					handle_images();
+				}
+			};
+		}
+		$time = AnyEvent->timer(after => 25,
+			interval => 25,
+			cb => sub { handle_images(); });
+	} else {
+		print "handle_result: fin de liste!\n";
+		out::send_bmovl("vignettes") if ($has_vignettes);
+		$time = undef;
+	}
+}
+
+sub handle_images {
+	my $cur = shift;
+	$cur = $old_titre if (!$cur);
+	$old_titre = $cur;
+	print "handle_image: $cur net $net.\n";
+	return if (!$net);
+	if (!@cur_images || $cur_images[0] ne $cur) {
+		print "handle_image: reset search\n";
+		# Reset de la recherche précédente si pas finie !
+		if ($cur_images[1]) {
+			my $result = $cur_images[1];
+		}
+
+		@cur_images = ($cur);
+		$cur =~ s/û/u/g; # Pour une raison inconnue allergie !
+		my $res = $agent->search($cur);
+#		open(F,">vignettes");
+#		foreach (@$res) {
+#			print F $_,"\n";
+#		}
+#		close(F);
+		# $has_vignettes = 1;
+		out::send_bmovl("vignettes") if ($has_vignettes);
+		my $result = $agent->{tab};
+		push @cur_images,$result;
+		handle_result($result);
+	} else {
+		print "handle_image calling handle_result\n";
+		my $result = $cur_images[1];
+		handle_result($result);
+	}
 }
 
