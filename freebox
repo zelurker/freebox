@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # e16 &
 if ! [ -f bmovl-src/bmovl ]; then
