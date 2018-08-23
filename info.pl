@@ -340,6 +340,9 @@ sub commands {
 		$fadeout = $refresh = undef;
 		out::clear("info_coords");
 		$cleared = 1;
+	} elsif ($cmd eq "unload") {
+		# envoyé par le script lua de mpv pour indiquer qu'il quitte
+		$time = undef;
 	} elsif ($cmd eq "tracks") {
 		my ($name,$src) = get_cur_name();
 		$name .= "&$src";

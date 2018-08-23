@@ -65,12 +65,17 @@ mp.observe_property("audio-bitrate","number",on_abitrate)
 mp.observe_property("metadata","native",metadata)
 
 mp.add_hook("on_unload", 10, function ()
+	local c = assert(socket.unix())
+	if (c:connect("sock_info")) then
+		c:send("unload")
+		c:close()
+	end
 	pos = mp.get_property_number("percent-pos")
 	if not pos then
 		-- si on lit une url, on aura pas de pos ici
 		return
 	end
-	local c = assert(socket.unix())
+	c = assert(socket.unix())
 	if (c:connect("sock_list")) then
 		name = mp.get_property("path")
 		local duration = mp.get_property_number("duration")
