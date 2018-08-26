@@ -40,6 +40,8 @@ sub decode_type {
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
 			# say STDERR "decode_type: type : $_->{type}, argbase $arg[$base]";
+			my $code = $_->{code};
+			$code = $code->{id} if (ref($code) eq "HASH");
 			if ($_->{type} eq "listing") {
 				decode_prg($_->{data});
 			} elsif ($_->{type}) { # catégories de vidéos
@@ -48,8 +50,8 @@ sub decode_type {
 # plusieurs. Je suppose que c'est lié aux vidéos
 # affichées dans la bannière de haut d'écran, on laisse
 # tomber à priori...
-                    print $_->{title}."\n$str$_->{code}\n";
-                } elsif ($_->{code} eq $arg[$base]) {
+                    print $_->{title}."\n$str$code\n";
+                } elsif ($code eq $arg[$base]) {
 					my ($code,$url);
 					if ($_->{link}{url}) {
 						$url = $_->{link}{url};
@@ -241,4 +243,5 @@ if ($@) {
     print STDERR "arte: couille dans le potage au niveau json $?:$@, json: $json\n";
     exit(0);
 }
+# say Dumper($json);
 decode_main($json);
