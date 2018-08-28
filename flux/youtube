@@ -26,12 +26,14 @@ if ($str =~ /^get,(\d+),(.+?),(.+)/) {
 	} else {
 		die "could not get title from $suffix\n";
 	}
+	again:
 	if (! -f "$ENV{HOME}/bin/youtube-dl") {
 		mkdir "$ENV{HOME}/bin";
+		say STDERR "récupération de youtube-dl...";
 		# apparemment le binaire est modifié après execution, on lui retire
 		# les droits d'écriture, pas sûr que ça suffise mais ça vaut le
 		# coup de voir...
-		system("wget -q -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl && chmod -w ~/bin/youtube-dl");
+		system("wget -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl && chmod -w ~/bin/youtube-dl");
 	}
 	my $file = $title;
 	$file =~ s/ /_/g;
@@ -52,7 +54,13 @@ if ($str =~ /^get,(\d+),(.+?),(.+)/) {
 			sleep 1;
 		}
 		if ($tries == 10) {
-			print STDERR "pas trouvé le fichier attendu racine:records/$file. on va essayer en aveugle\n";
+			print STDERR "pas trouvé le fichier attendu racine:records/$file.\n";
+			if (-M <~/bin/youtube.dl> > 1) {
+				say STDERR "on va tenter une màj de youtube-dl...";
+				kill TERM => $pid;
+				unlink <~/bin/youtube-dl>;
+				goto again;
+			}
 			print "records/$file*\n";
 			exit(0);
 		}
