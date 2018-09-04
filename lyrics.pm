@@ -282,14 +282,13 @@ sub get_lyrics {
 	}
 	if ($mp3) {
 		$mp3 = MP3::Tag->new($file);
+		say "pas de mp3 pour $file" if (!$mp3);
+	}
+	if ($mp3) {
 
 		# get some information about the file in the easiest way
 		my ($track,$album,$comment,$year,$genre);
 		($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
-		if (!$comment) {
-			$comment = $mp3->comment();
-			print "comment fixed\n" if ($comment);
-		}
 	}
 	if (!$lyrics && open(F,"<","$file.lyrics")) {
 		while (<F>) {

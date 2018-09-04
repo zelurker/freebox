@@ -38,6 +38,11 @@ function metadata(name,value)
 			print(i,v)
 		end
 	end
+	local c = assert(socket.unix())
+	if (c:connect("sock_info")) then
+		c:send("metadata end 1")
+		c:close()
+	end
 end
 
 function on_abitrate(name,value)
