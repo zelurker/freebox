@@ -107,7 +107,7 @@ sub update_pics {
 		$updating = 1;
 		for (my $n=0; $n<=$#$rpic; $n+=2) {
 			if (open(my $f,">$$rpic[$n]")) {
-				print "*** update_pic, updating $n\n";
+				print "*** update_pic, updating $$rpic[$n]\n";
 				$f = unblock $f;
 				my $nb = $n; # il faut garder une copie pour le callback en cas d'erreur
 				http_get $$rpic[$n+1],sub {
