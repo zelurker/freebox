@@ -123,6 +123,7 @@ my %icons = (
   "Radio Pulsar" => "http://www.bestseller-consulting.com/images/Image/Image/Logos/radio-pulsar1.jpg",
   "Radio RDL" => "http://www.rdlradio.fr/assets/LOGOS-RDL-GENERIQUE.jpg",
   "Radio TeenTall" => "http://1.bp.blogspot.com/-skx7uKgFTD8/ULssmGzHcOI/AAAAAAAAAm4/suGjz-QaXvQ/s1600/RADIO%252BTEENTALL.jpg",
+  "RCA / Radio côte d'amour (Nantes)" => "http://www.rcalaradio.com/upload/design/588a15bb4ef961.11113250.png",
   "SUD Radio" => "http://france3-regions.blog.francetvinfo.fr/medias-midi-pyrenees/wp-content/blogs.dir/363/files/2014/12/Sud-radio.jpg",
   "Sun" => "http://www.lafrap.fr/sites/default/files/u56/sun.png",
   "Top Music" => "https://upload.wikimedia.org/wikipedia/fr/a/a2/Top_Music_logo.png",
@@ -148,14 +149,10 @@ sub get_radio_pic {
         say "get_radio_pic: pas d'icone pour $name";
     }
 	my $test = 0;
-	if ($name =~ /rtl 2/i) {
-		$test = 1;
-		print "rtl2 : url $url\n";
-	}
 	if ($url) {
 		my ($ext) = $url =~ /.+\.(.+)/;
 #		print STDERR "channel name $name from $url\n";
-		$name =~ s/ /_/g;
+		$name =~ s/[ \/]/_/g;
 		$name = "radios/$name.$ext";
 		print "name $name\n" if ($test);
 		if (! -f $name || (-s $name == 0)) {
