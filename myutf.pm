@@ -5,6 +5,9 @@ package myutf;
 # attention référence en paramètre
 
 use Encode;
+use strict;
+
+our $latin = ($ENV{LANG} !~ /UTF/i);
 
 sub mydecode {
 	my $ref = shift;
