@@ -23,6 +23,7 @@ use Cwd;
 use EV;
 use Data::Dumper;
 use AnyEvent::HTTP;
+use myutf;
 
 # Un mot sur le format interne de @list :
 # chaque élément est un tableau de tableau, c'est parce qu'à l'origine
@@ -387,24 +388,6 @@ sub list_files {
 		}
 		next if ($name =~ /\.(nfo|lyrics)$/i);
 
-		# On aimerait bien utiliser is_utf8 ici, sauf qu'en fait si le flag
-		# utf8 de perl n'est pas positionné sur la chaine ça renvoie toujours
-		# faux, donc aucun intérêt. A priori y a toujours un caractère 0xc3
-		# devant les accents classiques français, j'ai pas tout vérifié donc
-		# pas sûr que ça marche partout, mais j'ai pas trouvé non plus de
-		# détection générique utf8. Pour l'instant ça marche en tous cas !
-		if ($latin && $name =~ /[\xc3\xc5]/) {
-			# c3 est pour la plupart des accents
-			# c5 est pour le oe collé.
-			eval {
-				Encode::from_to($name, "utf-8", "iso-8859-1");
-			}; # trop idiot autrement !
-			if ($@) {
-				print "list_files: pb conversion utf $name\n";
-			}
-		} elsif (!$latin && $name =~ /[\xc3\xc5]/) {
-			$encoding = "utf8";
-		}
 		push @list,[[$num++,$name,$service,-M $service]];
 	}
 	out::clear( "info_coords");
@@ -535,14 +518,6 @@ sub read_list {
 				push @rejets,[$serv,$flav,$audio,$video,$name];
 			}
 			close(F);
-		}
-
-		eval {
-			Encode::from_to($list, "utf-8", "iso-8859-1") if ($latin && $list !~ /débit/);
-		};
-
-		if ($@) {
-			print "read_list: pb conversion utf $list\n";
 		}
 
 		my ($num,$service,$flavour);
@@ -798,19 +773,6 @@ sub read_list {
 				my $pic = undef;
 				if ($name =~ s/^pic:(.+?) //) {
 					$pic = $1;
-				}
-				eval {
-					if ($latin && $encoding =~ /utf/i) {
-						Encode::from_to($name, "utf-8", "iso-8859-1")
-					} elsif (!$latin && $encoding && $encoding !~/utf/i) {
-						Encode::from_to($name, "iso-8859-1","utf-8")
-					} else {
-						say "pas d'encoding";
-					}
-					$name =~ s/\xc3\x85\xc2\x93/oe/g;
-				};
-				if ($@) {
-					print "read_list: pb3 conv utf $name\n";
 				}
 				if ($pic) {
 					my $file = out::get_cache($pic);
@@ -2139,6 +2101,10 @@ sub disp_list {
 			print "list split failed:$num,$name,$service indice $n\n";
 			next;
 		}
+		# Traitement utf à l'affichage seulement :
+		# sinon on risque d'envoyer de l'utf8 à la socket pour la commande
+		# prog ce qui est très mal pris !
+		myutf::mydecode(\$name);
 		$cur .= sprintf("%3d:%s",$num,($pic ? "pic:$pic " : "").$name);
 		if ($#$rtab > 0) {
 			$cur .= ">";
