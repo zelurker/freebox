@@ -100,7 +100,6 @@ sub get {
 	$code =~ s/,.+//;
 	# say "progs/arte: code $code";
 
-	@arg = split(/\//,$serv);
 	my ($f,$json);
 
 	# ça se complique, on a 3 sources de json possibles, et les 3 ont des
