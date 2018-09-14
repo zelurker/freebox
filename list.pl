@@ -2122,16 +2122,6 @@ sub disp_list {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
 			$info = 1;
 		}
-		if (!$latin && $source ne "flux" && $encoding && $encoding !~ /utf/) {
-			# on laisse tomber l'encodage par défaut, faut juste s'arranger
-			# pour initialiser correctement $encoding quand on arrive ici
-			eval {
-				Encode::from_to($cur, "iso-8859-1", "utf-8") ;
-			};
-			if ($@) {
-				print "read_list2: pb conv utf $serv\n";
-			}
-		}
 		print $out $header,$cur;
 		close($out);
 		if ($found <= $#list) {
