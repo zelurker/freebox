@@ -125,11 +125,12 @@ if ($debug && !$str) {
 	$_ = $mech->content(charset => "utf8");
 	# Apparemment l'apostrophe windows n'est même pas de l'utf8 standard
 	# ça provoque un sacré merdier, alors on traque les codes étendus ici...
+	# Note : on ne peut pas utiliser myutf ici, il faut absolument que le
+	# texte reste en utf8 pour le parser xml !
 	if ($latin) {
 		for (my $n=1; $n<=length($_); $n++) {
 			my $code = ord(substr($_,$n,1));
 			if ($code > 255) {
-				print STDERR "replace code $code\n";
 				if ($code == 8217) {
 					substr($_,$n,1) = "'";
 				} else {
