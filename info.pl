@@ -400,7 +400,11 @@ sub commands {
 			} else {
 				disp_channel();
 			}
-			handle_images($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
+			if ($info{$name}->{metadata}->{genre} =~ /podcast/i && $info{$name}->{metadata}->{album}) {
+				handle_images($info{$name}->{metadata}->{album});
+			} else {
+				handle_images($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
+			}
 		}
 	} elsif ($cmd =~ /^codec/) {
 		my ($codec,$bitrate);
