@@ -17,8 +17,8 @@ sub decode_prg {
     $_ = shift;
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
-			return decode_prg($_->{data}) if ($_->{data});
-            if ($_->{programId}) {
+			decode_prg($_->{data}) if ($_->{data});
+            if (ref($_) eq "HASH" && $_->{programId}) {
                 say $_->{title},($_->{subtitle} ? " - ".$_->{subtitle} : "");
                 my $url = $_->{url};
 				$url = "http://www.arte.tv$url" if ($url !~ /^http/);
@@ -27,7 +27,7 @@ sub decode_prg {
             } # note : certains programmes genre vod n'ont pas de programid, on affiche donc pas
         }
     } else {
-        die "decode_prg: pas de tableau ?";
+        die "decode_prg: pas de tableau ? : $_";
     }
 }
 
@@ -42,7 +42,7 @@ sub decode_type {
 			# say STDERR "decode_type: type : $_->{type}, argbase $arg[$base]";
 			my $code = $_->{code};
 			$code = $code->{id} if (ref($code) eq "HASH");
-			if ($_->{type} eq "listing") {
+			if ($_->{contextPage}) { # eq "HOME") {
 				decode_prg($_->{data});
 			} elsif ($_->{type}) { # catégories de vidéos
                 if (!$arg[$base] && $_->{title}) {
@@ -80,7 +80,10 @@ sub decode_main {
         if ($hash{pages}) { # racine du nouveau hash 2017
 			# et encore après ça...
 			if ($str =~ /^result:/) {
-				return decode_prg($hash{pages}{list}{SEARCH}{zones});
+				foreach (keys %{$hash{pages}{list}}) {
+					decode_prg($hash{pages}{list}{$_}{zones});
+				}
+				return;
 			}
 			# non mais sans déconner, on se demande bien d'où vient se
 			# HOME_fr_{} à la con ???
@@ -128,7 +131,12 @@ sub decode_html {
 	# say STDERR "decode_html: myget pour $code.player : $url";
 	my $player = myget($url,"cache/arte/$code.player",7);
 	($json) = $player =~ /js_json = (.+?);/;
-	$json = decode_json($json);
+	eval {
+		$json = decode_json($json);
+	};
+	if ($@) {
+		say STDERR "decode_json a foiré sur $json erreur $!";
+	}
 	$json->{videoJsonPlayer}{VSR};
 }
 
@@ -219,6 +227,9 @@ my $page;
 if ($str =~ /^result:(.+)/) {
 	my $url = "http://www.arte.tv/fr/search/?q=$1";
 	$page = myget($url);
+} elsif ($str eq "concerts") {
+	say STDERR "get concerts";
+	$page = myget("https://www.arte.tv/fr/videos/arte-concert/","cache/arte/concert0",1/24.0);
 } else {
 	$page = myget("https://www.arte.tv/fr/","cache/arte/j0",1/24.0);
 }
@@ -227,6 +238,7 @@ if ($str =~ /^result:(.+)/) {
 say "encoding: latin1";
 say "list";
 say "Recherche\nRecherche";
+say "Concerts\nconcerts";
 my $capture = 0;
 my $json;
 # le json dans de l'html c'est toujours merdique, ça vient de changer en
