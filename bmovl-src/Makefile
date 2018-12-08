@@ -1,4 +1,4 @@
-# SDL1 = 1
+SDL1 = 1
 WARNS = -Wno-write-strings -Wno-pointer-arith
 ifdef SDL1
 WARNS += -DSDL1
