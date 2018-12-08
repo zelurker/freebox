@@ -971,8 +971,9 @@ sub run_mplayer2 {
 	# out::clear("list_coords");
 	if ($serv =~ /^get,.+/) {
 		# lien get : download géré par le plugin
-		print "lien get détecté: $serv\n";
+		print "lien get détecté: $serv, base_flux = $base_flux\n";
 		my ($b) = $base_flux =~ /(.+?)\/.+/;
+		$b = $base_flux if (!$b);
 		print "b reconst: $b\n";
 		if (-x "flux/$b") {
 			open(F,"flux/$b \"$serv\"|");
