@@ -317,6 +317,24 @@ sub get_cache($) {
 
 sub setup_server {
 	my ($path,$cb) = @_;
+	if ($path =~ /list/) {
+		our $list_server = AnyEvent::Socket::tcp_server(undef, 1025, sub {
+				my ($fh) = @_;
+				async {
+					$fh = unblock $fh;
+
+					my $cmd = $fh->readline ("\012");
+					if (defined($cmd)) {
+						# Pas de boucle à priori, 1 seule commande avec éventuellement
+						# 1 réponse
+						chomp $cmd;
+						say STDERR "reçu command $cmd par port 1025";
+						&$cb($fh,$cmd);
+						cede;
+					}
+				};
+			}) or Carp::croak "Coro::Debug::new_unix_server($path): $!";
+	}
 	my $server = AnyEvent::Socket::tcp_server("unix/", $path, sub {
 			my ($fh) = @_;
 			async {
