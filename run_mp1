@@ -192,6 +192,9 @@ while [ "$ok" == "0" ]; do
 	if ! ps -p `cat player1.pid` >& /dev/null
 	then
 		echo plus de player1 tried=$tried flavour=$flavour
+		if [ "$src" == "dvb" ]; then
+			exit 1
+		fi
 		change_flav
 	else
 		size=0
