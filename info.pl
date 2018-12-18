@@ -284,9 +284,6 @@ sub disp_prog {
 	my $raw = 0;
 	if ($$sub[9]) {
 		# Prsence d'une image...
-		my $name = $$sub[9];
-		$name =~ s/^.+\///;
-
 		$raw = myget $$sub[9];
 	}
 	# Check channel logo
@@ -300,9 +297,15 @@ sub disp_prog {
 	}
 
 	my $out = out::setup_output("bmovl-src/bmovl",$raw,$long);
-	# Bizarre d'être obligé de faire ça, mais apparemment vaut mieux !
-	# binmode($out, ":utf8") if (!$latin);
 
+	my @f = out::get_current();
+	if ($f[6] =~ /\.ts$/) { # on vérifie quand même que c'est bien un .ts
+		if (open(F,">$f[6].info")) {
+			print F "pic:$$sub[9] " if ($$sub[9]);
+			print F "$$sub[2]\n$$sub[6]\n$$sub[7]\n";
+			close(F);
+		}
+	}
 	print $out "$name\n";
 	print $out $raw if ($raw);
 
