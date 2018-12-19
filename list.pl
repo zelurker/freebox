@@ -1035,17 +1035,17 @@ sub run_mplayer2 {
 	my ($dvd1,@dvd2);
 	if ($serv =~ /iso$/i || $src eq "dvd") {
 		if ($flav eq "mplayer dvdnav") {
+			$player = "mplayer";
 			$dvd1 = "-dvd-device";
+			$serv = $dvd;
 			@dvd2 = ("-nocache");
 			push @dvd2, "dvdnav://";
-			$filter = ",kerndeint";
 		} elsif ($flav eq "vlc") {
 			exec("vlc","-f","--deinterlace","-1",$serv);
 		} else { # mplayer raw, le résultat quoi...
 			print "dvdraw params : $name,$src,$serv,$flav,$audio,$video\n";
 			@dvd2 = ("-dvd-device",$dvd,"-cache","5000");
 			# push @dvd2, "dvdnav://";
-			$filter = ",kerndeint";
 		}
 	}
 
