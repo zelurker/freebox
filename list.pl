@@ -1285,14 +1285,35 @@ sub load_file2 {
 			$child_checker = undef;
 		}
 		if ($src eq "dvd" && $flav eq "mplayer dvd raw") {
-			open(F,"mplayer2 -dvd-device $dvd dvd://1 -nocache -identify -frames 0|");
+			open(F,"mplayer2 -dvd-device $dvd dvd://2 -nocache -identify -frames 0|");
 			@list = ();
+			my @title = ();
+			my @length = ();
 			while (<F>) {
 				if (/ID_DVD_TITLE_(\d+)_CHAPTERS=(\d+)/) {
-					push @list,[[$1,"Titre $1 : $2 chapitres","dvd://$1"]];
+					$title[$1-1] = "Titre $1 : $2 chapitres";
+					say "$_ -> title = ".$title[$1-1];
+				} elsif (/ID_DVD_TITLE_(\d+)_LENGTH=(\d+)/) {
+					$length[$1-1] = $2;
+					print "$_ -> length = $2\n";
 				}
 			}
 			close(F);
+			for (my $n=0; $n<=$#title; $n++) {
+				my $l = $length[$n];
+				my $t = "";
+				if ($l >= 3600) {
+					$t = sprintf("%d",$l/3600);
+					$l -= $t*3600;
+					$t .= "h";
+				}
+				if ($l >= 60) {
+					$t .= sprintf("%dm",$l/60);
+					$l -= sprintf("%d",$l/60)*60;
+				}
+				$t .= $l."s";
+				push @list,[[$n+1,"$title[$n], $t","dvd://$n"]];
+			}
 			disp_list();
 			return;
 		}
