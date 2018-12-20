@@ -298,12 +298,14 @@ sub disp_prog {
 
 	my $out = out::setup_output("bmovl-src/bmovl",$raw,$long);
 
-	my @f = out::get_current();
-	if ($f[6] =~ /\.ts$/) { # on vérifie quand même que c'est bien un .ts
-		if (open(F,">$f[6].info")) {
-			print F "pic:$$sub[9] " if ($$sub[9]);
-			print F "$$sub[2]\n$$sub[6]\n$$sub[7]\n";
-			close(F);
+	if (-f "video_size") { # mplayer/mpv en cours...
+		my @f = out::get_current();
+		if ($f[6] =~ /\.ts$/) { # on vérifie quand même que c'est bien un .ts
+			if (open(F,">$f[6].info")) {
+				print F "pic:$$sub[9] " if ($$sub[9]);
+				print F "$$sub[2]\n$$sub[6]\n$$sub[7]\n";
+				close(F);
+			}
 		}
 	}
 	print $out "$name\n";
