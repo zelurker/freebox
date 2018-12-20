@@ -300,7 +300,7 @@ sub disp_prog {
 
 	if (-f "video_size") { # mplayer/mpv en cours...
 		my @f = out::get_current();
-		if ($f[6] =~ /\.ts$/) { # on vérifie quand même que c'est bien un .ts
+		if ($f[6] =~ /\.ts$/ && $f[0] eq $$sub[1]) { # on vérifie quand même que c'est bien un .ts
 			if (open(F,">$f[6].info")) {
 				print F "pic:$$sub[9] " if ($$sub[9]);
 				print F "$$sub[2]\n$$sub[6]\n$$sub[7]\n";
