@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # e16 &
+export PERL_USE_UNSAFE_INC=1
 if ! [ -f bmovl-src/bmovl ]; then
 	cd bmovl-src && make && cd -
 fi
