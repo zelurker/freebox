@@ -7,6 +7,7 @@ use progs::telerama;
 use XML::Simple;
 use HTML::Entities;
 use Date::Parse;
+use myutf;
 use v5.10;
 
 @progs::podcasts::ISA = ("progs::telerama");
@@ -68,6 +69,12 @@ sub get {
 		my $date = $_->{pubDate};
 		$date = str2time($date) if ($date !~ /^\d+$/);
 		$title .= " le ".get_date($date) if ($date);
+		# très bizarrement title est parfois en latin1 ici avec une locale
+		# utf alors qu'on lit un xml utf ! ça change en fonction du sens du
+		# vent d'une version de perl à l'autre... Normalement
+		# myutf::mydecode devrait pouvoir corriger le truc dans tous les
+		# cas, c'est justement fait pour ça !
+		myutf::mydecode(\$title);
 		say "progs/podcasts: $title cmp $channel" if ($debug);
 		if ($title eq $channel) {
 			my $desc = mydecode($_->{"description"});
