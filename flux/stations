@@ -47,8 +47,6 @@ FG Vintage
 http://www.radiofg.com/streams/fgv.pls
 FIP
 http://direct.fipradio.fr/live/fip-midfi.mp3
-Flash FM
-http://live140.impek.com:8000/listen.pls
 France bleu Gascogne
 http://direct.francebleu.fr/live/fbgascogne-midfi.mp3
 France bleu loire ocean
@@ -61,8 +59,6 @@ France Inter
 http://direct.franceinter.fr/live/franceinter-midfi.mp3
 France Musique
 http://direct.francemusique.fr/live/francemusique-midfi.mp3
-Frequence 3
-http://streams.frequence3.net/mp3-192.m3u
 Frequence Terre
 http://sv3.vestaradio.com:8010/;stream.mp3
 Fun Radio
@@ -89,30 +85,14 @@ Kif Cool
 http://www.kifradio.com/cool/kifcool256.m3u
 La Grosse Radio
 http://www.lagrosseradio.com/son/stream/192.m3u
-La Grosse Radio Metal
-http://hd.lagrosseradio.info:8200/;stream.nsv
-La Grosse Radio Reggae
-http://hd.lagrosseradio.info:8300/;stream.nsv
 Le Mouv'
 http://direct.mouv.fr/ts/mouv-midfi.mp3
-M2 Radio
-http://www.m2radio.fr/pls/m2radio.m3u
-M2 Radio - Analog
-http://www.m2radio.fr/pls/m2analog.m3u
 M2 Radio - Chillout
 http://www.m2radio.fr/pls/m2chillout_winamp.m3u
-M2 Radio - Digital
-http://www.m2radio.fr/pls/m2digital_winamp.m3u
 M2 Radio - Love
 http://www.m2radio.fr/pls/m2love_winamp.m3u
-M2 Radio - Mix
-http://www.m2radio.fr/pls/m2mix.m3u
-M2 Radio - Purple
-http://www.m2radio.fr/pls/m2purple_winamp.m3u
 M2 Radio - Sunshine
 http://www.m2radio.fr/pls/m2sunshine.m3u
-M2 Radio - Vinyl
-http://www.m2radio.fr/pls/m2vinyl.m3u
 Maxi 80
 http://www.maxi80.com/ecoute/maxi80.m3u
 Maxxima
@@ -137,20 +117,8 @@ Oui FM Alternatif
 http://ouifm2.ice.infomaniak.ch/ouifm2.mp3
 Oui FM Collector
 http://ouifm3.ice.infomaniak.ch/ouifm3.mp3
-Oui FM Blues
-http://ouifm4.ice.infomaniak.ch/ouifm4.aac
 Oui FM Indé
 http://ouifm5.ice.infomaniak.ch/ouifm5.aac
-Paris One Club
-http://www.paris-one.com/pls/radio.pls
-Paris One Reverse
-http://www.paris-one.com/pls/radio_v6.pls
-Paris One Deeper
-http://www.paris-one.com/pls/radio_deeper.pls
-Paris One Trance
-http://www.paris-one.com/pls/radio_trance.pls
-Paris One Dance
-http://www.paris-one.com/pls/radio_dance.pls
 Prun
 http://streaming.prun.net/streamprun
 Puls Radio
@@ -173,8 +141,6 @@ Radio Junior
 http://streaming.radionomy.com/RADIO-JUNIOR?_=1448767610
 Radio Latina
 http://broadcast.infomaniak.net/start-latina-high.mp3
-Radio Pulsar
-http://91.121.62.121:8100/;
 Radio RDL
 http://radiobruaysis.ice.infomaniak.ch/radiobruaysis-64.aac?type=.flv&ua=Infomaniak%20Flash%20Player%20v2
 RCA / Radio côte d'amour (Nantes)
