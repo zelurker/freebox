@@ -261,6 +261,22 @@ sub pure_ascii {
 sub get_lyrics {
 	my ($file,$artist,$title) = @_;
 	my $lyrics = "";
+	if (open(F,"<","$file.lyrics")) {
+		while (<F>) {
+			$lyrics .= $_;
+		}
+		close(F);
+	}
+	if ($lyrics) {
+		print "got lyrics from .lyrics\n";
+		return $lyrics;
+	}
+	# Pendant un temps j'ai essayé de stocker les paroles dans des tags,
+	# mais ça pose des problèmes, genre en cas de paroles foireuses il faut
+	# aller éditer le tag pour corriger, il y a aussi le problème de
+	# l'encodage, c'est nettement + simple par un fichier .lyrics.
+	# Je continue quand même à accèder aux tags pour avoir au moins l'info
+	# titre et artiste...
 	my $ogg = $file =~ /ogg$/i;
 	my $mp3 = $file =~ /mp3$/i;
 	if ($file =~ /^http/) {
@@ -290,18 +306,27 @@ sub get_lyrics {
 		# get some information about the file in the easiest way
 		my ($track,$album,$comment,$year,$genre);
 		($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
-	}
-	if (!$lyrics && open(F,"<","$file.lyrics")) {
-		while (<F>) {
-			$lyrics .= $_;
-		}
-		close(F);
-	}
-	if ($lyrics) {
-		print "got lyrics from .lyrics\n";
-		return $lyrics;
+		$mp3->update_tags if ($title);
 	}
 
+	if (!$title || !$artist && $file =~ /^(.+) ?\- ?(.+)\./) {
+		# tâche de deviner l'artiste et le titre d'après le nom de fichier
+		# si possible...
+		$artist = $1;
+		$title = $2;
+		if ($mp3) {
+			# En fait MP3::Tag sait déduire l'artiste et le titre du nom de
+			# fichier donc cette partie là n'est normalement jamais
+			# executée, on va garder quand même au cas où mais bon... !
+			$mp3->title_set($title);
+			$mp3->artist_set($artist);
+			$mp3->update_tags();
+		} elsif ($ogg) {
+			$ogg->add_comment("artist",$artist);
+			$ogg->add_comment("title",$title);
+			$ogg->write_vorbis;
+		}
+	}
 	my $r;
 	my $orig = $title;
 	$title = pure_ascii($title);

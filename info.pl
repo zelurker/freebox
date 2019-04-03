@@ -414,10 +414,22 @@ sub commands {
 	} elsif ($cmd =~ /^codec/) {
 		my ($codec,$bitrate);
 		($cmd,$codec,$bitrate) = split / /,$cmd;
-		my ($name,$src) = get_cur_name();
+		my ($name,$src,$serv) = get_cur_name();
 		$name .= "&$src";
 		$info{$name}->{codec} = "$codec $bitrate";
-		if (!$cleared && $name eq conv($channel) && $src !~ /^flux\/podcasts/) {
+		if (!$info{$name}->{metadata}->{artist} && !$info{$name}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i) { # normalement on reçoit les tags avant le codec...
+			say "got name $name src $src serv $serv et pas de tags, on y va... !";
+			my $lyrics = lyrics::get_lyrics($serv);
+			if ($lyrics) {
+				$serv =~ s/^.+\///;
+				$serv =~ /^(.+) ?\- ?(.+)\./;
+				$info{$name}->{metadata}->{artist} = $1;
+				$info{$name}->{metadata}->{title} = $2;
+				myutf::mydecode(\$lyrics);
+				$info{$name}->{lyrics} = $lyrics;
+			}
+		}
+		if (!$cleared && (!$channel || $name eq conv($channel)) && $src !~ /^flux\/podcasts/) {
 			if ($lastprog && $channel eq $last_chan) {
 				disp_prog($lastprog,$last_long);
 			} else {
