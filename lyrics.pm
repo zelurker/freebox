@@ -55,6 +55,7 @@ sub handle_lyrics {
 				}
 				s/<div .+?>(.+)<\/div>/$1/;
 				s/<br>/\n/g;
+				s/<br \/>/\n/g;
 				$_ = decode_entities($_);
 				$lyrics .= $_;
 			}
