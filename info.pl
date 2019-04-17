@@ -387,12 +387,14 @@ sub commands {
 		my $name0 = $name;
 		$name .= "&$src";
 		$info{$name}->{metadata}->{$i} = $v;
+		say "metadata $i = $v";
 		if ($info{$name}->{metadata}->{artist} && $info{$name}->{metadata}->{end} &&
 			$info{$name}->{metadata}->{title} && !$info{$name}->{tracks}) {
 			my @track = ($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
 			$info{$name}->{tracks} = \@track;
 			$channel = $name0;
 			$source = $src;
+			$lastprog = undef if ($channel ne $last_chan);
 			if ($info{$name}->{metadata}->{genre} !~ /podcast/i) {
 				# fourni par finter au moins, bah sinon on fera une requête
 				# pour rien... !
@@ -403,7 +405,7 @@ sub commands {
 			if ($lastprog) {
 				disp_prog($lastprog,$last_long);
 			} else {
-				disp_channel();
+				read_stream_info(time(),$channel,$info{$name});
 			}
 			if ($info{$name}->{metadata}->{genre} =~ /podcast/i && $info{$name}->{metadata}->{album}) {
 				handle_images($info{$name}->{metadata}->{album});
