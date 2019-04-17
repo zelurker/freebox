@@ -317,7 +317,8 @@ sub get_cache($) {
 
 sub setup_server {
 	my ($path,$cb) = @_;
-	if ($path =~ /list/) {
+	if ($path =~ /list/ && `hostname` =~ /^tv/) { # socket réseau seulement sur tv !
+		say STDERR "on ouvre une socket sur le port 1025...";
 		our $list_server = AnyEvent::Socket::tcp_server(undef, 1025, sub {
 				my ($fh) = @_;
 				async {
