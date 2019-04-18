@@ -47,7 +47,10 @@ sub myget {
 	$ua->timeout(15);
 	$ua->cookie_jar($cookie_jar);
 	my $r = $ua->get($url);
-	return undef if (!$r->is_success);
+	if (!$r->is_success) {
+		say STDERR "myget: error for url $url";
+		return undef;
+	}
 	my $type = $r->header("Content-type");
 	print STDERR "myget: got type $type\n";
 	if ($type =~ /charset=(.+)/) {
