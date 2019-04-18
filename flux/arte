@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+use lib ".";
 use Cpanel::JSON::XS qw(decode_json);
 use HTML::Entities;
 use strict;
@@ -131,11 +132,22 @@ sub decode_html {
 	# say STDERR "decode_html: myget pour $code.player : $url";
 	my $player = myget($url,"cache/arte/$code.player",7);
 	($json) = $player =~ /js_json = (.+?);/;
+	if (!$json) {
+		my ($json_url) = $player =~ /json_url=(.+?)&amp/;
+		$json_url =~ s/%(..)/chr(hex($1))/eg;
+		if ($json_url) {
+			say STDERR "json_url $json_url";
+			$json = myget($json_url,"cache/arte/$code.json",7);
+		}
+	}
+
 	eval {
 		$json = decode_json($json);
 	};
 	if ($@) {
-		say STDERR "decode_json a foiré sur $json erreur $!";
+		say STDERR "decode_json a foiré sur $json erreur $! player dans cache cache/arte/$code.player url $url";
+		($json) = $player =~ /js_json = (.+?);/;
+		say STDERR "contenu json foireux : $json";
 	}
 	$json->{videoJsonPlayer}{VSR};
 }
