@@ -8,6 +8,7 @@ use link_get;
 require "http.pl";
 use v5.10;
 use Data::Dumper;
+use Time::Local;
 
 # binmode STDOUT,":utf8";
 my $str = shift @ARGV;
@@ -20,6 +21,14 @@ sub decode_prg {
         foreach (@$_) {
 			decode_prg($_->{data}) if ($_->{data});
             if (ref($_) eq "HASH" && $_->{programId}) {
+				if ($_->{broadcastDates}) {
+					my $t = $_->{broadcastDates}[0];
+					if ($t =~ /(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+)Z/) {
+						my $t = timegm($6,$5,$4,$3,$2-1,$1-1900);
+						my ($sec,$min,$hour,$mday,$mon,$year) = localtime($t);
+						print "$mday/",$mon+1,"/",$year+1900," ",sprintf("%02d:%02d:%02d ",$hour,$min,$sec);
+					}
+				}
                 say $_->{title},($_->{subtitle} ? " - ".$_->{subtitle} : "");
                 my $url = $_->{url};
 				$url = "http://www.arte.tv$url" if ($url !~ /^http/);
