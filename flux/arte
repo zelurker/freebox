@@ -13,7 +13,9 @@ use Time::Local;
 # binmode STDOUT,":utf8";
 my $str = shift @ARGV;
 my @arg = split(/\//,$str);
+my ($cat) = $arg[1] =~ /^cat:(.+)/;
 my $utf = $ENV{LANG} =~ /utf/i;
+splice @arg,1,1 if ($cat);
 
 sub decode_prg {
     $_ = shift;
@@ -46,14 +48,24 @@ sub decode_type {
     $_ = shift;
 	my $base = 0;
 	$base = 1 if ($arg[0] =~ /^vid:/);
-	$str .= "/" if ($str);
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
 			# say STDERR "decode_type: type : $_->{type}, argbase $arg[$base]";
 			my $code = $_->{code};
-			$code = $code->{id} if (ref($code) eq "HASH");
+			if (ref($code) eq "HASH") {
+				if ($code->{id}) {
+					$code = $code->{id};
+				} else {
+					$code = $code->{name};
+				}
+			}
 			if ($_->{contextPage}) { # eq "HOME") {
-				decode_prg($_->{data});
+				if ($cat eq $code || $str =~ /vid:/ || $str =~ /^Guide/) {
+					decode_prg($_->{data});
+				} elsif (!$cat && $_->{title}) {
+					say $_->{title};
+					say "$str/cat:$code";
+				}
 			} elsif ($_->{type}) { # catégories de vidéos
                 if (!$arg[$base] && $_->{title}) {
 # Note : y a des entrées sans titre avec comme type "banner", mais y en a
@@ -145,7 +157,6 @@ sub decode_html {
 		my ($json_url) = $player =~ /json_url=(.+?)&amp/;
 		$json_url =~ s/%(..)/chr(hex($1))/eg;
 		if ($json_url) {
-			say STDERR "json_url $json_url";
 			$json = myget($json_url,"cache/arte/$code.json",7);
 		}
 	}
@@ -248,11 +259,12 @@ my $page;
 if ($str =~ /^result:(.+)/) {
 	my $url = "http://www.arte.tv/fr/search/?q=$1";
 	$page = myget($url);
-} elsif ($str eq "concerts") {
-	say STDERR "get concerts";
-	$page = myget("https://www.arte.tv/fr/videos/arte-concert/","cache/arte/concert0",1/24.0);
+} elsif ($str =~ /^concerts/) {
+	$page = myget("https://www.arte.tv/fr/videos/arte-concert/","cache/arte/concert0",1/12.0);
+} elsif ($str =~ /^Guide/) {
+	$page = myget("https://www.arte.tv/fr/guide/","cache/arte/guide",1/12.0);
 } else {
-	$page = myget("https://www.arte.tv/fr/","cache/arte/j0",1/24.0);
+	$page = myget("https://www.arte.tv/fr/","cache/arte/j0",1/12.0);
 }
 # l'encoding doit être après le myget parce que si l'html est en utf8, le
 # json est en latin !!!
@@ -260,6 +272,7 @@ say "encoding: latin1";
 say "list";
 say "Recherche\nRecherche";
 say "Concerts\nconcerts";
+say "Guide\nGuide";
 my $capture = 0;
 my $json;
 # le json dans de l'html c'est toujours merdique, ça vient de changer en
@@ -276,5 +289,5 @@ if ($@) {
     print STDERR "arte: couille dans le potage au niveau json $?:$@, json: $json\n";
     exit(0);
 }
-# say Dumper($json);
+# say STDERR Dumper($json);
 decode_main($json);
