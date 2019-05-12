@@ -68,7 +68,7 @@ sub get {
 	my $mech = search::init();
 	dbmopen %series,"series.db",0666;
 	if (!-f "cache/$channel.info") {
-		my $u = $series{$titre};
+		my $u = $series{"$titre saison $saison"};
 		if (!$u) {
 			say STDERR "series: searching for link to allocine...";
 			$mech = search::search("allocine $titre saison $saison");
@@ -89,7 +89,7 @@ sub get {
 			}
 			#		foreach ($mech->links) {
 			$u = $u->url;
-			$series{$titre} = $u;
+			$series{"$titre saison $saison"} = $u;
 		}
 		say STDERR "series: found $u for $titre";
 		dbmclose(%series);
