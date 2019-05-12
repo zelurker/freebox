@@ -1,5 +1,6 @@
 package progs::series;
 
+use lib ".";
 use strict;
 use warnings;
 use progs::telerama;
@@ -63,27 +64,38 @@ sub get {
 	my $cast = "";
 	my $sub;
 
+	my %series;
+	my $mech = search::init();
+	dbmopen %series,"series.db",0666;
 	if (!-f "cache/$channel.info") {
-		my $mech = search::search("allocine $titre saison $saison");
-		if ($@) {
-			$p->error("error google : $@ status ".$mech->res()->status_line);
-			return;
-		}
-		# On récupère le lien du haut du résultat :
-		my $dump = 0;
-		my $actor = 0;
-		my $u;
-		$u = $mech->find_link( url_regex => qr/allocine.fr/);
+		my $u = $series{$titre};
 		if (!$u) {
-			say "series : pas trouvé de regex, on sauve";
-			$mech->save_content("goog.html");
-		}
-		return undef if (!$u);
-#		foreach ($mech->links) {
+			say STDERR "series: searching for link to allocine...";
+			$mech = search::search("allocine $titre saison $saison");
+			if ($@) {
+				$p->error("error google : $@ status ".$mech->res()->status_line);
+				return;
+			}
+			# On récupère le lien du haut du résultat :
+			my $actor = 0;
+			$u = $mech->find_link( url_regex => qr/allocine.fr/);
+			if (!$u) {
+				say "series : pas trouvé de regex, on sauve";
+				$mech->save_content("goog.html");
+			}
+			if (!$u) {
+				dbmclose(%series);
+				return undef;
+			}
+			#		foreach ($mech->links) {
 			$u = $u->url;
-			# avec duckduckgo, plus la peine de traiter les liens, c'est du
-			# lien direct !
-#		}
+			$series{$titre} = $u;
+		}
+		say STDERR "series: found $u for $titre";
+		dbmclose(%series);
+		# avec duckduckgo, plus la peine de traiter les liens, c'est du
+		# lien direct !
+		#		}
 		for (my $page=1; $page<=2; $page++) {
 			print STDERR "url $u page $page\n" if ($debug);
 			# passer ajax avant ?page pour une version text only
@@ -95,9 +107,11 @@ sub get {
 				print STDERR "mechanize error $@\n";
 				return undef;
 			}
+			$mech->save_content("page$page.html");
 			$_ = $mech->content;
 			my $search = sprintf("s%02de%02d",$saison,$episode);
 			my $syn = 0;
+			my $dump = 0;
 			foreach (split /\n/,$_) {
 				if (/<img.*data-src="(http.+?)"/i) {
 					$img = $1;
@@ -105,9 +119,11 @@ sub get {
 					s/\<.+?\>//g;
 					$sub = decode_entities($_);
 					$dump = 1;
+					say STDERR "series: found $search, sub = $sub, dump=1...";
 					next;
-				} elsif ($dump && /<div class="synopsis/i) {
+				} elsif ($dump && /<div class=".+?synopsis/i) {
 					$syn = 1;
+					say STDERR "series: found synopsis...";
 					next;
 				} elsif ($syn) {
 					if (/<\/div/i) {
@@ -119,11 +135,11 @@ sub get {
 				}
 			} # foreach
 			my $img2;
-			($cast,$img2) = find_actor($mech);
+			# ($cast,$img2) = find_actor($mech);
 			$img = $img2 if (!$img);
 			last if ($sum ne "");
 		}
-		if (!$cast) {
+		if (0) { # !$cast) {
 			# La page est incroyablement encodée avec des span transformés en
 			# liens par du css, du coup c'est impossible à gérer en utilisant
 			# find_link / follow_link. A priori toutes les urls respectent
