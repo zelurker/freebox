@@ -25,7 +25,6 @@ use out;
 require "radios.pl";
 
 use progs::telerama;
-use progs::nolife;
 use progs::finter;
 use progs::podcasts;
 use progs::files;
@@ -207,7 +206,6 @@ my @prog;
 if ($have_dvb || $have_fb) {
 	push @prog, progs::telerama->new($net);
 }
-push @prog, progs::nolife->new($net);
 push @prog, progs::finter->new($net);
 push @prog, progs::podcasts->new($net);
 push @prog, progs::files->new($net);
