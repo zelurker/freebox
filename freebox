@@ -1,7 +1,19 @@
 #!/bin/bash
 
-# e16 &
 export PERL_USE_UNSAFE_INC=1
+
+# Remarque : zenity se traine maintenant une tonne de dépendances inutiles
+# ça serait bien de le remplacer par un truc + light, ils ont oublié le
+# light en chemin... !
+for n in wget socat zenity mpv; do
+if ! type $n > /dev/null 2> /dev/null; then
+	echo install $n
+	warn=1
+fi
+done
+if [ "$warn" == "1" ]; then
+	exit 1
+fi
 if ! [ -f bmovl-src/bmovl ]; then
 	cd bmovl-src && make && cd -
 fi
@@ -42,12 +54,6 @@ if ! perl -c filter_mplayer.pl; then
 	echo problèmes filter_mplayer.pl
 	exit 1
 fi
-for n in wget socat zenity; do
-if ! type $n > /dev/null 2> /dev/null; then
-	echo install $n
-	exit 1
-fi
-done
 ulimit -c unlimited
 find cache/ -mtime +3 -delete
 find podcasts/ -mtime +7 -delete
