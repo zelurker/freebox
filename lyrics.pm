@@ -306,7 +306,12 @@ sub get_lyrics {
 		# get some information about the file in the easiest way
 		my ($track,$album,$comment,$year,$genre);
 		($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
-		$mp3->update_tags if ($title);
+		eval {
+			$mp3->update_tags if ($title);
+		};
+		if ($@) {
+			say "eval while updating tags: $@";
+		}
 	}
 
 	if (!$title || !$artist && $file =~ /^(.+) ?\- ?(.+)\./) {
