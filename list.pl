@@ -714,6 +714,10 @@ sub read_list {
 						$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
 						splice @tab_serv,2;
 						$tab_serv[1] = $serv;
+					} else {
+						$serv = undef;
+						splice @tab_serv,$#tab_serv;
+						$base_flux =~ s/^(.+?)\/.+$/$1/;
 					}
 				} elsif ($serv =~ /^\+/) { # commence par + -> reset base_flux
 					$serv =~ s/^.//; # Supprime le + !
@@ -1725,6 +1729,7 @@ sub commands {
 			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// && $serv !~ /^get/) ||
 					($serv =~ / / && $base_flux !~ /youtube/) && $mode_flux)) {
 				$name =~ s/\//-/g;
+				myutf::mydecode(\$name);
 				$base_flux .= "/$name";
 				push @tab_serv,$serv;
 				$base_flux =~ s/pic:.+? //;
