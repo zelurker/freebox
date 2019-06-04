@@ -27,13 +27,14 @@ if ($str =~ /^get,(\d+),(.+?),(.+)/) {
 		die "could not get title from $suffix\n";
 	}
 	again:
-	if (! -f "$ENV{HOME}/bin/youtube-dl") {
+	if (! -f "$ENV{HOME}/bin/youtube-dl" || -M "$ENV{HOME}/bin/youtube-dl" > 30) {
 		mkdir "$ENV{HOME}/bin";
+		unlink "$ENV{HOME}/bin/youtube-dl";
 		say STDERR "récupération de youtube-dl...";
 		# apparemment le binaire est modifié après execution, on lui retire
 		# les droits d'écriture, pas sûr que ça suffise mais ça vaut le
 		# coup de voir...
-		system("wget -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl && chmod -w ~/bin/youtube-dl");
+		system("wget -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl");
 	}
 	my $file = $title;
 	$file =~ s/ /_/g;
