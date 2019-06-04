@@ -706,22 +706,15 @@ sub read_list {
 					my ($libelle) = $serv =~ /^Recherche\:(.+)/;
 					$libelle = "A chercher (regex)" if (!$libelle);
 					delete $ENV{WINDOWID};
-					$serv = `zenity --entry --text="$libelle"`;
-					chomp $serv;
-					if ($encoding =~ /utf/i && $latin) {
-						eval {
-							Encode::from_to($serv, "iso-8859-1", "utf-8") ;
-						};
-						if ($@) {
-							print "read_list2: pb conv utf $serv\n";
-						}
-					} else {
-						print "encoding $encoding lang $ENV{LANG}\n";
+					$serv = `./zen "$libelle"`;
+					my $exit = $serv =~ /EXIT="gtk-ok"/;
+					if ($exit) {
+						my ($entry) = $serv =~ /ENTRY="(.+?)"/;
+						$serv = "result:$entry";
+						$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
+						splice @tab_serv,2;
+						$tab_serv[1] = $serv;
 					}
-					$serv = "result:$serv";
-					$base_flux =~ s/^(.+?)\/.+$/$1\/$serv/;
-					splice @tab_serv,2;
-					$tab_serv[1] = $serv;
 				} elsif ($serv =~ /^\+/) { # commence par + -> reset base_flux
 					$serv =~ s/^.//; # Supprime le + !
 					my ($fin) = $base_flux =~ /.+\/(.+)/;
@@ -2169,6 +2162,4 @@ sub disp_list {
 		print "récup nb_elem $nb_elem\n";
 	}
 }
-
-# vim: encoding=latin1
 

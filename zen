@@ -1,0 +1,31 @@
+#!/bin/sh
+
+GTKDIALOG=gtkdialog
+
+# on a pas la touche esc associée au bouton cancel !!!
+MAIN_DIALOG='
+<window title="Question" icon-name="gtk-dialog-question">
+	<vbox>
+		<hbox>
+			<text>
+			<label>'$1'</label>
+			</text>
+			<entry activates-default="true">
+				<variable>ENTRY</variable>
+			</entry>
+		</hbox>
+		<hbox>
+			<button use-stock="true"><label>gtk-cancel</label></button>
+			<button can-default="true" has-default="true" use-stock="true">
+				<label>gtk-ok</label>
+			</button>
+		</hbox>
+	</vbox>
+</window>
+'
+export MAIN_DIALOG
+
+case $1 in
+	-d | --dump) echo "$MAIN_DIALOG" ;;
+	*) $GTKDIALOG --program=MAIN_DIALOG ;;
+esac

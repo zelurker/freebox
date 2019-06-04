@@ -162,9 +162,14 @@ sub add {
 	print "enreg: info returned $src,$num,$name,$service,$flavour,$audio,$video\n";
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($$lastprog[3]);
 	my $file = "records/".sprintf("%d%02d%02d %02d%02d%02d",$year+1900,$mon+1,$mday,$hour,$min,$sec)." $$lastprog[1].ts";
-	my $delay = `zenity --entry --entry-text=0 --text="Delai supplémentaire avant et après en minutes"`;
-	chomp $delay;
-	$delay = 0 if (!$delay);
+	my $delay = `./zen "Delai supplémentaire avant et après en minutes"`;
+	my $exit = $delay =~ /EXIT="gtk-ok"/;
+	my ($entry) = $delay =~ /ENTRY="(.+?)"/;
+	if (!$exit) {
+		$delay = 0;
+	} else {
+		$delay = $entry;
+	}
 	$delay *= 60;
 	my $added = undef;
 	foreach (@records) {

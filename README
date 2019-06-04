@@ -74,7 +74,7 @@ qu'elle utilise pour perl. Le script de lancement vérifie que les scripts
 principaux peuvent se lancer, mais il faudrait une méthode "user friendly"
 pour installer tous les mods nécessaires... Du coup pour l'instant ça
 demande quand même une connaissance minimale de perl pour y arriver. A part
-ça, elle utilise aussi zenity, et pour youtube-dl elle le télécharge elle
+ça, elle utilise aussi gtkdialog, et pour youtube-dl elle le télécharge elle
 même.
 Le programme C qui sert d'interface écran quand il n'y a pas de lecteur
 vidéo actif, bmovl, support sdl ou sdl2, mais la version sdl2 est encore

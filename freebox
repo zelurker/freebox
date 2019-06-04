@@ -2,10 +2,7 @@
 
 export PERL_USE_UNSAFE_INC=1
 
-# Remarque : zenity se traine maintenant une tonne de dépendances inutiles
-# ça serait bien de le remplacer par un truc + light, ils ont oublié le
-# light en chemin... !
-for n in wget socat zenity mpv; do
+for n in wget socat gtkdialog mpv; do
 if ! type $n > /dev/null 2> /dev/null; then
 	echo install $n
 	warn=1
