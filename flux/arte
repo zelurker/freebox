@@ -59,7 +59,7 @@ sub decode_type {
 					$code = $code->{name};
 				}
 			}
-			if ($_->{contextPage}) { # eq "HOME") {
+			if ($_->{data}) { # eq "HOME") {
 				if ($cat eq $code || $str =~ /vid:/ || $str =~ /^Guide/) {
 					decode_prg($_->{data});
 				} elsif (!$cat && $_->{title}) {
@@ -87,7 +87,7 @@ sub decode_type {
 					}
                 }
             } else {
-                die "deocde_type: reconnais pas ça : ".Dumper($_);
+                die "decode_type: reconnais pas ça : ".Dumper($_);
             }
         }
     } else {
