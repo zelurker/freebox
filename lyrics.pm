@@ -10,6 +10,7 @@ use Ogg::Vorbis::Header;
 use MP3::Tag;
 use utf8;
 use v5.10;
+use lib ".";
 use search;
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
@@ -304,10 +305,22 @@ sub get_lyrics {
 	if ($mp3) {
 
 		# get some information about the file in the easiest way
-		my ($track,$album,$comment,$year,$genre);
-		($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
+		my $id3v1;
+		$mp3->get_tags;
+		if (exists $mp3->{ID3v1}) {
+			$id3v1 = 1;
+          # read some information from the tag
+		  my $id3v1 = $mp3->{ID3v1};
+		  $artist = $id3v1->artist;
+		  $title = $id3v1->title;
+		  say "lyrics: using id3v1";
+  	    } else {
+			my ($track,$album,$comment,$year,$genre);
+			($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
+		}
+		say "lyrics: artist: $artist, title: $title";
 		eval {
-			$mp3->update_tags if ($title);
+			$mp3->update_tags if ($title && !$id3v1);
 		};
 		if ($@) {
 			say "eval while updating tags: $@";
