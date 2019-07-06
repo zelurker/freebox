@@ -130,7 +130,7 @@ sub decode_html {
 	if (!$url) {
 		# dans ce cas là, c'est une page d'index probablement
 		if ($html =~ /__INITIAL_STATE__ = (.+);/) {
-			$json = decode_entities($1);
+			$json = $1; # decode_entities($1);
 			eval  {
 				$json = decode_json( $json);
 			};

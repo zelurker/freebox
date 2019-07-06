@@ -50,7 +50,7 @@ sub read_json {
 	while (<$f>) {
 		chomp;
 		if (/__INITIAL_STATE__ = (.+);/) {
-			$json = decode_entities($1);
+			$json = $1; # decode_entities($1);
 			last;
 		}
 	}
