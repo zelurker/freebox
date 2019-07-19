@@ -128,6 +128,12 @@ sub decode_html {
 # on récupère l'url de l'iframe video...
 	my ($url) = $html =~ /iframe allow.+?src="(.+?)"/;
 	if (!$url) {
+		($url) = $html =~ /iframe title.+?src=\\"(.+?)\\"/ if (!$url); # alternative...
+		$url =~ s/\\\//\//g;
+		$url =~ s/%(..)/chr(hex($1))/ge;
+		$url =~ s/\\u(....)/chr(hex($1))/ge;
+	}
+	if (!$url) {
 		# dans ce cas là, c'est une page d'index probablement
 		if ($html =~ /__INITIAL_STATE__ = (.+);/) {
 			$json = $1; # decode_entities($1);
@@ -157,6 +163,7 @@ sub decode_html {
 		my ($json_url) = $player =~ /json_url=(.+?)&amp/;
 		$json_url =~ s/%(..)/chr(hex($1))/eg;
 		if ($json_url) {
+			# say STDERR "deocde_html: $code.json from $json_url";
 			$json = myget($json_url,"cache/arte/$code.json",7);
 		}
 	}
