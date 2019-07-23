@@ -72,7 +72,7 @@ function timing(name,value)
 		return
 	end
 	local vcodec = mp.get_property("video-codec")
-	if vcodec then
+	if vcodec and not vcodec:match("^mjpeg") then
 		return
 	end
 	value = math.floor(value)
