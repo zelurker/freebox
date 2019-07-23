@@ -1,6 +1,7 @@
 local mp = require 'mp'
 socket = require "socket"
 socket.unix = require"socket.unix"
+local last_time = 0
 
 function on_width_change(name,value)
 	local file = io.open("video_size","r")
@@ -65,14 +66,33 @@ function on_abitrate(name,value)
 	end
 end
 
+function timing(name,value)
+	local duration = mp.get_property("duration")
+	if not duration then
+		return
+	end
+	value = math.floor(value)
+	if value == last_time then
+		return
+	end
+	last_time = value
+	local c = assert(socket.unix())
+	if (c:connect("sock_info")) then
+		c:send("progress " .. value .. " " .. duration)
+		c:close()
+	end
+end
+
 mp.observe_property("osd-width","number",on_width_change)
 mp.observe_property("audio-bitrate","number",on_abitrate)
 mp.observe_property("metadata","native",metadata)
+mp.observe_property("time-pos","native",timing)
 
 mp.add_hook("on_unload", 10, function ()
 	local c = assert(socket.unix())
+	name = mp.get_property("path")
 	if (c:connect("sock_info")) then
-		c:send("unload")
+		c:send("unload " .. name)
 		c:close()
 	end
 	pos = mp.get_property_number("percent-pos")
@@ -82,7 +102,6 @@ mp.add_hook("on_unload", 10, function ()
 	end
 	c = assert(socket.unix())
 	if (c:connect("sock_list")) then
-		name = mp.get_property("path")
 		local duration = mp.get_property_number("duration")
 		if (pos < 90 or pos > 100) and duration > 300 then
 			-- gestion basique des bookmarks :

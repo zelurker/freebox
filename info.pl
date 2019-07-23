@@ -263,9 +263,14 @@ sub disp_prog {
 	my @date = ($$sub[12] ? split('/', $$sub[12]) : "");
 	my $date = timelocal_nocheck(0,0,12,$date[0],$date[1]-1,$date[2]-1900);
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday) = localtime($date);
-	my $time = time();
+	my $time;
+	if ($last_chan eq "podcasts") {
+		$time = $start;
+	} else {
+		$time = time();
+	}
 	my $reste = undef;
-	if ($start && $time > $start && $time < $end) {
+	if ($start && $time >= $start && $time < $end) {
 		$reste = $end-$time;
 		my $source0 = $source;
 		$refresh = AnyEvent->timer(after=>($reste > 60 ? 60 : $reste+1), cb =>
@@ -345,8 +350,14 @@ sub commands {
 		$fadeout = $refresh = undef;
 		out::clear("info_coords");
 		$cleared = 1;
-	} elsif ($cmd eq "unload") {
+	} elsif ($cmd =~ s/^unload //) {
 		# envoyé par le script lua de mpv pour indiquer qu'il quitte
+		my ($name,$src,$serv) = get_cur_name();
+		if ($src =~ /^flux\/podcasts/) {
+			# le nom du fichier est renvoyé par la commande unload,
+			# pratique pour les cas indirects comme les podcasts !
+			utime(undef,undef,$cmd);
+		}
 		$time = undef;
 	} elsif ($cmd eq "tracks") {
 		my ($name,$src) = get_cur_name();
@@ -437,15 +448,27 @@ sub commands {
 			}
 		}
 	} elsif ($cmd =~ s/^progress //) {
+		# La commande progress avait comme paramètre quoi afficher dans le
+		# champ progress à l'époque de mplayer, maintenant elle a en brut
+		# la position et la durée, les 2 en secondes
+		my ($pos,$dur) = split(/ /,$cmd);
 		my ($name,$src) = get_cur_name();
 		$name .= "&$src";
-		$info{$name}->{progress} = $cmd;
-		if (!$cleared && $name eq conv($channel) && $src !~ /^flux\/podcasts/) {
+		if (!$cleared && $name eq conv($channel) ) { # && $src !~ /^flux\/podcasts/) {
 			# Ne pas afficher de progress sur les podcasts, conflit avec
 			# l'info progs/podcasts
             # A noter que ça pourrait être pas mal d'avoir le progress
             # quand même... à voir un de ces jours !
-			read_stream_info(time(),$channel,$info{$name});
+			if ($lastprog) {
+				$$lastprog[3] = timelocal_nocheck($pos,0,0,$mday,$mon,$year);
+				$$lastprog[4] = timelocal_nocheck($dur,0,0,$mday,$mon,$year);
+				disp_prog($lastprog,$last_long);
+			} else {
+				$pos = sprintf("%02d:%02d:%02d",$pos/3600,($pos/60)%60,$pos%60);
+				$dur = sprintf("%02d:%02d:%02d",$dur/3600,($dur/60)%60,$dur%60);
+				$info{$name}->{progress} = "$pos - $dur";
+				read_stream_info(time(),$channel,$info{$name});
+			}
 		}
 	} elsif ($cmd =~ /^lyrics/) {
 		my ($name,$src) = get_cur_name();
