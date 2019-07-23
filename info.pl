@@ -397,10 +397,21 @@ sub commands {
 		$name .= "&$src";
 		$info{$name}->{metadata}->{$i} = $v;
 		say "metadata $i = $v";
+		if ($i =~ /icy-title/i && $v =~ /(.+) - (.+)/) {
+			my ($artist,$title) = ($1,$2);
+			$title =~ s/\|.+//; # y a des numéros bizarres intercalés par des || sur hotmix
+			$info{$name}->{metadata}->{artist} = $artist;
+			$info{$name}->{metadata}->{title} = $title;
+		}
 		if ($info{$name}->{metadata}->{artist} && $info{$name}->{metadata}->{end} &&
-			$info{$name}->{metadata}->{title} && !$info{$name}->{tracks}) {
+			$info{$name}->{metadata}->{title}) {
 			my @track = ($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
-			$info{$name}->{tracks} = \@track;
+			if (!$info{$name}->{tracks}) {
+				$info{$name}->{tracks} = \@track;
+			} else {
+				return if (${$info{$name}->{tracks}}[0] eq $track[0]);
+				unshift @{$info{$name}->{tracks}},@track;
+			}
 			$channel = $name0;
 			$source = $src;
 			$lastprog = undef if ($channel ne $last_chan);
@@ -453,6 +464,9 @@ sub commands {
 		# la position et la durée, les 2 en secondes
 		my ($pos,$dur) = split(/ /,$cmd);
 		my ($name,$src) = get_cur_name();
+		# au niveau du lua on ne peut pas savoir si un flux doit ou pas
+		# envoyer progress, on ne peut le bloquer qu'ici...
+		return if ($src =~ /^flux\/(stations|ecoute_directe)/);
 		$name .= "&$src";
 		if (!$cleared && $name eq conv($channel) ) { # && $src !~ /^flux\/podcasts/) {
 			# Ne pas afficher de progress sur les podcasts, conflit avec

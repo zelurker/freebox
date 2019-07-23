@@ -71,6 +71,10 @@ function timing(name,value)
 	if not duration then
 		return
 	end
+	local vcodec = mp.get_property("video-codec")
+	if vcodec then
+		return
+	end
 	value = math.floor(value)
 	if value == last_time then
 		return
