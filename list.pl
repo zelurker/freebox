@@ -1242,12 +1242,13 @@ sub load_file2 {
 			$found = 0;
 			disp_list();
 			# boucle sur la 1ère entrée de la liste
-			if ($old_base ne "stations") {
-				$name = $list[0][0][1]; # on prend le nom indiqué
-			} else {
-				($name) = $base_flux =~ /\/(.+)/; # restaure le nom pour les stations
-			}
-			return load_file2($name,$serv,$flav,$audio,$video);
+#			if ($old_base ne "stations") {
+#				$name = $list[0][0][1]; # on prend le nom indiqué
+#			} else {
+#				($name) = $base_flux =~ /\/(.+)/; # restaure le nom pour les stations
+#			}
+#			return load_file2($name,$serv,$flav,$audio,$video);
+			return 0;
 		}
 		return 0 if ($cont && $serv =~ /m3u$/);
 	}
