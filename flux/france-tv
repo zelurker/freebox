@@ -1,0 +1,96 @@
+#!/usr/bin/perl
+
+use lib ".";
+use HTML::Entities;
+use strict;
+use link_get;
+require "http.pl";
+use v5.10;
+use Time::Local;
+
+# binmode STDOUT,":utf8";
+my $str = shift @ARGV;
+$str =~ s/^get,//;
+my @arg = split(/\//,$str);
+my $utf = $ENV{LANG} =~ /utf/i;
+my $server;
+
+# Note le script est très court, mais il se repose principalement sur les
+# noms qu'ils ont choisis pour leurs classes html, ce qui veut dire que ça
+# risque de péter facilement au moindre changement, mais ça devrait être
+# facile de corriger le code si ça arrive... !
+
+my $page;
+my $base;
+if ($arg[0] =~ s/^vid://) {
+	$arg[0] =~ s/\|/\//g;
+	# Normalement on téléchargerait la vidéo en appelant youtube-dl pour la
+	# stocker dans le rép cache... sauf que certaines des vidéos ont une
+	# piste audio séparée, youtube-dl downloade les pistes séparément avant
+	# de les mixer ce qui est très long. mpv le fait à sa sauce si on lui
+	# passe l'url... (en récupérant les urls et en faisant le mixage à la
+	# volée). Ca serait à priori compliqué de faire pareil à la main,
+	# autant le laisser faire à priori... !
+	say $arg[0];
+	exit(0);
+}
+
+if ($arg[0]) {
+	my $text = $arg[0];
+	$text =~ s/\|$//;
+	$text =~ s/^.+\|//;
+	$text = "undef" if (!$text);
+	$arg[0] =~ s/\|/\//g;
+	$base = $arg[0];
+	$base =~ /https?...(.+?)\//;
+	$server = $1;
+	$page = myget($arg[0],"cache/ftv/$text",1/1.0);
+} else {
+	$base = "https://www.france.tv/";
+	$server = "www.france.tv";
+	$page = myget($base,"cache/ftv/j0",1/12.0);
+}
+
+if ($page =~ /FTVPlayerVideo/) {
+	say "direct";
+	say "Vidéo";
+	say "get,vid:$str";
+	exit(0);
+}
+
+say "list";
+# say "Recherche\nRecherche";
+
+if (!$arg[0]) { # le menu des chaines, uniquement sur la 1ère page
+	while ($page =~ s/a class="c-metanav-nav-item.+?" href="(.+?)".+?> (.+?) <//) {
+		my $url = $1;
+		my $text = decode_entities($2);
+		say $text;
+		if ($url =~ /^\/[a-z]/) {
+			$url = "https://www.france.tv$url";
+		} elsif ($url =~ /^\/\//) {
+			$url = "https:$url";
+		}
+		$url =~ s/\//|/g; # pour que l'url puisse être passée en argument, on a pas le droit au /
+		say $url;
+	}
+}
+while ($page =~ s/a href="([^<^>^"]+?)" class="c-card-(mea|main-mea).+?alt="(.+?)"// ||
+$page =~ s/<a href="([^<^>^"]+?)" class="c-card-(video).+?><div class="c-card-video__title ?"> (.+?) ?<.+?<div class="c-card-video__description ?"> ?(.+?) ?<// ||
+$page =~ s/<a class="c-card-program__link" href="(.+?)" title="(.+?)"//) {
+	my $url = $1;
+	my $post = $4;
+	my $text = "";
+	$text = decode_entities($3) if ($3);
+	$text = decode_entities($2) if (!$text);
+	$text .= " ".decode_entities($post) if ($post);
+	if ($url =~ /^\/[a-z]/) {
+		$url = "https://$server$url";
+	} elsif ($url =~ /^\/\//) {
+		$url = "https:$url";
+	}
+	$url =~ s/\//|/g; # pour que l'url puisse être passée en argument, on a pas le droit au /
+	say $text;
+	say $url;
+}
+
