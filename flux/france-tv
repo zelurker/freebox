@@ -22,18 +22,6 @@ my $server;
 
 my $page;
 my $base;
-if ($arg[0] =~ s/^vid://) {
-	$arg[0] =~ s/\|/\//g;
-	# Normalement on téléchargerait la vidéo en appelant youtube-dl pour la
-	# stocker dans le rép cache... sauf que certaines des vidéos ont une
-	# piste audio séparée, youtube-dl downloade les pistes séparément avant
-	# de les mixer ce qui est très long. mpv le fait à sa sauce si on lui
-	# passe l'url... (en récupérant les urls et en faisant le mixage à la
-	# volée). Ca serait à priori compliqué de faire pareil à la main,
-	# autant le laisser faire à priori... !
-	say $arg[0];
-	exit(0);
-}
 
 if ($arg[0]) {
 	my $text = $arg[0];
@@ -54,7 +42,10 @@ if ($arg[0]) {
 if ($page =~ /FTVPlayerVideo/) {
 	say "direct";
 	say "Vidéo";
-	say "get,vid:$str";
+	# on a même plus besoin d'appeler youtube-dl, c'est mpv qui se charge
+	# de tout, du coup lien direct, et on renvoie arg[0] au lieu de str, la
+	# version pour que list.pl traitera bien comme une url
+	say $arg[0];
 	exit(0);
 }
 
