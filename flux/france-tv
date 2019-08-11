@@ -62,7 +62,7 @@ say "list";
 # say "Recherche\nRecherche";
 
 if (!$arg[0]) { # le menu des chaines, uniquement sur la 1ère page
-	while ($page =~ s/a class="c-metanav-nav-item.+?" href="(.+?)".+?> (.+?) <//) {
+	while ($page =~ s/a href="([^"]+?)" class="c-sub-nav-item-channel.+?><img .+?alt="(.+?)"//) {
 		my $url = $1;
 		my $text = decode_entities($2);
 		say $text;
@@ -75,21 +75,36 @@ if (!$arg[0]) { # le menu des chaines, uniquement sur la 1ère page
 		say $url;
 	}
 }
-while ($page =~ s/a href="([^<^>^"]+?)" class="c-card-(mea|main-mea).+?alt="(.+?)"// ||
-$page =~ s/<a href="([^<^>^"]+?)" class="c-card-(video).+?><div class="c-card-video__title ?"> (.+?) ?<.+?<div class="c-card-video__description ?"> ?(.+?) ?<// ||
+while ($page =~ s/a href="([^<^>^"]+?)" class="c-card-(mea|main-mea).+?data-src="(.+?)" alt="(.+?)"// ||
+$page =~ s/imagearea"><img src=".+?" data-src="(.+?)" alt="(.+?)".+?<a href="([^<^>^"]+?)" class="c-card-video.+?><div class="c-card-video__title ?"> (.+?) ?<.+?<div class="c-card-video__description ?"> ?(.+?) ?<// ||
 $page =~ s/<a class="c-card-program__link" href="(.+?)" title="(.+?)"//) {
 	my $url = $1;
 	my $post = $4;
-	my $text = "";
-	$text = decode_entities($3) if ($3);
-	$text = decode_entities($2) if (!$text);
-	$text .= " ".decode_entities($post) if ($post);
+	my $postb = $5;
+	my $img = undef;
+	my $t = $3;
+	my $text = undef;
+	$text = decode_entities($2) if ($2);
+	$text = undef if ($text =~ /^"/);
+	if ($t =~ /^\/\//) {
+		$img = "https:$t";
+		$text = decode_entities($post);
+	} elsif ($t =~ /^\/[a-z]/ && $url =~ /^\/\//) {
+		$img = "https:$url";
+		$url = $t;
+		$text = decode_entities($post) if (!$text);
+		$text .= " ".decode_entities($postb) if ($postb);
+	} else {
+		$text = decode_entities($t) if ($t);
+		$text .= " ".decode_entities($post) if ($post);
+	}
 	if ($url =~ /^\/[a-z]/) {
 		$url = "https://$server$url";
 	} elsif ($url =~ /^\/\//) {
 		$url = "https:$url";
 	}
 	$url =~ s/\//|/g; # pour que l'url puisse être passée en argument, on a pas le droit au /
+	print "pic:$img " if ($img);
 	say $text;
 	say $url;
 }
