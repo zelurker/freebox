@@ -1074,7 +1074,14 @@ sub run_mplayer2 {
 		"-fs",
 		$quiet,
 		@dvd2);
-	push @list, split / /,$serv;
+	if ($serv =~ /^\-/) {
+		# si $serv débute par un -, on suppose que c'est une ligne de
+		# commande, donc on passe ça à mpv, en espérant qu'il n'y ait pas
+		# d'espace pour la partie fichier. Utilisé par le plugin youtube
+		push @list, split / /,$serv;
+	} else {
+		push @list,$serv;
+	}
 	push @list,("-vf", $filter) if ($filter);
 	push @list,("-identify","-stop-xscreensaver","-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
@@ -1158,7 +1165,7 @@ sub load_file2 {
 	# retourne 1 si on a lancé un lecteur, 0 si on a juste modifié la liste
 	my ($name,$serv,$flav,$audio,$video) = @_;
 	my $prog;
-	my ($name,$src) = out::get_current();
+	my ($nm,$src) = out::get_current();
 	$prog = $1 if ($src !~ /youtube/ && $serv =~ s/ (http.+)//);
 	if ($serv =~ /(jpe?g|png|gif|bmp)$/i) {
 		system("feh \"$serv\"");
