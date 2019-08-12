@@ -4,6 +4,7 @@ use strict;
 require "http.pl";
 use HTML::Entities;
 use v5.10;
+use lib ".";
 
 binmode STDERR; # ,":utf8";
 binmode STDOUT; # ,":utf8";
@@ -11,76 +12,9 @@ my $str = shift @ARGV;
 my $debug = 0; # infos
 my $dump = 0;  # dump toute l'entrée ligne par ligne
 $str =~ s/^result\://;
-if ($str =~ /^get,(\d+),(.+?),(.+)/) {
-	print STDERR "str $str sending direct\n";
-	my ($format,$codec,$suffix) = ($1,$2,$3);
-	$codec =~ s/video\///;
-	print STDERR "got format $format suffix $suffix\n";
-	my $title;
-	if (open(F,"<cache/yt/$suffix")) {
-		$title = <F>;
-		chomp $title;
-		$title =~ s/^pic:.+? //;
-		close(F);
-		print STDERR "got title $title\n";
-	} else {
-		die "could not get title from $suffix\n";
-	}
-	again:
-	if (! -f "$ENV{HOME}/bin/youtube-dl" || -M "$ENV{HOME}/bin/youtube-dl" > 30) {
-		mkdir "$ENV{HOME}/bin";
-		unlink "$ENV{HOME}/bin/youtube-dl";
-		say STDERR "récupération de youtube-dl...";
-		# apparemment le binaire est modifié après execution, on lui retire
-		# les droits d'écriture, pas sûr que ça suffise mais ça vaut le
-		# coup de voir...
-		system("wget -N -c -O ~/bin/youtube-dl https://yt-dl.org/downloads/latest/youtube-dl 2> /dev/null && chmod +x ~/bin/youtube-dl");
-	}
-	my $file = $title;
-	$file =~ s/ /_/g;
-	$file =~ s/\&\#(..)\;/chr($1)/ge;
-	while ($file =~ s/[^a-zA-Z0-9-_.éèêàù]//g) {}
-	$file .= ".$codec";
-	my $pid = fork();
-	if (!$pid) {
-		say STDERR "*** lancement youtube-dl -q -o $file -f $format https://www.youtube.com/watch?v=$suffix";
-		chdir("records");
-		exec("~/bin/youtube-dl -q -o $file -f $format https://www.youtube.com/watch?v=$suffix 1> /dev/null");
-	} else {
-		my $tries = 0;
-		$| = 1;
-		while (!-f "records/$file.part" && !-f "records/$file" && $tries < 10) {
-			$tries++;
-			say STDERR "pas de fichier records/$file\[.part] try $tries";
-			sleep 1;
-		}
-		if ($tries == 10) {
-			print STDERR "pas trouvé le fichier attendu racine:records/$file.\n";
-			if (-M <~/bin/youtube.dl> > 1) {
-				say STDERR "on va tenter une màj de youtube-dl...";
-				kill TERM => $pid;
-				unlink <~/bin/youtube-dl>;
-				goto again;
-			}
-			print "records/$file*\n";
-			exit(0);
-		}
-		print STDERR "trouvé le fichier après $tries secondes\n";
-		$file = "records/$file";
-		$file .= ".part" if (! -f $file);
-		print STDERR "file = $file\n";
-		my $r = $file;
-		$r =~ s/.part$//;
-		rename("cache/yt/$suffix","$r.info");
-		$tries = 0;
-		while (-s "$file" < 3*1024*1024 && $tries < 10) {
-			sleep 1;
-			$tries ++;
-		}
-		print STDERR "taille ",(-s "$file")," après $tries secondes\n";
-		print "$file\n";
-		exit(0);
-	}
+if ($str =~ /^get,(.+)/) {
+	say $1;
+	exit(0);
 } elsif ($str !~ /^http/ || $str =~ /channel/) {
 	print STDERR "str $str sending list\n";
 	print "list\n";
@@ -235,102 +169,12 @@ foreach (split /\n/) {
 }
 
 sub handle_tag {
-	# Cette sub récupère les différents formats vidéos d'une page, y en a
-	# de 2 sortes qui sont déterminés par start_tag :
-	# url_encoded_fmt_map qui est le format par défaut
-	# adaptive_fmt qui fournit une résolution et une piste audio séparée !
-	# Avant j'essayais aussi de décoder la signature, mais je n'ai jamais
-	# trouvé comment elle change environ tous les jours, donc je laisse
-	# tomber et je laisse ça à youtube-dl, je garde quand même la sub pour
-	# la liste des formats, beaucoup + rapide que d'appeler youtube-dl pour
-	# ça.
-	my ($start_tag,$title) = @_;
-	my $last = "";
-	print STDERR "handle_tag start_tag $start_tag title $title.\n" if ($debug);
-	while (s/\"$start_tag\": ?\"(.+?)\"//) {
-		print STDERR "in while\n" if ($debug);
-		my $url = $1;
-		$url =~ s/\\\//\//g;
-		$url =~ s/%(..)/chr(hex($1))/ge;
-		$url =~ s/generate_204/videoplayback/g;
-		$url =~ s/\\u(....)/chr(hex($1))/ge;
-		my ($tag) = $url =~ /^(.+?)\=/;
-		print STDERR "starting tag $tag\n" if ($debug);
-		my (@name,@url);
-		my $audio;
-		while ($url =~ s/($tag=.+?)(,$tag=|$)/$2/) {
-			my $u = $1;
-			$u =~ s/\\\//\//g;
-			while ($u =~ s/%(..)/chr(hex($1))/ge) {}
-			$u =~ s/generate_204/videoplayback/g;
-			$u =~ s/\\u(....)/chr(hex($1))/ge;
-			# L'url arrive avec la plupart de ses arguments encodés, et une
-			# partie en clair (et pour certains doublés, comme itag). Passer
-			# itag en double provoque un 403, donc le + simple c'est de tout
-			# remettre à plat en récupérant tout dans un hash et en éliminant
-			# ce qu'on veut pas
-			print STDERR "url $u\n" if ($debug);
-			my @args = split(/[\?\&]/,$u);
-			my %args;
-			foreach (@args) {
-				# La séparation actuelle des args est un hack, il faudrait
-				# revoir ça pour gérer correctement les pistes séparées, le
-				# problème c'est que c'est un sacré bazar :
-				# arguments \u0026 qui font une espèce de header
-				# puis argument url avec arguments internes collés avec des
-				# %3d
-				# puis un autre bloc \u0026 pour la partie audio
-				# donc séparer les 2 s'annonce + que délicat. Pour
-				# l'instant seule la dernière url audio est récupéré avec
-				# ce hack, c'est + une preuve que ça marche...
-				# my (@eq) = split(/=/);
-				# $args{$eq[0]}=join("",@eq[1..$#eq]);
-				my ($name,$val) = split(/=/);
-				$args{$name}=$val;
-			}
-			my $type = delete $args{type};
-#			# Ca valait le coup d'essayer, mais apparemment requiressl ne
-#			change pas grand chose, si on essaye de le coller à no on prend
-#			toujours un 403 en http, et aucun flux en https. Vaut mieux pas
-#			toucher !
-#			if ($args{requiressl}) {
-#				$args{requiressl} = "no";
-#				$args{url} =~ s/https/http/;
-#			}
-			my $q = delete $args{quality};
-			$q = delete $args{size} if (!$q);
-			$q =~ s/,.+//;
-			delete $args{index};
-			my $bitrate = delete $args{bitrate};
-			delete $args{init};
-			$last = $q;
-			$type =~ s/;.+//;
-			$u = delete $args{url};
-			$u .= "?";
-			foreach (keys %args) {
-				$u .= "&$_=".$args{$_};
-			}
-			print STDERR "processing q=$q type=$type bitrate=$bitrate\n" if ($debug);
-			# Sépare les pistes audio pour les adaptive
-			if ($type !~ /^audio/) {
-				# Il faut garder le titre ici pour le bandeau d'info...
-				push @name,"$title $q $type $args{codecs}"; # on laisse tomber le bitrate
-				push @url,"get,$args{itag},$type,$suffix";
-			} else {
-				$audio = "$u";
-				print STDERR "*** addendum à $name[$#name] = $type\n";
-				$name[$#name] .= " $type"; # apparemment l'audio est 2ème
-			}
+	open(F,"youtube-dl -F \"$str\"|");
+	while(<F>) {
+		if (/^(\d+)/) {
+			print;
+			say "--ytdl-format=$1 $str";
 		}
-		if ($audio) {
-			foreach (@url) {
-				$_ .= " $audio";
-			}
-		}
-		print STDERR "in ze end : $#name names\n" if ($debug);
-		for (my $n=0; $n<=$#name; $n++) {
-			print "$name[$n]\n$url[$n]\n";
-		}
-		# return $url;
 	}
+	close(F);
 }

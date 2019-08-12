@@ -1019,9 +1019,6 @@ sub run_mplayer2 {
 		$serv =~ s/ http.+//; # Stations de radio, vire l'url du prog
 	} else {
 		$audio = "-aid $audio " if ($audio);
-		if ($src =~ /youtube/ && $serv =~ s/ (http.+)//) {
-			$audio = $1;
-		}
 		if ($src =~ /Fichiers vidéo/) {
 # 			if ($name =~ /(mpg|ts)$/) {
 # 				$filter = ",kerndeint";
@@ -1069,7 +1066,7 @@ sub run_mplayer2 {
 	$filter .= "screenshot" if ($player !~ /^mpv/);
 	my @list;
 	@list = ("perl","filter_mplayer.pl") if ($player =~ /mplayer/); # pour mpv à priori filter_mplayer va devenir inutile !
-	push @list, ($player,$dvd1,$serv,
+	push @list, ($player,$dvd1,
 		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
 		# Apparemment options interdites avec vdpau, sinon on perd la synchro !
 #			"-framedrop", # "-nocorrect-pts",
@@ -1077,6 +1074,7 @@ sub run_mplayer2 {
 		"-fs",
 		$quiet,
 		@dvd2);
+	push @list, split / /,$serv;
 	push @list,("-vf", $filter) if ($filter);
 	push @list,("-identify","-stop-xscreensaver","-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
@@ -1160,7 +1158,8 @@ sub load_file2 {
 	# retourne 1 si on a lancé un lecteur, 0 si on a juste modifié la liste
 	my ($name,$serv,$flav,$audio,$video) = @_;
 	my $prog;
-	$prog = $1 if ($serv =~ s/ (http.+)//);
+	my ($name,$src) = out::get_current();
+	$prog = $1 if ($src !~ /youtube/ && $serv =~ s/ (http.+)//);
 	if ($serv =~ /(jpe?g|png|gif|bmp)$/i) {
 		system("feh \"$serv\"");
 		return 1;
