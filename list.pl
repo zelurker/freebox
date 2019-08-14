@@ -1165,8 +1165,7 @@ sub load_file2 {
 	# retourne 1 si on a lancé un lecteur, 0 si on a juste modifié la liste
 	my ($name,$serv,$flav,$audio,$video) = @_;
 	my $prog;
-	my ($nm,$src) = out::get_current();
-	$prog = $1 if ($src !~ /youtube/ && $serv =~ s/ (http.+)//);
+	$prog = $1 if ($base_flux !~ /^youtube/ && $serv =~ s/ (http.+)//);
 	if ($serv =~ /(jpe?g|png|gif|bmp)$/i) {
 		system("feh \"$serv\"");
 		return 1;
