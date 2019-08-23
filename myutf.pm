@@ -26,7 +26,7 @@ sub mydecode {
 	}
 	return if ($max_ord < 128);
 	if (!$latin) {
-		if ($$ref =~ /[\xc3\xc5]/ || $max_ord > 255) {
+		if ($$ref =~ /[\xc3\xc5\xe2]/ || $max_ord > 255) {
 			# print "to_utf: reçu un truc en utf: $$ref\n";
 			return;
 		}
