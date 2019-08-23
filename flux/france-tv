@@ -32,7 +32,7 @@ if ($arg[0]) {
 	$base = $arg[0];
 	$base =~ /https?...(.+?)\//;
 	$server = $1;
-	$page = myget($arg[0],"cache/ftv/$text",1/1.0);
+	$page = myget($arg[0],"cache/ftv/$text",1/24.0);
 } else {
 	$base = "https://www.france.tv/";
 	$server = "www.france.tv";
