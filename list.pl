@@ -469,8 +469,8 @@ sub read_list {
 	} elsif ($source eq "cd") {
 		cd_menu();
 	} elsif ($source eq "dvd") {
-		@list = ([[1,"mplayer dvdnav"]],
-		[[2,"mplayer dvd raw"]],
+		@list = ([[1,"mpv dvdnav"]],
+		[[2,"mpv dvd raw"]],
 		[[3,"vlc"]],
 		[[3,"eject"]]);
 	} elsif ($source =~ /freebox/) {
@@ -1028,11 +1028,11 @@ sub run_mplayer2 {
 	}
 	my ($dvd1,@dvd2);
 	if ($serv =~ /iso$/i || $src eq "dvd") {
-		if ($flav eq "mplayer dvdnav") {
-			$player = "mplayer";
+		if ($flav eq "mpv dvdnav") {
+			$player = "mpv";
 			$dvd1 = "-dvd-device";
 			$serv = $dvd;
-			@dvd2 = ("-nocache");
+			@dvd2 = ("--no-cache");
 			push @dvd2, "dvdnav://";
 		} elsif ($flav eq "vlc") {
 			exec("vlc","-f","--deinterlace","-1",$serv);
@@ -1046,21 +1046,6 @@ sub run_mplayer2 {
 	unlink "fifo_cmd","fifo","mpvsocket","video_size";
 	system("mkfifo fifo_cmd fifo") if ($player =~ /^mplayer/);
 	out::clear("list_coords","info_coords","numero_coords");
-	if ($player eq "mplayer2" && $serv =~ /(avi|mkv$)/ &&
-		# Dilemne : mplayer2 ne supporte pas le x265, mais mplayer est
-		# bourré de bugs ! Donc on continue à avoir mplayer2 par défaut
-		# sauf sur les fichiers où on ne trouve pas la vidéo avec lui !
-	   	open(F,"$player -frames 0 -identify \"$serv\"|")) {
-		my $found_video = 0;
-		while (<F>) {
-			if (/ID_VIDEO_FORMAT/) {
-				$found_video = 1;
-				last;
-			}
-		}
-		close(F);
-		$player = "mplayer" if (!$found_video);
-	}
 	$filter = "bmovl=1:0:fifo$filter" if ($player =~ /^mplayer/); # pas de bmovl dans mpv, un sacré merdier...
 	$filter .= "," if ($filter);
 	$filter .= "screenshot" if ($player !~ /^mpv/);
@@ -1287,22 +1272,19 @@ sub load_file2 {
 			kill "TERM" => $pid_player2;
 			$child_checker = undef;
 		}
-		if ($src eq "dvd" && $flav eq "mplayer dvd raw") {
-			open(F,"mplayer2 -dvd-device $dvd dvd://2 -nocache -identify -frames 0|");
+		if ($src eq "dvd" && $flav eq "mpv dvd raw") {
+			say "lancement mpv -dvd-device $dvd dvd://2 --no-cache -frames 0 --no-video -script dvd.lua|";
+			open(F,"mpv -dvd-device $dvd dvd://2 --no-cache -frames 0 --no-video -script dvd.lua|");
 			@list = ();
-			my @title = ();
 			my @length = ();
 			while (<F>) {
-				if (/ID_DVD_TITLE_(\d+)_CHAPTERS=(\d+)/) {
-					$title[$1-1] = "Titre $1 : $2 chapitres";
-					say "$_ -> title = ".$title[$1-1];
-				} elsif (/ID_DVD_TITLE_(\d+)_LENGTH=(\d+)/) {
-					$length[$1-1] = $2;
-					print "$_ -> length = $2\n";
+				if (/length (\d+)/) {
+					say "got length $1";
+					push @length,$1;
 				}
 			}
 			close(F);
-			for (my $n=0; $n<=$#title; $n++) {
+			for (my $n=0; $n<=$#length; $n++) {
 				my $l = $length[$n];
 				my $t = "";
 				if ($l >= 3600) {
@@ -1315,7 +1297,7 @@ sub load_file2 {
 					$l -= sprintf("%d",$l/60)*60;
 				}
 				$t .= $l."s";
-				push @list,[[$n+1,"$title[$n], $t","dvd://$n"]];
+				push @list,[[$n+1,$t,"dvd://$n"]];
 			}
 			disp_list();
 			return;
