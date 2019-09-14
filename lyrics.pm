@@ -249,6 +249,7 @@ sub pure_ascii {
 	s/([éèêë]|\xc3\xa9)/e/g;
 	s/ô/o/g;
 	s/[ùû]/u/g;
+	s/(ü|\xc3\xbc)/u/g;
 	s/(ç|\xc3\xa7)/c/g;
 	s/[!,?;\-]/ /g;
 	s/ +/ /g;
