@@ -345,7 +345,7 @@ sub commands {
 	# A priori utile juste pour prog
 	$long = $old_long if ($cmd !~ /^prog /);
 
-	print "info: reçu commande $cmd long:$long.\n";
+	print "info: reçu commande $cmd long:$long.\n" if ($cmd !~ /^progress/);
 	if ($cmd eq "clear") {
 		$fadeout = $refresh = undef;
 		out::clear("info_coords");
@@ -435,7 +435,11 @@ sub commands {
 				read_stream_info(time(),$channel,$info{$name});
 			}
 			if ($info{$name}->{metadata}->{genre} =~ /podcast/i && $info{$name}->{metadata}->{album}) {
-				handle_images($info{$name}->{metadata}->{album});
+				my $title = lyrics::pure_ascii($info{$name}->{metadata}->{title});
+				if (handle_images($info{$name}->{metadata}->{album}." - $title") ||
+					handle_images($title) ||
+					handle_images($info{$name}->{metadata}->{album})) {
+				}
 			} else {
 				handle_images($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
 			}
@@ -743,6 +747,7 @@ sub handle_images {
 		# $has_vignettes = 1;
 		out::send_bmovl("vignettes") if ($has_vignettes);
 		my $result = $agent->{tab};
+		return 0 if ($#$result == -1);
 		push @cur_images,$result;
 		handle_result($result);
 	} else {
@@ -750,5 +755,6 @@ sub handle_images {
 		my $result = $cur_images[1];
 		handle_result($result);
 	}
+	return 1;
 }
 
