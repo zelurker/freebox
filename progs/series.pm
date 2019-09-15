@@ -113,7 +113,7 @@ sub get {
 			my $syn = 0;
 			my $dump = 0;
 			foreach (split /\n/,$_) {
-				if (/<img.*data-src="(http.+?)"/i) {
+				if (/<img.*data-src="(http.+?)"/i && !$dump) {
 					$img = $1;
 				} elsif (/$search/i) {
 					s/\<.+?\>//g;
@@ -136,7 +136,7 @@ sub get {
 			} # foreach
 			my $img2;
 			# ($cast,$img2) = find_actor($mech);
-			$img = $img2 if (!$img);
+			# $img = $img2 if (!$img);
 			last if ($sum ne "");
 		}
 		if (0) { # !$cast) {
