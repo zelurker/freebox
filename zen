@@ -1,5 +1,17 @@
 #!/bin/sh
 
+if ! type gtkdialog >& /dev/null; then
+	# pas de gtkdialog, il n'est plus sur arch en ce moment !
+	# dans ce cas là on fait avec zenity, sans vérifier qu'il est là
+	rep=`zenity --entry --text="$1"`
+	if [ "$rep" != "" ]; then
+		echo 'EXIT="gtk-ok" ENTRY='$rep
+	else
+		echo nada
+	fi
+	exit 0
+fi
+
 GTKDIALOG=gtkdialog
 
 # on a pas la touche esc associée au bouton cancel !!!

@@ -2,12 +2,17 @@
 
 export PERL_USE_UNSAFE_INC=1
 
-for n in wget socat gtkdialog mpv; do
+# unzip est pour cpan en fait
+for n in wget socat mpv unzip; do
 if ! type $n > /dev/null 2> /dev/null; then
 	echo install $n
 	warn=1
 fi
 done
+if ! type gtkdialog >& /dev/null && ! type zenity >& /dev/null; then
+	echo install gtkdialog or zenity
+	warn=1
+fi
 if [ "$warn" == "1" ]; then
 	exit 1
 fi
@@ -39,17 +44,18 @@ if ! [ -f Vera.ttf ]; then
 		fi
 	fi
 fi
-if ! perl -c info.pl; then
+if ! ./perlcheck.pl info.pl; then
 	echo problèmes avec votre install de perl, dsl !
 	exit 1
 fi
-if ! perl -c list.pl; then
+if ! ./perlcheck.pl  list.pl; then
 	echo problèmes avec votre install de perl, dsl !
 	exit 1
 fi
-if ! perl -c filter_mplayer.pl; then
-	echo problèmes filter_mplayer.pl
-	exit 1
+if ! perl -MLWP::Protocol::https -e "" >& /dev/null; then
+	if ! cpan -T LWP::Protocol::https; then
+		exit 1
+	fi
 fi
 ulimit -c unlimited
 find cache/ -mtime +3 -delete
