@@ -54,7 +54,10 @@ sub send_cmd_fifo {
 		}
        tcp_connect "unix/", "$cwd/$fifo", sub {
           my ($fh) = @_;
-		  binmode $fh,":utf8" if ($fh && !$latin);
+		  # pas de binmode $fh,":utf8", c'est interdit en 5.30, et de
+		  # toutes façons les handles doivent rester neutres dans cette
+		  # interface
+		  binmode $fh if ($fh && !$latin);
 		  async {
 			  $fh = unblock $fh;
 			  if (!$fh) {
