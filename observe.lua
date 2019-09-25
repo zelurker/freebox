@@ -2,6 +2,7 @@ local mp = require 'mp'
 socket = require "socket"
 socket.unix = require"socket.unix"
 local last_time = 0
+local last_arate = 0
 
 function on_width_change(name,value)
 	local file = io.open("video_size","r")
@@ -56,6 +57,10 @@ function on_abitrate(name,value)
 		if not acodec then
 			return
 		end
+		if math.abs(value/1000-last_arate) < 1 then
+			return
+		end
+		last_arate = value/1000
 		local c = assert(socket.unix())
 		if (c:connect("sock_info")) then
 			c:send("codec " .. acodec .. " " .. (value/1000) .. "k")
