@@ -60,7 +60,12 @@ sub send_cmd_fifo {
 			  if (!$fh) {
 				  print "couldn't get unblock from fifo $fifo\n";
 			  } else {
-				  $fh->print( $cmd);
+				  # Le print $fh au lieu du $fh->print fait des miracles
+				  # ici ! $fh->print est traduit par un syswrite pour je ne
+				  # sais quelle raison, ce qui provoque un die avec perl
+				  # 5.30 car les syswrite sont interdits sur une handle en
+				  # utf8...
+				  print $fh $cmd;
 				  if (defined($rep)) {
 					  my $reply = $fh->readline();
 					  $rep->put($reply);

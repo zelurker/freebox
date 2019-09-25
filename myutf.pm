@@ -6,6 +6,7 @@ package myutf;
 
 use Encode;
 use strict;
+use v5.10;
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
 
@@ -26,8 +27,10 @@ sub mydecode {
 	}
 	return if ($max_ord < 128);
 	if (!$latin) {
-		if ($$ref =~ /[\xc3\xc5\xe2]/ || $max_ord > 255) {
-			# print "to_utf: reçu un truc en utf: $$ref\n";
+		# Le test e2 pour ref peut être mal interprêté, c'est le â dans
+		# théâtre... !
+		if ($$ref =~ /[\xc3\xc5]/ || $max_ord > 255) {
+			# print "to_utf: reçu un truc en utf: $$ref max_ord $max_ord\n";
 			return;
 		}
 		eval {
