@@ -5,7 +5,7 @@ if ! type gtkdialog >& /dev/null; then
 	# dans ce cas là on fait avec zenity, sans vérifier qu'il est là
 	rep=`zenity --entry --text="$1"`
 	if [ "$rep" != "" ]; then
-		echo 'EXIT="gtk-ok" ENTRY='$rep
+		echo 'EXIT="gtk-ok" ENTRY="'`echo $rep`'"'
 	else
 		echo nada
 	fi
