@@ -1045,7 +1045,7 @@ sub run_mplayer2 {
 
 	unlink "fifo_cmd","fifo","mpvsocket","video_size";
 	system("mkfifo fifo_cmd fifo") if ($player =~ /^mplayer/);
-	out::clear("list_coords","info_coords","numero_coords");
+	out::clear("info_coords","numero_coords");
 	$filter = "bmovl=1:0:fifo$filter" if ($player =~ /^mplayer/); # pas de bmovl dans mpv, un sacré merdier...
 	$filter .= "," if ($filter);
 	$filter .= "screenshot" if ($player !~ /^mpv/);
