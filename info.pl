@@ -170,7 +170,7 @@ sub read_stream_info {
 			} else {
 				print $out " $progress\n\n";
 			}
-			print $out "Dernier morceau : $last\n" if ($last);
+			print $out "Dernier morceau : $last\n" if ($last && $source !~ /^Fichiers/);
 			print $out "Paroles : $rinfo->{lyrics}" if ($rinfo->{lyrics});
 			out::close_fifo($out);
 			setup_fadeout($long);
@@ -416,7 +416,7 @@ sub commands {
 			if (!$info{$name}->{tracks}) {
 				$info{$name}->{tracks} = \@track;
 			} else {
-				return if (${$info{$name}->{tracks}}[0] eq $track[0]);
+				return if (${$info{$name}->{tracks}}[0] eq $track[0] && $source !~ /^Fichiers/);
 				unshift @{$info{$name}->{tracks}},@track;
 			}
 			$channel = $name0;
