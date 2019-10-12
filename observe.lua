@@ -21,7 +21,11 @@ function on_width_change(name,value)
 		if exists then
 			return
 		end
-		os.remove("info_coords")
+		local c = assert(socket.unix())
+		if (c:connect("sock_list")) then
+			c:send("clear\n")
+			c:close()
+		end
 		-- on insère l'appel dans une pause de 1s parce que la video se
 		-- configure 2 fois très rapidement quand lancé en plein écran !
 		mp.add_timeout(0.2,function ()
