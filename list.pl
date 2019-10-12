@@ -1572,6 +1572,7 @@ sub commands {
 			} else {
 				unlink $file;
 				unlink "$file.info";
+				unlink "$file.lyrics";
 			}
 		} elsif ($source eq "flux") {
 			my $b = $base_flux;
