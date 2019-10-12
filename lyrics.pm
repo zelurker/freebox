@@ -310,10 +310,12 @@ sub get_lyrics {
 		$mp3->get_tags;
 		if (exists $mp3->{ID3v1}) {
 			$id3v1 = 1;
+		  my ($track,$album,$comment,$year,$genre);
+		  ($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
           # read some information from the tag
 		  my $id3v1 = $mp3->{ID3v1};
 		  $artist = $id3v1->artist;
-		  $title = $id3v1->title;
+		  $title = $id3v1->title if (length($title) <= length($id3v1->title));
 		  say "lyrics: using id3v1";
   	    } else {
 			my ($track,$album,$comment,$year,$genre);
