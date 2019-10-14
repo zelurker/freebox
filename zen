@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 if ! type gtkdialog >& /dev/null; then
 	# pas de gtkdialog, il n'est plus sur arch en ce moment !
