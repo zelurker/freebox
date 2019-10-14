@@ -79,3 +79,4 @@ if ! ./bmovl-src/bmovl fifo; then
 		echo probleme avec bmovl, vérifiez !
 	fi
 fi
+kill `cat info_pl.pid`
