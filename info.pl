@@ -126,6 +126,7 @@ sub conv {
 
 sub read_stream_info {
 	my ($time,$cmd,$rinfo) = @_;
+	$cleared = 0;
 	# Là il peut y avoir un problème si une autre source a le même nom
 	# de chaine, genre une radio et une chaine de télé qui ont le même
 	# nom... Pour l'instant pas d'idée sur comment éviter ça...
