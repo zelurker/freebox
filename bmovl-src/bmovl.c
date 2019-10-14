@@ -835,9 +835,9 @@ static int nb_keys,*keys;
 static char **command;
 
 static void read_inputs() {
-    FILE *f = fopen("input.conf","r");
+    FILE *f = fopen("input-mpv.conf","r");
     if (!f) {
-	printf("can't read inputs from input.conf\n");
+	printf("can't read inputs from input-mpv.conf\n");
 	return;
     }
     char buff[80];
