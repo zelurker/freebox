@@ -736,7 +736,8 @@ sub read_list {
 					# Quand on relance freebox, get_name ne peut pas avoir la
 					# bonne valeur, on doit la déduire de base_flux si on veut
 					# que ça marche !
-					$serv = $1;
+					# Note pourquoi virer result: ici ?!!
+					$serv = "result:$1";
 				}
 
 				print "list: execution plugin flux $b param $serv base_flux $base_flux\n";
