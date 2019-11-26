@@ -401,10 +401,12 @@ sub commands {
 		if ($i =~ /^icy-title/i && ($v =~ /(.+) - (.+)/ ||
 				$v =~ /(.+) \xc3\x8b\xc2\x97 (.+)/)) {
 			my ($artist,$title) = ($1,$2);
-			say "icy-title: artist:$artist title:$title";
-			$title =~ s/\|.+//; # y a des numéros bizarres intercalés par des || sur hotmix
-			$info{$name}->{metadata}->{artist} = $artist;
-			$info{$name}->{metadata}->{title} = $title;
+			if (!($artist =~ /^\d+$/ && $title =~ /^\d+$/)) { # délire chérie fm
+				say "icy-title: artist:$artist title:$title";
+				$title =~ s/\|.+//; # y a des numéros bizarres intercalés par des || sur hotmix
+				$info{$name}->{metadata}->{artist} = $artist;
+				$info{$name}->{metadata}->{title} = $title;
+			}
 		} elsif ($i =~ /^icy-title/i) {
 			for (my $n=0; $n<=length($v); $n++) {
 				say substr($v,$n,1)," ",ord(substr($v,$n,1));
@@ -480,7 +482,7 @@ sub commands {
 		# envoyer progress, on ne peut le bloquer qu'ici...
 		return if ($src =~ /^flux\/(stations|ecoute_directe|freetuxtv)/);
 		$name .= "&$src";
-		if (!$cleared && $name eq conv($channel) ) { # && $src !~ /^flux\/podcasts/) {
+		if (!$cleared && ($name eq conv($channel) || $src =~ /^Fichiers son/) ) { # && $src !~ /^flux\/podcasts/) {
 			# Ne pas afficher de progress sur les podcasts, conflit avec
 			# l'info progs/podcasts
             # A noter que ça pourrait être pas mal d'avoir le progress
@@ -495,6 +497,8 @@ sub commands {
 				$info{$name}->{progress} = "$pos - $dur";
 				read_stream_info(time(),$channel,$info{$name});
 			}
+		} else {
+			say "progress: cleared $cleared name $name eq ",conv($channel);
 		}
 	} elsif ($cmd =~ /^lyrics/) {
 		my ($name,$src) = get_cur_name();
