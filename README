@@ -11,7 +11,7 @@ Les fonctionnalités :
    vidéos sont toujours accessibles sur la freebox (je suis plus chez free
    depuis longtemps !). Evidemment c'est de la télé par dvr, donc programme
    des chaines en temps réel, pause, avance et retour rapide, sélection des
-   cannaux audio ou sous titres, et toutes les fonctions de mplayer sur la
+   cannaux audio ou sous titres, et toutes les fonctions de mpv sur la
    vidéo.  Remarque ça utilise le principe de "livetv" de mythtv, c'est à dire
    que toute chaine regardée est automatiquement enregistrée, et
    l'enregistrement conservé pendant 24h dans un répertoire livetv, donc si on
@@ -22,7 +22,7 @@ Les fonctionnalités :
    carte récente pour que ça marche.
  - Evidemment on peut aussi voir des fichiers vidéo, tout ce qui est
    accessible par le système de fichiers, que ça soit distant ou pas, tant
-   que c'est décodable par mplayer, ça marche aussi avec le h265, et ça
+   que c'est décodable par mpv, ça marche aussi avec le h265, et ça
    permet d'utiliser la sortie audio optique si on en a une. Sauvegarde de
    là où on en est de la lecture et reprise automatique.
  - les chansons en local, avec affichage des paroles dans le bandeau d'info
@@ -30,14 +30,15 @@ Les fonctionnalités :
    pendant la lecture (ça marche aussi avec les radios et les cds audios).
  - Les flux réseau : arte (arte+7), youtube (par youtube-dl maintenant),
    radios du web (+ d'1 centaine actuellement, on peut facilement en
-   ajouter d'autres), podcasts avec recherche utilisant google, shoutcast.
+   ajouter d'autres), podcasts avec recherche utilisant google, shoutcast,
+   et toutes les chaines france-tv grace à youtube-dl.
    Pour les radios, la plupart n'indiquent leur programme que dans le flux
    transmis donc c'est du temps réel, mais on a le programme de la journée
    pour les radio france (inter, culture, musique, france bleu).
  - lancement d'applis ! Ca a l'air bête, mais vu que le pc est sans souris,
    c'est pratique de pouvoir lancer des trucs comme des jeux.
 
-Il faut avoir un minimum configuré mplayer en local du genre mettre au
+Il faut avoir un minimum configuré mpv en local du genre mettre au
 moins dans ~/.mplayer/config :
 --- début ---
 alang=fra,fre # langue par défaut pour l'audio quand disponible
@@ -69,17 +70,23 @@ fenêtre, donc dernièrement j'utilise e16 pour en avoir un de base. Entre
 autres elles ne passent plus en plein écran sans gestionnaire de fenêtre,
 tu parles d'un truc bugué !
 
-Je dirais que son problème essentiel c'est le paquet de modules externes
-qu'elle utilise pour perl. Le script de lancement vérifie que les scripts
-principaux peuvent se lancer, mais il faudrait une méthode "user friendly"
-pour installer tous les mods nécessaires... Du coup pour l'instant ça
-demande quand même une connaissance minimale de perl pour y arriver. A part
-ça, elle utilise aussi gtkdialog, et pour youtube-dl elle le télécharge elle
-même.
+Normalement le script de lancement vérifie les dépendances et demande
+l'installation des programmes externes nécessaires. Et pour les modules
+perl manquants, il essaye de les installer par la commande cpan donc il
+peut éventuellement y avoir besoin d'ajouter une conf minimale pour
+utiliser le répertoire ~/perl5 que ça va créer, du genre :
+PATH="~/perl5/bin${PATH:+:${PATH}}"; export PATH;
+PERL5LIB="~/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
+PERL_LOCAL_LIB_ROOT="~/perl5${PERL_LOCAL_LIB_ROOT:+:${PERL_LOCAL_LIB_ROOT}}"; export PERL_LOCAL_LIB_ROOT;
+PERL_MB_OPT="--install_base \"~/perl5\""; export PERL_MB_OPT;
+PERL_MM_OPT="INSTALL_BASE=~/perl5"; export PERL_MM_OPT;
+
 Le programme C qui sert d'interface écran quand il n'y a pas de lecteur
-vidéo actif, bmovl, support sdl ou sdl2, mais la version sdl2 est encore
-considérée comme expérimentale, ça marche mais je continue à utiliser sdl1
-par habitude.
+vidéo actif, bmovl, supporte sdl ou sdl2 mais je continue à utiliser sdl1
+par habitude. Là aussi le script de lancement va essayer de le compiler si
+il ne trouve pas l'executable, il a besoin par défaut de sdl1.2 et de
+sdl-image, les versions de développement dans les distribs qui font la
+différence.
 
 En fait vu que ma télé dans la salle n'a pas de tuner tnt, la seule façon
 de regarder la télé est d'utiliser cette interface, donc je continue à
