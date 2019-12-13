@@ -330,22 +330,29 @@ sub get_lyrics {
 		}
 	}
 
-	if (!$title || !$artist && $file =~ /^(.+) ?\- ?(.+)\./) {
+	if ((!$title || !$artist) && $file =~ /.+\/(.+) ?\- ?(.+)\./) {
 		# tâche de deviner l'artiste et le titre d'après le nom de fichier
 		# si possible...
 		$artist = $1;
 		$title = $2;
-		if ($mp3) {
-			# En fait MP3::Tag sait déduire l'artiste et le titre du nom de
-			# fichier donc cette partie là n'est normalement jamais
-			# executée, on va garder quand même au cas où mais bon... !
-			$mp3->title_set($title);
-			$mp3->artist_set($artist);
-			$mp3->update_tags();
-		} elsif ($ogg) {
-			$ogg->add_comment("artist",$artist);
-			$ogg->add_comment("title",$title);
-			$ogg->write_vorbis;
+		$artist =~ s/^the very best of //i;
+		$artist =~ s/best of //i;
+		our $last;
+		if ($last ne $file) {
+			$last = $file;
+			if ($mp3) {
+				# En fait MP3::Tag sait déduire l'artiste et le titre du nom de
+				# fichier donc cette partie là n'est normalement jamais
+				# executée, on va garder quand même au cas où mais bon... !
+				$mp3->title_set($title);
+				$mp3->artist_set($artist);
+				$mp3->update_tags();
+			} elsif ($ogg) {
+				say "adding vorbis comments artist $artist title $title";
+				# $ogg->add_comments("artist",$artist);
+				# $ogg->add_comments("title",$title);
+				# $ogg->write_vorbis;
+			}
 		}
 	}
 	my $r;
@@ -370,7 +377,8 @@ debut:
 		# c'est qu'un autre site a exactement les mêmes ! Difficile à
 		# détecter, le + simple c'est de l'écarter explicitement pour
 		# l'instant
-		next if ($u =~ /genius.com/ && $title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour)$/i);
+		next if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|)$/i ||
+			$artist =~ / dion/i));
 		if ($u =~ /(musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/) {
 			my $old = $_;
 			my $text = pure_ascii($_->text);
