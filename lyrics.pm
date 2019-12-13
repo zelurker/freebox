@@ -184,6 +184,21 @@ sub handle_lyrics {
 			}
 		}
 		say "lyrics greatsong.net $lyrics";
+	} elsif ($u =~ /musiclyrics.com/) {
+		my $start = undef;
+		foreach (split /\n/,$_) {
+			next if (/^ *$/);
+			s/^ +//;
+			if (/<div class="artist-page-lyrics/) {
+				$start = 1;
+			} elsif ($start) {
+				last if (/<p>Photo/ || /Lyrics/);
+				s/<br( \/)?>/\n/g;
+				s/<\/?p>//;
+				s/&#8217;/'/g;
+				$lyrics .= decode_entities($_);
+			}
+		}
 	} elsif ($u =~ /lyrics.wikia.com/) {
 		foreach (split /\n/,$_) {
 			if (s/<div class=.lyricbox.>//) {
@@ -247,6 +262,7 @@ sub pure_ascii {
 	s/[()]//g;
 	s/([àâ]|\xc3\xa0)/a/g;
 	s/([éèêë]|\xc3\xa9)/e/g;
+	s/ï/i/g;
 	s/ô/o/g;
 	s/[ùû]/u/g;
 	s/(ü|\xc3\xbc)/u/g;
@@ -379,7 +395,7 @@ debut:
 		# l'instant
 		next if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|)$/i ||
 			$artist =~ / dion/i));
-		if ($u =~ /(musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/) {
+		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/) {
 			my $old = $_;
 			my $text = pure_ascii($_->text);
 			if ($text =~ /$title/ || $u =~ /lyricsfreak.com/ || $text =~ /^En cache/i) {
