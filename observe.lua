@@ -35,6 +35,9 @@ function on_width_change(name,value)
 end
 
 function metadata(name,value)
+	if not value then
+		return
+	end
 	for i,v in pairs(value) do
 		local c = assert(socket.unix())
 		if (c:connect("sock_info")) then
