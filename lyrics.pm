@@ -194,7 +194,8 @@ sub handle_lyrics {
 			} elsif ($start) {
 				last if (/<p>Photo/ || /Lyrics/);
 				s/<br( \/)?>/\n/g;
-				s/<\/?p>//;
+				s/<\/p>/\n/;
+				s/<p>//;
 				s/&#8217;/'/g;
 				$lyrics .= decode_entities($_);
 			}
