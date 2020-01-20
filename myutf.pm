@@ -29,7 +29,7 @@ sub mydecode {
 	if (!$latin) {
 		# Le test e2 pour ref peut être mal interprêté, c'est le â dans
 		# théâtre... !
-		if ($$ref =~ /[\xc3\xc5]/ || $max_ord > 255) {
+		if ($$ref =~ /[\xc3\xc2\xc5]/ || $max_ord > 255) {
 			# print "to_utf: reçu un truc en utf: $$ref max_ord $max_ord\n";
 			return;
 		}
