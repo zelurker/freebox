@@ -401,7 +401,7 @@ sub commands {
 		if ($i =~ /^icy-title/i && ($v =~ /(.+) - (.+)/ ||
 				$v =~ /(.+) \xc3\x8b\xc2\x97 (.+)/)) {
 			my ($artist,$title) = ($1,$2);
-			if (!($artist =~ /^\d+$/ && $title =~ /^\d+$/)) { # délire chérie fm
+			if (!($artist =~ /^\d+/ && $title =~ /^\d+$/)) { # délire chérie fm
 				say "icy-title: artist:$artist title:$title";
 				$title =~ s/\|.+//; # y a des numéros bizarres intercalés par des || sur hotmix
 				$info{$name}->{metadata}->{artist} = $artist;
