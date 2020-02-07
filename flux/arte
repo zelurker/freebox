@@ -48,6 +48,7 @@ sub decode_type {
     $_ = shift;
 	my $base = 0;
 	$base = 1 if ($arg[0] =~ /^vid:/);
+	say STDERR "decode_type ",ref($_);
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
 			# say STDERR "decode_type: type : $_->{type}, argbase $arg[$base]";
@@ -59,12 +60,19 @@ sub decode_type {
 					$code = $code->{name};
 				}
 			}
+			# say STDERR "decode_type code $code cat $cat";
 			if ($_->{data}) { # eq "HOME") {
-				if ($cat eq $code || $str =~ /vid:/ || $str =~ /^Guide/) {
-					decode_prg($_->{data});
-				} elsif (!$cat && $_->{title}) {
-					say $_->{title};
-					say "$str/cat:$code";
+				my $data = $_->{data};
+				$data = $#$data;
+				if ($data > -1 && $_->{title} !~ /^Banner/i) {
+					# filtre les entrées vides de l'index ! (et les
+					# bannières)
+					if ($cat eq $code || $str =~ /vid:/ || $str =~ /^Guide/) {
+						decode_prg($_->{data});
+					} elsif (!$cat && $_->{title}) {
+						say $_->{title};
+						say "$str/cat:$code";
+					}
 				}
 			} elsif ($_->{type}) { # catégories de vidéos
                 if (!$arg[$base] && $_->{title}) {
@@ -111,6 +119,7 @@ sub decode_main {
 			# HOME_fr_{} à la con ???
 			my $code = $hash{pages}{currentCode};
 			# say STDERR "decode_main: code $code";
+			# say STDERR "hash ",Dumper(%hash);
             return decode_type($hash{pages}{list}{"$code"}{zones}) if ($code);
             return decode_type($hash{pages}{list}{"HOME_fr_{}"}{zones});
         } else {
@@ -157,11 +166,12 @@ sub decode_html {
 		exit(0);
 	}
 	# say STDERR "decode_html: myget pour $code.player : $url";
-	my $player = myget($url,"cache/arte/$code.player",7);
-	($json) = $player =~ /js_json = (.+?);/;
+	my $player = myget($url,"cache/arte/$code.player",7) if (!$json);
+	($json) = $player =~ /js_json = (.+?);/ if (!$json);
 	if (!$json) {
 		my ($json_url) = $player =~ /json_url=(.+?)&amp/;
 		$json_url =~ s/%(..)/chr(hex($1))/eg;
+		$json_url =~ s/api-internal/api/;
 		if ($json_url) {
 			# say STDERR "deocde_html: $code.json from $json_url";
 			$json = myget($json_url,"cache/arte/$code.json",7);
