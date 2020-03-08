@@ -174,7 +174,7 @@ sub read_stream_info {
 			}
 			print $out "Dernier morceau : $last\n" if ($last && $source !~ /^Fichiers/);
 			print $out "Paroles : $rinfo->{lyrics}" if ($rinfo->{lyrics});
-			print $out "Chapter : $rinfo->{metadata}->{title}\n" if ($rinfo->{metadata}->{title});
+			print $out $rinfo->{metadata}->{title} if ($rinfo->{metadata}->{title} && !$rinfo->{metadata}->{artist});
 			out::close_fifo($out);
 			setup_fadeout($long);
 		}
