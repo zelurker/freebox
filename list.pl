@@ -1073,7 +1073,7 @@ sub run_mplayer2 {
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
 	if ($player =~ /^mpv/) {
 		push @list,("-stop-screensaver","--input-ipc-server=mpvsocket","--script=observe.lua",
-			"-input-conf","input-mpv.conf","--quiet");
+			"--input-conf=input-mpv.conf","--quiet");
 		if ($serv !~ /^get,/ && $source !~ /(dvb|freeboxtv)/) {
 			my %bookmarks;
 			dbmopen %bookmarks,"bookmarks.db",0666;
