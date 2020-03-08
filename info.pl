@@ -65,6 +65,7 @@ our $refresh;
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
 	my ($name,$source,$serv) = out::get_current();
+	myutf::mydecode(\$source);
 	$source =~ s/flux\/stations\/.+/flux\/stations/;
 	return (lc($name),$source,$serv);
 }
@@ -173,6 +174,7 @@ sub read_stream_info {
 			}
 			print $out "Dernier morceau : $last\n" if ($last && $source !~ /^Fichiers/);
 			print $out "Paroles : $rinfo->{lyrics}" if ($rinfo->{lyrics});
+			print $out "Chapter : $rinfo->{metadata}->{title}\n" if ($rinfo->{metadata}->{title});
 			out::close_fifo($out);
 			setup_fadeout($long);
 		}
@@ -446,6 +448,8 @@ sub commands {
 			} else {
 				handle_images($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
 			}
+		} elsif ($info{$name}->{metadata}->{end} &&	$info{$name}->{metadata}->{title}) { # cas des chapitres matroshka
+			read_stream_info(time(),$channel,$info{$name});
 		}
 	} elsif ($cmd =~ /^codec/) {
 		my ($codec,$bitrate);
