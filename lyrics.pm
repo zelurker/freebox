@@ -41,24 +41,25 @@ sub handle_lyrics {
 	my $lyrics = "";
 	my $start = undef;
 	if ($u =~ /lyricsfreak.com/) {
-		print "lyricsfreak.com\n";
+		print "lyricsfreak.com url $u\n";
 		my $lyr = 0;
 		foreach (split /\n/,$_) {
 			s/\r//;
-			if (/<!-- SONG LYRICS/) {
+			if (/class="lyrictxt/) {
 				$lyr = 1;
 				next;
 			}
 			if ($lyr) {
-				if (/<!-- \/SONG/) {
+				if (s/<\/div>//) {
 					$lyr = 0;
-					last;
 				}
+				s/^ +//;
 				s/<div .+?>(.+)<\/div>/$1/;
 				s/<br>/\n/g;
 				s/<br \/>/\n/g;
 				$_ = decode_entities($_);
 				$lyrics .= $_;
+				last if (!$lyr);
 			}
 		}
 	} elsif ($u =~ /musique.ados.fr/) {
