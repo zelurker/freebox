@@ -2,6 +2,7 @@
 
 use strict;
 use v5.10;
+use lib ".";
 use lyrics;
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
