@@ -53,7 +53,8 @@ say "list";
 # say "Recherche\nRecherche";
 
 if (!$arg[0]) { # le menu des chaines, uniquement sur la 1ère page
-	while ($page =~ s/a href="([^"]+?)" class="c-sub-nav-item-channel.+?><img .+?alt="(.+?)"//) {
+	# while ($page =~ s/a href="([^"]+?)" class="c-sub-nav-item-channel.+?><img .+?alt="(.+?)"//) {
+	while ($page =~ s/href="([^"]+?)" target="_blank"> (.+?)<//) {
 		my $url = $1;
 		my $text = decode_entities($2);
 		say $text;
