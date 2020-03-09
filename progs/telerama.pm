@@ -253,7 +253,7 @@ sub req_prog {
 	my $date = strftime("%Y-%m-%d", localtime(time()+(24*3600*$offset)) );
 	my $server = "https://api.telerama.fr";
 	$page = 1 if (!$page);
-	my $url = "/v1/programmes/telechargement?dates=$date&nb_par_page=100&id_chaines=".$u;
+	my $url = "/v1/programmes/grille?date=$date&nb_par_page=100&id_chaines=".$u;
 	$url .= "&appareil=android_tablette";
 	$url .= "&page=$page" if ($page);
 	$url .= "&api_signature=".myhash($url)."&api_cle=apitel-5304b49c90511";
