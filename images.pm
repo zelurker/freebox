@@ -64,58 +64,20 @@ sub search {
 	$mech->save_content("page_images.html");
 	my @vignette = ();
 	my $saved = undef;
-	# Nouveau google images 2017 : plutôt bizarre, les tags de l'image sont
-	# contenus en json dans l'html puis apparemment convertis en html après
-	# chargement. Vu qu'on execute pas de javascript ici, on doit se taper
-	# le json à la main, ça reste très simple, en espérant que ça change
-	# pas trop dans l'avenir quoi... !
-	my %corresp = ( # correspondances nouveaux tags -> anciens
-		ow => "w",
-		oh => "h",
-		ou => "imgurl",
-		id => "tbnid"
-	);
-	while ($c =~ s/class="rg_meta.+?">\{(.+?)\}//) {
-		my $tags = $1;
-		my @tags = split(/,/,$tags);
+	# ok, c le nouveau remake de google images, 2019 ou 2020, il m'a fallu
+	# un sacré bout de temps pour réagir, donc à priori, chaque image
+	# commence par [1,[0, puis l'id, puis un tableau qui a l'air de contenir des infos
+	# pour la version réduite, puis ce qui nous intéresse : [url, width,
+	# height]. J'ai pas compris ce que veulent dire tous les champs, mais
+	# j'ai les principaux... !
+	while ($c =~ s/\[1,\[0,"(.+?)",\[.+?\]\n?,\[(.+?)\]//) {
 		my %args;
-		foreach (@tags) {
-			my ($var,$val) = /(.+?):(.+)/;
-			$var =~ s/"//g;
-			$val =~ s/"//g;
-			$val =~ s/:$// if ($var eq "id");
-			$var = $corresp{$var} if ($corresp{$var});
-			$args{$var} = $val;
-		}
+		$args{tbnid} = $1;
+		($args{imgurl},$args{w},$args{h}) = split(/,/,$2);
+		$args{imgurl} =~ s/"//g;
 
 		push @tab,\%args; # on garde tout, pourquoi se priver ?!!!
 
-#		# Pour l'instant j'ai pas les vignettes, y a l'id dans le code,
-#		mais bizarrement je vois pas où est la correspondance !
-#		Je garde quand même le code parce que c'était assez héroïque de
-#		faire le décodage dans l'html, ça peut éventuellement re-servir un
-#		de ces jours...
-#		if ($c =~ s/e\.src='([^']+?)';}}\)\(document.getElementsByName\('$args{tbnid}//){
-#			my $b64 = $1;
-#			my $name;
-#			if ($b64 =~ /^data:image\/jpeg/) {
-#				$name = "cache/vn_$args{tbnid}.jpg";
-#				$name =~ s/://;
-#			} else {
-#				print "base64: file type not recognized : ",substr($b64,0,16),"\n";
-#				next;
-#			}
-#			if (!-f $name) {
-#				if (open(F,">$name")) {
-#					$b64 =~ s/^.+?base64,//;
-#					print F decode_base64($b64);
-#					close(F);
-#				}
-#			} else {
-#				utime(undef,undef,$name);
-#			}
-#			push @vignette,$name;
-#		}
 	}
 	$self->{tab} = \@tab;
 	\@vignette;
