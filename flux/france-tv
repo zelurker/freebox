@@ -68,7 +68,7 @@ if (!$arg[0]) { # le menu des chaines, uniquement sur la 1ère page
 	}
 }
 while ($page =~ s/a href="([^<^>^"]+?)" class="c-card-(mea|main-mea).+?data-src="(.+?)" alt="(.+?)"// ||
-$page =~ s/imagearea"><img src=".+?" data-src="(.+?)" alt="(.+?)".+?<a href="([^<^>^"]+?)" class="c-card-video.+?><div class="c-card-video__title ?"> (.+?) ?<.+?<div class="c-card-video__description ?"> ?(.+?) ?<// ||
+$page =~ s/imagearea"><img src=".+?" data-src="(.+?)" alt="(.+?)".+?<a href="([^<^>^"]+?)" class="c-card-video.+?<h3 class="c-card-video__infos">(.+?)<.+?<div class="c-card-video__description ?"> ?(.+?) ?<// ||
 $page =~ s/<a class="c-card-program__link" href="(.+?)" title="(.+?)"//) {
 	my $url = $1;
 	my $post = $4;
