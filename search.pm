@@ -16,14 +16,26 @@ sub search {
 
 	my $mech = init();
 	eval {
-		$mech->get("https://www.duckduckgo.com/");
+		$mech->get("https://fr.search.yahoo.com/search");
 		$mech->submit_form(
 			form_number => 1,
 			fields      => {
-				"q" => $q,
+				"p" => $q,
+				"fr" => "yfp-search-sb"
 			}
 		);
 	};
+	my $html = $mech->content;
+	open(F,">html");
+	print F $html;
+	close(F);
+	$html =~ s/href="https?:\/\/f?r.search.yahoo.com.+?RU=(.+?)\/.+?"/href="$1"/g;
+	$html =~ s/%(..)/chr(hex($1))/ge;
+	$mech->update_html($html);
+	open(F,">html2");
+	print F $html;
+	close(F);
+
 	return $mech;
 }
 
