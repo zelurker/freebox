@@ -26,15 +26,9 @@ sub search {
 		);
 	};
 	my $html = $mech->content;
-	open(F,">html");
-	print F $html;
-	close(F);
 	$html =~ s/href="https?:\/\/f?r.search.yahoo.com.+?RU=(.+?)\/.+?"/href="$1"/g;
 	$html =~ s/%(..)/chr(hex($1))/ge;
 	$mech->update_html($html);
-	open(F,">html2");
-	print F $html;
-	close(F);
 
 	return $mech;
 }
