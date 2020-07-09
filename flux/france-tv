@@ -68,7 +68,7 @@ if (!$arg[0]) { # le menu des chaines, uniquement sur la 1ère page
 	}
 }
 while ($page =~ s/a href="([^<^>^"]+?)" class="c-card-(mea|main-mea).+?data-src="(.+?)" alt="(.+?)"// ||
-$page =~ s/imagearea"><img src=".+?" data-src="(.+?)" alt="(.+?)".+?<a href="([^<^>^"]+?)" class="c-card-video.+?<h3 class="c-card-video__infos">(.+?)<.+?<div class="c-card-video__description ?"> ?(.+?) ?<// ||
+$page =~ s/imagearea"><img src=".+?" data-src="(.+?)" alt="(.+?)".+?<a href="([^<^>^"]+?)" class="c-card-video.+?<h3 class="c-card-video__infos">(.+?)<.+?<div class="c-card-video__subtitle ?"> ?(.+?) ?<// ||
 $page =~ s/<a class="c-card-program__link" href="(.+?)" title="(.+?)"//) {
 	my $url = $1;
 	my $post = $4;
@@ -78,7 +78,12 @@ $page =~ s/<a class="c-card-program__link" href="(.+?)" title="(.+?)"//) {
 	my $text = undef;
 	$text = decode_entities($2) if ($2);
 	$text = undef if ($text =~ /^"/);
-	if ($t =~ /^\/\//) {
+	if ($t =~ /^http.+html/) {
+		$img = $url;
+		$url = $t;
+		$text = decode_entities($post);
+		$text .= " ".decode_entities($postb) if ($postb);
+	} elsif ($t =~ /^\/\//) {
 		$img = "https:$t";
 		$text = decode_entities($post);
 	} elsif ($t =~ /^\/[a-z]/ && $url =~ /^\/\//) {
