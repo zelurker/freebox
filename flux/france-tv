@@ -39,6 +39,7 @@ if ($arg[0]) {
 	$page = myget($base,"cache/ftv/j0",1/12.0);
 }
 
+
 if ($page =~ /FTVPlayerVideo/) {
 	say "direct";
 	say "Vidéo";
@@ -68,8 +69,8 @@ if (!$arg[0]) { # le menu des chaines, uniquement sur la 1ère page
 	}
 }
 while ($page =~ s/a href="([^<^>^"]+?)" class="c-card-(mea|main-mea).+?data-src="(.+?)" alt="(.+?)"// ||
-$page =~ s/imagearea"><img src=".+?" data-src="(.+?)" alt="(.+?)".+?<a href="([^<^>^"]+?)" class="c-card-video.+?<h3 class="c-card-video__infos">(.+?)<.+?<div class="c-card-video__subtitle ?"> ?(.+?) ?<// ||
-$page =~ s/<a class="c-card-program__link" href="(.+?)" title="(.+?)"//) {
+	$page =~ s/imagearea"><img src=".+?" data-src="(.+?)" alt="(.+?)".+?<a href="([^<^>^"]+?)" class="c-card-video.+?<h3>(.+?)<.+?<div class="c-card-video__textarea\-subtitle.+?> ?(.+?) ?<// ||
+	$page =~ s/<a class="c-card-program__link" href="(.+?)" title="(.+?)"//) {
 	my $url = $1;
 	my $post = $4;
 	my $postb = $5;
