@@ -68,7 +68,7 @@ if (!$arg[0]) { # le menu des chaines, uniquement sur la 1ère page
 		say $url;
 	}
 }
-while ($page =~ s/a href="([^<^>^"]+?)" class="c-card-(mea|main-mea).+?data-src="(.+?)" alt="(.+?)"// ||
+while ($page =~ s/a href="([^<^>^"]+?)" class="c-slider_item.+?data-src="(.+?)" alt="(.+?)"// ||
 	$page =~ s/imagearea"><img src=".+?" data-src="(.+?)" alt="(.+?)".+?<a href="([^<^>^"]+?)" class="c-card-video.+?<h3>(.+?)<.+?<div class="c-card-video__textarea\-subtitle.+?> ?(.+?) ?<// ||
 	$page =~ s/<a class="c-card-program__link" href="(.+?)" title="(.+?)"//) {
 	my $url = $1;
@@ -78,11 +78,13 @@ while ($page =~ s/a href="([^<^>^"]+?)" class="c-card-(mea|main-mea).+?data-src=
 	my $t = $3;
 	my $text = undef;
 	$text = decode_entities($2) if ($2);
+	$text =~ s/ \- vidéo undef.+//;
 	$text = undef if ($text =~ /^"/);
 	if ($t =~ /^http.+html/) {
 		$img = $url;
 		$url = $t;
 		$text = decode_entities($post);
+		$text =~ s/ \- vid.o undef.+//;
 		$text .= " ".decode_entities($postb) if ($postb);
 	} elsif ($t =~ /^\/\//) {
 		$img = "https:$t";
@@ -90,11 +92,20 @@ while ($page =~ s/a href="([^<^>^"]+?)" class="c-card-(mea|main-mea).+?data-src=
 	} elsif ($t =~ /^\/[a-z]/ && $url =~ /^\/\//) {
 		$img = "https:$url";
 		$url = $t;
-		$text = decode_entities($post) if (!$text);
+		$text = decode_entities($post); # if (!$text);
 		$text .= " ".decode_entities($postb) if ($postb);
 	} else {
+		$img = $2;
+		if ($img =~ /^\//) {
+			$img = "https:$img";
+		} elsif ($img =~ /^\:/) {
+			$img = "https$img";
+		} elsif ($img !~ /^http/) {
+			$img = undef;
+		}
 		$text = decode_entities($t) if ($t);
 		$text .= " ".decode_entities($post) if ($post);
+		$text =~ s/ \- programme.+//;
 	}
 	if ($url =~ /^\/[a-z]/) {
 		$url = "https://$server$url";
