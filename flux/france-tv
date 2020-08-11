@@ -71,6 +71,7 @@ if (!$arg[0]) { # le menu des chaines, uniquement sur la 1ère page
 while ($page =~ s/a href="([^<^>^"]+?)" class="c-slider_item.+?data-src="(.+?)" alt="(.+?)"// ||
 	$page =~ s/imagearea"><img src=".+?" data-src="(.+?)" alt="(.+?)".+?<a href="([^<^>^"]+?)" class="c-card-video.+?<h3>(.+?)<.+?<div class="c-card-video__textarea\-subtitle.+?> ?(.+?) ?<// ||
 	$page =~ s/<a class="c-card-program__link" href="(.+?)" title="(.+?)"//) {
+	# say STDERR "data-src=$1 alt=$2 href=$3 h3=$4 div=$5";
 	my $url = $1;
 	my $post = $4;
 	my $postb = $5;
@@ -80,7 +81,7 @@ while ($page =~ s/a href="([^<^>^"]+?)" class="c-slider_item.+?data-src="(.+?)" 
 	$text = decode_entities($2) if ($2);
 	$text =~ s/ \- vidéo undef.+//;
 	$text = undef if ($text =~ /^"/);
-	if ($t =~ /^http.+html/) {
+	if ($t =~ /^(http|\/).+html/) {
 		$img = $url;
 		$url = $t;
 		$text = decode_entities($post);
