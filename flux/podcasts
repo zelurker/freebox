@@ -234,7 +234,7 @@ if ($u =~ /google\./) {
 	print STDERR "host for filtering $host\n";
 	foreach ($mech->links) {
 		my $u = $_->url;
-		next if ($u !~ /^http/ || $u !~ /xml$/);
+		next if ($u !~ /^http/ || $_->text =~ /^ *$/);
 		print $_->text,"\n$u\n";
 	}
 }
