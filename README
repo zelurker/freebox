@@ -31,7 +31,7 @@ Les fonctionnalités :
  - Les flux réseau : arte (arte+7), youtube (par youtube-dl maintenant),
    radios du web (+ d'1 centaine actuellement, on peut facilement en
    ajouter d'autres), podcasts avec recherche utilisant google, shoutcast,
-   et toutes les chaines france-tv grace à youtube-dl.
+   et toutes les chaines france-tv.
    Pour les radios, la plupart n'indiquent leur programme que dans le flux
    transmis donc c'est du temps réel, mais on a le programme de la journée
    pour les radio france (inter, culture, musique, france bleu).
@@ -94,4 +94,9 @@ l'utiliser et la maintenir encore aujourd'hui. Je l'ai surtout faite pour
 moi, et je la mets sur github pour que ça soit + simple de la transférer
 d'un ordo à l'autre. Français uniquement évidemment. Si ça intéresse du
 monde vous pouvez toujours m'envoyer un mail si vous voulez des infos !
+
+Note pour youtube-dl : vu qu'ils viennent de supprimer le dépot github pour
+des raisons de dmca, on peut pour l'instant le récupérer sur son site là :
+https://yt-dl.org/downloads/latest/youtube-dl
+puis faire chmod +x sur le fichier résultat.
 
