@@ -46,6 +46,7 @@ sub conv_channel {
 		"PARIS PREMIERE" => "PARIS Première",
 	);
 	$channel =~ s/ \(hd\)//i;
+	$channel =~ s/ fhd$//i;
 	$channel =~ s/ ?hd$//i;
 	$channel =~ s/ sat$//i;
 	$channel =~ s/^Télénantes //;

@@ -1068,6 +1068,7 @@ sub run_mplayer2 {
 	} else {
 		push @list,$serv;
 	}
+	push @list,("--loop-playlist=inf") if ($serv =~ /^http:..dimapro.cz/); # loop obligatoire pour ce truc !
 	push @list,("-vf", $filter) if ($filter);
 	push @list,("-identify","-stop-xscreensaver","-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
