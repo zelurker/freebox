@@ -1140,6 +1140,7 @@ sub check_player2 {
 			if ($pid == $pid_player2) { # qui a pu changer à cause de l'appel à commands...
 				$pid_player2 = 0;
 				$child_checker = undef;
+				commands(\*STDERR,"list") if (-f "video_size");
 				unlink("fifo","fifo_cmd","mpvsocket","video_size");
 			}
 		});

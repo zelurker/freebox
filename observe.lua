@@ -131,10 +131,5 @@ mp.add_hook("on_unload", 10, function ()
 		end
 		c:close()
 	end
-	c = assert(socket.unix())
-	if (c:connect("sock_list")) then
-		c:send("list\n")
-		c:close()
-	end
 end)
 
