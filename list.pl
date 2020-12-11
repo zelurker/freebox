@@ -1278,6 +1278,11 @@ sub load_file2 {
 			kill "TERM" => $pid_player2;
 			$child_checker = undef;
 		}
+		if ($pid_remux) {
+			say "kill remux aussi";
+			kill "TERM" => $pid_remux;
+			$pid_remux = undef;
+		}
 		if ($src eq "dvd" && $flav eq "mpv dvd raw") {
 			say "lancement mpv -dvd-device $dvd dvd://2 --no-cache -frames 0 --no-video -script dvd.lua|";
 			open(F,"mpv -dvd-device $dvd dvd://2 --no-cache -frames 0 --no-video -script dvd.lua|");

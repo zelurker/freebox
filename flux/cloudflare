@@ -1,5 +1,7 @@
 RFM TV
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/504
+RFM TV HD
+https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/rfm.tv.fr.m3u8
 MCM TOP
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/502
 MTV HITS
@@ -26,10 +28,6 @@ FRANCE Ô FHD
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2372
 TF1 SERIES FHD
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2461
-RTS DEUX FHD
-http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2370
-RTS UN FHD
-http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2371
 W9 FHD
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2471
 NRJ 12 FHD
@@ -48,8 +46,6 @@ RTL9 FHD https://iptv.live
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2434
 AB1 FHD
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2430
-AB 3 FHD
-http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2380
 SYFY
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/572
 13EME RUE FHD
@@ -94,8 +90,6 @@ ACTION FHD
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2440
 CINE POLAR FHD
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2439
-CINE FX FHD
-http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2438
 PARIS PREMIERE FHD
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2435
 SERIE CLUB FHD
@@ -162,6 +156,12 @@ MANGAS FHD
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2399
 GAME ONE FHD
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/2398
+VH1 SD
+http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/59299
+VH1 CLASSIC HD
+http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/59300
+VH1 FHD
+http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/39156
 Satellite TV
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/4949
 Satellite TV
@@ -292,6 +292,18 @@ COMEDIE
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/568
 ELLE GIRL
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/567
+LA UNE HD
+http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/38536
+LA DEUX HD
+http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/38537
+LA TROIS HD
+http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/38538
+RTL TVI HD
+http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/38539
+CLUB RTL
+http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/38540
+PLUG RTL
+http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/38541
 ## Satellite TV
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/38554
 Satellite TV
@@ -318,8 +330,6 @@ CINE CLASSIC
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/555
 CINE CLUB
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/554
-CINE FX
-http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/553
 CINE POLAR
 http://dimapro.cz:80/SfZXl1780F/PUrytlTWZ4/552
 OCS CHOC

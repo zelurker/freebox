@@ -44,14 +44,23 @@ sub conv_channel {
 		"NUMERO 23" => "Numéro 23",
 		"RMC DECOUVERTE" => "RMC Découverte",
 		"PARIS PREMIERE" => "PARIS Première",
+		"Science & Vie" => "Science & Vie TV",
+		"TCM Cinema" => "TCM Cinéma",
+		"VH1 European" => "VH1",
 	);
 	$channel =~ s/ \(hd\)//i;
 	$channel =~ s/ fhd$//i;
-	$channel =~ s/^cine /ciné /i;
+	$channel =~ s/ fr$//i;
+	$channel =~ s/^cine\+? /ciné\+ /i;
 	$channel =~ s/^ocs geant/ocs géant/i;
 	$channel =~ s/^serie club/serieclub/i;
 	$channel =~ s/^tv breizh/tvbreizh/i;
 	$channel =~ s/^syfyfr/syfy/i;
+	$channel =~ s/^National Geo/National Geographic/i;
+	$channel =~ s/^Nickelodeon/Nickelodéon/i;
+	$channel =~ s/^Nick Jr/Nickelodeon junior/i;
+	$channel =~ s/^Planete\+ CI/Planète\+ Crime investigation/i;
+	$channel =~ s/^Planete/Planète/i;
 	$channel =~ s/ ?hd$//i;
 	$channel =~ s/ sat$//i;
 	$channel =~ s/^Télénantes //;
@@ -181,7 +190,6 @@ sub getListeChaines($) {
 		$ordre{$_} = $num++;
 	}
 	foreach (@{$json->{donnees}->{chaines}}) {
-		$_->{nom} =~ s/^ciné\+/ciné/i;
 		$chan{lc($_->{nom})} = [$_->{id},$_->{logo},$_->{nom},$ordre{$_->{id}}];
 	}
 	return \%chan;
