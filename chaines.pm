@@ -47,6 +47,11 @@ sub conv_channel {
 	);
 	$channel =~ s/ \(hd\)//i;
 	$channel =~ s/ fhd$//i;
+	$channel =~ s/^cine /ciné /i;
+	$channel =~ s/^ocs geant/ocs géant/i;
+	$channel =~ s/^serie club/serieclub/i;
+	$channel =~ s/^tv breizh/tvbreizh/i;
+	$channel =~ s/^syfyfr/syfy/i;
 	$channel =~ s/ ?hd$//i;
 	$channel =~ s/ sat$//i;
 	$channel =~ s/^Télénantes //;
@@ -176,7 +181,7 @@ sub getListeChaines($) {
 		$ordre{$_} = $num++;
 	}
 	foreach (@{$json->{donnees}->{chaines}}) {
-		# say $_->{id}," ",$_->{nom};
+		$_->{nom} =~ s/^ciné\+/ciné/i;
 		$chan{lc($_->{nom})} = [$_->{id},$_->{logo},$_->{nom},$ordre{$_->{id}}];
 	}
 	return \%chan;

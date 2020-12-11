@@ -47,7 +47,7 @@ say "list: have_net $net";
 our $have_fb = 0; # have_freebox
 $have_fb = out::have_freebox() if ($net);
 our $have_dvb = 1; # (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
-our ($pid_player2,$quit_mplayer);
+our ($pid_player2,$quit_mplayer,$pid_remux,$remux_checker);
 $quit_mplayer = 0;
 open(F,">info_list.pid") || die "info_list.pid\n";
 print F "$$\n";
@@ -757,7 +757,7 @@ sub read_list {
 			my @pic = ();
 			my $last = undef;
 			while (<F>) {
-				say "list: from plugin : $_";
+				# say "list: from plugin : $_";
 				if (/^encoding:/) {
 					$encoding = $_;
 					print "encoding: $encoding\n";
@@ -1068,7 +1068,7 @@ sub run_mplayer2 {
 	} else {
 		push @list,$serv;
 	}
-	push @list,("--loop-playlist=inf") if ($serv =~ /^http:..dimapro.cz/); # loop obligatoire pour ce truc !
+
 	push @list,("-vf", $filter) if ($filter);
 	push @list,("-identify","-stop-xscreensaver","-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
@@ -1136,6 +1136,13 @@ sub check_player2 {
 				}
 			} elsif ($quit_mplayer) {
 				$quit_mplayer = 0;
+			}
+			if ($pid_remux) {
+				say "killing remux";
+				kill "TERM" => $pid_remux;
+				$pid_remux = 0;
+			} else {
+				say "pid_remux = $pid_remux";
 			}
 			if ($pid == $pid_player2) { # qui a pu changer à cause de l'appel à commands...
 				$pid_player2 = 0;
@@ -1255,16 +1262,12 @@ sub load_file2 {
 	if ($serv) {
 		out::send_command("pause\n");
 		unlink("current");
-		open(G,">current");
 		my $src = $source; # ($source eq "cd" ? "flux" : $source);
 		$src .= "/$base_flux" if ($base_flux);
 		$serv .= " $prog" if ($prog);
 		# $serv est en double en 7ème ligne, c'est voulu
 		# oui je sais, c'est un bordel
 		# A nettoyer un de ces jours dans run_mp1/freebox
-		print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
-		print G join("\n",@tab_serv);
-		close(G);
 		print "sending quit\n";
 		unlink("id","stream_info","stream_info.0");
 		# Remarque ici on ne veut pas que le message id_exit=quit sorte de
@@ -1307,6 +1310,33 @@ sub load_file2 {
 		}
 		# On a déjà pas de player2, on admet qu'il faut tout relancer
 		# dans ce cas là
+		if ($serv =~ /^http:..dimapro.cz/) {
+			$pid_remux = fork();
+			my $name0 = $name;
+			$name0 =~ s/ /_/g;
+			my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =
+			localtime(time);
+			$name0 = sprintf("%d%02d%02d_%02d%02d_$name0",$year+1900,$mon+1,$mday,$hour,$min,$sec);
+			if ($pid_remux == 0) {
+				exec("./remuxing $serv livetv/$name0.ts");
+			}
+			say "pid_remux au lancement $pid_remux";
+			$remux_checker = AnyEvent->child(pid => $pid_remux, cb => sub {
+					my ($pid,$status) = @_;
+					say "fin de remuxing";
+					$remux_checker = undef;
+				});
+			$serv = "livetv/$name0.ts";
+			my $tries = 0;
+			while (!-f $serv && -s $serv < 1024*1024*5 && $tries < 5) {
+				sleep(1);
+				$tries++;
+			}
+		}
+		open(G,">current");
+		print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
+		print G join("\n",@tab_serv);
+		close(G);
 		print "run_mplayer2...\n";
 		if ($src =~ /(dvb|freeboxtv)/) {
 			print "lancement run_mp1...\n";
