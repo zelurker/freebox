@@ -1333,7 +1333,7 @@ sub load_file2 {
 				});
 			$serv = "livetv/$name0.ts";
 			my $tries = 0;
-			while (!-f $serv && -s $serv < 1024*1024*5 && $tries < 5) {
+			while ((!-f $serv || -s $serv < 1024*1024*5) && $tries < 5) {
 				sleep(1);
 				$tries++;
 			}
