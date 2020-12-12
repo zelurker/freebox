@@ -1,7 +1,9 @@
+VH1 (East) US
+https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.eastern.us.m3u8
 VH1 Classic
-https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.classic.ru.m3u8
-VH1 European
-https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.european.ru.m3u8
+https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.classic.europe.se.m3u8
+VH1
+https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.se.m3u8
 6Ter
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/6ter.fr.m3u8
 8 Mont-Blanc
@@ -676,8 +678,6 @@ USA Network (East)
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/usa.network.east.us.m3u8
 USA Network (West)
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/usa.network.pacific.us.m3u8
-VH1 (East) US
-https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.eastern.us.m3u8
 VICE
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vice.us.m3u8
 Viceland
@@ -4342,8 +4342,6 @@ TV Verdes Mares
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/tv.verdes.mares.br.m3u8
 Universal
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/universal.br.m3u8
-VH1
-https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.br.m3u8
 Viva
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/viva.br.m3u8
 Warner Channel
@@ -5480,8 +5478,6 @@ Satellite TVTG24
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/sky.tg24.it.m3u8
 Satellite TVUno
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/sky.uno.it.m3u8
-VH1
-https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.it.m3u8
 26 TV AR
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/26.tv.ar.m3u8
 3ABN Latino
@@ -6108,8 +6104,6 @@ Venezuela TV
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/venezuela.lat.m3u8
 Vh1 AR
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.ar.m3u8
-VH1 MegaHits CL
-https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.mega.hits.cl.m3u8
 Volver AR
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/volver.ar.m3u8
 WAPA 2 PR
@@ -6338,10 +6332,6 @@ TV6 NO
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/tv6.no.m3u8
 TVNorge NO
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/tvnorge.no.m3u8
-VH1 Classic SE
-https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.classic.europe.se.m3u8
-VH1 SE
-https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/vh1.se.m3u8
 Viasat 4 NO
 https://tv4.live/api/stream/z4bmt@pxjtw.com/258213/livetv.epg/viasat.4.no.m3u8
 Viasat Fotboll SE
