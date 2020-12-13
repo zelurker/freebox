@@ -786,6 +786,9 @@ sub read_list {
 				if ($base_flux eq "stations") {
 					my $pic = get_radio_pic($name,\@pic);
 					push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
+				} elsif ($base_flux =~ /^(cloudflare|voxility|xxx)/i) {
+					my $pic = chaines::get_chan_pic($name,\@pic);
+					push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
 				} else {
 					push @list,[[$num++,$name,$service]];
 				}
@@ -1138,7 +1141,7 @@ sub check_player2 {
 				$quit_mplayer = 0;
 			}
 			if ($pid_remux) {
-				say "killing remux";
+				say "killing remux ($pid_remux)";
 				kill "TERM" => $pid_remux;
 				$pid_remux = 0;
 			} else {
@@ -1279,7 +1282,7 @@ sub load_file2 {
 			$child_checker = undef;
 		}
 		if ($pid_remux) {
-			say "kill remux aussi";
+			say "kill remux aussi ($pid_remux)";
 			kill "TERM" => $pid_remux;
 			$pid_remux = undef;
 		}
@@ -1315,14 +1318,16 @@ sub load_file2 {
 		}
 		# On a déjà pas de player2, on admet qu'il faut tout relancer
 		# dans ce cas là
-		if ($serv =~ /^http:..dimapro.cz/) {
+		if ($serv =~ /^http:..(dimapro.cz|io.t-v.io)/) {
 			$pid_remux = fork();
 			my $name0 = $name;
 			$name0 =~ s/ /_/g;
+			$name0 =~ s/\&//g;
 			my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) =
 			localtime(time);
 			$name0 = sprintf("%d%02d%02d_%02d%02d_$name0",$year+1900,$mon+1,$mday,$hour,$min,$sec);
 			if ($pid_remux == 0) {
+				say "lancement remuxing $serv livetv/$name0.ts";
 				exec("./remuxing $serv livetv/$name0.ts");
 			}
 			say "pid_remux au lancement $pid_remux";
@@ -1330,13 +1335,15 @@ sub load_file2 {
 					my ($pid,$status) = @_;
 					say "fin de remuxing";
 					$remux_checker = undef;
+					$pid_remux = 0;
 				});
 			$serv = "livetv/$name0.ts";
 			my $tries = 0;
-			while ((!-f $serv || -s $serv < 1024*1024*5) && $tries < 5) {
+			while ((!-f $serv || -s $serv < 1024*1024*5) && $tries < 10) {
 				sleep(1);
 				$tries++;
 			}
+			say "remux sync : tries $tries size ",(-s $serv);
 		}
 		open(G,">current");
 		print G "$name\n$src\n$serv\n$flav\n$audio\n$video\n$serv\n";
