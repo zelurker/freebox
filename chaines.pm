@@ -60,6 +60,7 @@ sub conv_channel {
 		"France Info tv" => "Franceinfo",
 		"Nickelodéon 4 teen" => "Nickelodéon teen",
 		"Planète+ A&E" => "Planète+ Aventure Expérience",
+		"comédie" => "comédie+",
 	);
 	$channel =~ s/ \(hd\)//i;
 	$channel =~ s/ fhd$//i;
