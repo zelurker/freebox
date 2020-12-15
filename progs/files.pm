@@ -12,6 +12,7 @@ our $debug = 0;
 
 sub get {
 	my ($p,$channel,$source,$base_flux,$serv) = @_;
+	return undef if ($source !~ /^(Enregistrements|Fichiers|livetv)/i);
 	if ($source eq "Enregistrements" && $channel !~ /^records/) {
 		$channel = "records/$channel";
 	}
