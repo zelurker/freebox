@@ -61,10 +61,12 @@ sub conv_channel {
 		"Nickelodéon 4 teen" => "Nickelodéon teen",
 		"Planète+ A&E" => "Planète+ Aventure Expérience",
 		"comédie" => "comédie+",
+		"tf1 series" => "tf1 séries films",
+		"numero 23" => "numéro 23",
 	);
 	$channel =~ s/ \(hd\)//i;
 	$channel =~ s/ fhd$//i;
-	$channel =~ s/ (fr|ch)$//i;
+	$channel =~ s/ (fr|ch|us)$//i;
 	$channel =~ s/^cine\+? /ciné\+ /i;
 	$channel =~ s/^brava stingray classica/stingray brava/i;
 	$channel =~ s/^ab1/ab 1/i;
@@ -78,7 +80,7 @@ sub conv_channel {
 	$channel =~ s/^comedie/comédie/i;
 	$channel =~ s/^serie club/serieclub/i;
 	$channel =~ s/^tv breizh/tvbreizh/i;
-	$channel =~ s/^tf1 series \& /tf1 séries /i;
+	$channel =~ s/^tf1 series \&? ?/tf1 séries /i;
 	$channel =~ s/^syfyfr/syfy/i;
 	$channel =~ s/^canal\+ cinema/canal+ cinéma/i;
 	$channel =~ s/^planete \+/planete+/i;
@@ -223,6 +225,7 @@ sub getListeChaines($) {
 	foreach (@{$json->{donnees}->{chaines}}) {
 		$chan{lc($_->{nom})} = [$_->{id},$_->{logo},$_->{nom},$ordre{$_->{id}}];
 	}
+	$chan{"hbo (east)"} = [1500,"https://www.directhd.tv/wp-content/uploads/channels/200x200/logo_hbo_east_small.gif","HBO (East)"];
 	return \%chan;
 }
 
