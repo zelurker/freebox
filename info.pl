@@ -25,6 +25,7 @@ use out;
 require "radios.pl";
 
 use progs::telerama;
+# use progs::hbo;
 use progs::finter;
 use progs::podcasts;
 use progs::files;
@@ -214,6 +215,7 @@ push @prog, progs::podcasts->new($net);
 push @prog, progs::files->new($net);
 push @prog, progs::series->new($net);
 push @prog, progs::arte->new($net);
+# push @prog, progs::hbo->new($net);
 
 # read_prg:
 my $path = "sock_info";
@@ -306,7 +308,13 @@ sub disp_prog {
 
 	if (-f "video_size") { # mplayer/mpv en cours...
 		my @f = out::get_current();
-		if ($f[6] =~ /\.ts$/ && $f[0] eq $$sub[1]) { # on vérifie quand même que c'est bien un .ts
+		if ($f[6] =~ /\.ts$/ && chaines::conv_channel($f[0]) eq lc($$sub[1])) { # on vérifie quand même que c'est bien un .ts
+			# Note : habituellement avec le dvb ou une source "stable",
+			# f[0] eq $$sub[1] directement, mais pas en utilisant des flux
+			# web, dans ce cas là les chaines ont tout un tas de préfixes
+			# qui sont préservés au niveau de la liste et qu'on retrouve
+			# dans f[0] et qu'on ne peut donc pas comparer à la chaine pour
+			# télérama contenue dans sub[1]
 			if (open(F,">$f[6].info")) {
 				print F "pic:$$sub[9] " if ($$sub[9]);
 				print F "$$sub[2]\n$$sub[6]\n$$sub[7]\n";

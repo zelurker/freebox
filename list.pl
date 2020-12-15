@@ -633,7 +633,7 @@ sub read_list {
 			if ($name =~ /\.ts$/) {
 				$name =~ s/.ts$//;
 				$name =~ s/^.+\///;
-				my ($an,$mois,$jour,$heure,$minute,$sec,$chaine) = $name =~ /^(....)(..)(..) (..)(..)(..) (.+)/;
+				my ($an,$mois,$jour,$heure,$minute,$sec,$chaine) = $name =~ /^(....)(..)(..)[ _](..)(..)(..)?[ _](.+)/;
 				$name = "$jour/$mois $heure:$minute $chaine ";
 			} else {
 				$name =~ s/records\///;
@@ -786,7 +786,7 @@ sub read_list {
 				if ($base_flux eq "stations") {
 					my $pic = get_radio_pic($name,\@pic);
 					push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
-				} elsif ($base_flux =~ /^(cloudflare|voxility|xxx)/i) {
+				} elsif ($base_flux =~ /^(cloudflare|voxility|ilia)/i) {
 					my $pic = chaines::get_chan_pic($name,\@pic);
 					push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
 				} else {
@@ -1318,7 +1318,7 @@ sub load_file2 {
 		}
 		# On a déjà pas de player2, on admet qu'il faut tout relancer
 		# dans ce cas là
-		if ($serv =~ /^http:..(dimapro.cz|io.t-v.io)/) {
+		if ($serv =~ /^http:..(dimapro.cz|io.t-v.io|tvla.xyz|fonteangelusiptv.com)/) {
 			$pid_remux = fork();
 			my $name0 = $name;
 			$name0 =~ s/ /_/g;
@@ -2170,7 +2170,7 @@ sub disp_list {
 		if ($source =~ /Fichiers/) {
 			$out = out::setup_output("fsel");
 		} elsif ($source eq "flux" && $base_flux ne "stations" && !$have_pic) {
-			$info = 1 if ($base_flux =~ /^(la-bas|podcasts|arte)/);
+			$info = 1 if ($base_flux =~ /^(la-bas|podcasts|arte|cloudflare)/i);
 			$out = out::setup_output("longlist");
 		} else {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
