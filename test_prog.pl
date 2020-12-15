@@ -1,13 +1,14 @@
 #!/usr/bin/env perl
 
 # use progs::podcasts;
+use lib ".";
 use Cpanel::JSON::XS qw(decode_json);
 use Data::Dumper;
 use strict;
 use warnings;
 use chaines;
 
-my $file = $ARGV[0] || "cache/telerama/day0-4";
+my $file = $ARGV[0] || "cache/telerama/day0-111";
 open(F,"<$file");
 @_ = <F>;
 close(F);
