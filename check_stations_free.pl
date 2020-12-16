@@ -5,17 +5,21 @@
 # fichier
 
 use strict;
+use v5.10;
 
 open(F,"<flux/stations") || die "can't stations\n";
 while (<F>) {
 	chomp;
-	next if (/^encoding:/);
+	if (/^encoding:/) {
+		print;
+		next;
+	}
 	my $name = $_;
 	my $url = <F>;
 	chomp $url;
 	my $prog = undef;
 	$prog = $1 if ($url =~ s/ (http.+)//);
-	print STDERR "testing $name : $url... ";
+	print STDERR "testing $name : $url ";
 	# on utiliserait bien --network-timeout pour tester le timeout sauf que
 	# ça marche très mal même sur un flux http !
 	# du coup on en revient au bon vieux alarm... !
@@ -26,11 +30,12 @@ while (<F>) {
 		alarm(5);
 		$pid = open($g,"mpv --network-timeout=5 '$url' 2> /dev/null|");
 		if (!$pid) {
-			print "pas de commande mpv ?!!!\n";
-			exit(1);
+			die "pas de commande mpv ?!!!\n";
 		}
 		my $valid = 0;
 		while (<$g>) {
+			chomp;
+			print STDERR "$_ " if (/Failed/);
 			if (/ Audio /) {
 				$valid = 1;
 				last;
@@ -54,7 +59,7 @@ while (<F>) {
 		close($g);
 	}
 	if ($@) {
-		print STDERR "not ok\n";
+		print STDERR "not ok (timeout) \n";
 	}
 }
 close(F);
