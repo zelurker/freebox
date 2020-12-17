@@ -86,12 +86,16 @@ sub test {
 		}
 		close($g);
 		$g = undef;
-		if ($valid == 2) {
-			print STDERR "ok\n";
-			$valid{$url} = $name;
-		} else {
-			$bad{$url} = 1;
-			print "not ok\n";
+		given($valid) {
+			when(2) {
+				print STDERR "ok\n";
+				$valid{$url} = $name;
+			}
+			when(1) { say "half ok only" }
+			default {
+				$bad{$url} = 1;
+				print "not ok\n";
+			}
 		}
 		alarm(0);
 	};
