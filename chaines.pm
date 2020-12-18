@@ -226,6 +226,13 @@ sub getListeChaines($) {
 		$chan{lc($_->{nom})} = [$_->{id},$_->{logo},$_->{nom},$ordre{$_->{id}}];
 	}
 	$chan{"hbo (east)"} = [1500,"https://www.directhd.tv/wp-content/uploads/channels/200x200/logo_hbo_east_small.gif","HBO (East)"];
+	$chan{"hbo (west)"} = [1501,"http://static.ontvtonight.com/static/2/Open/SourceLogos/Cleared%20Logos/HBO/HBO%20WEST.jpg","HBO (West)"];
+	$chan{"hbo 2 (west)"} = [1502,"https://upload.wikimedia.org/wikipedia/commons/d/de/Hbo_2.png","HBO 2 (West)"];
+	$chan{"hbo 2 (east)"} = [1503,"https://upload.wikimedia.org/wikipedia/commons/d/de/Hbo_2.png","HBO 2 (East)"];
+	$chan{"hbo comedy (east)"} = [1504,"https://upload.wikimedia.org/wikipedia/commons/8/84/HBO_Comedy_logo.png","HBO Comedy (East)"];
+	$chan{"hbo family (east)"} = [1505,"https://upload.wikimedia.org/wikipedia/en/thumb/d/d2/HBO_Family_Asia_logo.svg/1200px-HBO_Family_Asia_logo.svg.png","HBO Family (East)"];
+	$chan{"hbo signature (east)"} = [1506,"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/HBO_Signature.svg/1200px-HBO_Signature.svg.png","HBO Signature (East)"];
+	$chan{"hbo zone (east)"} = [1507,"https://upload.wikimedia.org/wikipedia/commons/6/6a/HBO_Zone_logo.png",,"HBO Zone (East)"];
 	return \%chan;
 }
 
