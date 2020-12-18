@@ -8,6 +8,7 @@
 # up/down : montre les info pour la chaine suivante/précédente
 # zap1 : transmet à list.pl pour zapper
 
+use lib ".";
 use strict;
 use v5.10;
 use POSIX qw(:sys_wait_h);
@@ -25,7 +26,7 @@ use out;
 require "radios.pl";
 
 use progs::telerama;
-# use progs::hbo;
+use progs::hbo;
 use progs::finter;
 use progs::podcasts;
 use progs::files;
@@ -215,7 +216,12 @@ push @prog, progs::podcasts->new($net);
 push @prog, progs::files->new($net);
 push @prog, progs::series->new($net);
 push @prog, progs::arte->new($net);
-# push @prog, progs::hbo->new($net);
+push @prog, progs::hbo->new($net);
+async {
+	my $hbo = $prog[$#prog];
+	$hbo->init();
+	say "hbo init done";
+}
 
 # read_prg:
 my $path = "sock_info";
