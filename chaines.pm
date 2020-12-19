@@ -232,7 +232,7 @@ sub getListeChaines($) {
 	$chan{"hbo comedy (east)"} = [1504,"https://upload.wikimedia.org/wikipedia/commons/8/84/HBO_Comedy_logo.png","HBO Comedy (East)"];
 	$chan{"hbo family (east)"} = [1505,"https://upload.wikimedia.org/wikipedia/en/thumb/d/d2/HBO_Family_Asia_logo.svg/1200px-HBO_Family_Asia_logo.svg.png","HBO Family (East)"];
 	$chan{"hbo signature (east)"} = [1506,"https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/HBO_Signature.svg/1200px-HBO_Signature.svg.png","HBO Signature (East)"];
-	$chan{"hbo zone (east)"} = [1507,"https://upload.wikimedia.org/wikipedia/commons/6/6a/HBO_Zone_logo.png",,"HBO Zone (East)"];
+	$chan{"hbo zone (east)"} = [1507,"https://upload.wikimedia.org/wikipedia/commons/6/6a/HBO_Zone_logo.png","HBO Zone (East)"];
 	return \%chan;
 }
 

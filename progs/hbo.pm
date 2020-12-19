@@ -10,8 +10,6 @@ use out;
 
 @progs::hbo::ISA = ("progs::telerama");
 
-our @tab = ();
-
 our %urls = (
 	"hbo (east)" => "https://www.ontvtonight.com/guide/listings/channel/69046988/hbo-east.html",
 	"hbo (west)" => "https://www.ontvtonight.com/guide/listings/channel/69035526/hbo-west.html",
@@ -29,35 +27,32 @@ sub init {
 	my $p = shift;
 	return if (!$p);
 	foreach my $myurl (keys %urls) {
-		say "*** hbo init $myurl";
 		$p->get($myurl);
 	}
 }
 
-sub get {
-	my ($p,$channel,$source,$base_flux,$serv) = @_;
-	my $conv = chaines::conv_channel($channel);
-	return undef if (!$urls{$conv});
-	# C'est un peu le bordel d'aller chercher net et getlistechaines tout
-	# ça pour récupérer le numéro de chaines, mais c'est ça ou le dupliquer
-	# ici...
-	my $net = out::have_net();
-	my $list = chaines::getListeChaines($net);
-	my $num = $$list{$conv}[0];
-	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-	$mon++; $year += 1900;
-	my $date = sprintf("%02d%02d%d",$mday,$mon,$year);
-	my $ltime = $sec + $min*60 + $hour*3600;
-	my $conv2 = $conv;
+sub update {
+	my ($p,$channel,$offset) = @_;
+	my $list = $p->{list};
+	my $num = $$list{$channel}[0];
+	my $nom = $$list{$channel}[2];
+	die "pas de nom pour $channel num $num list $list" if (!$nom);
+	my $dt = DateTime->now(time_zone => "Europe/Paris");
+	$dt->set_time_zone("US/Eastern");
+	if ($offset) {
+		my $dur = DateTime::Duration->new(days => $offset);
+		$dt += $dur;
+	}
+	my ($mday,$mon,$year) = ($dt->day,$dt->month,$dt->year);
+
+	my $date = sprintf("%02d%02d%d",$dt->day,$dt->month,$dt->year);
+	my $conv2 = $channel;
 	$conv2 =~ s/ /_/g;
 	$conv2 =~ s/[\(\)]//g;
-	# idéalement il faudrait déplacer ça dans update pour qu'on puisse
-	# récupérer un fichier différent en fonction de l'offset de date, mais
-	# le test de chaine est dans get... à faire quand même un de ces 4 !
-	my $html = http::myget($urls{$conv},"cache/$conv2-$date.html",7);
+	my $html = http::myget($urls{$channel}."?dt=".$dt->ymd,"cache/$conv2-$date.html",7);
 	@_ = split /\n/,$html;
 	my ($title,$url,$find_title) = ();
-	@tab = ();
+	my @tab = ();
 	foreach (@_) {
 		last if (/<\/table/);
 		if (/<a href="(https.+?)"/) {
@@ -65,32 +60,42 @@ sub get {
 			$find_title = 1;
 		} elsif ($find_title && /^[ \t]+(.+)<\/a/) {
 			$title = $1;
-			say "adding title $title url $url";
-			add_entry($mday,$mon,$year,$url,$channel,$title,$num) if ($title);
+			add_entry(\@tab,$mday,$mon,$year,$url,$nom,$title,$num) if ($title);
 			$find_title = 0;
 		}
 	}
+	$p->{chaines}->{$channel} = \@tab;
+	\@tab;
+}
+
+sub get {
+	my ($p,$channel,$source,$base_flux,$serv) = @_;
+	my $conv = chaines::conv_channel($channel);
+	return undef if (!$urls{$conv});
+	# p->{chaines} est initialisé dans new de telerama, spécifique à
+	# telerama & hbo
+	my $rtab = $p->{chaines}->{$conv};
+	$rtab = $p->update($conv) if (!$rtab);
 	# Note sur les last_chan : tous ces trucs c pour les command next et
 	# prev qui commencent par tester la chaine en cours et vérifier que
-	# conv_channel(chennel) eq last_channel, du cuop on est obligé de
+	# conv_channel(chennel) eq last_channel, du coup on est obligé de
 	# convertir la chaine ici alors que ça ne nous sert à rien !!!
 	$p->{last_chan} = $conv;
-	$p->{chaines}->{$conv} = \@tab;
-	my $rtab = \@tab;
+	my $time = time();
 	for (my $n=0; $n<=$#$rtab; $n++) {
 		my $sub = $$rtab[$n];
 		my $start = $$sub[3];
 		my $end = $$sub[4];
-		if ($start > time() && $n > 0) {
+		if ($start > $time && $n > 0) {
 			$p->{last_prog} = $n-1;
 			return $$rtab[$n-1];
 		}
 	}
-	die "pas trouvé d'heure locale ?";
+	die "pas trouvé d'heure locale ? channel $channel time $time rtab $#$rtab";
 }
 
 sub add_entry {
-	my ($mday,$mon,$year,$url,$source,$title,$num) = @_;
+	my ($rtab,$mday,$mon,$year,$url,$source,$title,$num) = @_;
 	$url =~ s/\&amp;/\&/g;
 	my ($deb,$fin);
 	my ($pid) = $url =~ /pid=(.+?)\&/;
@@ -140,7 +145,7 @@ sub add_entry {
 	$desc =~ s/<.+?>//g; # vire tous les tags html
 	$desc =~ s/^[ \t]+//;
 	$title = decode_entities($title);
-	push @tab, ([$num, # chan id
+	push @$rtab, ([$num, # chan id
 		"$source", $title,
 		$deb,
 		$fin, "", # fin
