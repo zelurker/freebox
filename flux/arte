@@ -143,6 +143,15 @@ sub decode_html {
 		$url =~ s/\\u(....)/chr(hex($1))/ge;
 	}
 	if (!$url) {
+		# nouveau type de player sans iframe, avec directement le json dans
+		# la page...
+		my ($json_url) = $html =~ /json_url=(.+?)"/;
+		if ($json_url) {
+			$json_url =~ s/v2/v1/;
+			$json = myget($json_url,"cache/arte/$code.json",7);
+		}
+	}
+	if (!$url && !$json) {
 		# dans ce cas là, c'est une page d'index probablement
 		if ($html =~ /__INITIAL_STATE__ = (.+);/) {
 			$json = $1; # decode_entities($1);
@@ -166,8 +175,11 @@ sub decode_html {
 		exit(0);
 	}
 	# say STDERR "decode_html: myget pour $code.player : $url";
-	my $player = myget($url,"cache/arte/$code.player",7) if (!$json);
-	($json) = $player =~ /js_json = (.+?);/ if (!$json);
+	my $player;
+	if ($url) {
+		my $player = myget($url,"cache/arte/$code.player",7) if (!$json);
+		($json) = $player =~ /js_json = (.+?);/ if (!$json);
+	}
 	if (!$json) {
 		my ($json_url) = $player =~ /json_url=(.+?)&amp/;
 		$json_url =~ s/%(..)/chr(hex($1))/eg;
