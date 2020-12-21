@@ -64,8 +64,17 @@ sub update {
 			$find_title = 0;
 		}
 	}
-	$p->{chaines}->{$channel} = \@tab;
-	\@tab;
+	my $rtab = $p->{chaines}->{$channel};
+	if (!$rtab) {
+		$p->{chaines}->{$channel} = \@tab;
+	} elsif ($tab[$#tab][3] < $$rtab[0][3]) {
+		unshift @$rtab,@tab;
+	} elsif ($tab[0][3] > $$rtab[$#$rtab][3]) {
+		push @$rtab,@tab;
+	} else {
+		say STDERR "hbo::update: anomalie, sait pas où mettre le tableau résultat !";
+	}
+	$p->{chaines}->{$channel}
 }
 
 sub get {
@@ -76,12 +85,18 @@ sub get {
 	# telerama & hbo
 	my $rtab = $p->{chaines}->{$conv};
 	$rtab = $p->update($conv) if (!$rtab);
-	# Note sur les last_chan : tous ces trucs c pour les command next et
-	# prev qui commencent par tester la chaine en cours et vérifier que
-	# conv_channel(chennel) eq last_channel, du coup on est obligé de
-	# convertir la chaine ici alors que ça ne nous sert à rien !!!
+
 	$p->{last_chan} = $conv;
 	my $time = time();
+	if ($time > $$rtab[$#$rtab][4]) {
+		# Si le cache dans chaines{} est trop vieux, on met à jour
+		$p->update($channel);
+		$rtab = $p->{chaines}->{$channel};
+	}
+	if ($$rtab[0][3] > $time) {
+		# Heure de début du 1er prog dans le futur -> récupérer l'offset d'avant
+		$p->update($channel,-1);
+	}
 	for (my $n=0; $n<=$#$rtab; $n++) {
 		my $sub = $$rtab[$n];
 		my $start = $$sub[3];

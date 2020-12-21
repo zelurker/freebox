@@ -2,7 +2,7 @@
 package chaines;
 
 use strict;
-require "http.pl";
+use http;
 use Cpanel::JSON::XS qw(decode_json);
 use Data::Dumper;
 use out;
@@ -66,7 +66,7 @@ sub conv_channel {
 	);
 	$channel =~ s/ \(hd\)//i;
 	$channel =~ s/ fhd$//i;
-	$channel =~ s/ (fr|ch|us)$//i;
+	$channel =~ s/ (fr|ch|us|se|br)$//i;
 	$channel =~ s/^cine\+? /ciné\+ /i;
 	$channel =~ s/^brava stingray classica/stingray brava/i;
 	$channel =~ s/^ab1/ab 1/i;
@@ -174,7 +174,7 @@ sub getListeChaines($) {
 	my $url = "/v1/application/initialisation";
 	$url .= "?appareil=android_tablette";
 	$url .= "&api_signature=".progs::telerama::myhash($url)."&api_cle=apitel-5304b49c90511";
-	$r = myget("$server$url","liste_chaines",30);
+	$r = http::myget("$server$url","liste_chaines",30);
 	my $json;
 	eval {
 		$json = decode_json($r);

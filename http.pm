@@ -20,7 +20,7 @@ sub myget {
 		my ($dir) = $cache =~ /^(.+)\//;
 		make_path($dir) if ($dir && !-d $dir);
 		if (-f $cache && -M $cache < $age) {
-			print STDERR "http.pl: cache hit fichier $cache url $url, age ",(-M $cache),"\n";
+			# print STDERR "http.pl: cache hit fichier $cache url $url, age ",(-M $cache),"\n";
 			open(my $f,"<$cache") || die "can't open $cache\n";
 			@_ = <$f>;
 			close($f);
@@ -45,7 +45,7 @@ sub myget {
 		return undef;
 	}
 	my $type = $r->header("Content-type");
-	print STDERR "myget: got type $type\n";
+	# print STDERR "myget: got type $type\n";
 	if ($type =~ /charset=(.+)/) {
 		print "encoding: $1\n";
 	}
