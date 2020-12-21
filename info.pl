@@ -608,6 +608,7 @@ sub disp_channel {
 	chomp $channel;
 	chomp $long if ($long);
 	$cleared = 0;
+	$fadeout = $refresh = undef;
 	print "disp_channel: entrée avec channel=$channel long:$long\n";
 
 	$to_disp = $channel;
