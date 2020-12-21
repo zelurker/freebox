@@ -129,6 +129,8 @@ sub add_entry {
 			my ($h1,$m1,$am1,$h2,$m2,$am2) = ($1,$2,$3,$4,$5,$6);
 			$h1 += 12 if ($am1 eq "pm" && $h1 < 12);
 			$h2 += 12 if ($am2 eq "pm" && $h2 < 12);
+			$h1 = 0 if ($am1 eq "am" && $h1 == 12); # 12am -> 0h !!!
+			$h2 = 0 if ($am2 eq "am" && $h2 == 12); # 12am -> 0h !!!
 			$dt = DateTime->new(year => $year, month => $mon, day => $mday, hour => $h1, minute => $m1, time_zone => $tz);
 			$dt->set_time_zone("Europe/Paris");
 			$deb = $dt->epoch;
