@@ -371,7 +371,7 @@ static int info(int fifo, int argc, char **argv)
 		}
 		nb_indents = 0;
 		if (pic) {
-		    int pw = pic->w, ph = pic->h;
+		    Uint16 pw = pic->w, ph = pic->h;
 		    if (r.y + ph >= sf->h) {
 			/* Le ratio de l'image est calculé d'après une approx, on peut se retrouver avec une hauteur trop grande ici
 			 * donc on clippe plutôt que de ne rien afficher */
@@ -517,6 +517,7 @@ static int list(int fifo, int argc, char **argv)
     int wlist,hlist;
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
     get_size(font,source,&wlist,&hlist,maxw);
+    int htitle = hlist;
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
     hlist += 4;
     // 1ère boucle : on stocke les infos...
@@ -626,11 +627,21 @@ static int list(int fifo, int argc, char **argv)
     if (hlist + fsize > maxh)
 	hlist = maxh - fsize;
 
+again:
     SDL_Surface *sf = create_surface(wlist+4*2,hlist+4*2);
 
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
     y += put_string(sf,font,x,y,source,SDL_MapRGB(sf->format,0xff,0xff,0x80),
 	    NULL);
+    if (y > htitle+4) {
+	/* Débordement du titre, doit refaire sf */
+	y -= 4;
+	hlist += y-htitle;
+	htitle = y;
+	x = y = 4;
+	SDL_FreeSurface(sf);
+	goto again;
+    }
     x += numw+4; // aligné après les numéros
 
     // Détermine start
@@ -1074,7 +1085,7 @@ static void handle_event(SDL_Event *event) {
     }
 }
 
-static void get_free_coords(int &x, int &y, int &w, int &h) {
+static void get_free_coords(Sint16 &x, Sint16 &y, Uint16 &w, Uint16 &h) {
     int infoy=0;
     x = desktop_w/36;
     y = desktop_h/36;
@@ -1115,7 +1126,8 @@ static int vignettes(int argc, char **argv) {
 	printf("vignettes: pas de fichier vignettes\n");
 	return(1);
     }
-    int x,y,w,h;
+    Sint16 x,y;
+    Uint16 w,h;
     get_free_coords(x,y,w,h);
     int x0 = x,maxh=0;
     SDL_Rect r = {x,y,w,h};
@@ -1225,7 +1237,8 @@ static int image(int argc, char **argv) {
     if (!pic) {
 	return vignettes(0,NULL);
     }
-    int x,y,w,h;
+    Sint16 x,y;
+    Uint16 w,h;
     get_free_coords(x,y,w,h);
     int maxy = h+y;
     if (bmp == bg_pic && lastx == x && lasty == y && lastw == w && lasth == h){
