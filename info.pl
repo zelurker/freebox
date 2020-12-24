@@ -72,6 +72,14 @@ sub get_cur_name {
 	return (lc($name),$source,$serv);
 }
 
+sub refresh {
+	if ($lastprog) {
+		disp_prog($lastprog,$last_long);
+	} else {
+		read_stream_info(time(),"$last_chan");
+	}
+}
+
 sub myget {
 	# un get avec cache
 	my $url = shift;
@@ -90,11 +98,7 @@ sub myget {
 					syswrite(F,$raw,length($raw));
 					close(F);
 				}
-				if ($lastprog) {
-					disp_prog($lastprog,$last_long);
-				} else {
-					read_stream_info(time(),"$last_chan");
-				}
+				refresh();
 			} else {
 				print "couldn't get image $url\n";
 			}
@@ -217,11 +221,6 @@ push @prog, progs::files->new($net);
 push @prog, progs::series->new($net);
 push @prog, progs::arte->new($net);
 push @prog, progs::hbo->new($net);
-async {
-	my $hbo = $prog[$#prog];
-	$hbo->init();
-	say "hbo init done";
-}
 
 # read_prg:
 my $path = "sock_info";
@@ -266,6 +265,7 @@ sub disp_prog {
 		return;
 	}
 	encoding($sub);
+	$prog[$reader]->valid($sub,\&refresh);
 	print "disp_long : long:$long\n";
 	$lastprog = $sub;
 	$last_chan = $$sub[1];

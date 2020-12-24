@@ -508,5 +508,11 @@ sub prev {
 	return $p->prev($channel);
 }
 
+sub valid {
+	# Validation de l'affichage
+	my ($p,$sub,$refreh) = @_;
+	return 1;
+}
+
 1;
 

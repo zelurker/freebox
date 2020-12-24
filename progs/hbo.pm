@@ -23,7 +23,11 @@ our %urls = (
 
 sub init {
 	# Procédure pour remplir le cache avec les pages html des chaines, à
-	# appeler dans un fork
+	# appeler dans un async de coro
+	# problème : le site a l'air de mettre une pause de 1s sur chaque page,
+	# du coup ça prend un temps fou si on fait plusieurs chaines, et en + y
+	# a vraiment beaucoup de fichiers, du coup on change de tactique, voir
+	# fonction valid, appelée au moment de l'affichage d'une entrée
 	my $p = shift;
 	return if (!$p);
 	foreach my $myurl (keys %urls) {
@@ -53,14 +57,33 @@ sub update {
 	@_ = split /\n/,$html;
 	my ($title,$url,$find_title) = ();
 	my @tab = ();
+	my $dt;
+	my $tz = "US/Eastern";
+	$tz = "US/Pacific" if ($nom =~ /West/i);
 	foreach (@_) {
 		last if (/<\/table/);
-		if (/<a href="(https.+?)"/) {
+		if (/<h5.+?>(\d\d?):(\d\d) (am|pm)/) {
+			my ($h1,$m1,$am1) = ($1,$2,$3);
+			$h1 += 12 if ($am1 eq "pm" && $h1 < 12);
+			$h1 = 0 if ($am1 eq "am" && $h1 == 12); # 12am -> 0h !!!
+			$dt = DateTime->new(year => $year, month => $mon, day => $mday, hour => $h1, minute => $m1, time_zone => $tz);
+		} elsif (/<a href="(https.+?)"/) {
 			$url = $1;
 			$find_title = 1;
 		} elsif ($find_title && /^[ \t]+(.+)<\/a/) {
 			$title = $1;
-			add_entry(\@tab,$mday,$mon,$year,$url,$nom,$title,$num) if ($title);
+			# add_entry(\@tab,$mday,$mon,$year,$url,$nom,$title,$num) if ($title);
+			push @tab, ([$num, # chan id
+					$nom, $title,
+					$dt->epoch,
+					$dt->epoch+1, "", # fin
+					"", # sub
+					$url, # details
+					"",
+					"", # img
+					0,0,
+					$dt->dmy("/")]);
+			$tab[$#tab-1][4] = $dt->epoch if ($#tab > 0);
 			$find_title = 0;
 		}
 	}
@@ -109,8 +132,13 @@ sub get {
 	die "pas trouvé d'heure locale ? channel $channel time $time rtab $#$rtab";
 }
 
-sub add_entry {
-	my ($rtab,$mday,$mon,$year,$url,$source,$title,$num) = @_;
+sub valid {
+	my ($p,$rtab,$refresh) = @_;
+	my $url = $$rtab[7];
+	my $title = $$rtab[2];
+	return 1 if ($url !~ /^http/);
+	say "valid: got url $url";
+	my $source = $$rtab[1];
 	$url =~ s/\&amp;/\&/g;
 	my ($deb,$fin);
 	my ($pid) = $url =~ /pid=(.+?)\&/;
@@ -123,7 +151,8 @@ sub add_entry {
 	@_ = split /\n/,$html;
 	my $infos = 0;
 	my $desc = "";
-	my $dt;
+	my $dt = DateTime->from_epoch(epoch => $$rtab[3], time_zone => $tz);
+	my ($mday,$mon,$year) = ($dt->day,$dt->month,$dt->year);
 	foreach (@_) {
 		if (/(\d\d?):(\d\d) (am|pm) - (\d\d?):(\d\d) (am|pm)/) {
 			my ($h1,$m1,$am1,$h2,$m2,$am2) = ($1,$2,$3,$4,$5,$6);
@@ -162,16 +191,11 @@ sub add_entry {
 	$desc =~ s/<.+?>//g; # vire tous les tags html
 	$desc =~ s/^[ \t]+//;
 	$title = decode_entities($title);
-	push @$rtab, ([$num, # chan id
-		"$source", $title,
-		$deb,
-		$fin, "", # fin
-		"", # sub
-		$desc, # details
-		"",
-		"", # img
-		0,0,
-		$dt->dmy("/")]);
+	$$rtab[2] = $title;
+	$$rtab[3] = $deb;
+	$$rtab[4] = $fin;
+	$$rtab[7] = $desc;
+	return 1;
 }
 
 1;
