@@ -113,12 +113,12 @@ sub get {
 	my $time = time();
 	if ($time > $$rtab[$#$rtab][4]) {
 		# Si le cache dans chaines{} est trop vieux, on met à jour
-		$p->update($channel);
+		$p->update($conv);
 		$rtab = $p->{chaines}->{$channel};
 	}
 	if ($$rtab[0][3] > $time) {
 		# Heure de début du 1er prog dans le futur -> récupérer l'offset d'avant
-		$p->update($channel,-1);
+		$p->update($conv,-1);
 	}
 	for (my $n=0; $n<=$#$rtab; $n++) {
 		my $sub = $$rtab[$n];
