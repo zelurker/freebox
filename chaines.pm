@@ -233,6 +233,8 @@ sub getListeChaines($) {
 	$chan{"hbo family (east)"} = [1505,"https://cdn.tvpassport.com/image/station/240x135/hbo-family.png","HBO Family (East)"];
 	$chan{"hbo signature (east)"} = [1506,"https://cdn.tvpassport.com/image/station/240x135/hbo-signature.png","HBO Signature (East)"];
 	$chan{"hbo zone (east)"} = [1507,"https://cdn.tvpassport.com/image/station/240x135/hbo-zone.png","HBO Zone (East)"];
+	$chan{"hbo 1 ca"} = [1508,"https://cdn.tvpassport.com/image/station/240x135/hbo.png","HBO 1 Ca"];
+	$chan{"hbo 2 (east) ca"} = [1509,"https://cdn.tvpassport.com/image/station/240x135/hbo2.png","HBO 2 (East) Ca"];
 	return \%chan;
 }
 

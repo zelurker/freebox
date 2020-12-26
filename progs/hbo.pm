@@ -19,6 +19,8 @@ our %urls = (
 	"hbo family (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-family-eastern-feed/628",
 	"hbo signature (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-signature-hbo-3-eastern-hd/7099",
 	"hbo zone (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-zone-east/630",
+	"hbo 1 ca" => "https://www.tvpassport.com/tv-listings/stations/hbo/84",
+	"hbo 2 (east) ca" => "https://www.tvpassport.com/tv-listings/stations/hbo-canada-2-west/292",
 );
 
 sub init {
