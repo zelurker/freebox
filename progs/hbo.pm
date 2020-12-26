@@ -53,6 +53,8 @@ sub parse_tvpassport {
 				my ($eptitle) = /data-episodeTitle="(.*?)"/;
 				if ($title eq "Movie") {
 					$title = $eptitle;
+					my ($annee) = /data-year="(.*?)"/;
+					$title .= " ($annee)" if ($annee);
 				} else {
 					my ($episode) = /data-episodeNumber="(\d*?)"/;
 					$desc = "Episode : $episode ".($eptitle ? "($eptitle)" : "")."\n$desc";
@@ -63,16 +65,18 @@ sub parse_tvpassport {
 				my ($type) = /data-showType="(.+?)"/;
 				my ($pic) = /data-showPicture="(.*?)"/;
 				$pic = "https://cdn.tvpassport.com/image/show/240x360/$pic" if ($pic);
-				$details = $cast if ($cast);
+				$details = "Avec : $cast" if ($cast);
 				$details .= "\nDirector : $director" if ($director);
-				my $dt = DateTime->new(year => $year, month => $month, day => $day, hour => $hour, minute => $minute, second => $second);
+				# indique la time_zone sinon epoch retourne le nombre de
+				# secondes pour l'utc, on veut pas ça.
+				my $dt = DateTime->new(year => $year, month => $month, day => $day, hour => $hour, minute => $minute, second => $second,time_zone => "Europe/Paris");
 				push @tab, ([$num, # chan id
 						$nom, $title,
 						$dt->epoch,
 						$dt->epoch+$duration*60, # fin
 						$type, # category
 						$desc,
-						$cast, # details
+						$details, # details
 						"", # rating
 						$pic, # img
 						$stars,0,
