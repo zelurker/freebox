@@ -12,7 +12,7 @@ use out;
 
 our %urls = (
 	"hbo (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-eastern-feed/614",
-	"hbo (west)" => "https://www.tvpassport.com/tv-listings/stations/hbo-west-hd/6425",
+	"hbo (west)" => "https://www.tvpassport.com/tv-listings/stations/hbo-hd-pacific-feed/2629",
 	"hbo 2 (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-2-eastern-feed-hd/6313",
 	"hbo 2 (west)" => "https://www.tvpassport.com/tv-listings/stations/hbo-2-pacific-feed-hd/6314",
 	"hbo comedy (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-comedy-east/629",
