@@ -61,7 +61,7 @@ sub parse_tvpassport {
 				my ($director) = /data-director="(.*?)"/;
 				my $details = "";
 				my ($type) = /data-showType="(.+?)"/;
-				my ($pic) = /data-showPicture="(.+?)"/;
+				my ($pic) = /data-showPicture="(.*?)"/;
 				$pic = "https://cdn.tvpassport.com/image/show/240x360/$pic" if ($pic);
 				$details = $cast if ($cast);
 				$details .= "\nDirector : $director" if ($director);
