@@ -11,14 +11,14 @@ use out;
 @progs::hbo::ISA = ("progs::telerama");
 
 our %urls = (
-	"hbo (east)" => "https://www.ontvtonight.com/guide/listings/channel/69046988/hbo-east.html",
-	"hbo (west)" => "https://www.ontvtonight.com/guide/listings/channel/69035526/hbo-west.html",
-	"hbo 2 (east)" => "https://www.ontvtonight.com/guide/listings/channel/69022958/hbo-2-east.html",
-	"hbo 2 (west)" => "https://www.ontvtonight.com/guide/listings/channel/69047094/hbo-2-west.html",
-	"hbo comedy (east)" => "https://www.ontvtonight.com/guide/listings/channel/69047950/hbo-comedy-east.html",
-	"hbo family (east)" => "https://www.ontvtonight.com/guide/listings/channel/69032418/hbo-family-east.html",
-	"hbo signature (east)" => "https://www.ontvtonight.com/guide/listings/channel/69032052/hbo-signature-east.html",
-	"hbo zone (east)" => "https://www.ontvtonight.com/guide/listings/channel/69047953/hbo-zone-east.html",
+	"hbo (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-eastern-feed/614",
+	"hbo (west)" => "https://www.tvpassport.com/tv-listings/stations/hbo-west-hd/6425",
+	"hbo 2 (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-2-eastern-feed-hd/6313",
+	"hbo 2 (west)" => "https://www.tvpassport.com/tv-listings/stations/hbo-2-pacific-feed-hd/6314",
+	"hbo comedy (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-comedy-east/629",
+	"hbo family (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-family-eastern-feed/628",
+	"hbo signature (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-signature-hbo-3-eastern-hd/7099",
+	"hbo zone (east)" => "https://www.tvpassport.com/tv-listings/stations/hbo-zone-east/630",
 );
 
 sub init {
@@ -35,30 +35,62 @@ sub init {
 	}
 }
 
-sub update {
-	my ($p,$channel,$offset) = @_;
-	my $list = $p->{list};
-	my $num = $$list{$channel}[0];
-	my $nom = $$list{$channel}[2];
-	die "pas de nom pour $channel num $num list $list" if (!$nom);
-	my $dt = DateTime->now(time_zone => "Europe/Paris");
-	$dt->set_time_zone("US/Eastern");
-	if ($offset) {
-		my $dur = DateTime::Duration->new(days => $offset);
-		$dt += $dur;
-	}
-	my ($mday,$mon,$year) = ($dt->day,$dt->month,$dt->year);
+sub parse_tvpassport {
+	my ($html,$num,$nom) = @_;
+	@_ = split /\n/,$html;
+	my @tab;
+	foreach (@_) {
+		if (/<div id="itemheader/) {
+			s/^[ \t]+//;
+			my @items = split /<div id="itemheader/;
+			foreach (@items) {
+				next if (!$_);
+				my ($year,$month,$day,$hour,$minute,$second) = /data-st="(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)/;
+				my ($duration) = /data-duration="(\d+)/;
+				my ($stars) = /data-starRating="(\d)/i;
+				my ($desc) = /data-description="(.+?)"/;
+				my ($title) = /data-showName="(.+?)"/;
+				my ($eptitle) = /data-episodeTitle="(.*?)"/;
+				if ($title eq "Movie") {
+					$title = $eptitle;
+				} else {
+					my ($episode) = /data-episodeNumber="(\d*?)"/;
+					$desc = "Episode : $episode ".($eptitle ? "($eptitle)" : "")."\n$desc";
+				}
+				my ($cast) = /data-cast="(.*?)"/;
+				my ($director) = /data-director="(.*?)"/;
+				my $details = "";
+				my ($type) = /data-showType="(.+?)"/;
+				my ($pic) = /data-showPicture="(.+?)"/;
+				$pic = "https://cdn.tvpassport.com/image/show/240x360/$pic" if ($pic);
+				$details = $cast if ($cast);
+				$details .= "\nDirector : $director" if ($director);
+				my $dt = DateTime->new(year => $year, month => $month, day => $day, hour => $hour, minute => $minute, second => $second);
+				push @tab, ([$num, # chan id
+						$nom, $title,
+						$dt->epoch,
+						$dt->epoch+$duration*60, # fin
+						$type, # category
+						$desc,
+						$cast, # details
+						"", # rating
+						$pic, # img
+						$stars,0,
+						$dt->dmy("/")]);
+			}
+		} # if
+	} # foreach (@_)
+	return @tab;
+}
 
-	my $date = sprintf("%02d%02d%d",$dt->day,$dt->month,$dt->year);
-	my $conv2 = $channel;
-	$conv2 =~ s/ /_/g;
-	$conv2 =~ s/[\(\)]//g;
-	my $html = http::myget($urls{$channel}."?dt=".$dt->ymd,"cache/$conv2-$date.html",7);
+sub parse_ontvtonight {
+	my ($html,$num,$nom,$year,$mon,$mday) = @_;
 	@_ = split /\n/,$html;
 	my ($title,$url,$find_title) = ();
 	my @tab = ();
 	my $dt;
 	my $tz = "US/Eastern";
+	my $desc;
 	$tz = "US/Pacific" if ($nom =~ /West/i);
 	foreach (@_) {
 		last if (/<\/table/);
@@ -87,15 +119,59 @@ sub update {
 			$find_title = 0;
 		}
 	}
+	return @tab;
+}
+
+sub update {
+	my ($p,$channel,$offset) = @_;
+	my $list = $p->{list};
+	say "*** update $channel offset $offset";
+	my $num = $$list{$channel}[0];
+	my $nom = $$list{$channel}[2];
+	die "pas de nom pour $channel num $num list $list" if (!$nom);
+	my $dt = DateTime->now(time_zone => "Europe/Paris");
+	if ($urls{$channel} =~ /ontvtonight/) {
+		$dt->set_time_zone("US/Eastern");
+	}
+	if ($offset) {
+		my $dur = DateTime::Duration->new(days => $offset);
+		$dt += $dur;
+	}
+	my ($mday,$mon,$year) = ($dt->day,$dt->month,$dt->year);
+	say "update date ",$dt->dmy;
+
+	my $date = sprintf("%02d%02d%d",$dt->day,$dt->month,$dt->year);
+	my $conv2 = $channel;
+	$conv2 =~ s/ /_/g;
+	$conv2 =~ s/[\(\)]//g;
+	my $html;
+	my @tab;
+	if ($urls{$channel} =~ /ontvtonight/) {
+		$html = http::myget($urls{$channel}."?dt=".$dt->ymd,"cache/$conv2-$date.html",7);
+		@tab = parse_ontvtonight($html,$num,$nom,$year,$mon,$mday);
+	} else { # tvpassport
+		$html = http::myget($urls{$channel}."/".$dt->ymd,"cache/$conv2-$date.html",7);
+		@tab = parse_tvpassport($html,$num,$nom);
+	}
+
 	my $rtab = $p->{chaines}->{$channel};
 	if (!$rtab) {
 		$p->{chaines}->{$channel} = \@tab;
-	} elsif ($tab[$#tab][3] < $$rtab[0][3]) {
+	} elsif ($tab[$#tab][3] <= $$rtab[0][3]) {
+		if ($tab[$#tab][3] == $$rtab[0][3] && $tab[$#tab][4] == $$rtab[0][4]) {
+			shift @$rtab;
+		}
 		unshift @$rtab,@tab;
-	} elsif ($tab[0][3] > $$rtab[$#$rtab][3]) {
+	} elsif ($tab[0][3] >= $$rtab[$#$rtab][3]) {
+		if ($tab[0][3] == $$rtab[$#$rtab][3] && $tab[0][4] == $$rtab[$#$rtab][4]) {
+			shift @tab;
+		}
 		push @$rtab,@tab;
 	} else {
 		say STDERR "hbo::update: anomalie, sait pas où mettre le tableau résultat !";
+		say STDERR "actuel commence en $tab[0][3] comparé à fin de rtab $$rtab[$#$rtab][3]";
+		say STDERR "actuel finit en $tab[$#tab][3] comparé à début de rtab $$rtab[0][3]";
+		exit(0);
 	}
 	$p->{chaines}->{$channel}
 }
@@ -137,7 +213,6 @@ sub valid {
 	my $url = $$rtab[7];
 	my $title = $$rtab[2];
 	return 1 if ($url !~ /^http/);
-	say "valid: got url $url";
 	my $source = $$rtab[1];
 	$url =~ s/\&amp;/\&/g;
 	my ($deb,$fin);

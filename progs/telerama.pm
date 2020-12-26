@@ -131,7 +131,7 @@ sub parse_prg {
 		# stop => 4,
 		# category => 5,
 		# desc => 6,
-		# details => 7,
+		# details => 7, (év casting)
 		# rating => 8,
 		# image => 9,
 		# stars => 10,
@@ -472,7 +472,7 @@ sub next {
 	# toujours un bout du jour suivant quand on demande les 100 programmes
 	# d'une date donnée, à priori ils ont l'air d'aller de 6h jour actuel à
 	# 6h jour suivant (on se demande bien pourquoi ils n'ont pas pris 0h !)
-	my $offset = get_offset($$rtab[$#$rtab][12]);
+	my $offset = get_offset($$rtab[$#$rtab][12])+1;
 	my $old = $#$rtab;
 	print "A récupérer offset $offset de $$rtab[$#$rtab][12]\n" if ($debug);
 	$p->update($channel,$offset);
