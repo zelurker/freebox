@@ -50,7 +50,7 @@ sub parse_tvpassport {
 				my ($year,$month,$day,$hour,$minute,$second) = /data-st="(\d+)-(\d+)-(\d+) (\d+):(\d+):(\d+)/;
 				my ($duration) = /data-duration="(\d+)/;
 				my ($stars) = /data-starRating="(\d)/i;
-				my ($desc) = /data-description="(.+?)"/;
+				my ($desc) = /data-description="(.*?)"/;
 				my ($title) = /data-showName="(.+?)"/;
 				my ($eptitle) = /data-episodeTitle="(.*?)"/;
 				if ($title eq "Movie") {
@@ -59,7 +59,7 @@ sub parse_tvpassport {
 					$title .= " ($annee)" if ($annee);
 				} else {
 					my ($episode) = /data-episodeNumber="(\d*?)"/;
-					$desc = "Episode : $episode ".($eptitle ? "($eptitle)" : "")."\n$desc";
+					$desc = "Episode : $episode ".($eptitle ? "($eptitle)" : "")."\n$desc" if ($episode);
 				}
 				my ($cast) = /data-cast="(.*?)"/;
 				my ($director) = /data-director="(.*?)"/;
