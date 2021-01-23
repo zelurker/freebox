@@ -30,11 +30,11 @@ sub mydecode {
 		# test utf8 d'après la page wikipedia https://fr.wikipedia.org/wiki/UTF-8
 		# problème : en latin1 e9 est le é, si il n'y a que ça, on ne peut
 		# pas faire la différence ! Du coup on est obligé d'éliminer des
-		# codes : e9 (é) ea (ê) ef (ï) ee (î) e8 (è) e2 (â)
+		# codes : e7 (ç) e8 (è) e9 (é) ea (ê) ef (ï) ee (î) e2 (â)
 		# Ce qui fait que ça reste boiteux, mais ça devrait suffire... !
 		# (on retire les préfixes qui peuvent être suivis par n'importe
 		# quoi et qui correspondent à des codes courants en latin1)
-		if ($$ref =~ /([\xc2-\xdf\xe1\xe3-\xe7\xeb-\xec\xf1-\xf3])|(\xe0[\xa0-\xbf])|(\xed[\x80-\x9f])|(\xf0[\x90-\xbf])|(\xf4[\x80-\x8f])/ || $max_ord > 255) {
+		if ($$ref =~ /([\xc2-\xdf\xe1\xe3-\xe6\xeb-\xec\xf1-\xf3])|(\xe0[\xa0-\xbf])|(\xed[\x80-\x9f])|(\xf0[\x90-\xbf])|(\xf4[\x80-\x8f])/ || $max_ord > 255) {
 			# print "to_utf: reçu un truc en utf: $$ref max_ord $max_ord\n";
 			return;
 		}
