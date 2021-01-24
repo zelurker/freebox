@@ -26,6 +26,8 @@ our $last_chan;
 sub get {
 	my ($p,$channel,$source,$base_flux) = @_;
 	print STDERR "progs/podcats/get chan $channel source $source\n"; # if ($debug);
+	# Même chose en entrée, $channel est en latin1 parfois !
+	myutf::mydecode(\$channel);
 	if (!$debug) {
 		return undef if ($source ne "flux" || $base_flux !~ /^podcasts.*\/(.+)/);
 		my $choice = $1;
