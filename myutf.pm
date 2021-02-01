@@ -34,6 +34,10 @@ sub mydecode {
 		# Ce qui fait que ça reste boiteux, mais ça devrait suffire... !
 		# (on retire les préfixes qui peuvent être suivis par n'importe
 		# quoi et qui correspondent à des codes courants en latin1)
+		# 1ère collision frontale, e2 en latin1 ça fait donc à
+		# mais e2 80 9c en utf ça fait guillemet ouverte... !
+		# Au passage c'est 6 " avec la touche de composition : “
+		return if ($$ref =~ /\xe2\x80\x9c/);
 		if ($$ref =~ /([\xc2-\xdf\xe1\xe3-\xe6\xeb-\xec\xf1-\xf3])|(\xe0[\xa0-\xbf])|(\xed[\x80-\x9f])|(\xf0[\x90-\xbf])|(\xf4[\x80-\x8f])/ || $max_ord > 255) {
 			# print "to_utf: reçu un truc en utf: $$ref max_ord $max_ord\n";
 			return;
