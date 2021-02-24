@@ -44,7 +44,7 @@ sub mydecode {
 		# test utf8 d'après la page wikipedia https://fr.wikipedia.org/wiki/UTF-8
 		# problème : en latin1 e9 est le é, si il n'y a que ça, on ne peut
 		# pas faire la différence ! Du coup on est obligé d'éliminer des
-		# codes : c7 (Ç) ce (î) e2 (â) e7 (ç) e8 (è) e9 (é) ea (ê) eb (ë) ee (î) ef (ï)
+		# codes : c7 (Ç) c9 (É) ce (î) e2 (â) e7 (ç) e8 (è) e9 (é) ea (ê) eb (ë) ee (î) ef (ï)
 		# Ce qui fait que ça reste boiteux, mais ça devrait suffire... !
 		# (on retire les préfixes qui peuvent être suivis par n'importe
 		# quoi et qui correspondent à des codes courants en latin1)
@@ -55,13 +55,13 @@ sub mydecode {
 		return if ($$ref =~ /(\xe2\x80\x9c|\xe2\x82\xac)/);
 		# je garde la boucle commentée pour d'autre débugage éventuel, ça
 		# évite de tout retaper à chaque fois !
-#		if ($$ref =~ /Le jeu des 1000/) {
+#		if ($$ref =~ /Best of Plastic/) {
 #			for (my $n=0; $n<length($$ref); $n++) {
 #				print substr($$ref,$n,1)," ",sprintf("%02x ",ord(substr($$ref,$n)));
 #			}
 #			print "\n";
 #		}
-		if ($$ref =~ /([\xc2-\xc6\xc8-\xcd\xcf-\xdf\xe1\xe3-\xe6\xec-\xec\xf1-\xf3])|(\xe0[\xa0-\xbf])|(\xed[\x80-\x9f])|(\xf0[\x90-\xbf])|(\xf4[\x80-\x8f])/ || $max_ord > 255) {
+		if ($$ref =~ /([\xc2-\xc6\xc8\xca-\xcd\xcf-\xdf\xe1\xe3-\xe6\xec-\xec\xf1-\xf3])|(\xe0[\xa0-\xbf])|(\xed[\x80-\x9f])|(\xf0[\x90-\xbf])|(\xf4[\x80-\x8f])/ || $max_ord > 255) {
 			# print "to_utf: reçu un truc en utf: $$ref max_ord $max_ord\n";
 			return;
 		}
