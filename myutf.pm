@@ -22,8 +22,22 @@ sub mydecode {
 	# Si c'est < 256 alors c'est du latin1
 	# Si c'est > 256 alors c'est de l'utf8 (j'espère !)
 	my $max_ord = 0;
+	# Bon on a un sérieux problème avec une variation du -
+	# quand on est un utf8 il est encodé par e2 80 93
+	# mais quand on est en latin, vu qu'il n'y a pas de code pour ce truc,
+	# il est encodé par \x2013 !!!
+	# Evidemment une chaine contenant ce code ne peut être convertie de
+	# latin1 en utf8, tu m'étonnes
+	# donc on va forcer le remplacement de cet e2 80 93 par -
+	# et faire pareil pour le \x2013
+	$$ref =~ s/\xe2\x80\x93/-/g;
 	for (my $n=0; $n<length($$ref); $n++) {
-		$max_ord = ord(substr($$ref,$n,1)) if (ord(substr($$ref,$n,1)) > $max_ord);
+		my $o = ord(substr($$ref,$n,1));
+		if ($o == 0x2013) {
+			$$ref = substr($$ref,0,$n)."-".substr($$ref,$n+1);
+			next;
+		}
+		$max_ord = $o if ($o > $max_ord);
 	}
 	return if ($max_ord < 128);
 	if (!$latin) {
@@ -37,7 +51,16 @@ sub mydecode {
 		# 1ère collision frontale, e2 en latin1 ça fait donc à
 		# mais e2 80 9c en utf ça fait guillemet ouverte... !
 		# Au passage c'est 6 " avec la touche de composition : “
-		return if ($$ref =~ /\xe2\x80\x9c/);
+		# et e2 82 ac c'est l'euro €
+		return if ($$ref =~ /(\xe2\x80\x9c|\xe2\x82\xac)/);
+		# je garde la boucle commentée pour d'autre débugage éventuel, ça
+		# évite de tout retaper à chaque fois !
+#		if ($$ref =~ /Le jeu des 1000/) {
+#			for (my $n=0; $n<length($$ref); $n++) {
+#				print substr($$ref,$n,1)," ",sprintf("%02x ",ord(substr($$ref,$n)));
+#			}
+#			print "\n";
+#		}
 		if ($$ref =~ /([\xc2-\xc6\xc8-\xcd\xcf-\xdf\xe1\xe3-\xe6\xec-\xec\xf1-\xf3])|(\xe0[\xa0-\xbf])|(\xed[\x80-\x9f])|(\xf0[\x90-\xbf])|(\xf4[\x80-\x8f])/ || $max_ord > 255) {
 			# print "to_utf: reçu un truc en utf: $$ref max_ord $max_ord\n";
 			return;
