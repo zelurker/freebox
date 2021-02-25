@@ -10,10 +10,102 @@ use v5.10;
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
 
+sub F { 0 }  # character never appears in text */
+sub T { 1 }  # character appears in plain ASCII text */
+sub I { 2 }  # character appears in ISO-8859 text */
+sub X { 3 }  # character appears in non-ISO extended ASCII (Mac, IBM PC) */
+
+my @text_chars = (
+	#                   BEL BS HT LF VT FF CR    */
+	F, F, F, F, F, F, F, T, T, T, T, T, T, T, F, F,  #  0x0X */
+	#                               ESC          */
+	F, F, F, F, F, F, F, F, F, F, F, T, F, F, F, F,  #  0x1X */
+	T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T,  #  0x2X */
+	T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T,  #  0x3X */
+	T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T,  #  0x4X */
+	T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T,  #  0x5X */
+	T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, T,  #  0x6X */
+	T, T, T, T, T, T, T, T, T, T, T, T, T, T, T, F,  #  0x7X */
+	#             NEL                            */
+	X, X, X, X, X, T, X, X, X, X, X, X, X, X, X, X,  #  0x8X */
+	X, X, X, X, X, X, X, X, X, X, X, X, X, X, X, X,  #  0x9X */
+	I, I, I, I, I, I, I, I, I, I, I, I, I, I, I, I,  #  0xaX */
+	I, I, I, I, I, I, I, I, I, I, I, I, I, I, I, I,  #  0xbX */
+	I, I, I, I, I, I, I, I, I, I, I, I, I, I, I, I,  #  0xcX */
+	I, I, I, I, I, I, I, I, I, I, I, I, I, I, I, I,  #  0xdX */
+	I, I, I, I, I, I, I, I, I, I, I, I, I, I, I, I,  #  0xeX */
+	I, I, I, I, I, I, I, I, I, I, I, I, I, I, I, I   #  0xfX */
+);
+
+#sub looks_ascii {
+#    my $text = shift;
+#    for (my $i = 0; $i < length($text); $i++) {
+#	my $t = $text_chars[ord(substr($text,$i,1))];
+#
+#	return 0 if ($t != T)
+#    }
+#}
+
+sub looks_utf8 {
+    my $text = shift;
+    my $ctrl = 0;
+
+    my $gotone = 0;
+    for (my $i = 0; $i < length($text); $i++) {
+	my $c = ord(substr($text,$i,1));
+	if (($c & 0x80) == 0) {	   #  0xxxxxxx is plain ASCII */
+	    # Even if the whole file is valid UTF-8 sequences,
+	    # still reject it if it uses weird control characters.
+
+	    $ctrl = 1 if ($text_chars[$c] != T);
+
+	} elsif (($c & 0x40) == 0) { #  10xxxxxx never 1st byte */
+	    return 0;
+	} else {			   #  11xxxxxx begins UTF-8 */
+	    my $following;
+
+	    if (($c & 0x20) == 0) {		#  110xxxxx */
+		$c &= 0x1f;
+		$following = 1;
+	    } elsif (($c & 0x10) == 0) {	#  1110xxxx */
+		$c &= 0x0f;
+		$following = 2;
+	    } elsif (($c & 0x08) == 0) {	#  11110xxx */
+		$c &= 0x07;
+		$following = 3;
+	    } elsif (($c & 0x04) == 0) {	#  111110xx */
+		$c &= 0x03;
+		$following = 4;
+	    } elsif (($c & 0x02) == 0) {	#  1111110x */
+		$c &= 0x01;
+		$following = 5;
+	    } else {
+		return 0;
+	    }
+
+	    for (my $n = 0; $n < $following; $n++) {
+		$i++;
+		if ($i >= length($text)) {
+		    goto done;
+		}
+
+		my $b = ord(substr($text,$i,1));
+		if (($b & 0x80) == 0 || ($b & 0x40)) {
+		    return 0;
+		}
+
+		$c = ($c << 6) + ($b & 0x3f);
+	    }
+
+	    $gotone = 1;
+	}
+    }
+    done:
+    return $ctrl ? 0 : ($gotone ? 2 : 1);
+}
+
 sub mydecode {
 	my $ref = shift;
-	$$ref =~ s/\x{2019}/'/g;
-	$$ref =~ s/\x{0153}/oe/g;
 	# Ok, on va chercher l'encodage de la chaine puisqu'on ne peut
 	# faire confiance à is_utf8. L'idée c'est de se fier aux codes
 	# ascii, on cherche le maxi dans la chaine.
@@ -30,41 +122,26 @@ sub mydecode {
 	# latin1 en utf8, tu m'étonnes
 	# donc on va forcer le remplacement de cet e2 80 93 par -
 	# et faire pareil pour le \x2013
+	# pareil pour 201c ("), e2 80 9c
 	$$ref =~ s/\xe2\x80\x93/-/g;
+	$$ref =~ s/\xe2\x80(\x9c|\x9d)/"/g;
+	$$ref =~ s/[\x{201c}\x{201d}]/"/g;
+	$$ref =~ s/\x{2013}/-/g;
 	for (my $n=0; $n<length($$ref); $n++) {
 		my $o = ord(substr($$ref,$n,1));
-		if ($o == 0x2013) {
-			$$ref = substr($$ref,0,$n)."-".substr($$ref,$n+1);
-			next;
-		}
 		$max_ord = $o if ($o > $max_ord);
 	}
 	return if ($max_ord < 128);
 	if (!$latin) {
-		# test utf8 d'après la page wikipedia https://fr.wikipedia.org/wiki/UTF-8
-		# problème : en latin1 e9 est le é, si il n'y a que ça, on ne peut
-		# pas faire la différence ! Du coup on est obligé d'éliminer des
-		# codes : c7 (Ç) c9 (É) ce (î) e2 (â) e7 (ç) e8 (è) e9 (é) ea (ê) eb (ë) ee (î) ef (ï)
-		# Ce qui fait que ça reste boiteux, mais ça devrait suffire... !
-		# (on retire les préfixes qui peuvent être suivis par n'importe
-		# quoi et qui correspondent à des codes courants en latin1)
-		# 1ère collision frontale, e2 en latin1 ça fait donc à
-		# mais e2 80 9c en utf ça fait guillemet ouverte... !
-		# Au passage c'est 6 " avec la touche de composition : “
-		# et e2 82 ac c'est l'euro €
-		return if ($$ref =~ /(\xe2\x80\x9c|\xe2\x82\xac)/);
-		# je garde la boucle commentée pour d'autre débugage éventuel, ça
-		# évite de tout retaper à chaque fois !
-#		if ($$ref =~ /Best of Plastic/) {
-#			for (my $n=0; $n<length($$ref); $n++) {
-#				print substr($$ref,$n,1)," ",sprintf("%02x ",ord(substr($$ref,$n)));
-#			}
-#			print "\n";
-#		}
-		if ($$ref =~ /([\xc2-\xc6\xc8\xca-\xcd\xcf-\xdf\xe1\xe3-\xe6\xec-\xec\xf1-\xf3])|(\xe0[\xa0-\xbf])|(\xed[\x80-\x9f])|(\xf0[\x90-\xbf])|(\xf4[\x80-\x8f])/ || $max_ord > 255) {
-			# print "to_utf: reçu un truc en utf: $$ref max_ord $max_ord\n";
-			return;
+		if ($$ref =~ /en distanciel quand/) {
+			for (my $n=0; $n<length($$ref); $n++) {
+				print substr($$ref,$n,1)," ",sprintf("%02x ",ord(substr($$ref,$n)));
+			}
+			print "\n";
 		}
+	    if (looks_utf8($$ref)) {
+		return;
+	    }
 		eval {
 			Encode::from_to($$ref,"iso-8859-15","utf8");
 		};
