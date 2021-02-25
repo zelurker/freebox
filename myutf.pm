@@ -104,6 +104,20 @@ sub looks_utf8 {
     return $ctrl ? 0 : ($gotone ? 2 : 1);
 }
 
+my @above;
+sub restore_above($) {
+	if (@above) {
+		my $ref = shift;
+		my $x = 0;
+		for (my $n=0; $n<length($$ref); $n++) {
+			if (ord(substr($$ref,$n)) == 1) {
+				Encode::_utf8_off($above[$x]);
+				substr($$ref,$n,1) = $above[$x++];
+			}
+		}
+	}
+}
+
 sub mydecode {
 	my $ref = shift;
 	# Ok, on va chercher l'encodage de la chaine puisqu'on ne peut
@@ -123,31 +137,40 @@ sub mydecode {
 	# donc on va forcer le remplacement de cet e2 80 93 par -
 	# et faire pareil pour le \x2013
 	# pareil pour 201c ("), e2 80 9c
-	$$ref =~ s/\xe2\x80\x93/-/g;
-	$$ref =~ s/\xe2\x80(\x9c|\x9d)/"/g;
-	$$ref =~ s/[\x{201c}\x{201d}]/"/g;
-	$$ref =~ s/\x{2013}/-/g;
+	my $orig = $$ref;
+	@above = ();
 	for (my $n=0; $n<length($$ref); $n++) {
 		my $o = ord(substr($$ref,$n,1));
+		if ($o > 255) {
+			push @above,substr($$ref,$n,1);
+			substr($$ref,$n,1) = "\x01";
+			next;
+		}
 		$max_ord = $o if ($o > $max_ord);
 	}
-	return if ($max_ord < 128);
-	if (!$latin) {
-		if ($$ref =~ /en distanciel quand/) {
-			for (my $n=0; $n<length($$ref); $n++) {
-				print substr($$ref,$n,1)," ",sprintf("%02x ",ord(substr($$ref,$n)));
-			}
-			print "\n";
-		}
-	    if (looks_utf8($$ref)) {
+	if ($max_ord < 128) {
+		restore_above($ref);
 		return;
-	    }
+	}
+	if (!$latin) {
+#		if ($$ref =~ /Faux.fuyants/) {
+#			for (my $n=0; $n<length($$ref); $n++) {
+#				print substr($$ref,$n,1)," ",sprintf("%02x ",ord(substr($$ref,$n)));
+#			}
+#			print "\n";
+#		}
+		if (looks_utf8($$ref)) {
+			restore_above($ref);
+			return;
+		}
+
 		eval {
 			Encode::from_to($$ref,"iso-8859-15","utf8");
 		};
 		if ($@) {
 			print "to_utf: error encoding $$ref: $!, $@\n";
 		}
+		restore_above($ref);
 	} elsif ($$ref =~ /[\xc3\xc5]/ || $max_ord > 255) {
 		utf8::encode($$ref) if ($max_ord > 255);
 		eval {
