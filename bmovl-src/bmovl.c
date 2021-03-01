@@ -744,8 +744,9 @@ again:
 	fprintf(f,"%d\n",nb_elem);
 	fclose(f);
     }
-    if (sdl_screen && *bg_pic) {
+    if (sdl_screen/* && *bg_pic */) {
 	// Dans ce cas là il peut rester un bout d'image en dessous à virer
+	// et à droite
 	int infoy = 0;
 	f = fopen("info_coords","r");
 	if (f) {
@@ -762,6 +763,19 @@ again:
 	r.w = sf->w + (mode_list ? 0 : x);
 	r.h = maxy - r.y;
 	if (maxy > r.y) {
+#ifdef SDL1
+	    SDL_FillRect(sdl_screen,&r,0);
+	    SDL_UpdateRects(sdl_screen,1,&r);
+#else
+	    SDL_RenderFillRect(renderer,&r); // color set when clearing the screen
+	    SDL_RenderPresent(renderer);
+#endif
+	}
+	if (oldy < y+sf->h) {
+	    r.x = x+sf->w;
+	    r.y = oldy;
+	    r.w = oldw-r.x;
+	    r.h = y+sf->h-oldy;
 #ifdef SDL1
 	    SDL_FillRect(sdl_screen,&r,0);
 	    SDL_UpdateRects(sdl_screen,1,&r);
