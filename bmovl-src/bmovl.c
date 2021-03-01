@@ -348,9 +348,9 @@ static int info(int fifo, int argc, char **argv)
 		x = margew;
 		y = height - h - margeh;
 		if (list_opened && y < listy+listh) {
+		    int oldy = y;
 		    y = listy+listh;
-		    if (y+h > height-16)
-			h = height-16-y;
+		    h -= y-oldy;
 		}
 		sf = create_surface(width,h);
 		fg = get_fg(sf);
