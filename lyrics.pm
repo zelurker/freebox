@@ -375,6 +375,7 @@ sub get_lyrics {
 	}
 	my $r;
 	my $orig = $title;
+	$title =~ s/ \(\d+\)//; # année éventuelle à la fin (sun)
 	$title = pure_ascii($title);
 	$title =~ s/ en duo.+//; # à tout hasard... !
 	if ($title =~ /jeanine medicament blues/i) {
