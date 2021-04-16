@@ -353,6 +353,12 @@ sub disp_prog {
 sub commands {
 	my $fh = shift;
 	$cmd = shift;
+	# interception d'un double encodage utf8, ça arrive quand un tag est
+	# encodé en utf8, mpv lui réapplique un encodage. Je vais pas m'amuser
+	# à tout filtrer, ça reste rare, celui là est pour le é, codé en utf8
+	# ça fait c3 a9, mis sous forme de codes pour être certain que c'est ce
+	# qu'on veut
+	$cmd =~ s/\xc3\x83\xc2\xa9/\xc3\xa9/g;
 	myutf::mydecode(\$cmd);
 	my @tab = split(/ /,$cmd);
 	my $old_long = $long;
