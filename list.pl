@@ -2124,7 +2124,7 @@ sub disp_list {
 	} elsif ($source =~ /Fichiers/) {
 		my $path = ($source eq "Fichiers vidéo" ? "video_path" : "music_path");
 		$header .= "$source : $conf{$path}\n";
-		Encode::from_to($header, "iso-8859-1", "utf-8") if (!$latin);
+		myutf::mydecode(\$header);
 	} else {
 		$header .= "$source\n";
 	}
@@ -2171,7 +2171,7 @@ sub disp_list {
 		if ($source =~ /Fichiers/) {
 			$out = out::setup_output("fsel");
 		} elsif ($source eq "flux" && $base_flux ne "stations" && !$have_pic) {
-			$info = 1 if ($base_flux =~ /^(la-bas|podcasts|arte|cloudflare)/i);
+			$info = 1; # if ($base_flux =~ /^(la-bas|podcasts|arte|cloudflare)/i);
 			$out = out::setup_output("longlist");
 		} else {
 			$out = out::setup_output(($cmd eq "refresh" ? "list-noinfo" : "bmovl-src/list"));
