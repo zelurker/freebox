@@ -1288,32 +1288,16 @@ sub load_file2 {
 			$pid_remux = undef;
 		}
 		if ($src eq "dvd" && $flav eq "mpv dvd raw") {
-			say "lancement mpv -dvd-device $dvd dvd://2 --no-cache -frames 0 --no-video -script dvd.lua|";
-			open(F,"mpv -dvd-device $dvd dvd://2 --no-cache -frames 0 --no-video -script dvd.lua|");
+			say "lancement lsdvd $dvd";
+			open(F,"lsdvd $dvd|");
 			@list = ();
-			my @length = ();
 			while (<F>) {
-				if (/length (\d+)/) {
+				if (/Title: (\d+), Length: (.+) /) {
 					say "got length $1";
-					push @length,$1;
+					push @list,[[$1,$2,"dvd://".($1-1)]];
 				}
 			}
 			close(F);
-			for (my $n=0; $n<=$#length; $n++) {
-				my $l = $length[$n];
-				my $t = "";
-				if ($l >= 3600) {
-					$t = sprintf("%d",$l/3600);
-					$l -= $t*3600;
-					$t .= "h";
-				}
-				if ($l >= 60) {
-					$t .= sprintf("%dm",$l/60);
-					$l -= sprintf("%d",$l/60)*60;
-				}
-				$t .= $l."s";
-				push @list,[[$n+1,$t,"dvd://$n"]];
-			}
 			disp_list();
 			return;
 		}
