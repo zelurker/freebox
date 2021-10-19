@@ -102,7 +102,7 @@ end
 mp.observe_property("osd-width","number",on_width_change)
 mp.observe_property("audio-bitrate","number",on_abitrate)
 mp.observe_property("metadata","native",metadata)
-mp.observe_property("chapter-metadata","native",metadata)
+-- mp.observe_property("chapter-metadata","native",metadata)
 mp.observe_property("time-pos","native",timing)
 
 mp.add_hook("on_unload", 10, function ()
