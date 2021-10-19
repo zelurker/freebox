@@ -722,13 +722,13 @@ sub handle_result {
 					print F $body;
 					close(F);
 					$pic = $name;
-					my $ftype = `file $pic`;
+					my $ftype = `file \"$pic\"`;
 					chomp $ftype;
 					if ($ftype =~ /gzip/) {
 						print "gzip content detected\n";
 						rename($pic,"$pic.gz");
 						system("gunzip $pic.gz");
-						$ftype = `file $pic`;
+						$ftype = `file \"$pic\"`;
 						chomp $ftype;
 					}
 					if ($ftype =~ /error/i || $ftype =~ /HTML/) {
