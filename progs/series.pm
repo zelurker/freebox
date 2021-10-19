@@ -107,7 +107,7 @@ sub get {
 				print STDERR "mechanize error $@\n";
 				return undef;
 			}
-			$mech->save_content("page$page.html");
+			$mech->save_content("page$page.html") if ($debug);
 			$_ = $mech->content;
 			my $search = sprintf("s%02de%02d",$saison,$episode);
 			my $syn = 0;
