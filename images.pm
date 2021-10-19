@@ -14,11 +14,6 @@ sub search {
 	my @tab = ();
 
 	$q =~ s/ /\+/g;
-	say "images: $q";
-	for (my $n=0; $n<length($q); $n++) {
-		print sprintf("%02x ",ord(substr($q,$n,1)));
-	}
-	say "";
 	my $c = http::myget("https://duckduckgo.com/?t=ffsb&q=$q&ia=web");
 
 	# avec duckduckgo, l'idée est de récupérer un champ généré pour
