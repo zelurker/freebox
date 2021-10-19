@@ -710,7 +710,7 @@ sub handle_result {
 		if (-f $name) {
 			utime(undef,undef,$name);
 			print "handle_result: using cache $name\n";
-			out::send_bmovl("image $name");
+			out::send_bmovl_utf("image $name");
 		} else {
 			my $referer = $url;
 			$referer =~ s/(.+)\/.+?$/$1\//;
@@ -738,7 +738,7 @@ sub handle_result {
 						return;
 					}
 					print "handle_result: calling image $pic\n";
-					out::send_bmovl("image $pic");
+					out::send_bmovl_utf("image $pic");
 				} else {
 					handle_images();
 				}

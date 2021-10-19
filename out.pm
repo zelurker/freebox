@@ -29,6 +29,16 @@ sub send_bmovl {
 	}
 }
 
+sub send_bmovl_utf {
+	my $cmd = shift;
+	my $f = open_bmovl();
+	binmode $f, ":utf8" if (!$latin);
+	if ($f) {
+		print $f "$cmd\n";
+		close($f);
+	}
+}
+
 sub send_cmd_fifo {
 	my ($fifo,$cmd,$rep) = @_;
 	my $tries = 1;
