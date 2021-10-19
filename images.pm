@@ -29,7 +29,14 @@ sub search {
 	# Décodage du js... !
 	$c =~ s/^.+results"\:/{"results":/;
 	$c =~ s/,"vqd.+/}/;
-	my $json = decode_json($c);
+	my $json;
+	eval {
+		$json = decode_json($c);
+	};
+	if ($@) {
+		say "images: $@ $!";
+		return;
+	}
 	my $rtab = $json->{results};
 	foreach (@$rtab) {
 		my %args;
