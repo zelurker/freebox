@@ -98,6 +98,7 @@ sub handle_lyrics {
 				$lyr = 1;
 				next;
 			}
+			next if (/<div class="lf_info/);
 			if ($lyr) {
 				s/<br>/\n/g;
 				$lyr = 0 if (s/<\/div>//); # collé à la dernière ligne !
@@ -262,6 +263,8 @@ sub pure_ascii {
 	$_ = shift;
 	$_ = lc($_);
 	s/[()]//g;
+	s/–/-/g; # un tiret en utf8 !
+	s/(œ|\xc5\x93)/oe/g;
 	s/([àâ]|\xc3\xa0)/a/g;
 	s/([éèêë]|\xc3\xa9)/e/g;
 	s/ï/i/g;
@@ -381,8 +384,9 @@ sub get_lyrics {
 	if ($title =~ /jeanine medicament blues/i) {
 		$artist = "Jean-jacques Goldman";
 	}
+	say "title $title";
 debut:
-	say "lyrics: envoie requête : lyrics $artist - $title";
+	say "lyrics: envoie requête : lyrics $artist $title";
 	my $mech = search::search("lyrics $artist $title");
 	if ($@) {
 		print "lyrics: foirage sur le submit $!: $@\n";
