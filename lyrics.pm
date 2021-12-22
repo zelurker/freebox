@@ -78,16 +78,30 @@ sub handle_lyrics {
 		}
 	} elsif ($u =~ /genius.com/) {
 		my $lyr = 0;
+		my $footer = undef;
 		foreach (split /\n/,$_) {
 			s/\r//;
-			if (s/<div class="lyrics">//) {
+			if (s/<div[^>]+class="lyrics.+?">//i) {
 				$lyr = 1;
 			}
 			if ($lyr) {
-				last if (/<\/div>/);
-				s/<br>/\n/g;
+				s/<br\/?>/\n/g;
 				# Filtrage des pubs en plein milieu de la chanson !!!
+				if (/div class="RichText.+?>(.+)/i) {
+					$footer = $1;
+				}
+				$lyr = 0 if (s/<div class="Lyrics__Footer.+//i);
 				$lyrics .= decode_entities($_);
+			} elsif ($footer) {
+				if (s/<\/div.+//) {
+					$footer .= $_;
+					$footer =~ s/<p>//g;
+					$footer =~ s/<\/p>/\n/g;
+					$footer = decode_entities($footer);
+					$lyrics .= "\n\n$footer";
+					last;
+				}
+				$footer .= $_;
 			}
 		}
 	} elsif ($u =~ /paroles-musique.com/) {
@@ -237,7 +251,7 @@ sub handle_lyrics {
 	$year += 1900;
 	$lyrics =~ s/^ +//;
 	if ($lyrics eq "") {
-		say "lyrics rejected - empty";
+		say "lyrics rejected - empty ($u)";
 		return undef;
 	}
 	$lyrics .= "\nParoles provenant de $site, le $mday/$mon/$year";
