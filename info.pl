@@ -415,6 +415,9 @@ sub commands {
 		my ($i,$v) = ($1,$2);
 		$i = lc($i); # tsss... !
 		$v =~ s/\xc2\x92/'/g;
+		$v =~ s/\xc3\x83\xc2\xaa/\xc3\xaa/g; # double encodage du ê, parce que mpv refuse les tags en utf8 et les ré-encode systématiquement !
+		$v =~ s/\xc3\x83\xc2\xa8/\xc3\xa8/g; # pareil pour le è
+		$v =~ s/\xc3\x83\xc2\xb9/\xc3\xb9/g; # et le ù
 		my ($name,$src,$serv) = get_cur_name();
 		my $name0 = $name;
 		$name .= "&$src";
