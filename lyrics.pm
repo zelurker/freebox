@@ -12,6 +12,7 @@ use utf8;
 use v5.10;
 use lib ".";
 use search;
+use myutf;
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
 
@@ -85,10 +86,10 @@ sub handle_lyrics {
 				$lyr = 1;
 			}
 			if ($lyr) {
+				$footer = $1 if (/div class="RichText.+?>(.+)/i);
 				$lyr = 0 if (s/<div class="Lyrics__Footer.+//i);
 				s/<br\/?>/\n/g;
 				# Filtrage des pubs en plein milieu de la chanson !!!
-				$footer = $1 if (/div class="RichText.+?>(.+)/i);
 				$lyrics .= decode_entities($_);
 				last if (!$lyr && !$footer);
 			} elsif ($footer) {
@@ -279,10 +280,10 @@ sub pure_ascii {
 	s/–/-/g; # un tiret en utf8 !
 	s/(œ|\xc5\x93)/oe/g;
 	s/([àâ]|\xc3\xa0)/a/g;
-	s/([éèêë]|\xc3\xa9)/e/g;
-	s/ï/i/g;
-	s/ô/o/g;
-	s/[ùû]/u/g;
+	s/(é|è|ê|ë|\xc3\xa9|\xc3\xaa|\xc3\xa8|\xc3\xab)/e/g; # c3 aa est censé être pareil que ê, et le source est utf8... !!!!
+	s/(ï|\xc3\xaf)/i/g;
+	s/(ô|\xc3\xb4)/o/g;
+	s/(ù|û|\xc3\xb9|\xc3\xbb)/u/g; # le u
 	s/(ü|\xc3\xbc)/u/g;
 	s/(ç|\xc3\xa7)/c/g;
 	s/[!,?;\-]/ /g;
