@@ -81,7 +81,7 @@ sub handle_lyrics {
 		my $footer = undef;
 		foreach (split /\n/,$_) {
 			s/\r//;
-			if (s/<div[^>]+class="lyrics.+?">//i) {
+			if (s/^.+?<div[^>]+class="lyrics.+?">//i) {
 				$lyr = 1;
 			}
 			if ($lyr) {
