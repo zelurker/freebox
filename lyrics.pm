@@ -85,18 +85,17 @@ sub handle_lyrics {
 				$lyr = 1;
 			}
 			if ($lyr) {
+				$lyr = 0 if (s/<div class="Lyrics__Footer.+//i);
 				s/<br\/?>/\n/g;
 				# Filtrage des pubs en plein milieu de la chanson !!!
-				if (/div class="RichText.+?>(.+)/i) {
-					$footer = $1;
-				}
-				$lyr = 0 if (s/<div class="Lyrics__Footer.+//i);
+				$footer = $1 if (/div class="RichText.+?>(.+)/i);
 				$lyrics .= decode_entities($_);
+				last if (!$lyr && !$footer);
 			} elsif ($footer) {
 				if (s/<\/div.+//) {
 					$footer .= $_;
 					$footer =~ s/<p>//g;
-					$footer =~ s/<\/p>/\n/g;
+					$footer =~ s/<\/(p|h3)>/\n\n/g;
 					$footer = decode_entities($footer);
 					$lyrics .= "\n\n$footer";
 					last;
