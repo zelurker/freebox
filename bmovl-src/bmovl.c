@@ -180,7 +180,7 @@ static int info(int fifo, int argc, char **argv)
 	 * bandeau sans savoir ce qui va pouvoir être affiché */
 
 	static int width, height, fg, x0, y0, nb_prev;
-#define MAX_PREV 10
+#define MAX_PREV 30
 	static char *desc, *next, *prev[MAX_PREV], *str;
 	static TTF_Font *font;
 	static SDL_Rect r;
@@ -1008,7 +1008,7 @@ static void handle_event(SDL_Event *event) {
     int input = event->key.keysym.sym;
 #ifdef SDL1
     int unicode = event->key.keysym.unicode;
-    printf("reçu touche %d (%c) unicode %d %c scan %x\n",input,input,unicode,unicode,event->key.keysym.scancode);
+    // printf("reçu touche %d (%c) unicode %d %c scan %x\n",input,input,unicode,unicode,event->key.keysym.scancode);
     if (unicode && (input == 0 ||
 		((unicode >= 'a' && unicode <= 'z') || (unicode >= 'A' && unicode <= 'Z'))))
 	input = event->key.keysym.unicode;
@@ -1246,6 +1246,12 @@ static int image(int argc, char **argv) {
 #endif
 	    strcpy(bg_pic,bmp);
 	    old_size = size;
+	} else {
+	    printf("can't open image %s\n",bmp);
+	    int n;
+	    for (n=0; n<strlen(bmp); n++)
+		printf("%02x ",bmp[n]);
+	    printf("\n");
 	}
     }
     if (!pic) {
