@@ -43,7 +43,7 @@ sub search {
 		($args{imgurl},$args{w},$args{h},$args{tbnid}) = ($_->{image},$_->{width},$_->{height},$_->{title});
 		# tbnid est utilisé comme identifiant unique pour stocker dans le
 		# cache, espaces interdits, et | aussi...
-		$args{tbnid} =~ s/[ |\/]/_/g;
+		$args{tbnid} =~ s/[ \'|\/]/_/g;
 
 		push @tab,\%args; # on garde tout, pourquoi se priver ?!!!
 
