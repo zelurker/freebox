@@ -1114,7 +1114,7 @@ sub run_mplayer2 {
 	}
 	# hr-mp3-seek : lent, surtout quand on revient en arrière, mais
 	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/ && $player =~ /^mplayer/);
-	push @list,("-vo","null") if ($serv =~ /(ogg|mp3|mpc)$/i && $player eq "mpv");
+	push @list,("-vo","null") if ($serv =~ /(ogg|mp3|mpc|flac)$/i && $player eq "mpv");
 	push @list,("-demuxer","lavf") if ($player eq "mplayer" && $serv =~ /\.ts$/);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
