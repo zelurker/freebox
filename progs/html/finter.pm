@@ -2,7 +2,7 @@ package progs::html::finter;
 
 use HTML::Entities;
 use Time::Local "timelocal_nocheck";
-use v5.10;
+use common::sense;
 
 sub get_tag {
 	my ($s,$t) = @_;
@@ -42,7 +42,106 @@ sub decode_html {
 		my ($desc,$title,$img);
 		$pos = $sub_pos;
 
-		if ($instr eq "article") { # finter
+		if ($instr eq "span") {
+			my $class = get_tag($sub,"class");
+			if ($class eq "card-schedule") {
+				my $body = substr($l,$sub_pos+1);
+				my $end_pos = find_closing_tag($body,0,"div");
+				$body = substr($body,0,$end_pos);
+				my $btn = index($body,"<button");
+				if ($btn >= 0) {
+					$sub_pos = find_closing_tag($body,$btn+1,"button");
+					$sub = substr($body,$btn,$sub_pos-$btn-1);
+					$title = get_tag($sub,"data-emission-title");
+					$start = get_tag($sub,"data-start-time");
+					$end = get_tag($sub,"data-duration-seconds") + $start if ($start);
+					if (!$start) {
+						$start = get_tag($sub,"data-timeshift-date");
+						$end = get_tag($sub,"data-timeshift-end");
+					}
+					my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start);
+					$date = sprintf("$mday/%d/%d",$mon+1,$year+1900);
+				} else {
+					while (($btn = index($body,"<div",$btn+1)) >= 0) {
+						$sub_pos = find_closing_tag($body,$btn+1,"div");
+						$sub = substr($body,$btn,$sub_pos-$btn-1);
+						$class = get_tag($sub,"class");
+						if ($class eq "favorites") {
+							$title = get_tag($sub,"data-uact-fav-title");
+							last;
+						}
+					}
+				}
+				$img = index($body,"<picture");
+				if ($img >= 0) {
+					$end_pos = find_closing_tag($body,$img+1,"picture");
+					$sub = substr($body,$img,$end_pos-$img-1);
+					$img = get_tag($sub,"data-dejavu-srcset");
+				}
+				$btn = -1;
+				while (($btn = index($body,"<a ",$btn+1)) >= 0) {
+					$sub_pos = find_closing_tag($body,$btn+1,"a");
+					$sub = substr($body,$btn,$sub_pos-$btn-1);
+					$class = get_tag($sub,"class");
+					if ($class eq "card-text-sub") {
+						if (!$date) {
+							$date = get_tag($sub,"href");
+							my ($jour,$mday,$mon,$year);
+							($jour,$mday,$mon,$year) = $date =~ /du-(.+)-(..)-(.+)-(....)/;
+							my @mois = ("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre");
+							for (my $n=0; $n<=$#mois; $n++) {
+								if ($mois[$n] eq $mon) {
+									$mon = $n;
+									last;
+								}
+							}
+							$date = sprintf("$mday/%d/%d",$mon+1,$year);
+							# dans ce cas là on a pas l'heure de début non
+							# plus
+							my ($h,$m) = $body =~ /^(..)h(..)/;
+							$start = timelocal_nocheck(0,$m,$h,$mday,$mon,$year-1900);
+							$end = $start + 55*60;
+						}
+						$desc = get_tag($sub,"data-xiti-libelle");
+						$desc =~ s/^.+_//;
+					}
+				}
+				if (!$start) {
+					# saloperie, des fois y a pas de <a class mais un div
+					# avec la même class... !!!
+					while (($btn = index($body,"<div ",$btn+1)) >= 0) {
+						$sub_pos = find_closing_tag($body,$btn+1,"div");
+						$sub = substr($body,$btn,$sub_pos-$btn-1);
+						$class = get_tag($sub,"class");
+						if ($class eq "card-text-sub") {
+							if (!$date) {
+								$date = get_tag($sub,"data-xiti-libelle");
+								my ($jour,$mday,$mon,$year);
+								($jour,$mday,$mon,$year) = $date =~ /du (.+) (..) (.+) (....)/;
+								my @mois = ("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre");
+								for (my $n=0; $n<=$#mois; $n++) {
+									if ($mois[$n] eq $mon) {
+										$mon = $n;
+										last;
+									}
+								}
+								$date = sprintf("$mday/%d/%d",$mon+1,$year);
+								# dans ce cas là on a pas l'heure de début non
+								# plus
+								my ($h,$m) = $body =~ /^(..)h(..)/;
+								$start = timelocal_nocheck(0,$m,$h,$mday,$mon,$year-1900);
+								$end = $start + 55*60;
+							}
+							$desc = get_tag($sub,"data-xiti-libelle");
+							$desc =~ s/^.+_//;
+						}
+					}
+				}
+			} else {
+				next;
+			}
+		}
+		elsif ($instr eq "article") { # finter
 			# bien pratique france inter ils ont ajouté un tag <article>
 			# pour séparer leurs programmes.
 			# Par contre y a ni heure de fin, ni durée, donc faut deviner,
@@ -55,6 +154,7 @@ sub decode_html {
 			$end = timelocal_nocheck(0,0,$hour,$mday,$mon,$year);
 			my $body = substr($l,$sub_pos+1);
 			$body =~ s/<\/article.+//s;
+			my $tit;
 			while ($body =~ s/<a (.+?)>//s) {
 				my $args = $1;
 				my $class;
@@ -160,12 +260,12 @@ sub decode_html {
 			$pos++;
 			next;
 		}
-
 		my @tab = (undef, $name, $title, $start,
 			$end, "",
 			$desc,
 			"","",$img,0,0,$date);
 		$p->insert(\@tab,$rtab,600);
+		($title,$start,$end,$desc,$date,$img) = undef;
 		redo;
 	}
 	$rtab;
