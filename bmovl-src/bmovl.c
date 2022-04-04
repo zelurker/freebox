@@ -230,7 +230,12 @@ static int info(int fifo, int argc, char **argv)
 		myfgets(buff,8192,stdin);
 		picture = strdup((char*)buff);
 		if (*channel) chan = IMG_Load(channel);
-		if (*picture) pic = IMG_Load(picture);
+		if (*picture) {
+		    pic = IMG_Load(picture);
+		    if (!pic) {
+			printf("bmovl: can't load picture %s\n",picture);
+		    }
+		}
 		myfgets(buff,8192,stdin);
 		heure = strdup((char*)buff);
 		myfgets(buff,8192,stdin);
@@ -1333,6 +1338,7 @@ int main(int argc, char **argv) {
 	signal(SIGPIPE, &disconnect);
 	signal(SIGTERM, &myexit);
 	signal(SIGALRM, &myalarm);
+	printf("img_init %d\n",IMG_Init(IMG_INIT_PNG | IMG_INIT_JPG | IMG_INIT_WEBP));
 	last_htext = 0;
 	FILE *f = fopen("info.pid","w");
 	fprintf(f,"%d\n",getpid());
