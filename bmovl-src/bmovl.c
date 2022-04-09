@@ -30,7 +30,7 @@
 
 static int fifo;
 static char *fifo_str;
-static int server,infoy,listy,listh,old_size;
+static int server,infox,infoy,listx,listy,listh,old_size;
 static char bg_pic[FILENAME_MAX];
 #ifdef SDL1
 static SDL_Surface *pic;
@@ -301,7 +301,7 @@ static int info(int fifo, int argc, char **argv)
 		int len = 0;
 		// Carrier returns are included, a loop is mandatory then
 		while (!feof(stdin) && len < 8191) {
-			char *dummy = fgets((char*)&buff[len],8192-len,stdin); // we keep the eol here
+			fgets((char*)&buff[len],8192-len,stdin); // we keep the eol here
 			while (buff[len]) len++;
 		}
 		while (len > 0 && buff[len-1] < 32) buff[--len] = 0; // remove the last one though
@@ -433,7 +433,7 @@ static int info(int fifo, int argc, char **argv)
 	f = fopen("info_coords","r");
 	if (f) {
 	    int oldx,oldy,oldw,oldh;
-	    int dummy = fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	    fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
 	    fclose(f);
 	    if (list_opened && oldy < listy+listh) {
 		oldy = listy+listh;
@@ -449,7 +449,7 @@ static int info(int fifo, int argc, char **argv)
 	/* printf("bmovl: blit %d %d %d %d avec width %d height %d\n",
 			sf->w,sf->h,x,y,width,height); */
 	blit(fifo, sf, x, y, -40, 0,1);
-	infoy = y; // pour mode_list
+	infox = x; infoy = y; // pour mode_list
 	send_command(fifo,"SHOW\n");
 	// printf("bmovl: show done\n");
 	f = fopen("info_coords","w");
@@ -478,6 +478,8 @@ static int disp_list(SDL_Surface *sf, TTF_Font *font, int x, int y, char *list,
 	dy = put_string(sf,font,x,y,list,col,NULL);
     return dy;
 }
+
+static SDL_Surface *sf_list;
 
 static int list(int fifo, int argc, char **argv)
 {
@@ -633,18 +635,20 @@ static int list(int fifo, int argc, char **argv)
 	hlist = maxh - fsize;
 
 again:
-    SDL_Surface *sf = create_surface(wlist+4*2,hlist+4*2);
+    if (sf_list)
+	SDL_FreeSurface(sf_list);
+    sf_list = create_surface(wlist+4*2,hlist+4*2);
 
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
-    y += put_string(sf,font,x,y,source,SDL_MapRGB(sf->format,0xff,0xff,0x80),
+    y += put_string(sf_list,font,x,y,source,SDL_MapRGB(sf_list->format,0xff,0xff,0x80),
 	    NULL);
     if (y > htitle+4) {
-	/* Débordement du titre, doit refaire sf */
+	/* Débordement du titre, doit refaire sf_list */
 	y -= 4;
 	hlist += y-htitle;
 	htitle = y;
 	x = y = 4;
-	SDL_FreeSurface(sf);
+	SDL_FreeSurface(sf_list);
 	goto again;
     }
     x += numw+4; // aligné après les numéros
@@ -663,11 +667,11 @@ again:
 	}
     }
 
-    int fg = get_fg(sf);
-    int red = SDL_MapRGB(sf->format,0xff,0x50,0x50);
-    int cyan = SDL_MapRGB(sf->format, 0x50,0xff,0xff);
+    int fg = get_fg(sf_list);
+    int red = SDL_MapRGB(sf_list->format,0xff,0x50,0x50);
+    int cyan = SDL_MapRGB(sf_list->format, 0x50,0xff,0xff);
     TTF_SetFontStyle(font,TTF_STYLE_NORMAL);
-    int bg = get_bg(sf),sely;
+    int bg = get_bg(sf_list),sely;
     for (n=start; n<nb && y+fsize < maxh; n++) {
 	if (chan[n] && y+chan[n]->h > maxh)
 	    break;
@@ -683,11 +687,11 @@ again:
 	    SDL_Rect r;
 	    r.x = 4; r.y = y; r.w = wlist; r.h = heights[n];
 	    if (chan[n] && chan[n]->h > heights[n]) r.h = chan[n]->h;
-	    SDL_FillRect(sf,&r,fg);
+	    SDL_FillRect(sf_list,&r,fg);
 	    if (!fsel && !mode_list)
-		put_string(sf,font,4,y,(char*)buff,bg,NULL); // Numéro
+		put_string(sf_list,font,4,y,(char*)buff,bg,NULL); // Numéro
 	    int dy;
-	    dy = disp_list(sf,font,x,y,list[n],chan[n],bg,heights[n]);
+	    dy = disp_list(sf_list,font,x,y,list[n],chan[n],bg,heights[n]);
 	    sely = y+dy/2;
 	    y += dy;
 	} else {
@@ -697,12 +701,12 @@ again:
 		fg = cyan;
 	    }
 	    if (!fsel && !mode_list)
-		put_string(sf,font,4,y,(char*)buff,fg,NULL); // Numéro
-	    y += disp_list(sf,font,x,y,list[n],chan[n],fg,heights[n]);
-	    if (status[n] == 'R' || status[n] == 'D') fg = get_fg(sf);
+		put_string(sf_list,font,4,y,(char*)buff,fg,NULL); // Numéro
+	    y += disp_list(sf_list,font,x,y,list[n],chan[n],fg,heights[n]);
+	    if (status[n] == 'R' || status[n] == 'D') fg = get_fg(sf_list);
 	}
 	if (hidden) {
-	    direct_string(sf,font,xright,y0,">",(current == n ? bg : fg));
+	    direct_string(sf_list,font,xright,y0,">",(current == n ? bg : fg));
 	}
 //	printf("y:%d/%d %s from %d\n",y0,maxh,list[n],x);
     }
@@ -713,17 +717,17 @@ again:
 
     FILE *f = fopen("list_coords","r");
     if (f) {
-	int dummy = fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
+	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
 	fclose(f);
 	if (!mode_list) {
-	    if (oldh > sf->h) {
+	    if (oldh > sf_list->h) {
 		char buff[2048];
-		sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy+sf->h);
+		sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf_list->h,oldx,oldy+sf_list->h);
 		send_command(fifo, buff);
 	    }
-	    if (oldw > sf->w) {
+	    if (oldw > sf_list->w) {
 		char buff[2048];
-		sprintf(buff,"CLEAR %d %d %d %d\n",oldw-sf->w,oldh,oldx+sf->w,oldy);
+		sprintf(buff,"CLEAR %d %d %d %d\n",oldw-sf_list->w,oldh,oldx+sf_list->w,oldy);
 		send_command(fifo, buff);
 	    }
 	}
@@ -732,19 +736,19 @@ again:
     // Display
     if (mode_list) {
 	x = oldx+oldw;
-	y = oldsel-sf->h/2;
-	if (y+sf->h > infoy)
-	    y = infoy-sf->h;
+	y = oldsel-sf_list->h/2;
+	if (y+sf_list->h > infoy)
+	    y = infoy-sf_list->h;
 	if (y < 0) y = 0;
 	f = fopen("mode_coords","w");
-	fprintf(f,"%d %d %d %d \n",sf->w, sf->h,
+	fprintf(f,"%d %d %d %d \n",sf_list->w, sf_list->h,
 		x, y);
 	fclose(f);
     } else {
 	x = margew;
 	y = margeh;
 	f = fopen("list_coords","w");
-	fprintf(f,"%d %d %d %d %d\n",sf->w, sf->h,
+	fprintf(f,"%d %d %d %d %d\n",sf_list->w, sf_list->h,
 		x, y,sely);
 	fprintf(f,"%d\n",nb_elem);
 	fclose(f);
@@ -756,7 +760,7 @@ again:
 	f = fopen("info_coords","r");
 	if (f) {
 	    int oldx,oldy,oldw,oldh;
-	    int dummy = fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	    fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
 	    fclose(f);
 	    h = oldy - y;
 	    infoy = oldy;
@@ -764,8 +768,8 @@ again:
 	int maxy = (infoy ? infoy : desktop_h);
 	SDL_Rect r;
 	r.x = (mode_list ? x : 0);
-	r.y = y + sf->h;
-	r.w = sf->w + (mode_list ? 0 : x);
+	r.y = y + sf_list->h;
+	r.w = sf_list->w + (mode_list ? 0 : x);
 	r.h = maxy - r.y;
 	if (maxy > r.y) {
 #ifdef SDL1
@@ -776,11 +780,11 @@ again:
 	    SDL_RenderPresent(renderer);
 #endif
 	}
-	if (oldy < y+sf->h) {
-	    r.x = x+sf->w;
+	if (oldy < y+sf_list->h) {
+	    r.x = x+sf_list->w;
 	    r.y = oldy;
 	    r.w = oldw-r.x;
-	    r.h = y+sf->h-oldy;
+	    r.h = y+sf_list->h-oldy;
 #ifdef SDL1
 	    SDL_FillRect(sdl_screen,&r,0);
 	    SDL_UpdateRects(sdl_screen,1,&r);
@@ -793,15 +797,14 @@ again:
     // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
     // apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
     // Pour l'instant le meilleur contournement c'est ça.
-    blit(fifo, sf, x, y, -40, 1,0);
-    listy = y; listh = sf->h;
+    blit(fifo, sf_list, x, y, -40, 1,0);
+    listx = x; listy = y; listh = sf_list->h;
 
     // Clean up
 
     int info=0;
     send_command(fifo,"SHOW\n");
     free(source);
-    SDL_FreeSurface(sf);
     for (n=0; n<nb; n++) {
 	free(list[n]);
 	if (chan[n]) SDL_FreeSurface(chan[n]);
@@ -873,7 +876,7 @@ static void read_inputs() {
     char buff[80];
     int nb_alloc = 0;
     while (!feof(f)) {
-	char *dummy = fgets(buff,80,f);
+	fgets(buff,80,f);
 	if (buff[0] == '#' || !buff[0])
 	    continue;
 	char *c = strchr(buff,' ');
@@ -968,8 +971,8 @@ static int numero(int fifo, int argc, char **argv) {
     int width,height;
     FILE *f = fopen("video_size","r");
     if (f) {
-	int dummy = fscanf(f,"%d\n",&width);
-	dummy = fscanf(f,"%d\n",&height);
+	fscanf(f,"%d\n",&width);
+	fscanf(f,"%d\n",&height);
 	fclose(f);
     } else {
 	width = desktop_w;
@@ -1005,6 +1008,23 @@ static void handle_event(SDL_Event *event) {
     if (!nb_keys) read_inputs();
 #ifndef SDL1
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_EXPOSED) {
+	if (sf_list) {
+	    FILE *f = fopen("list_coords","r");
+	    if (f) {
+		fclose(f);
+		blit(fifo, sf_list, listx, listy, -40, 1,0);
+	    }
+	}
+	if (*bg_pic) {
+	    image(1,NULL);
+	}
+	if (sf) {
+	    FILE *f = fopen("info_coords","r");
+	    if (f) {
+		fclose(f);
+		blit(fifo, sf, infox, infoy, -40, 0,1);
+	    }
+	}
 	SDL_RenderPresent(renderer);
 	return;
     }
@@ -1112,21 +1132,21 @@ static void get_free_coords(Sint16 &x, Sint16 &y, Uint16 &w, Uint16 &h) {
     f = fopen("list_coords","r");
     if (f) {
 	int oldx,oldy,oldw,oldh,oldsel;
-	int dummy = fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
+	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
 	fclose(f);
 	x = oldx + oldw;
     }
     f = fopen("mode_coords","r");
     if (f) {
 	int oldx,oldy,oldw,oldh,oldsel;
-	int dummy = fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
+	fscanf(f,"%d %d %d %d %d",&oldw,&oldh,&oldx,&oldy,&oldsel);
 	fclose(f);
 	y = oldy + oldh;
     }
     f = fopen("info_coords","r");
     if (f) {
 	int oldx,oldy,oldw,oldh;
-	int dummy = fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
+	fscanf(f,"%d %d %d %d",&oldw,&oldh,&oldx,&oldy);
 	fclose(f);
 	infoy = oldy;
     }
