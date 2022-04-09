@@ -243,7 +243,7 @@ EV::run;
 sub disp_duree($) {
 	my $duree = shift;
 	if ($duree < 60) {
-		$duree."s";
+		int($duree)."s";
 	} elsif ($duree < 3600) {
 		sprintf("%d min",$duree/60);
 	} else {
@@ -369,6 +369,10 @@ sub commands {
 	$long = $old_long if ($cmd !~ /^prog /);
 
 	print "info: reçu commande $cmd long:$long.\n" if ($cmd !~ /^progress/);
+	# for (my $n=0; $n<length($cmd); $n++) {
+	# 	print sprintf("%02x ",ord(substr($cmd,$n,1)));
+	# }
+	# print "\n";
 	if ($cmd eq "clear") {
 		$fadeout = $refresh = undef;
 		out::clear("info_coords");
@@ -418,6 +422,7 @@ sub commands {
 		$v =~ s/\xc3\x83\xc2\xaa/\xc3\xaa/g; # double encodage du ê, parce que mpv refuse les tags en utf8 et les ré-encode systématiquement !
 		$v =~ s/\xc3\x83\xc2\xa8/\xc3\xa8/g; # pareil pour le è
 		$v =~ s/\xc3\x83\xc2\xb9/\xc3\xb9/g; # et le ù
+		$v =~ s/\xc3\x85\xc2\x93/\xc5\x93/g; # oe
 		my ($name,$src,$serv) = get_cur_name();
 		my $name0 = $name;
 		$name .= "&$src";
