@@ -1,3 +1,4 @@
+print(_VERSION)
 local mp = require 'mp'
 socket = require "socket"
 socket.unix = require"socket.unix"
