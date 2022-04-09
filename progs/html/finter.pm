@@ -61,7 +61,12 @@ sub decode_html {
 					}
 					my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start);
 					$date = sprintf("$mday/%d/%d",$mon+1,$year+1900);
-				} else {
+				}
+				if (!$start && !$title) {
+					$btn = -1;
+					$date = undef;
+				}
+				if ($btn < 0 || !$title) {
 					while (($btn = index($body,"<div",$btn+1)) >= 0) {
 						$sub_pos = find_closing_tag($body,$btn+1,"div");
 						$sub = substr($body,$btn,$sub_pos-$btn-1);
@@ -136,6 +141,9 @@ sub decode_html {
 							$desc =~ s/^.+_//;
 						}
 					}
+				}
+				if (!$start) {
+					die "toujours pas de start, end $end title $title desc $desc";
 				}
 			} else {
 				next;
