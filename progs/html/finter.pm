@@ -28,11 +28,33 @@ sub find_closing_tag {
 	$pos;
 }
 
+sub disp_date {
+	my $start = shift;
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start);
+	return sprintf("%02d:%02d",$hour,$min);
+}
+
+sub check_start {
+	my ($ref, $prev_start) = @_;
+	# les programmes de la nuit de finter sont pétés en avril 22, les
+	# heures indiquent l'heure de la 1ère diffusion pour les redifs !
+	if ($$ref < $prev_start-3600) {
+		# on teste avec prev_start-3600 parce qu'ils collent leur playlist
+		# de la nuit comme bouche trou si il reste de la place, mais vu
+		# qu'on est obligé de mettre 1h pour chaque programme, y a des
+		# jours où il en reste pas, elle doit être plutôt courte cette
+		# playlist... !
+		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($prev_start+3600);
+		$$ref = timelocal_nocheck(0,5,$hour,$mday,$mon,$year);
+	}
+}
+
 sub decode_html {
 	my ($p,$l,$name) = @_;
 	my $rtab = [];
 	my $pos = 0;
 	my $date;
+	my $prev_start;
 	while (($pos = index($l,"<",$pos))>= 0) {
 		my $bl = index($l," ",$pos);
 		my $instr = substr($l,$pos+1,$bl-$pos-1);
@@ -47,6 +69,7 @@ sub decode_html {
 			if ($class eq "card-schedule") {
 				my $body = substr($l,$sub_pos+1);
 				my $end_pos = find_closing_tag($body,0,"div");
+				$pos += $end_pos;
 				$body = substr($body,0,$end_pos);
 				my $btn = index($body,"<button");
 				if ($btn >= 0) {
@@ -59,8 +82,11 @@ sub decode_html {
 						$start = get_tag($sub,"data-timeshift-date");
 						$end = get_tag($sub,"data-timeshift-end");
 					}
-					my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start);
-					$date = sprintf("$mday/%d/%d",$mon+1,$year+1900);
+					if ($start) {
+						check_start(\$start,$prev_start);
+						my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start);
+						$date = sprintf("$mday/%d/%d",$mon+1,$year+1900);
+					}
 				}
 				if (!$start && !$title) {
 					$btn = -1;
@@ -105,6 +131,7 @@ sub decode_html {
 							# plus
 							my ($h,$m) = $body =~ /^(..)h(..)/;
 							$start = timelocal_nocheck(0,$m,$h,$mday,$mon,$year-1900);
+							check_start(\$start,$prev_start);
 							$end = $start + 55*60;
 						}
 						$desc = get_tag($sub,"data-xiti-libelle");
@@ -135,6 +162,7 @@ sub decode_html {
 								# plus
 								my ($h,$m) = $body =~ /^(..)h(..)/;
 								$start = timelocal_nocheck(0,$m,$h,$mday,$mon,$year-1900);
+								check_start(\$start,$prev_start);
 								$end = $start + 55*60;
 							}
 							$desc = get_tag($sub,"data-xiti-libelle");
@@ -149,7 +177,7 @@ sub decode_html {
 				next;
 			}
 		}
-		elsif ($instr eq "article") { # finter
+		elsif ($instr eq "article") { # finter avant 2022... !
 			# bien pratique france inter ils ont ajouté un tag <article>
 			# pour séparer leurs programmes.
 			# Par contre y a ni heure de fin, ni durée, donc faut deviner,
@@ -273,6 +301,7 @@ sub decode_html {
 			$desc,
 			"","",$img,0,0,$date);
 		$p->insert(\@tab,$rtab,600);
+		$prev_start = $start;
 		($title,$start,$end,$desc,$date,$img) = undef;
 		redo;
 	}

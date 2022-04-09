@@ -473,6 +473,10 @@ sub next {
 	# d'une date donnée, à priori ils ont l'air d'aller de 6h jour actuel à
 	# 6h jour suivant (on se demande bien pourquoi ils n'ont pas pris 0h !)
 	my $offset = get_offset($$rtab[$#$rtab][12])+1;
+	if (ref($p) eq "progs::finter") {
+		$offset--;
+		say "next: offset fixed on finter";
+	}
 	my $old = $#$rtab;
 	print "A récupérer offset $offset de $$rtab[$#$rtab][12]\n" if ($debug);
 	$p->update($channel,$offset);
