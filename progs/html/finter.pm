@@ -31,7 +31,7 @@ sub find_closing_tag {
 sub disp_date {
 	my $start = shift;
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start);
-	return sprintf("%02d:%02d",$hour,$min);
+	return sprintf("%d/%d/%d %02d:%02d",$mday,$mon+1,$year+1900,$hour,$min);
 }
 
 sub check_start {
@@ -55,6 +55,11 @@ sub decode_html {
 	my $pos = 0;
 	my $date;
 	my $prev_start;
+	my $rtab2 = $p->{chaines}->{lc($name)};
+	if ($rtab2) {
+		$prev_start = $$rtab2[$#$rtab2][3];
+		say "prev_start init ".disp_date($prev_start);
+	}
 	while (($pos = index($l,"<",$pos))>= 0) {
 		my $bl = index($l," ",$pos);
 		my $instr = substr($l,$pos+1,$bl-$pos-1);
@@ -133,6 +138,8 @@ sub decode_html {
 							$start = timelocal_nocheck(0,$m,$h,$mday,$mon,$year-1900);
 							check_start(\$start,$prev_start);
 							$end = $start + 55*60;
+							my ($sec,$min,$hour,$mday,$mon,$year) = localtime($end);
+							$end = timelocal_nocheck(0,0,$hour,$mday,$mon,$year);
 						}
 						$desc = get_tag($sub,"data-xiti-libelle");
 						$desc =~ s/^.+_//;
