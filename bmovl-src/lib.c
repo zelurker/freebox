@@ -124,11 +124,15 @@ void init_video() {
     SDL_EnableUNICODE(1);
     SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY, SDL_DEFAULT_REPEAT_INTERVAL);
 #else
+    printf("desktop %d,%d\n",desktop_w,desktop_h);
+    SDL_DisplayMode mode;
+    SDL_GetDesktopDisplayMode(0,&mode);
+    desktop_w = mode.w; desktop_h = mode.h;
     sdl_screen = SDL_CreateWindow("bmovl",
-	    SDL_WINDOWPOS_UNDEFINED,
-	    SDL_WINDOWPOS_UNDEFINED,
-	    0, 0,
-	    SDL_WINDOW_FULLSCREEN_DESKTOP);
+	    0,
+	    0,
+	    mode.w, mode.h,
+	    SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_BORDERLESS);
     renderer = SDL_CreateRenderer(sdl_screen, -1, 0);
     SDL_Rect r;
     SDL_RenderGetViewport(renderer,&r);
