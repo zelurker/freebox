@@ -1029,8 +1029,18 @@ static void handle_event(SDL_Event *event) {
 	return;
     }
 #endif
-    if (event->type != SDL_KEYDOWN) return;
+    static int last_win;
+    if (event->type != SDL_KEYDOWN) {
+	if (event->type == SDL_WINDOWEVENT) {
+	    last_win = event->window.timestamp;
+	}
+	return;
+    }
     int input = event->key.keysym.sym;
+    if (event->key.timestamp - last_win < 10) {
+	printf("ignoring key because of win event\n");
+	return;
+    }
 #ifdef SDL1
     int unicode = event->key.keysym.unicode;
     // printf("reçu touche %d (%c) unicode %d %c scan %x\n",input,input,unicode,unicode,event->key.keysym.scancode);
@@ -1049,6 +1059,7 @@ static void handle_event(SDL_Event *event) {
 	    if (input == keys[n] && command[n][0] != '{') {
 		// Evite les commandes style {dvdnav}
 		printf("touche trouvée, commande %s\n",command[n]);
+
 		if (!strncmp(command[n],"run",3)) {
 		    int ret = system(&command[n][4]);
 		    if (ret)
@@ -1226,7 +1237,6 @@ static int vignettes(int argc, char **argv) {
 }
 
 static int image(int argc, char **argv) {
-    static int lastx,lasty,lastw,lasth;
     static int picw,pich;
     if (argc != 2 && argc != 1) {
 	printf("image: argc = %d\n",argc);
@@ -1273,8 +1283,8 @@ static int image(int argc, char **argv) {
 	    old_size = size;
 	} else {
 	    printf("can't open image %s\n",bmp);
-	    int n;
-	    for (n=0; n<strlen(bmp); n++)
+	    size_t n,l = strlen(bmp);
+	    for (n=0; n<l; n++)
 		printf("%02x ",bmp[n]);
 	    printf("\n");
 	}
@@ -1286,14 +1296,9 @@ static int image(int argc, char **argv) {
     Uint16 w,h;
     get_free_coords(x,y,w,h);
     int maxy = h+y;
-    if (bmp == bg_pic && lastx == x && lasty == y && lastw == w && lasth == h){
-	// Rien à mettre à jour
+    if (0) { // bmp == bg_pic && lastx == x && lasty == y && lastw == w && lasth == h){
+	// Rien à mettre à jour (invalide quand appelé par un event EXPOSE
 	return 0;
-    } else {
-	lastx = x;
-	lasty = y;
-	lastw = w;
-	lasth = h;
     }
 
     double ratio = w*1.0/picw;
@@ -1340,7 +1345,10 @@ static int image(int argc, char **argv) {
 #ifndef SDL1
     dst.w = r.w*ratio; dst.h = r.h*ratio;
     // SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer,s);
-    SDL_RenderCopy(renderer,pic,&r,&dst);
+    int ret = SDL_RenderCopy(renderer,pic,&r,&dst);
+    if (ret < 0) {
+	printf("image: SDL_RenderCopy error: %s (%d)\n",SDL_GetError(),ret);
+    }
     // SDL_DestroyTexture(tex);
     SDL_RenderPresent(renderer);
 #else
