@@ -45,6 +45,11 @@ sub check_start {
 		# jours où il en reste pas, elle doit être plutôt courte cette
 		# playlist... !
 		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($prev_start+3600);
+		if ($hour == 0 && $min == 0) { # journal de 23h, c'est encore pire !
+			($sec,$min,$hour,$mday,$mon,$year) = localtime($prev_start+15*60); # on dit 23h15 pour le suivant ? C'est variable, mais si c'est pas indiqué... !
+			$$ref = timelocal_nocheck(0,$min,$hour,$mday,$mon,$year);
+			return;
+		}
 		$$ref = timelocal_nocheck(0,5,$hour,$mday,$mon,$year);
 	}
 }
