@@ -1069,6 +1069,15 @@ sub run_mplayer2 {
 		# d'espace pour la partie fichier. Utilisé par le plugin youtube
 		push @list, split / /,$serv;
 	} else {
+		my ($dir) = $serv =~ /^(.+)\//;
+		if (open(F,"<$dir/.mpvrc")) {
+			while (<F>) {
+				chomp;
+				push @list,split / /;
+				last;
+			}
+			close(F);
+		}
 		push @list,$serv;
 	}
 
