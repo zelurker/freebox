@@ -8,7 +8,10 @@ if ! [ -d livetv ]; then
 	mkdir livetv
 fi
 find livetv/ -mtime +1 -delete
-
+if ! type ffprobe >& /dev/null; then
+	echo need ffprobe
+	exit 1
+fi
 function fallback
 {
 	serv=`head -n 3 current|tail -n 1`
@@ -189,6 +192,10 @@ while [ "$ok" == "0" ]; do
 		tries=$(( $tries+1 ))
 	done
 	echo run_mp1: fin attente fichier tries=$tries
+	if ! [ -f "$name" ]; then
+		echo pas de fichier donc le player a quitté !
+		exit 1
+	fi
 	tries=0
 	while [ `stat --printf=%s "$name"` == 0 ] && [ $tries -lt 10 ]; do
 		sleep 0.5
@@ -200,8 +207,7 @@ while [ "$ok" == "0" ]; do
 		echo run_mp1: shortcut fichier à 0
 		kill `cat player1.pid`
 	fi
-	if ! ps -p `cat player1.pid` >& /dev/null
-	then
+	if ! ps -p `cat player1.pid` >& /dev/null; then
 		echo plus de player1 tried=$tried flavour=$flavour
 		if [ "$src" == "dvb" ]; then
 			exit 1
@@ -211,27 +217,36 @@ while [ "$ok" == "0" ]; do
 		size=0
 		# Et attend que la taille sur disque soit au moins d'1 Mo
 		# remarque -frames n'a même pas l'air documenté dans la man page de mpv... !
-		while [ -f "$name" ] && ! (mpv -frames 0 "$name" 2>/dev/null|grep -q Audio) && \
+		echo gen mpv.log...
+		ffprobe "$name" >& mpv.log
+		echo start loop 1
+		while [ -f "$name" ] && ! grep -q Audio mpv.log && \
 			ps -p $pid >& /dev/null && \
 			[ $(( `date +%s`-$start )) -lt 10 ]; do
 		  sleep 0.1
+		  ffprobe "$name" >& mpv.log
+		  echo temps $(( `date +%s`-$start )) `grep Audio mpv.log` 
 		done
-		while [ -f "$name" ] && ! (mpv -frames 0 "$name" 2>/dev/null|grep -q Video) && \
+		echo sortie boucle 1 temps $(( `date +%s`-$start ))
+		while [ -f "$name" ] && ! grep -q Video mpv.log && \
 			ps -p $pid >& /dev/null && \
 			[ $(( `date +%s`-$start )) -lt 10 ]; do
 		  sleep 0.1
+		  ffprobe "$name" >& mpv.log
 		done
+		echo sortie boucle 2 temps $(( `date +%s`-$start ))
 		echo run_mp1: out of timeout loop, file : `ls -sk "$name"` ps :
 		ps -p `cat player1.pid`
 
 		timeout=$(( `date +%s`-$start ))
 		if ps -p $pid >& /dev/null && [ -f "$name" ] && \
-			mpv -frames 0 "$name" 2>/dev/null|grep Audio && \
-			mpv -frames 0 "$name" 2>/dev/null|grep Video; then
+			grep -q Audio mpv.log && \
+			grep -q Video mpv.log ; then
 			ok=1 # fini !
 		else
 			echo run_mp1: timeout $timeout ou pb fichier
 		fi
+		exit 1
 		if [ $timeout -gt 10 ] || [ "$timeout" == "10" ] || [ "$ok" == "0" ]; then
 			# timeout
 			echo run_mp1: timeout $timeout, ok=$ok change_flav
