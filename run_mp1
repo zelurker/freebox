@@ -246,7 +246,6 @@ while [ "$ok" == "0" ]; do
 		else
 			echo run_mp1: timeout $timeout ou pb fichier
 		fi
-		exit 1
 		if [ $timeout -gt 10 ] || [ "$timeout" == "10" ] || [ "$ok" == "0" ]; then
 			# timeout
 			echo run_mp1: timeout $timeout, ok=$ok change_flav
