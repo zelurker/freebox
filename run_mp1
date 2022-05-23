@@ -141,8 +141,14 @@ while [ "$ok" == "0" ]; do
 	echo sanity check $src...
 	case $src in
 		dvb)
-			echo lancement mplayer -quiet -dumpfile "$name" -dumpstream dvb://"$service"
-			mplayer -quiet -dumpfile "$name" -dumpstream dvb://$(( $nb+1 ))@"$service" >& /dev/null &
+			echo test de lancement dvb...
+			if type mplayer >& /dev/null; then
+				echo lancement mplayer -quiet -dumpfile "$name" -dumpstream dvb://"$service"
+				mplayer -quiet -dumpfile "$name" -dumpstream dvb://$(( $nb+1 ))@"$service" >& /dev/null &
+			else
+				echo lancement mpv --quiet --stream-dump="$name" dvb://$nb@"$service"
+				mpv --quiet --stream-dump="$name" dvb://"$nb@$service" >& /dev/null &
+			fi
 			;;
 		freebox|freeboxtv|"radios freebox")
 			# On met -c 2 parce que j'ai une ligne trop pourrie en ce moment
@@ -157,8 +163,13 @@ while [ "$ok" == "0" ]; do
 			    exit 1
 			fi
 
-			echo lancement mplayer $audio2 -dumpfile "$name" -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour"
-			mplayer $audio2 -dumpfile "$name" -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" >& /dev/null &
+			if type mplayer >& /dev/null; then
+				echo lancement mplayer $audio2 -dumpfile "$name" -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour"
+				mplayer $audio2 -dumpfile "$name" -quiet -dumpstream "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" >& /dev/null &
+			else
+				echo lancement mpv $audio2 --stream-dump="$name" --quiet "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" &
+				mpv $audio2 --stream-dump="$name" --quiet "rtsp://mafreebox.freebox.fr/fbxtv_pub/stream?namespace=1&service=$service&flavour=$flavour" >& /dev/null &
+			fi
 			;;
 		flux)
 			mplayer -quiet -dumpfile "$name" -dumpstream "$service" >& /dev/null &
@@ -199,12 +210,13 @@ while [ "$ok" == "0" ]; do
 	else
 		size=0
 		# Et attend que la taille sur disque soit au moins d'1 Mo
-		while [ -f "$name" ] && ! (mplayer2 -frames 0 -identify "$name" 2>/dev/null|grep -q ID_AUDIO_FORMAT) && \
+		# remarque -frames n'a même pas l'air documenté dans la man page de mpv... !
+		while [ -f "$name" ] && ! (mpv -frames 0 "$name" 2>/dev/null|grep -q Audio) && \
 			ps -p $pid >& /dev/null && \
 			[ $(( `date +%s`-$start )) -lt 10 ]; do
 		  sleep 0.1
 		done
-		while [ -f "$name" ] && ! (mplayer2 -frames 0 -identify "$name" 2>/dev/null|grep -q ID_VIDEO_FORMAT) && \
+		while [ -f "$name" ] && ! (mpv -frames 0 "$name" 2>/dev/null|grep -q Video) && \
 			ps -p $pid >& /dev/null && \
 			[ $(( `date +%s`-$start )) -lt 10 ]; do
 		  sleep 0.1
@@ -214,8 +226,8 @@ while [ "$ok" == "0" ]; do
 
 		timeout=$(( `date +%s`-$start ))
 		if ps -p $pid >& /dev/null && [ -f "$name" ] && \
-			mplayer2 -frames 0 -identify "$name" 2>/dev/null|grep ID_AUDIO_FORMAT && \
-			mplayer2 -frames 0 -identify "$name" 2>/dev/null|grep ID_VIDEO_FORMAT; then
+			mpv -frames 0 "$name" 2>/dev/null|grep Audio && \
+			mpv -frames 0 "$name" 2>/dev/null|grep Video; then
 			ok=1 # fini !
 		else
 			echo run_mp1: timeout $timeout ou pb fichier

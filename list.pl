@@ -587,7 +587,8 @@ sub read_list {
 		}
 	} elsif ($source eq "dvb") {
 		my $f;
-		open($f,"<","$ENV{HOME}/.mplayer/channels.conf") || die "can't open channels.conf\n";
+		open($f,"<","$ENV{HOME}/.mplayer/channels.conf") ||
+	       open($f,"<","$ENV{HOME}/.config/mpv/channels.conf") || die "can't open channels.conf\n";
 		@list = ();
 		my $num = 1;
 		my @pic = ();
