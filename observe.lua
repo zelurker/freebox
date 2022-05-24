@@ -86,11 +86,13 @@ function show_ass(name)
 	-- so we extend the syntax here, recognizing at least {red} {orange}
 	-- and {white}
 	-- command should be used like that :
-	-- echo 'script-message show-ass "show-text ${osd-ass-cc/0}{orange}hello"'|socat stdio unix:mpvsocket
+	-- echo '{ "command": ["expand-properties", "script-message", "show-ass", "text"] }'
+	-- This is actually so crazy that I would advise against using this, I
+	-- just need some hardware monitoring here so I'll use it anyway...
 	name = string.gsub(name,"{red}","{\\1c&H0000FF&}")
 	name = string.gsub(name,"{orange}","{\\1c&H0080FF&}")
 	name = string.gsub(name,"{white}","{\\1c&HffffFF&}")
-	mp.command(name)
+	mp.commandv("show-text", name, 8000)
 	-- s="show-text ${osd-ass-cc/0}{\\1c&H0000FF&}hello"
 end
 
