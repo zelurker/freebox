@@ -79,6 +79,21 @@ function on_abitrate(name,value)
 	end
 end
 
+function show_ass(name)
+	-- for a weird story about utf-8 expanding, it's just impossible to
+	-- pass an ass color sequence to the socket, the \\1c is taken as a
+	-- standard esc sequence, which is unknown and it just throws an error
+	-- so we extend the syntax here, recognizing at least {red} {orange}
+	-- and {white}
+	-- command should be used like that :
+	-- echo 'script-message show-ass "show-text ${osd-ass-cc/0}{orange}hello"'|socat stdio unix:mpvsocket
+	name = string.gsub(name,"{red}","{\\1c&H0000FF&}")
+	name = string.gsub(name,"{orange}","{\\1c&H0080FF&}")
+	name = string.gsub(name,"{white}","{\\1c&HffffFF&}")
+	mp.command(name)
+	-- s="show-text ${osd-ass-cc/0}{\\1c&H0000FF&}hello"
+end
+
 function timing(name,value)
 	local duration = mp.get_property("duration")
 	if not duration then
@@ -105,6 +120,7 @@ mp.observe_property("audio-bitrate","number",on_abitrate)
 mp.observe_property("metadata","native",metadata)
 -- mp.observe_property("chapter-metadata","native",metadata)
 mp.observe_property("time-pos","native",timing)
+mp.register_script_message("show-ass",show_ass)
 
 mp.add_hook("on_unload", 10, function ()
 	local c = assert(socket.unix())
