@@ -59,7 +59,7 @@ my $last_list = "";
 $SIG{PIPE} = sub { print "list: sigpipe ignoré\n" };
 
 my @modes = (
-	"freeboxtv",  "dvb", "Enregistrements", "Fichiers vidéo", "Fichiers son", "livetv", "flux","radios freebox",
+	"freeboxtv",  "dvb", "Enregistrements", "Fichiers video", "Fichiers son", "livetv", "flux","radios freebox",
 	"cd","dvd","apps");
 if (!$have_fb || !$have_dvb) {
 	for (my $n=0; $n<=$#modes; $n++) {
@@ -347,7 +347,7 @@ sub read_freebox {
 sub list_files {
 	@list = ();
 	my ($path,$tri);
-	if ($source eq "Fichiers vidéo") {
+	if ($source eq "Fichiers video") {
 		$path = "video_path";
 		$tri = "tri_video";
 	} elsif ($source eq "dvd") {
@@ -1024,7 +1024,7 @@ sub run_mplayer2 {
 		$serv =~ s/ http.+//; # Stations de radio, vire l'url du prog
 	} else {
 		$audio = "-aid $audio " if ($audio);
-		if ($src =~ /Fichiers vidéo/) {
+		if ($src =~ /Fichiers video/) {
 # 			if ($name =~ /(mpg|ts)$/) {
 # 				$filter = ",kerndeint";
 # 			}
@@ -2041,7 +2041,7 @@ sub commands {
 
 sub get_sort_key {
 	my $key;
-	if ($source eq "Fichiers vidéo" || $source eq "dvd") {
+	if ($source eq "Fichiers video" || $source eq "dvd") {
 		$key = "tri_video";
 	} else {
 		$key = "tri_music";
@@ -2053,7 +2053,7 @@ sub exec_file {
 	# Retour : 0 si la liste a changé, 1 autrement (next)
 	my ($name,$serv,$audio,$video) = @_;
 	my $path;
-	if ($source eq "Fichiers vidéo") {
+	if ($source eq "Fichiers video") {
 		$path = "video_path";
 	} elsif ($source =~ / son/) {
 		$path = "music_path";
@@ -2116,7 +2116,7 @@ sub disp_list {
 	if (($source eq "flux" || $source eq "cd") && $base_flux) {
 		$header .= "$source > $base_flux\n";
 	} elsif ($source =~ /Fichiers/) {
-		my $path = ($source eq "Fichiers vidéo" ? "video_path" : "music_path");
+		my $path = ($source eq "Fichiers video" ? "video_path" : "music_path");
 		$header .= "$source : $conf{$path}\n";
 		myutf::mydecode(\$header);
 	} else {
