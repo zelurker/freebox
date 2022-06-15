@@ -1,7 +1,7 @@
 package progs::html::finter;
 
 use HTML::Entities;
-use Time::Local "timelocal_nocheck";
+use Time::Local "timelocal_nocheck", "timegm_nocheck";
 use common::sense;
 
 sub get_tag {
@@ -74,117 +74,35 @@ sub decode_html {
 		my ($desc,$title,$img);
 		$pos = $sub_pos;
 
-		if ($instr eq "span") {
+		if ($instr eq "div") {
 			my $class = get_tag($sub,"class");
-			if ($class eq "card-schedule") {
+			if ($class =~ /^TimeSlotContainer/) {
 				my $body = substr($l,$sub_pos+1);
 				my $end_pos = find_closing_tag($body,0,"div");
 				$pos += $end_pos;
 				$body = substr($body,0,$end_pos);
-				my $btn = index($body,"<button");
+				my $btn = index($body,"<time ");
 				if ($btn >= 0) {
-					$sub_pos = find_closing_tag($body,$btn+1,"button");
+					$sub_pos = index($body,">",$btn+1);
 					$sub = substr($body,$btn,$sub_pos-$btn-1);
-					$title = get_tag($sub,"data-emission-title");
-					$start = get_tag($sub,"data-start-time");
-					$end = get_tag($sub,"data-duration-seconds") + $start if ($start);
-					if (!$start) {
-						$start = get_tag($sub,"data-timeshift-date");
-						$end = get_tag($sub,"data-timeshift-end");
-					}
-					if ($start) {
-						check_start(\$start,$prev_start);
-						my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start);
-						$date = sprintf("$mday/%d/%d",$mon+1,$year+1900);
-					}
+					$class = get_tag($sub,"datetime");
+					my ($year,$month,$day,$hour,$min,$sec) = $class =~ /(....)-(..)-(..)T(..):(..):(..)/;
+					$date = "$day/$month/$year" if (!$date);
+					$start = timegm_nocheck($sec,$min,$hour,$day,$month-1,$year-1900);
 				}
-				if (!$start && !$title) {
-					$btn = -1;
-					$date = undef;
-				}
-				if ($btn < 0 || !$title) {
-					while (($btn = index($body,"<div",$btn+1)) >= 0) {
-						$sub_pos = find_closing_tag($body,$btn+1,"div");
-						$sub = substr($body,$btn,$sub_pos-$btn-1);
-						$class = get_tag($sub,"class");
-						if ($class eq "favorites") {
-							$title = get_tag($sub,"data-uact-fav-title");
-							last;
-						}
-					}
-				}
-				$img = index($body,"<picture");
-				if ($img >= 0) {
-					$end_pos = find_closing_tag($body,$img+1,"picture");
-					$sub = substr($body,$img,$end_pos-$img-1);
-					$img = get_tag($sub,"data-dejavu-srcset");
-				}
-				$btn = -1;
-				while (($btn = index($body,"<a ",$btn+1)) >= 0) {
-					$sub_pos = find_closing_tag($body,$btn+1,"a");
+				$btn = index($body,"<figure");
+				if ($btn >= 0) {
+					$sub_pos = find_closing_tag($body,$btn+1,"figure");
 					$sub = substr($body,$btn,$sub_pos-$btn-1);
-					$class = get_tag($sub,"class");
-					if ($class eq "card-text-sub") {
-						if (!$date) {
-							$date = get_tag($sub,"href");
-							my ($jour,$mday,$mon,$year);
-							($jour,$mday,$mon,$year) = $date =~ /du-(.+)-(..)-(.+)-(....)/;
-							my @mois = ("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre");
-							for (my $n=0; $n<=$#mois; $n++) {
-								if ($mois[$n] eq $mon) {
-									$mon = $n;
-									last;
-								}
-							}
-							$date = sprintf("$mday/%d/%d",$mon+1,$year);
-							# dans ce cas là on a pas l'heure de début non
-							# plus
-							my ($h,$m) = $body =~ /^(..)h(..)/;
-							$start = timelocal_nocheck(0,$m,$h,$mday,$mon,$year-1900);
-							check_start(\$start,$prev_start);
-							$end = $start + 55*60;
-							my ($sec,$min,$hour,$mday,$mon,$year) = localtime($end);
-							$end = timelocal_nocheck(0,0,$hour,$mday,$mon,$year);
-						}
-						$desc = get_tag($sub,"data-xiti-libelle");
-						$desc =~ s/^.+_//;
-					}
+					$img = get_tag($sub,"srcset");
 				}
-				if (!$start) {
-					# saloperie, des fois y a pas de <a class mais un div
-					# avec la même class... !!!
-					while (($btn = index($body,"<div ",$btn+1)) >= 0) {
-						$sub_pos = find_closing_tag($body,$btn+1,"div");
-						$sub = substr($body,$btn,$sub_pos-$btn-1);
-						$class = get_tag($sub,"class");
-						if ($class eq "card-text-sub") {
-							if (!$date) {
-								$date = get_tag($sub,"data-xiti-libelle");
-								my ($jour,$mday,$mon,$year);
-								($jour,$mday,$mon,$year) = $date =~ /du (.+) (..) (.+) (....)/;
-								my @mois = ("janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre");
-								for (my $n=0; $n<=$#mois; $n++) {
-									if ($mois[$n] eq $mon) {
-										$mon = $n;
-										last;
-									}
-								}
-								$date = sprintf("$mday/%d/%d",$mon+1,$year);
-								# dans ce cas là on a pas l'heure de début non
-								# plus
-								my ($h,$m) = $body =~ /^(..)h(..)/;
-								$start = timelocal_nocheck(0,$m,$h,$mday,$mon,$year-1900);
-								check_start(\$start,$prev_start);
-								$end = $start + 55*60;
-							}
-							$desc = get_tag($sub,"data-xiti-libelle");
-							$desc =~ s/^.+_//;
-						}
-					}
+				$btn = index($body,"<span class=\"TimeSlotContent-title");
+				if ($btn >= 0) {
+					$sub_pos = find_closing_tag($body,$btn+1,"span")-1;
+					$btn = index($body,">",$btn+1)+1;
+					$title = substr($body,$btn,$sub_pos-$btn-1);
 				}
-				if (!$start) {
-					die "toujours pas de start, end $end title $title desc $desc";
-				}
+				say "start $start date $date title $title img $img";
 			} else {
 				next;
 			}
