@@ -2,7 +2,7 @@ package progs::html::finter;
 
 use HTML::Entities;
 use Time::Local "timelocal_nocheck", "timegm_nocheck";
-use Cpanel::JSON::XS qw(decode_json);
+# use Cpanel::JSON::XS qw(decode_json);
 use common::sense;
 use Data::Dumper;
 
@@ -75,43 +75,6 @@ sub decode_html {
 		my $sub = substr($l,$pos+1,$sub_pos-$pos-1);
 		my ($desc,$title,$img);
 		$pos = $sub_pos;
-
-		if ($instr eq "script") {
-			my $type = get_tag($sub,"type");
-			if ($type eq "application/json") {
-				my $body = substr($l,$sub_pos+1);
-				my $end_pos = find_closing_tag($body,0,"script")-2;
-				$body = substr($body,0,$end_pos);
-				# my ($json) = $body =~ /"body":(".+?}")}/;
-				my ($json) = $body =~ /({"status.+)/;
-				# $json =~ s/\\"/"/g;
-				# $json =~ s/%(..)/chr(hex($1))/ge;
-				$json =~ s/\\u(....)/chr(hex($1))/ge;
-				# $json =~ s/":(\d+)/":\\"$1\\"/g;
-				# $json =~ s/":null/":\\"null\\"/g;
-				# eval {
-				# say "json ",$json;
-					$json = decode_json($json);
-					# say "json ",Dumper($json);
-#					if ($json->{body}) {
-#						my $body = $json->{body};
-#						myutf::mydecode(\$body);
-#						eval {
-#							$json = decode_json($body);
-#						};
-#						if ($@) {
-#							say "json error $@ : $!, json ",$body;
-#							open(F,">body");
-#							binmode F;
-#							print F $body;
-#							close(F);
-#						} else {
-#							say "json ",Dumper($json);
-#						}
-#					}
-					# };
-			}
-		}
 
 		if ($instr eq "div") {
 			my $class = get_tag($sub,"class");
