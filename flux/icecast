@@ -1,17 +1,17 @@
 #!/usr/bin/perl
 
 use strict;
-require "http.pl";
+use http;
 
 my $str = shift @ARGV;
 if ($str =~ s/^result\://) {
 	print STDERR "icecast: recherche http://dir.xiph.org/search?search=$str\n";
-	$_ = myget("http://dir.xiph.org/search?search=$str");
+	$_ = http::myget("http://dir.xiph.org/search?search=$str");
 } elsif ($str) { # Catégorie par défaut
 	print STDERR "icecast: categ http://dir.xiph.org/by_genre/$str\n";
-	$_ = myget("http://dir.xiph.org/by_genre/$str");
+	$_ = http::myget("http://dir.xiph.org/by_genre/$str");
 } else { # Ou rien
-	$_ = myget("http://dir.xiph.org/");
+	$_ = http::myget("http://dir.xiph.org/");
 }
 if (/encoding="(.+?)"/) {
 	print "encoding: $1\n";

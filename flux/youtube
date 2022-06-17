@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
-require "http.pl";
+use http;
 use HTML::Entities;
 use v5.10;
 use lib ".";
@@ -32,12 +32,12 @@ if ($debug && !$str) {
 	$str = "http://channel";
 } else {
 	if ($str && $str !~ /^http/) {
-		$_ = myget( "http://www.youtube.com/results?search_query=$str&oq=$str");
+		$_ = http::myget( "http://www.youtube.com/results?search_query=$str&oq=$str");
 	} elsif ($str) {
 		print "debug: get $str\n" if ($debug);
-		$_ = myget($str);
+		$_ = http::myget($str);
 	} else {
-		$_ = myget("http://www.youtube.com/");
+		$_ = http::myget("http://www.youtube.com/");
 	}
 }
 if (/encoding="(.+?)"/) {

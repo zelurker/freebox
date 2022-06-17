@@ -4,7 +4,7 @@ use lib ".";
 use HTML::Entities;
 use strict;
 use link_get;
-require "http.pl";
+use http;
 use v5.10;
 use Time::Local;
 
@@ -32,11 +32,11 @@ if ($arg[0]) {
 	$base = $arg[0];
 	$base =~ /https?...(.+?)\//;
 	$server = $1;
-	$page = myget($arg[0],"cache/ftv/$text",1/24.0);
+	$page = http::myget($arg[0],"cache/ftv/$text",1/24.0);
 } else {
 	$base = "https://www.france.tv/";
 	$server = "www.france.tv";
-	$page = myget($base,"cache/ftv/j0",1/12.0);
+	$page = http::myget($base,"cache/ftv/j0",1/12.0);
 }
 
 

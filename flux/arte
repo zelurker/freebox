@@ -5,7 +5,7 @@ use Cpanel::JSON::XS qw(decode_json);
 use HTML::Entities;
 use strict;
 use link_get;
-require "http.pl";
+use http;
 use v5.10;
 use Data::Dumper;
 use Time::Local;
@@ -133,7 +133,7 @@ sub decode_html {
 	my ($code,$url0) = @_;
 	my $json;
 	# say STDERR "decode_html: myget pour $code.html $url0";
-	my $html = myget($url0,"cache/arte/$code.html",7);
+	my $html = http::myget($url0,"cache/arte/$code.html",7);
 # on récupère l'url de l'iframe video...
 	my ($url) = $html =~ /iframe allow.+?src="(.+?)"/;
 	if (!$url) {
@@ -148,7 +148,7 @@ sub decode_html {
 		my ($json_url) = $html =~ /json_url=(.+?)"/;
 		if ($json_url) {
 			$json_url =~ s/v2/v1/;
-			$json = myget($json_url,"cache/arte/$code.json",7);
+			$json = http::myget($json_url,"cache/arte/$code.json",7);
 		}
 	}
 	if (!$url && !$json) {
@@ -177,7 +177,7 @@ sub decode_html {
 	# say STDERR "decode_html: myget pour $code.player : $url";
 	my $player;
 	if ($url) {
-		my $player = myget($url,"cache/arte/$code.player",7) if (!$json);
+		my $player = http::myget($url,"cache/arte/$code.player",7) if (!$json);
 		($json) = $player =~ /js_json = (.+?);/ if (!$json);
 	}
 	if (!$json) {
@@ -186,7 +186,7 @@ sub decode_html {
 		$json_url =~ s/api-internal/api/;
 		if ($json_url) {
 			# say STDERR "deocde_html: $code.json from $json_url";
-			$json = myget($json_url,"cache/arte/$code.json",7);
+			$json = http::myget($json_url,"cache/arte/$code.json",7);
 		}
 	}
 
@@ -214,7 +214,7 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 	my ($url,$streams,$json,$hash);
 	if ($code =~ /\d/) { # un code normal contient un nombre
 		$url = "https://api.arte.tv/api/player/v1/config/fr/$code?platform=ARTEPLUS7&lang=fr_FR";
-		$streams = myget($url,"cache/arte/$code",7);
+		$streams = http::myget($url,"cache/arte/$code",7);
 		$json = decode_json($streams);
 		$hash = $json->{videoJsonPlayer}{VSR};
 	}
@@ -248,7 +248,7 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
     }
 	if ($count == 0 && $url) {
 		# On a une url m3u et rien d'autre, ça semble ête la mode en 2018 !
-		my $m3u = myget($url,"cache/arte/$code.m3u",7);
+		my $m3u = http::myget($url,"cache/arte/$code.m3u",7);
 		$count = 0;
 		foreach (split /\n/,$m3u) {
 			next if (/^#EXTM3U/);
@@ -287,13 +287,13 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 my $page;
 if ($str =~ /^result:(.+)/) {
 	my $url = "http://www.arte.tv/fr/search/?q=$1";
-	$page = myget($url);
+	$page = http::myget($url);
 } elsif ($str =~ /^concerts/) {
-	$page = myget("https://www.arte.tv/fr/videos/arte-concert/","cache/arte/concert0",1/12.0);
+	$page = http::myget("https://www.arte.tv/fr/videos/arte-concert/","cache/arte/concert0",1/12.0);
 } elsif ($str =~ /^Guide/) {
-	$page = myget("https://www.arte.tv/fr/guide/","cache/arte/guide",1/12.0);
+	$page = http::myget("https://www.arte.tv/fr/guide/","cache/arte/guide",1/12.0);
 } else {
-	$page = myget("https://www.arte.tv/fr/","cache/arte/j0",1/12.0);
+	$page = http::myget("https://www.arte.tv/fr/","cache/arte/j0",1/12.0);
 }
 # l'encoding doit être après le myget parce que si l'html est en utf8, le
 # json est en latin !!!
