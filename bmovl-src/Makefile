@@ -2,12 +2,15 @@
 WARNS = -Wno-write-strings -Wno-pointer-arith
 ifdef SDL1
 WARNS += -DSDL1
+CNF=sdl-config
+else
+CNF=sdl2-config
 endif
 # debug flags
-# CFLAGS=-Wall -g `sdl-config --cflags ` $(WARNS)
+# CFLAGS=-Wall -g `${CNF} --cflags ` $(WARNS)
 
 # opt flags
-CFLAGS=-O2 `sdl-config --cflags` $(WARNS)
+CFLAGS=-O2 `${CNF} --cflags` $(WARNS)
 
 %.o: %.c
 	g++ $(CFLAGS) -c $< -o $@
