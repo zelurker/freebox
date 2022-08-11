@@ -24,6 +24,7 @@ use EV;
 use Data::Dumper;
 use AnyEvent::HTTP;
 use myutf;
+use http;
 
 # Un mot sur le format interne de @list :
 # chaque élément est un tableau de tableau, c'est parce qu'à l'origine
@@ -971,6 +972,30 @@ sub mount_dvd() {
 sub run_mplayer2 {
 	my ($name,$src,$serv,$flav,$audio,$video) = @_;
 	# out::clear("list_coords");
+	if ($serv =~ s/ (http.+)//) {
+		say "run_mplayer2 serv contient audio $1";
+		$audio = $1;
+		if ($audio =~ /.+\/(.+?\.m3u8)$/) {
+			# mpv ne supporte pas l'audio venant d'un m3u, c'est le format
+			# plutôt tordu choisi par arte, même pour les flux qui ne sont
+			# pas en direct... A priori le format donne toujours la même
+			# url pour ce qui n'est pas en direct, donc on va extraire
+			# ça...
+			my $code = $1;
+			my $m3u = http::myget($audio,"cache/arte/$code",7);
+			say "run_mplayer2: audio m3u lu from cache/arte/$code";
+			foreach (split /\n/,$m3u) {
+				next if (/^#/);
+				next if (!$_);
+				# on est obligé de supposer que c'est la même url partout
+				my $url0 = $audio;
+				$url0 =~ s/^(.+)\/.+?$/$1\//;
+				$audio = $url0.$_;
+				say "audio reconstitué : $audio";
+				last;
+			}
+		}
+	}
 	if ($serv =~ /^get,.+/) {
 		# lien get : download géré par le plugin
 		print "lien get détecté: $serv, base_flux = $base_flux\n";
@@ -1023,7 +1048,7 @@ sub run_mplayer2 {
 			# }
 		$serv =~ s/ http.+//; # Stations de radio, vire l'url du prog
 	} else {
-		$audio = "-aid $audio " if ($audio);
+		$audio = "-aid $audio " if ($audio && $audio !~ /^http/);
 		if ($src =~ /Fichiers video/) {
 # 			if ($name =~ /(mpg|ts)$/) {
 # 				$filter = ",kerndeint";
@@ -1103,8 +1128,12 @@ sub run_mplayer2 {
 		}
 	}
 	if ($audio) {
-		if ($src =~ /youtube/) {
-			push @list,("-audiofile",$audio);
+		if ($src =~ /(youtube|arte)/) {
+			if ($player eq "mpv") {
+				push @list,("-audio-file",$audio);
+			} else {
+				push @list,("-audiofile",$audio);
+			}
 		} else {
 			push @list,$audio;
 		}
@@ -1173,6 +1202,7 @@ sub load_file2 {
 	# d'une source non vidéo vers une source vidéo par exemple.
 	# retourne 1 si on a lancé un lecteur, 0 si on a juste modifié la liste
 	my ($name,$serv,$flav,$audio,$video) = @_;
+	say "load_file2 name $name serv $serv flav $flav audio $audio video $video";
 	my $prog;
 	$prog = $1 if ($base_flux !~ /^youtube/ && $serv =~ s/ (http.+)//);
 	if ($serv =~ /(jpe?g|png|gif|bmp)$/i) {
@@ -1756,7 +1786,7 @@ sub commands {
 				print "base_flux = $name\n";
 				read_list();
 			} elsif ($mode_flux eq "list" || (($serv !~ /\/\// && $serv !~ /^get/) ||
-					($serv =~ / / && $base_flux !~ /youtube/) && $mode_flux)) {
+					($serv =~ / / && $base_flux !~ /(youtube|arte)/) && $mode_flux)) {
 				$name =~ s/\//-/g;
 				myutf::mydecode(\$name);
 				$base_flux .= "/$name";
