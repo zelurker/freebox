@@ -38,8 +38,10 @@ sub decode_prg {
 				say "$str/vid:$_->{programId},$url";
             } # note : certains programmes genre vod n'ont pas de programid, on affiche donc pas
         }
+	} elsif ($_->{data}) {
+		decode_prg($_->{data});
     } else {
-        die "decode_prg: pas de tableau ? : $_";
+        die "decode_prg: pas de tableau ? : data ",$_{data}," dumper ",Dumper($_);
     }
 }
 
@@ -110,8 +112,9 @@ sub decode_main {
         if ($hash{props}) { # racine du nouveau hash 2017
 			# et encore après ça...
 			if ($str =~ /^result:/) {
-				foreach (keys %{$hash{pages}{list}}) {
-					decode_prg($hash{pages}{list}{$_}{zones});
+				# say STDERR "dans recherche, hash : ",Dumper(%hash); # $hash{pageProps};
+				foreach (@{$hash{props}{pageProps}{initialPage}{zones}}) {
+					decode_prg($_);
 				}
 				return;
 			}
