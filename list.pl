@@ -1122,9 +1122,7 @@ sub run_mplayer2 {
 			dbmclose %bookmarks;
 		}
 		if ($source =~ /(dvb|freeboxtv)/) {
-			push @list,("-ss","-3","--keep-open","--deinterlace=yes");
-		} elsif ($source =~ /livetv/) {
-			push @list,("--deinterlace=yes");
+			push @list,("-ss","-3","--keep-open");
 		}
 	}
 	if ($audio) {
