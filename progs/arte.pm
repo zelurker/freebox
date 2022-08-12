@@ -7,6 +7,7 @@ use Cpanel::JSON::XS qw(decode_json);
 use HTML::Entities;
 use Time::Local "timelocal_nocheck","timegm_nocheck";
 use v5.10;
+use Data::Dumper;
 # require "http.pl";
 
 @progs::arte::ISA = ("progs::telerama");
@@ -49,10 +50,8 @@ sub read_json {
 	my $json;
 	while (<$f>) {
 		chomp;
-		if (/__INITIAL_STATE__ = (.+);/) {
-			$json = $1; # decode_entities($1);
-			last;
-		}
+		$json = $_; # decode_entities($1);
+		last;
 	}
 	close($f);
 	eval {
@@ -78,8 +77,8 @@ sub read_last_serv {
 sub parse_time {
 	my $t = shift;
 	return undef if (!$t);
-	my ($d,$h) = split(/ /,$t);
-	my ($j,$m,$a) = split(/\//,$d);
+	my ($d,$h) = split(/T/,$t);
+	my ($a,$m,$j) = split(/\-/,$d);
 	$a -= 1900;
 	$m--;
 	my ($hr,$min,$sec) = split(/:/,$h);
@@ -94,11 +93,12 @@ sub get {
 	if ($serv !~ /vid:(.+)/ && $#arg > 0) {
 		$serv = read_last_serv();
 	}
+	say STDERR "progs/arte: serv $serv";
 	@arg = split(/\//,$serv);
  	return undef if ($arg[$#arg] !~ /vid:(.+)/);
  	my $code = $1;
 	$code =~ s/,.+//;
-	# say "progs/arte: code $code";
+	say "progs/arte: code $code";
 
 	my ($f,$json);
 
@@ -108,103 +108,36 @@ sub get {
 	# ou un sous-index à retrouver !
 	for (my $idx=$#arg-1; $idx >= 0; $idx--) {
 		if ($arg[$idx] =~ /^vid:(.+?),/) {
-			return undef if (!open($f,"<cache/arte/$1.html"));
-			# say "progs/arte: lecture $1.html";
+			say "progs/arte: on teste cache/arte/$1...";
+			return undef if (!open($f,"<cache/arte/$1"));
+			say STDERR "progs/arte: lecture $1";
 			last;
 		}
 	}
 	if (!$f) {
+		open($f,"<cache/arte/$code");
+		say "progs/arte: lecture cache/arte/$code" if ($f);
+	}
+
+	if (!$f) {
 		return undef if (!open($f,"<cache/arte/j0"));
-		# say "progs/arte: lecture j0";
+		say "progs/arte: lecture j0";
 	}
 	$json = read_json($f);
 	return undef if (!$json);
-	my $hash = find_id($json,$code);
-	if (!$hash && $code !~ /\d/ && open(my $f,"<cache/arte/$code.html")) {
-		$json = read_json($f);
-		return undef if (!$json);
-		$hash = find_id($json,$code);
-		# say "progs/arte: lecture $code.html";
-	}
-	if (!$hash) {
-
-		# si ça marche pas, on passe à la 2ème source : si on est sur une
-		# liste de vidéos genre concerts ou séries, dans ce cas là faut
-		# récupérer le bon serv de flux/arte.pm dans last_serv...
-		my $old_serv = $serv;
-		$serv = read_last_serv();
-		@arg = split(/\//,$serv);
-		my ($id) = $arg[$#arg] =~ /vid:(.+?),/;
-		if ($id && $id ne $code && $old_serv !~ $id) {
-			if (open($f,"<cache/arte/$id.html")) {
-				$json = read_json($f);
-				# say "progs/arte: lecture $id.html";
-				return undef if (!$json);
-			}
-		}
-		$hash = find_id($json,$code) if (!$hash);
-	}
-	my $date = $hash->{creationDate}; # pas sûr
-	$date = $hash->{videoRightsBegin} if (!$date);
-	if ($date) {
-		my ($year,$mon,$day) = split(/\-/,$date);
-		$date = "$day/$mon/$year";
-	}
-	my $sum = $hash->{teaser};
+	my $date = $json->{data}{attributes}{rights}{end}; # pas sûr
+	my $fin = parse_time($date);
 
 	# On vérifie si on a le fichier détaillé, sans le récupérer, il n'y a
 	# qu'un résumé + long utile dedans pour ça...
-	my $title = $hash->{title};
-	my $sub = $hash->{subtitle};
-	my $img = $hash->{images};
-	# les images sont un gros merdier dans la version 2017, c'est dingue
-	# d'en garder autant !
-	foreach (@$img) {
-		if ($_->{format} eq "landscape") {
-			my $min = 9999;
-			my $url;
-			foreach (@{$_->{alternateResolutions}}) {
-				if ($_->{width} < $min) {
-					$min = $_->{width};
-					$url = $_->{url};
-				}
-			}
-			$img = $url;
-			last;
-		}
-	}
-	if (!$img || ref($img) eq "ARRAY") {
-		$img = $hash->{mainImage}{url};
-	}
-	my ($debut,$fin);
-	if ($code !~ /^RC/ && open(my $f,"<cache/arte/$code")) {
-		# Et voilà la 3ème, en lecture directe d'une vidéo on a un hash
-		# pour le player d'un format totalement différent.
-		@_ = <$f>;
-		close($f);
-		my $truc = join("\n",@_);
-		my $j = decode_json(decode_entities($truc));
-		$title = $j->{videoJsonPlayer}{VTI} if (!$title);
-		$sub = $j->{videoJsonPlayer}{subtitle} if (!$sub);
-		# V7T n'est pas vraiment un sous titre, + une espèce de
-		# présentation de la série pour les séries, ça ne devrait peut-être
-		# pas aller dans $sub, pour l'instant je garde comme ça pour avoir
-		# de la comparaison, mais en laissant la priorité à subtitle
-		$sub = $j->{videoJsonPlayer}{V7T} if (!$sub);
-		$sum .= " ".$j->{videoJsonPlayer}{VDE} if (!$sum);
-		$img = $j->{videoJsonPlayer}{VTU}{IUR} if (!$img || ref($img) eq "ARRAY");
-		$debut = parse_time($j->{videoJsonPlayer}{VRA});
-		$fin = parse_time($j->{videoJsonPlayer}{VRU});
-		# Note : apparemment il manque la date dans celui là, on peut la
-		# récupérer si on va lire le fichier .player, mais bon la date
-		# n'est pas vraiment super importante ici...
-	} elsif (!$title) {
-		return undef;
-	}
+	my $title = $json->{data}{attributes}{metadata}{title};
+	my $sub = $json->{data}{attributes}{metadata}{subtitle};
+	my $sum = $json->{data}{attributes}{metadata}{description};
+	my $img = $json->{data}{attributes}{metadata}{images}[0]{url};
 
 	my @tab = (undef, # chan id
 		"$source", $title,
-		$debut,
+		undef, # $debut,
 		$fin, "", # fin
 		$sub,
 		$sum, # details
