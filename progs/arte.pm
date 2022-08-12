@@ -46,12 +46,16 @@ sub find_id {
 }
 
 sub read_json {
-	my $f = shift;
+	my ($f,$code) = @_;
 	my $json;
 	while (<$f>) {
 		chomp;
 		$json = $_; # decode_entities($1);
-		last;
+		last if ($json =~ /^{/);
+		if ($json =~ /application\/json">({.+})<\//) {
+			$json = $1;
+			last;
+		}
 	}
 	close($f);
 	eval {
@@ -60,6 +64,17 @@ sub read_json {
 	if ($@) {
 		print "progs/arte: decode_json error $! à partir de $json\n";
 		return undef;
+	}
+	my $rtab = $json->{props}{pageProps}{initialPage}{zones};
+	if ($rtab) {
+		foreach (@$rtab) {
+			my $rtab2 = $_->{data};
+			foreach (@$rtab2) {
+				if ($_->{id} =~ /$code/) {
+					return $_;
+				}
+			}
+		}
 	}
 	$json;
 }
@@ -93,12 +108,12 @@ sub get {
 	if ($serv !~ /vid:(.+)/ && $#arg > 0) {
 		$serv = read_last_serv();
 	}
+	my $guide = $serv =~ /^Guide/;
 	say STDERR "progs/arte: serv $serv";
 	@arg = split(/\//,$serv);
  	return undef if ($arg[$#arg] !~ /vid:(.+)/);
  	my $code = $1;
 	$code =~ s/,.+//;
-	say "progs/arte: code $code";
 
 	my ($f,$json);
 
@@ -115,25 +130,59 @@ sub get {
 		}
 	}
 	if (!$f) {
-		open($f,"<cache/arte/$code");
+		if (!open($f,"<cache/arte/$code")) {
+			$f = undef;
+		}
 		say "progs/arte: lecture cache/arte/$code" if ($f);
 	}
 
+	if (!$f && $guide) {
+		return undef if (!open($f,"<cache/arte/guide"));
+		say "progs/arte: lecture guide";
+	}
 	if (!$f) {
 		return undef if (!open($f,"<cache/arte/j0"));
 		say "progs/arte: lecture j0";
 	}
-	$json = read_json($f);
+	$json = read_json($f,$code);
 	return undef if (!$json);
-	my $date = $json->{data}{attributes}{rights}{end}; # pas sûr
-	my $fin = parse_time($date);
+	my ($date,$debut,$fin,$title,$sub,$sum,$img);
+	if ($json->{data}) {
+		# Version vidéo spécifique
+		$date = $json->{data}{attributes}{rights}{end};
+		$fin = parse_time($date);
+		$debut = parse_time($json->{data}{attributes}{rights}{start});
 
-	# On vérifie si on a le fichier détaillé, sans le récupérer, il n'y a
-	# qu'un résumé + long utile dedans pour ça...
-	my $title = $json->{data}{attributes}{metadata}{title};
-	my $sub = $json->{data}{attributes}{metadata}{subtitle};
-	my $sum = $json->{data}{attributes}{metadata}{description};
-	my $img = $json->{data}{attributes}{metadata}{images}[0]{url};
+		# On vérifie si on a le fichier détaillé, sans le récupérer, il n'y a
+		# qu'un résumé + long utile dedans pour ça...
+		$title = $json->{data}{attributes}{metadata}{title};
+		$sub = $json->{data}{attributes}{metadata}{subtitle};
+		$sum = $json->{data}{attributes}{metadata}{description};
+		$sum = $json->{data}{attributes}{metadata}{teaser} if (!$sum);
+		$img = $json->{data}{attributes}{metadata}{images}[0]{url};
+	} else {
+		# Version page du guide
+		say "progs/arte: version json guide";
+		$date = $json->{availability}{end};
+		$fin = parse_time($date);
+		$debut = parse_time($json->{availability}{start});
+
+		# On vérifie si on a le fichier détaillé, sans le récupérer, il n'y a
+		# qu'un résumé + long utile dedans pour ça...
+		$title = $json->{title};
+		$sub = $json->{subtitle};
+		$sum = $json->{description};
+		$sum = $json->{shortDescription} if (!$sum);
+		$sum = $json->{teaserText} if (!$sum);
+		$sum = $json->{teaser} if (!$sum);
+		# un gros bordel les images
+		# landscape a l'air renseigné tout le temps mais pas paysage
+		# les résolutions n'arrivent pas triées bien sûr
+		my $res = $json->{images}{landscape}{resolutions};
+		my @sorted = sort { $b->{w} <=> $a->{w} } @$res;
+		say "sorted ",$sorted[0]->{w};
+		$img = $sorted[0]->{url};
+	}
 
 	my @tab = (undef, # chan id
 		"$source", $title,

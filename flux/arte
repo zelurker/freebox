@@ -16,6 +16,7 @@ my @arg = split(/\//,$str);
 my ($cat) = $arg[1] =~ /^cat:(.+)/;
 my $utf = $ENV{LANG} =~ /utf/i;
 splice @arg,1,1 if ($cat);
+# my $guide = $arg[0] =~ /Guide/;
 
 sub decode_prg {
     $_ = shift;
@@ -23,8 +24,8 @@ sub decode_prg {
         foreach (@$_) {
 			decode_prg($_->{data}) if ($_->{data});
             if (ref($_) eq "HASH" && $_->{programId}) {
-				if ($_->{broadcastDates}) {
-					my $t = $_->{broadcastDates}[0];
+				if ($_->{availability}) {
+					my $t = $_->{availability}{start};
 					if ($t =~ /(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+)Z/) {
 						my $t = timegm($6,$5,$4,$3,$2-1,$1-1900);
 						my ($sec,$min,$hour,$mday,$mon,$year) = localtime($t);
