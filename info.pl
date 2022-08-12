@@ -554,6 +554,17 @@ sub commands {
 		} else {
 			out::send_command("osd_show_property_text ".get_time(time())." 3000\n");
 		}
+	} elsif ($cmd eq "sensors") {
+		open(F,"sensors |");
+		my @temp;
+		while (<F>) {
+			chomp;
+			push @temp,$1 if (/([\d\.]+..C)/);
+		}
+		close(F);
+		if (-e "mpvsocket") {
+			out::send_command("show-text \"wifi $temp[0] cpu $temp[2]\" 8000\n");
+		}
 	} elsif ($cmd eq "nextprog" || $cmd eq "right") {
 		undef $refresh;
 		disp_prog($prog[$reader]->next($last_chan),$last_long);
@@ -580,7 +591,10 @@ sub commands {
 		# sources de programmes maintenant
 		# Note sur la regex : le 1er (.+) sert à être sûr qu'on prend la
 		# chaine la + longue, au cas où le nom de fichier contient un &
-		$cmd =~ s/(.+)&(.+)/$1/;
+		# le [A-Za-z] est pour éviter les collisons avec le & dans un
+		# titre, généralement y a un espace après
+		# J'aurais jamais du choisir & comme séparateur !!!
+		$cmd =~ s/(.+)&([A-Za-z].+)/$1/;
 		$source = $2;
 		if ($source =~ s/\/(.+)//) {
 			$base_flux = $1;
