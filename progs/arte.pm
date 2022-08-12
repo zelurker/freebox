@@ -162,7 +162,6 @@ sub get {
 		$img = $json->{data}{attributes}{metadata}{images}[0]{url};
 	} else {
 		# Version page du guide
-		say "progs/arte: version json guide";
 		$date = $json->{availability}{end};
 		$fin = parse_time($date);
 		$debut = parse_time($json->{availability}{start});
@@ -180,13 +179,12 @@ sub get {
 		# les résolutions n'arrivent pas triées bien sûr
 		my $res = $json->{images}{landscape}{resolutions};
 		my @sorted = sort { $b->{w} <=> $a->{w} } @$res;
-		say "sorted ",$sorted[0]->{w};
 		$img = $sorted[0]->{url};
 	}
 
 	my @tab = (undef, # chan id
 		"$source", $title,
-		undef, # $debut,
+		$debut,
 		$fin, "", # fin
 		$sub,
 		$sum, # details

@@ -18,6 +18,76 @@ my $utf = $ENV{LANG} =~ /utf/i;
 splice @arg,1,1 if ($cat);
 # my $guide = $arg[0] =~ /Guide/;
 
+sub handle_hash {
+  my ($hash,$code) = @_;
+  my $count = 0;
+  foreach (@$hash) {
+	  if ($_->{data}) {
+		  handle_hash($_->{data},$code);
+		  next;
+	  }
+	  $count++;
+	  if ($_->{url} =~ /m3u8?$/) {
+		  my $url = $_->{url};
+		  my $label = $_->{versions}[0]{label};
+		  # m3u...
+		  my $m3u = myget($url,"cache/arte/$code.m3u",7);
+		  $count = 0;
+		  my $audio = undef;
+		  foreach (split /\n/,$m3u) {
+			  next if (/^#EXTM3U/);
+			  if (/^#EXT-X-MEDIA:TYPE=AUDIO.+URI="(.+?)"/) {
+				  my $url0 = $url;
+				  my $aud = $1;
+				  $url0 =~ s/^(.+)\/.+?$/$1\//;
+				  $audio = $url0.$aud;
+				  last;
+			  }
+		  }
+		  foreach (split /\n/,$m3u) {
+			  next if (/^#EXTM3U/);
+			  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=128000,CODECS="mp4a.40.2"
+			  if (/^#EXT.X.STREAM.INF.*BANDWIDTH=(\d+)/) {
+				  my $band = $1;
+				  if (/,RESOLUTION=(\d+x\d+)/) {
+					  my $res = $1;
+					  if (/,CODECS="(.+?)"/) {
+						  say "$res ".($band/1000)."kbps $label";
+					  }
+				  }
+				  next;
+			  } elsif (/^#EXT.X.STREAM.INF.*BANDWIDTH=(\d+),CODECS="(.+?)"/) {
+				  say "audio only: ".($1/1000)."kbps codecs:$2";
+				  next;
+			  } elsif (/^http/) {
+				  $count++;
+				  say "get,$_";
+			  } elsif (/^media/) {
+				  my $url0 = $url;
+				  $url0 =~ s/^(.+)\/.+?$/$1\//;
+				  $count++;
+				  say $url0,$_,($audio ? " $audio" : "");
+			  } elsif ($_ ne "") {
+				  say STDERR "m3u: ligne non reconnue : $_.";
+			  }
+		  }
+		  next;
+	  }
+	  if ($_->{mainQuality}) {
+		  print "$_->{mainQuality}{label} $_->{versions}[0]{shortLabel}\n";
+		  if ($_->{streamer}) {
+			  print "get,$_->{streamer}$_->{url}\n";
+		  } else {
+			  print "get,$_->{url}\n";
+		  }
+	  } else {
+		  # on suppose que c'est un index...
+		  say $_->{title};
+		  say "vid:$_->{programId},$_->{url}";
+	  }
+  }
+}
+
 sub decode_prg {
     $_ = shift;
     if (ref($_) eq "ARRAY") {
@@ -139,6 +209,17 @@ sub decode_html {
 	# say STDERR "decode_html: myget pour $code.html $url0";
 	my $html = myget($url0,"cache/arte/$code.html",7);
 # on récupère l'url de l'iframe video...
+	my ($json) = $html =~ /application\/json">({.+})<\//;
+	if ($json) {
+		eval  {
+			$json = decode_json( $json);
+		};
+		if ($@) {
+			die "arte: couille dans le potage au niveau json $?:$@\n";
+		}
+		return $json->{props}{pageProps}{initialPage}{zones};
+	}
+
 	my ($url) = $html =~ /iframe allow.+?src="(.+?)"/;
 	if (!$url) {
 		($url) = $html =~ /iframe title.+?src=\\"(.+?)\\"/ if (!$url); # alternative...
@@ -170,7 +251,6 @@ sub decode_html {
 		}
 		say "encoding: latin1";
 		say "list";
-		# say STDERR "dumper : ".Dumper($json);
 		if ($json->{collection}{videos}) {
 			decode_prg($json->{collection}{videos});
 		} else {
@@ -178,7 +258,6 @@ sub decode_html {
 		}
 		exit(0);
 	}
-	# say STDERR "decode_html: myget pour $code.player : $url";
 	my $player;
 	if ($url) {
 		my $player = myget($url,"cache/arte/$code.player",7) if (!$json);
@@ -189,7 +268,6 @@ sub decode_html {
 		$json_url =~ s/%(..)/chr(hex($1))/eg;
 		$json_url =~ s/api-internal/api/;
 		if ($json_url) {
-			# say STDERR "deocde_html: $code.json from $json_url";
 			$json = myget($json_url,"cache/arte/$code.json",7);
 		}
 	}
@@ -216,78 +294,23 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
         close(F);
     }
 	my ($url,$streams,$json,$hash);
-	if ($code =~ /\d/) { # un code normal contient un nombre
+	if ($code =~ /\d/ && $code !~ /^RC/) { # un code normal contient un nombre
 		$url = "https://api.arte.tv/api/player/v2/config/fr/$code";
 		$streams = myget($url,"cache/arte/$code",7);
 		$json = decode_json($streams);
-		# say STDERR "json ",Dumper($json);
 		$hash = $json->{data}{attributes}{streams};
-		# say STDERR "hash ",ref($hash)," ",Dumper($hash);
 	}
-#     if (!$hash || ref($hash) ne "HASH") {
-# # 1 on récupère la page html liée
-# 		$hash = decode_html($code,$url0);
-#     }
 	say "encoding: latin1"; # c'est toujours du json...
-    print "direct\n";
-	say STDERR "dumper : ".Dumper($hash);
-	my $count = 0;
+    if ((!$hash || ref($hash) ne "HASH") && !$json) {
+# 1 on récupère la page html liée
+		$hash = decode_html($code,$url0);
+		# A priori ces pages html sont des indexes
+		say "list";
+    } else {
+		say "direct";
+	}
 	$url = undef;
-    foreach (@$hash) {
-		$count++;
-		if ($_->{url} =~ /m3u8?$/) {
-			my $url = $_->{url};
-			my $label = $_->{versions}[0]{label};
-			# m3u...
-			my $m3u = myget($url,"cache/arte/$code.m3u",7);
-			$count = 0;
-			my $audio = undef;
-			foreach (split /\n/,$m3u) {
-				next if (/^#EXTM3U/);
-				if (/^#EXT-X-MEDIA:TYPE=AUDIO.+URI="(.+?)"/) {
-					my $url0 = $url;
-					my $aud = $1;
-					$url0 =~ s/^(.+)\/.+?$/$1\//;
-					$audio = $url0.$aud;
-					last;
-				}
-			}
-			foreach (split /\n/,$m3u) {
-				next if (/^#EXTM3U/);
-				#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=128000,CODECS="mp4a.40.2"
-				if (/^#EXT.X.STREAM.INF.*BANDWIDTH=(\d+)/) {
-					my $band = $1;
-					if (/,RESOLUTION=(\d+x\d+)/) {
-						my $res = $1;
-						if (/,CODECS="(.+?)"/) {
-							say "$res ".($band/1000)."kbps $label";
-						}
-					}
-					next;
-				} elsif (/^#EXT.X.STREAM.INF.*BANDWIDTH=(\d+),CODECS="(.+?)"/) {
-					say "audio only: ".($1/1000)."kbps codecs:$2";
-					next;
-				} elsif (/^http/) {
-					$count++;
-					say "get,$_";
-				} elsif (/^media/) {
-					my $url0 = $url;
-					$url0 =~ s/^(.+)\/.+?$/$1\//;
-					$count++;
-					say $url0,$_,($audio ? " $audio" : "");
-				} elsif ($_ ne "") {
-					say STDERR "m3u: ligne non reconnue : $_.";
-				}
-			}
-			next;
-		}
-		print "$_->{mainQuality}{label} $_->{versions}[0]{shortLabel}\n";
-		if ($_->{streamer}) {
-			print "get,$_->{streamer}$_->{url}\n";
-		} else {
-			print "get,$_->{url}\n";
-		}
-    }
+	handle_hash($hash,$code);
     exit(0);
 } elsif ($str =~ /^get,(.+)/) {
     my $url = $1;
