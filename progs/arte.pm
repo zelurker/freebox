@@ -110,10 +110,15 @@ sub get {
 	}
 	my $guide = $serv =~ /^Guide/;
 	say STDERR "progs/arte: serv $serv";
-	@arg = split(/\//,$serv);
- 	return undef if ($arg[$#arg] !~ /vid:(.+)/);
- 	my $code = $1;
-	$code =~ s/,.+//;
+	@arg = split(/,/,$serv);
+	my $code;
+	foreach (@arg) {
+		if (/vid:(.+)/) {
+			$code = $1;
+			last;
+		}
+	}
+ 	return undef if (!$code);
 
 	my ($f,$json);
 
@@ -132,8 +137,30 @@ sub get {
 	if (!$f) {
 		if (!open($f,"<cache/arte/$code")) {
 			$f = undef;
+			if (!$guide) {
+				# légèrement le bazar : quand on parcourt une liste info reçoit le code vidéo associé à chaque élément
+				# mais si on est sur un index et qu'on a jamais visualisé aucune de ces vidéos on aura pas d'info dessus
+				# dans ce cas là on peut récupérer le code de l'index lui même dans read_last_serv(), puis chercher le
+				# code actuel dedans...
+				$serv = read_last_serv();
+				@arg = split(/,/,$serv);
+				my $last_code;
+				foreach (@arg) {
+					if (/vid:(.+)/) {
+						$last_code = $1;
+						last;
+					}
+				}
+				say STDERR "progs/arte: last_code $last_code";
+				if (!open($f,"<cache/arte/$last_code.html")) {
+					$f = undef;
+				} else {
+					say "progs/arte: lecture cache/arte/$last_code.html";
+				}
+			}
+		} else {
+			say "progs/arte: lecture cache/arte/$code";
 		}
-		say "progs/arte: lecture cache/arte/$code" if ($f);
 	}
 
 	if (!$f && $guide) {
