@@ -971,10 +971,11 @@ sub mount_dvd() {
 
 sub run_mplayer2 {
 	my ($name,$src,$serv,$flav,$audio,$video) = @_;
+	my $sub;
 	# out::clear("list_coords");
-	if ($serv =~ s/ (http.+)//) {
-		say "run_mplayer2 serv contient audio $1";
-		$audio = $1;
+
+	if ($serv =~ / http/) {
+		($serv,$audio,$sub) = split / /,$serv;
 		if ($audio =~ /.+\/(.+?\.m3u8)$/) {
 			# mpv ne supporte pas l'audio venant d'un m3u, c'est le format
 			# plutôt tordu choisi par arte, même pour les flux qui ne sont
@@ -1135,6 +1136,10 @@ sub run_mplayer2 {
 		} else {
 			push @list,$audio;
 		}
+	}
+	if ($sub) {
+		# mpv seulement
+		push @list,("--sub-file=$sub");
 	}
 	push @list,("-cdrom-device","/dev/$cd") if ($cd);
 	# fichier local (commence par /) -> pas de cache !

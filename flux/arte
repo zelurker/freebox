@@ -33,7 +33,7 @@ sub handle_hash {
 		  # m3u...
 		  my $m3u = myget($url,"cache/arte/$code.m3u",7);
 		  $count = 0;
-		  my $audio = undef;
+		  my ($audio,$subs);
 		  foreach (split /\n/,$m3u) {
 			  next if (/^#EXTM3U/);
 			  if (/^#EXT-X-MEDIA:TYPE=AUDIO.+URI="(.+?)"/) {
@@ -41,7 +41,53 @@ sub handle_hash {
 				  my $aud = $1;
 				  $url0 =~ s/^(.+)\/.+?$/$1\//;
 				  $audio = $url0.$aud;
-				  last;
+			  }
+			  if (/^#EXT-X-MEDIA:TYPE=SUBTITLES.*URI="(.+)"/) {
+				  my $url0 = $url;
+				  my $aud = $1;
+				  $url0 =~ s/^(.+)\/.+?$/$1\//;
+				  $subs = $url0.$aud;
+				  # Obligé de pré-traiter les subs parce que mpv disjoncte quand il y a des styles dedans... !
+				  my ($file) = $subs =~ /^.+\/(.+?)$/;
+				  my $text = myget($subs,"cache/arte/$file",7);
+				  # 1 : récupère le fichier vtt là-dedans...
+				  my $vtt = undef;
+				  foreach (split /\n/,$text) {
+					  s/\r//;
+					  next if (/^#/);
+					  if ($_) {
+						  $vtt = $_;
+						  last;
+					  }
+				  }
+				  $subs =~ s/^(.+)\/.+?$/$1\//;
+				  $subs .= $vtt;
+				  $text = myget($subs,"cache/arte/$vtt",7);
+				  $subs = "cache/arte/$vtt"."2";
+				  if (!open(F,">$subs")) {
+					  die "can't create $subs";
+				  }
+				  my $filter = 0;
+				  my $n = 0;
+				  $text =~ s/\r//g;
+				  foreach (split /\n/,$text) {
+					  # !?! ce split me génère 1 ligne vide pour chaque vraie ligne
+					  # c'est peut-être la chaleur mais je pige pas d'où ça vient, donc je les filtre avec ce $filter
+					  # il en reste encore un peu dans l'entête mais c'est déjà mieux !
+					  if (/STYLE/) {
+						  $filter = 1;
+					  } elsif (/}/) {
+						  $filter = -2;
+					  } elsif (!$filter) {
+						  say F $_;
+						  if ($_ ne "") {
+							  $filter = -1;
+						  }
+					  } elsif ($filter < 0) {
+						  $filter++;
+					  }
+				  }
+				  close(F);
 			  }
 		  }
 		  foreach (split /\n/,$m3u) {
@@ -66,7 +112,7 @@ sub handle_hash {
 				  my $url0 = $url;
 				  $url0 =~ s/^(.+)\/.+?$/$1\//;
 				  $count++;
-				  say $url0,$_,($audio ? " $audio" : "");
+				  say $url0,$_,($audio ? " $audio" : ""),($subs ? " $subs" : "");
 			  } elsif ($_ ne "") {
 				  say STDERR "m3u: ligne non reconnue : $_.";
 			  }
