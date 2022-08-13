@@ -124,16 +124,15 @@ sub get {
 
 	my ($f,$json);
 
-	# ça se complique, on a 3 sources de json possibles, et les 3 ont des
-	# formats différents, bien sûr... !
-	# voilà le 1er, l'index principal du site...
-	# ou un sous-index à retrouver !
 	for (my $idx=$#arg-1; $idx >= 0; $idx--) {
 		if ($arg[$idx] =~ /^vid:(.+?),/) {
 			say "progs/arte: on teste cache/arte/$1...";
-			return undef if (!open($f,"<cache/arte/$1"));
-			say STDERR "progs/arte: lecture $1";
-			last;
+			if (open($f,"<cache/arte/$1")) {
+				say STDERR "progs/arte: lecture $1";
+				last;
+			} else {
+				$f = undef;
+			}
 		}
 	}
 	if (!$f) {
