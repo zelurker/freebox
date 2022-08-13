@@ -70,7 +70,7 @@ sub read_json {
 		foreach (@$rtab) {
 			my $rtab2 = $_->{data};
 			foreach (@$rtab2) {
-				if ($_->{id} =~ /$code/) {
+				if ($_->{id} =~ /$code/ || $_->{programId} =~ /$code/) {
 					return $_;
 				}
 			}
@@ -110,7 +110,8 @@ sub get {
 	}
 	my $guide = $serv =~ /^Guide/;
 	say STDERR "progs/arte: serv $serv";
-	@arg = split(/,/,$serv);
+	# Légèrement le bazar, / pour séparer les arguments, mais à l'intérieur , pour séparer une url
+	@arg = split(/\//,$serv);
 	my $code;
 	foreach (@arg) {
 		if (/vid:(.+)/) {
@@ -119,6 +120,7 @@ sub get {
 		}
 	}
  	return undef if (!$code);
+	$code =~ s/,.+//;
 
 	my ($f,$json);
 
@@ -143,7 +145,7 @@ sub get {
 				# dans ce cas là on peut récupérer le code de l'index lui même dans read_last_serv(), puis chercher le
 				# code actuel dedans...
 				$serv = read_last_serv();
-				@arg = split(/,/,$serv);
+				@arg = split(/\//,$serv);
 				my $last_code;
 				foreach (@arg) {
 					if (/vid:(.+)/) {
@@ -151,6 +153,7 @@ sub get {
 						last;
 					}
 				}
+				$last_code =~ s/,.+//;
 				say STDERR "progs/arte: last_code $last_code";
 				if (!open($f,"<cache/arte/$last_code.html")) {
 					$f = undef;
@@ -178,7 +181,7 @@ sub get {
 		# Version vidéo spécifique
 		$date = $json->{data}{attributes}{rights}{end};
 		$fin = parse_time($date);
-		$debut = parse_time($json->{data}{attributes}{rights}{start});
+		$debut = parse_time($json->{data}{attributes}{rights}{begin});
 
 		# On vérifie si on a le fichier détaillé, sans le récupérer, il n'y a
 		# qu'un résumé + long utile dedans pour ça...
@@ -208,6 +211,8 @@ sub get {
 		my @sorted = sort { $b->{w} <=> $a->{w} } @$res;
 		$img = $sorted[0]->{url};
 	}
+	my ($year,$mon,$day) = $date =~ /(\d+)-(\d+)-(\d+)/;
+	$date = "$day/$mon/$year";
 
 	my @tab = (undef, # chan id
 		"$source", $title,
