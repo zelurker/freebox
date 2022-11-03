@@ -1176,7 +1176,11 @@ sub check_player2 {
 			my ($pid,$status) = @_;
 			print "list: fin de mplayer, pid $pid, status $status\n";
 			if ($pid == $pid_player2 && !$quit_mplayer) {
-				if  ($source =~ /^(Fichiers son|cd)/ && ! -e "list_coords") {
+				# récupère la source réelle
+				# sinon on peut avoir un bug de boucle en lisant une vidéo puis en ouvrant la liste des fichiers sons pendant que la vidéo joue et quitter
+				# ça provoque l'envoie de ce nextchan en boucle !!!
+				my ($chan,$source,$serv) = out::get_current();
+				if  ($source =~ /^(Fichiers son|cd)/) {
 					say "command nextchan de fin de player2";
 					commands(\*STDERR,"nextchan");
 				}
