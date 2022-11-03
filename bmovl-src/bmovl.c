@@ -635,12 +635,16 @@ static int list(int fifo, int argc, char **argv)
 	hlist = maxh - fsize;
 
 again:
-    if (sf_list)
+    if (sf_list && !mode_list)
 	SDL_FreeSurface(sf_list);
-    sf_list = create_surface(wlist+4*2,hlist+4*2);
+    SDL_Surface *sf_mode;
+    if (mode_list)
+	sf_mode = create_surface(wlist+4*2,hlist+4*2);
+    else
+	sf_list = create_surface(wlist+4*2,hlist+4*2);
 
     TTF_SetFontStyle(font,TTF_STYLE_BOLD);
-    y += put_string(sf_list,font,x,y,source,SDL_MapRGB(sf_list->format,0xff,0xff,0x80),
+    y += put_string(mode_list ? sf_mode : sf_list,font,x,y,source,SDL_MapRGB(sf_list->format,0xff,0xff,0x80),
 	    NULL);
     if (y > htitle+4) {
 	/* Débordement du titre, doit refaire sf_list */
@@ -648,7 +652,7 @@ again:
 	hlist += y-htitle;
 	htitle = y;
 	x = y = 4;
-	SDL_FreeSurface(sf_list);
+	SDL_FreeSurface(mode_list ? sf_mode : sf_list);
 	goto again;
     }
     x += numw+4; // aligné après les numéros
@@ -687,11 +691,11 @@ again:
 	    SDL_Rect r;
 	    r.x = 4; r.y = y; r.w = wlist; r.h = heights[n];
 	    if (chan[n] && chan[n]->h > heights[n]) r.h = chan[n]->h;
-	    SDL_FillRect(sf_list,&r,fg);
+	    SDL_FillRect(mode_list ? sf_mode : sf_list,&r,fg);
 	    if (!fsel && !mode_list)
 		put_string(sf_list,font,4,y,(char*)buff,bg,NULL); // Numéro
 	    int dy;
-	    dy = disp_list(sf_list,font,x,y,list[n],chan[n],bg,heights[n]);
+	    dy = disp_list(mode_list ? sf_mode : sf_list,font,x,y,list[n],chan[n],bg,heights[n]);
 	    sely = y+dy/2;
 	    y += dy;
 	} else {
@@ -702,11 +706,11 @@ again:
 	    }
 	    if (!fsel && !mode_list)
 		put_string(sf_list,font,4,y,(char*)buff,fg,NULL); // Numéro
-	    y += disp_list(sf_list,font,x,y,list[n],chan[n],fg,heights[n]);
+	    y += disp_list(mode_list ? sf_mode : sf_list,font,x,y,list[n],chan[n],fg,heights[n]);
 	    if (status[n] == 'R' || status[n] == 'D') fg = get_fg(sf_list);
 	}
 	if (hidden) {
-	    direct_string(sf_list,font,xright,y0,">",(current == n ? bg : fg));
+	    direct_string(mode_list ? sf_mode : sf_list,font,xright,y0,">",(current == n ? bg : fg));
 	}
 //	printf("y:%d/%d %s from %d\n",y0,maxh,list[n],x);
     }
@@ -736,12 +740,12 @@ again:
     // Display
     if (mode_list) {
 	x = oldx+oldw;
-	y = oldsel-sf_list->h/2;
-	if (y+sf_list->h > infoy)
-	    y = infoy-sf_list->h;
+	y = oldsel-sf_mode->h/2;
+	if (y+sf_mode->h > infoy)
+	    y = infoy-sf_mode->h;
 	if (y < 0) y = 0;
 	f = fopen("mode_coords","w");
-	fprintf(f,"%d %d %d %d \n",sf_list->w, sf_list->h,
+	fprintf(f,"%d %d %d %d \n",sf_mode->w, sf_mode->h,
 		x, y);
 	fclose(f);
     } else {
@@ -777,7 +781,6 @@ again:
 	    SDL_UpdateRects(sdl_screen,1,&r);
 #else
 	    SDL_RenderFillRect(renderer,&r); // color set when clearing the screen
-	    SDL_RenderPresent(renderer);
 #endif
 	}
 	if (oldy < y+sf_list->h) {
@@ -790,15 +793,20 @@ again:
 	    SDL_UpdateRects(sdl_screen,1,&r);
 #else
 	    SDL_RenderFillRect(renderer,&r); // color set when clearing the screen
-	    SDL_RenderPresent(renderer);
 #endif
 	}
     }
     // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
     // apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
     // Pour l'instant le meilleur contournement c'est ça.
-    blit(fifo, sf_list, x, y, -40, 1,0);
-    listx = x; listy = y; listh = sf_list->h;
+    if (mode_list) {
+	blit(fifo, sf_list, listx, listy, -40, 0,0);
+	blit(fifo, sf_mode, x, y, -40, 0,1);
+	SDL_FreeSurface(sf_mode);
+    } else {
+	blit(fifo, sf_list, x, y, -40, 1,0);
+	listx = x; listy = y; listh = sf_list->h;
+    }
 
     // Clean up
 
@@ -1004,28 +1012,34 @@ static int numero(int fifo, int argc, char **argv) {
     return 0;
 }
 
+#ifndef SDL1
+static void redraw_screen() {
+    if (sf_list) {
+	FILE *f = fopen("list_coords","r");
+	if (f) {
+	    fclose(f);
+	    blit(fifo, sf_list, listx, listy, -40, 1,0);
+	}
+    }
+    if (*bg_pic) {
+	image(1,NULL);
+    }
+    if (sf) {
+	FILE *f = fopen("info_coords","r");
+	if (f) {
+	    fclose(f);
+	    blit(fifo, sf, infox, infoy, -40, 0,1);
+	}
+    }
+    SDL_RenderPresent(renderer);
+}
+#endif
+
 static void handle_event(SDL_Event *event) {
     if (!nb_keys) read_inputs();
 #ifndef SDL1
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_EXPOSED) {
-	if (sf_list) {
-	    FILE *f = fopen("list_coords","r");
-	    if (f) {
-		fclose(f);
-		blit(fifo, sf_list, listx, listy, -40, 1,0);
-	    }
-	}
-	if (*bg_pic) {
-	    image(1,NULL);
-	}
-	if (sf) {
-	    FILE *f = fopen("info_coords","r");
-	    if (f) {
-		fclose(f);
-		blit(fifo, sf, infox, infoy, -40, 0,1);
-	    }
-	}
-	SDL_RenderPresent(renderer);
+	redraw_screen();
 	return;
     }
 #endif

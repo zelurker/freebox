@@ -152,7 +152,7 @@ char* send_cmd(char *fifo, char *cmd) {
     static char reply[256];
     if (!strncmp(fifo,"sock",4) || !strncmp(fifo,"mpvsock",7)) {
 	struct sockaddr_un address;
-	int  socket_fd, nbytes;
+	int  socket_fd;
 	char buffer[256];
 
 	socket_fd = socket(PF_UNIX, SOCK_STREAM, 0);
@@ -180,8 +180,8 @@ char* send_cmd(char *fifo, char *cmd) {
 	buffer[255] = 0;
 	if (strlen(buffer) < 255)
 	    strcat(buffer,"\012");
-	size_t dummy = write(socket_fd, buffer, strlen(buffer));
-	dummy = read(socket_fd,reply,256);
+	write(socket_fd, buffer, strlen(buffer));
+	read(socket_fd,reply,256);
 
 	close(socket_fd);
 
@@ -191,7 +191,7 @@ char* send_cmd(char *fifo, char *cmd) {
 	strcat(buf,"\n");
     int file = open(fifo,O_WRONLY|O_NONBLOCK);
     if (file > 0) {
-	size_t dummy = write(file,buf,strlen(buf));
+	write(file,buf,strlen(buf));
 	reply[0] = 0;
 	close(file);
     } else {
@@ -249,6 +249,7 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear, int i
 	SDL_DestroyTexture(tex);
 #endif
     } else if (!mpv) {
+	// cas mpv en fait !
 	// Bon on va essayer d'appliquer l'alpha...
 	// C'est un truc tordu, le composant alpha n'a pas le droit d'être > à l'une des composantes rgb
 	unsigned char trans = alpha & 0xff;
@@ -325,7 +326,7 @@ int send_command(int fifo,char *cmd) {
 		if (found) {
 		    char buffer[256];
 		    sprintf(buffer,"{ \"command\": [\"overlay-remove\", %d ] }\n",n);
-		    char *reply = send_cmd("mpvsocket",buffer);
+		    send_cmd("mpvsocket",buffer);
 		    type_blit[n].x = type_blit[n].y = -1;
 		} else
 		    printf("bmovl clear: type_blit not found\n");
