@@ -34,14 +34,14 @@ sub myget {
          );
 		 # my $useragt = 'Telerama/1.0 CFNetwork/445.6 Darwin/10.0.0d3';
 #	my $useragt = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.71 (KHTML, like Gecko) Version/6.1 Safari/537.71";
-	my $useragt = "Mozilla/5.0 (X11; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0";
+	my $useragt = "Mozilla/5.0 (X11; Linux x86_64; rv:105.0) Gecko/20100101 Firefox/105.0";
 	my $ua = LWP::UserAgent->new(keep_alive => 0,
 		agent =>$useragt);
 	$ua->timeout(15);
 	$ua->cookie_jar($cookie_jar);
 	my $r = $ua->get($url);
 	if (!$r->is_success) {
-		say STDERR "myget: error for url $url";
+		say STDERR "myget: error for url $url code ",$r->code," status line ",$r->status_line;
 		return undef;
 	}
 	my $type = $r->header("Content-type");
