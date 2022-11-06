@@ -3,7 +3,7 @@
 export PERL_USE_UNSAFE_INC=1
 
 # unzip est pour cpan en fait
-for n in wget socat mpv unzip ffprobe; do
+for n in wget socat mpv unzip ffprobe xdotool; do
 if ! type $n > /dev/null 2> /dev/null; then
 	echo install $n
 	warn=1
