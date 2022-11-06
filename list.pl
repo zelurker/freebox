@@ -1214,7 +1214,13 @@ sub load_file2 {
 	my $prog;
 	$prog = $1 if ($base_flux !~ /^youtube/ && $serv =~ s/ (http.+)//);
 	if ($serv =~ /(jpe?g|png|gif|bmp)$/i) {
-		system("feh \"$serv\"");
+		# la méthode xdotool est expérimentale, n'a pas l'air de marcher pour toutes les images ou y a un truc que j'ai loupé
+		# ce qu'il y a de sûr c'est qu'il faut killer feh au bout d'1 moment ici parce que si on a pas de wm on perd le focus et l'utilisateur ne peut plus le quitter !
+		# idéalement faudrait un process séparé mais bon un wait de 10s ça sera déjà mieux que tout bloquer à cause d'un feh qui n'a pas le focus !
+		system("xdotool mousemove 100 100") if (`which xdotool`);
+		system("feh \"$serv\" &");
+		sleep(10);
+		system("killall feh");
 		return 1;
 	}
 	if ($serv =~ /m3u$/) {
