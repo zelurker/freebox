@@ -14,7 +14,7 @@ sub search {
 	my @tab = ();
 
 	$q =~ s/ /\+/g;
-	my $c = http::myget("https://duckduckgo.com/?t=ffsb&q=$q&ia=web");
+	my $c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
 
 	# avec duckduckgo, l'idée est de récupérer un champ généré pour
 	# produire une requête json, ça a beaucoup d'avantages, ça devrait
@@ -35,6 +35,10 @@ sub search {
 	};
 	if ($@) {
 		say "images: $@ $!";
+		open(F,">content");
+		print F $c;
+		close(F);
+		say "images: content saved";
 		return;
 	}
 	my $rtab = $json->{results};
