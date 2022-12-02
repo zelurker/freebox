@@ -22,7 +22,7 @@ sub search {
 	say "images: q=$q";
 
 	say "images: firefox...";
-	system("(firefox \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 10; killall firefox; cd ~/.mozilla/firefox; rm -f */places.sqlite-wal");
+	system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 5; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
 	my $c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
 
 	# avec duckduckgo, l'idée est de récupérer un champ généré pour
