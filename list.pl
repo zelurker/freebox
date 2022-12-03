@@ -25,6 +25,7 @@ use Data::Dumper;
 use AnyEvent::HTTP;
 use myutf;
 use http;
+use Time::HiRes qw(usleep);
 
 # Un mot sur le format interne de @list :
 # chaque élément est un tableau de tableau, c'est parce qu'à l'origine
@@ -1219,7 +1220,10 @@ sub load_file2 {
 		# idéalement faudrait un process séparé mais bon un wait de 10s ça sera déjà mieux que tout bloquer à cause d'un feh qui n'a pas le focus !
 		system("xdotool mousemove 100 100") if (`which xdotool`);
 		system("feh \"$serv\" &");
-		sleep(10);
+		for (my $n=0; $n<20; $n++) {
+			usleep(500000); # microseconds !!!
+			last if (! `pidof feh`);
+		}
 		system("killall feh");
 		return 1;
 	}
