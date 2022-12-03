@@ -332,7 +332,7 @@ sub disp_prog {
 	print $out $raw if ($raw);
 
 	print $out "\n$$sub[1] : $start - $end ".
-	($reste ? "reste ".disp_duree($reste) : "($days[$wday])");
+	($reste ? "reste ".disp_duree($reste) : "($days[$wday] $mday/".($mon+1)."/".($year+1900).")");
 
 	my $tag = conv($channel);
 	my $codec = $info{$tag}->{codec};
