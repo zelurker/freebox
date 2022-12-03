@@ -87,7 +87,7 @@ sub handle_lyrics {
 			}
 			if ($lyr) {
 				$footer = $1 if (/div class="RichText.+?>(.+)/i);
-				$lyr = 0 if (s/<div class="Lyrics__Footer.+//i);
+				$lyr = 0 if (s/<div class="(Lyrics__Footer|ShareButtons).+//);
 				s/<br\/?>/\n/g;
 				# Filtrage des pubs en plein milieu de la chanson !!!
 				$lyrics .= decode_entities($_);
