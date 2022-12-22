@@ -22,7 +22,7 @@ sub search {
 	say "images: q=$q";
 
 	say "images: firefox...";
-	system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 5; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
+	system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
 	my $c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
 
 	# avec duckduckgo, l'idée est de récupérer un champ généré pour
@@ -34,9 +34,10 @@ sub search {
 	my ($vqd) = $c =~ /vqd='(.+?)'/;
 	my ($backend) = $c =~ /BackendDeepUrl\("(.+?)"/;
 	my ($nrj) = $c =~ /nrj\('(.+?)'/;
-	say "images: vqd = $vqd";
-	say "images: backend $backend";
-	say "images: nrj $nrj";
+	# say "images: vqd = $vqd";
+	# say "images: backend $backend";
+	# say "images: nrj $nrj";
+	# sleep(3);
 #    $c = http::myget("https://links.duckduckgo.com$backend");
 	# A priori le déclencheur doit être dans l'une de ces requêtes, il faut peut-être les 2, seul pb : le seul paramètre que je peux retrouver c'est q, la requête, certains autres sont très mystérieux !
 	#http::myget("https://improving.duckduckgo.com/t/rq_0?8481373&r=1&tts=1&ac=0&rqv=1&q=$q&ttc=414299&ct=FR&d=d&kl=wt-wt&rl=us-en&kp=-1&serp_return=0&g=__&sm=wikipedia_fathead_deep:i:medium&blay=v1w2i1w26r1,e1w1&dsig=about:m&biaexp=b&deepsprts=b&eclsexp=b&msvrtexp=b");
