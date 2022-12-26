@@ -55,9 +55,20 @@ sub search {
 	# un navigateur et qu'on passe ici, ça marche, mais pas très longtemps... !
 	#    la requête nrj renvoie exactement la même réponse que backend, donc totalement inutile.
 
+	say "images: 1ere requête vqd=$vqd";
 	$c = http::myget("https://duckduckgo.com/i.js?l=fr-fr&o=json&q=$q&vqd=$vqd&f=,,,,,&p=1");
 	# la fameuse requête json qui renvoie tout, mais ça ne marche que si le machin a été validé par le fameux y.js ci-dessus (requête load), sinon ça renvoie un 403 (forbidden).
 	# Pour l'instant seule méthode trouvée : faire la requête par un navigateur d'abord... ! Pas terrible ouais...
+
+	if (!$c) {
+		# Cas d'erruer on tente de boucler 1 fois...
+		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
+		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
+
+		($vqd) = $c =~ /vqd='(.+?)'/;
+		say "images: 2ème requête vqd=$vqd";
+		$c = http::myget("https://duckduckgo.com/i.js?l=fr-fr&o=json&q=$q&vqd=$vqd&f=,,,,,&p=1");
+	}
 
 	# Décodage du js... !
 	$c =~ s/^.+results"\:/{"results":/;
