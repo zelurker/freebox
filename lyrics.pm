@@ -419,7 +419,11 @@ debut:
 		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/) {
 			my $old = $_;
 			my $text = pure_ascii($_->text);
-			if ($text =~ /$title/ || $u =~ /lyricsfreak.com/ || $text =~ /^En cache/i) {
+			my $tit = $title;
+			if ($text !~ /$tit/) {
+				$tit =~ s/mr /mister /;
+			}
+			if ($text =~ /$tit/ || $u =~ /lyricsfreak.com/ || $text =~ /^En cache/i) {
 				# exception sur lyricsfreak : ces cons mélangent titre,
 				# artiste et la mention lyrics dans le titre de la page
 				# ce qui la rend très difficile à identifier !
