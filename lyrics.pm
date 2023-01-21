@@ -293,7 +293,7 @@ sub pure_ascii {
 	# Vire les accents et la ponctuation
 	$_ = shift;
 	$_ = lc($_);
-	s/[()]//g;
+	s/\(.+?\)//;
 	s/–/-/g; # un tiret en utf8 !
 	s/(œ|\xc5\x93)/oe/g;
 	s/([àâ]|\xc3\xa0)/a/g;
