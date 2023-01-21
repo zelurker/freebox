@@ -22,7 +22,6 @@ sub search {
 	say "images: q=$q";
 
 	say "images: firefox...";
-	system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
 	my $c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
 
 	# avec duckduckgo, l'idée est de récupérer un champ généré pour
@@ -70,6 +69,15 @@ sub search {
 		$c = http::myget("https://duckduckgo.com/i.js?l=fr-fr&o=json&q=$q&vqd=$vqd&f=,,,,,&p=1");
 	}
 
+	if (!$c) {
+		# Cas d'erruer on tente de boucler 1 fois...
+		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
+		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
+
+		($vqd) = $c =~ /vqd='(.+?)'/;
+		say "images: 3ème requête vqd=$vqd";
+		$c = http::myget("https://duckduckgo.com/i.js?l=fr-fr&o=json&q=$q&vqd=$vqd&f=,,,,,&p=1");
+	}
 	# Décodage du js... !
 	$c =~ s/^.+results"\:/{"results":/;
 	$c =~ s/,"vqd.+/}/;
