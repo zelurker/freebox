@@ -41,7 +41,24 @@ sub handle_lyrics {
 	$_ = $mech->content(decoded_by_headers => 1);
 	my $lyrics = "";
 	my $start = undef;
-	if ($u =~ /lyricsfreak.com/) {
+	if ($u =~ /songlyrics.com/) {
+		print "lyricsfreak.com url $u\n";
+		my $lyr = 0;
+		foreach (split /\n/,$_) {
+			s/\r//;
+			if (s/<p id="songLyrics.+?>//i) {
+				$lyr = 1;
+			}
+			if ($lyr) {
+				s/<br \/>/\n/;
+				if (s/<\/p>//) {
+					$lyr = 0;
+				}
+				$lyrics .= $_;
+				last if (!$lyr);
+			}
+		}
+	} elsif ($u =~ /lyricsfreak.com/) {
 		print "lyricsfreak.com url $u\n";
 		my $lyr = 0;
 		foreach (split /\n/,$_) {
@@ -416,7 +433,8 @@ debut:
 		# l'instant
 		next if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|)$/i ||
 			$artist =~ / dion/i));
-		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/) {
+		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/ ||
+			$u =~ /songlyrics.com/) {
 			my $old = $_;
 			my $text = pure_ascii($_->text);
 			my $tit = $title;
