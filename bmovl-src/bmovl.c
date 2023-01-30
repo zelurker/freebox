@@ -140,6 +140,7 @@ static void clear_rect(SDL_Surface *sf,int x, int y, int *indents)
 	} else {
 	    // printf("next h = %d - y %d - 1\n",*i,y);
 	    b.x =x; b.y = y; b.w = sf->w-x-1; b.h = *i++-y;
+	    // printf("bmovl: sf fillrect %d,%d,%d,%d\n",b.x, b.y,b.w,b.h);
 	    // printf("next: clear %d %d %d %d\n",x,y,b.w,b.h);
 	    SDL_FillRect(sf,&b,bg);
 	    x = *i++;
@@ -148,6 +149,7 @@ static void clear_rect(SDL_Surface *sf,int x, int y, int *indents)
     }
     b.x =x; b.y = y; b.w = sf->w-x-1; b.h = sf->h-y-1;
     SDL_FillRect(sf,&b,bg);
+    // printf("bmovl: sf fillrect %d,%d,%d,%d\n",b.x, b.y,b.w,b.h);
 }
 
 static void adjust_indent(int *x, int *y, int *indents)
@@ -218,6 +220,7 @@ static int info(int fifo, int argc, char **argv)
 		if (desc) {
 			free(desc);
 			TTF_CloseFont(font);
+			// printf("info: free surface sf\n");
 			SDL_FreeSurface(sf);
 		}
 		font = open_font(fsize);
@@ -357,6 +360,7 @@ static int info(int fifo, int argc, char **argv)
 		    y = listy+listh;
 		    h -= y-oldy;
 		}
+		// printf("info: create sf %d,%d\n",width,h);
 		sf = create_surface(width,h);
 		fg = get_fg(sf);
 
@@ -1292,6 +1296,7 @@ static int image(int argc, char **argv) {
 	    int access;
 	    Uint32 format;
 	    SDL_QueryTexture(pic, &format, &access, &picw, &pich);
+	    // printf("picw %d pich %d\n",picw,pich);
 #endif
 	    strcpy(bg_pic,bmp);
 	    old_size = size;
@@ -1338,6 +1343,7 @@ static int image(int argc, char **argv) {
 #ifdef SDL1
 	SDL_FillRect(sdl_screen,&r,0);
 #else
+	// printf("image: fillrect1 %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
 	SDL_RenderFillRect(renderer,&r); // color set when clearing the screen
 #endif
     }
@@ -1351,6 +1357,7 @@ static int image(int argc, char **argv) {
 #ifdef SDL1
 	SDL_FillRect(sdl_screen,&r,0);
 #else
+	// printf("image: fillrect2 %d,%d,%d,%d\n",r.x,r.y,r.w,r.h);
 	SDL_RenderFillRect(renderer,&r); // color set when clearing the screen
 #endif
     }
@@ -1360,11 +1367,12 @@ static int image(int argc, char **argv) {
     dst.w = r.w*ratio; dst.h = r.h*ratio;
     // SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer,s);
     int ret = SDL_RenderCopy(renderer,pic,&r,&dst);
+    // printf("image: rendercopy %d,%d,%d,%d vers %d,%d,%d,%d\n",r.x,r.y,r.w,r.h,dst.x,dst.y,dst.w,dst.h);
     if (ret < 0) {
 	printf("image: SDL_RenderCopy error: %s (%d)\n",SDL_GetError(),ret);
     }
     // SDL_DestroyTexture(tex);
-    SDL_RenderPresent(renderer);
+    // SDL_RenderPresent(renderer);
 #else
     SDL_BlitSurface(s,&r,sdl_screen,&dst);
     SDL_UpdateRect(sdl_screen,0,0,0,0);
