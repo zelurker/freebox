@@ -47,6 +47,11 @@ my @text_chars = (
 #}
 
 sub looks_utf8 {
+	# seems to return likelyhood of utf8 :
+	# 0 certainly not
+	# 1 maybe but not sure, like a string ending before checking what came after the last char...
+	# 2 certain it's utf8
+	# so in most cases should probably always test for looks_utf8 == 2 !
     my $text = shift;
     my $ctrl = 0;
 
@@ -159,7 +164,8 @@ sub mydecode {
 #			}
 #			print "\n";
 #		}
-		if (looks_utf8($$ref)) {
+		my $l = looks_utf8($$ref);
+		if ($l == 2) {
 			restore_above($ref);
 			return;
 		}
