@@ -103,8 +103,8 @@ sub handle_lyrics {
 				$lyr = 1;
 			}
 			if ($lyr) {
-				$footer = $1 if (/div class="RichText.+?>(.+)/i);
-				$lyr = 0 if (s/<div class="(Lyrics__Footer|ShareButtons).+//);
+				$footer = $1 if (/div class="RichText.+?>(.+?)<\div>/i);
+				$lyr = 0 if (s/<div class="(Lyrics__Footer|ShareButtons|RightSidebar).+//);
 				s/<br\/?>/\n/g;
 				# Filtrage des pubs en plein milieu de la chanson !!!
 				$lyrics .= decode_entities($_);
@@ -431,7 +431,7 @@ debut:
 		# c'est qu'un autre site a exactement les mêmes ! Difficile à
 		# détecter, le + simple c'est de l'écarter explicitement pour
 		# l'instant
-		next if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|)$/i ||
+		next if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|a l'envers|)$/i ||
 			$artist =~ / dion/i));
 		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/ ||
 			$u =~ /songlyrics.com/) {
