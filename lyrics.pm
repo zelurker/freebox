@@ -110,6 +110,7 @@ sub handle_lyrics {
 				$footer = $1 if (!$footer && s/div class="RichText.+?>(.+)//i);
 				$lyr = 0 if (s/<div class="(Lyrics__Footer|ShareButtons|ExpandableContent__Button).+//);
 				s/<br\/?>/\n/g;
+				s/<div class="Recommended.+?\/div>//; # les recommandations en + milieu !!!
 				# Filtrage des pubs en plein milieu de la chanson !!!
 				$lyrics .= decode_entities($_);
 				last if (!$lyr && !$footer);
@@ -167,18 +168,18 @@ sub handle_lyrics {
 		print "lyrics parolesmania.com : $lyrics\n";
 	} elsif ($u =~ /flashlyrics.com/) {
 		foreach (split /\n/,$_) {
-			if (/<div.+padding\-horiz/) {
+			if (/<div class="main-panel-content/) {
 				$start = 1;
 				next;
 			}
 			if ($start) {
-				if (/<div/) {
+				if (/Report lyrics/) {
 					$start = 0;
-					next;
+					last;
 				}
 				s/\r//g;
 				s/^[ \t]+//;
-				s/<\/?(br|p)( \/)?>/\n/gs;
+				s/<\/?(br|p)( ?\/)?>/\n/gs;
 				s/[ \t]+$//s;
 				$lyrics .= decode_entities($_);
 			}
@@ -441,7 +442,7 @@ debut:
 		# c'est qu'un autre site a exactement les mêmes ! Difficile à
 		# détecter, le + simple c'est de l'écarter explicitement pour
 		# l'instant
-		next if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|a l'envers|)$/i ||
+		next if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|a l'envers|brouillard|)$/i ||
 			$artist =~ / dion/i));
 		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/ ||
 			$u =~ /songlyrics.com/) {
