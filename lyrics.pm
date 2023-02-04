@@ -167,15 +167,26 @@ sub handle_lyrics {
 		$lyrics = "" if ($lyrics =~ /Les paroles de la chanson/);
 		print "lyrics parolesmania.com : $lyrics\n";
 	} elsif ($u =~ /flashlyrics.com/) {
+		my $ins = 0;
 		foreach (split /\n/,$_) {
 			if (/<div class="main-panel-content/) {
 				$start = 1;
 				next;
 			}
 			if ($start) {
+				if ($ins) {
+					if (/<\/div>/) {
+						$ins = 0;
+					}
+					next;
+				}
 				if (/Report lyrics/) {
 					$start = 0;
 					last;
+				}
+				if (/<ins/) {
+					$ins = 1;
+					next;
 				}
 				s/\r//g;
 				s/^[ \t]+//;
