@@ -103,14 +103,24 @@ sub handle_lyrics {
 				$lyr = 1;
 			}
 			if ($lyr) {
-				$footer = $1 if (/div class="RichText.+?>(.+?)<\div>/i);
-				$lyr = 0 if (s/<div class="(Lyrics__Footer|ShareButtons|RightSidebar).+//);
+				# Si on a des infos sur la chanson, c'est sur plusieurs lignes
+				# Si y en a pas, y a quand même un champ RichText mais qui se termine aussitôt et vaut mieux couper ici sinon
+				# on récupère un tas de merde en fin de paroles qui changent même l'encodage !
+				$footer = $1 if (s/div class="RichText.+?>(.+?<\/div>)//i);
+				$footer = $1 if (!$footer && s/div class="RichText.+?>(.+)//i);
+				$lyr = 0 if (s/<div class="(Lyrics__Footer|ShareButtons|ExpandableContent__Button).+//);
 				s/<br\/?>/\n/g;
 				# Filtrage des pubs en plein milieu de la chanson !!!
 				$lyrics .= decode_entities($_);
 				last if (!$lyr && !$footer);
 			} elsif ($footer) {
-				if (s/<\/div.+//) {
+				if ($footer =~ s/<\/div.+//) {
+					$footer =~ s/<p>//g;
+					$footer =~ s/<\/(p|h3)>/\n\n/g;
+					$footer = decode_entities($footer);
+					$lyrics .= "\n\n$footer";
+					last;
+				} elsif (s/<\/div.+//) {
 					$footer .= $_;
 					$footer =~ s/<p>//g;
 					$footer =~ s/<\/(p|h3)>/\n\n/g;
