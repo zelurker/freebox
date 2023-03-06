@@ -92,7 +92,7 @@ sub decode_html {
 					$date = "$day/$month/$year" if (!$date);
 					$start = timegm_nocheck($sec,$min,$hour,$day,$month-1,$year-1900);
 				}
-				$btn = index($body,"<figure");
+				$btn = index($body,"<picture");
 				if ($btn >= 0) {
 					$sub_pos = find_closing_tag($body,$btn+1,"figure");
 					$sub = substr($body,$btn,$sub_pos-$btn-1);
