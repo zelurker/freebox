@@ -30,7 +30,7 @@ sub search {
 	# champ a l'air facile à récupérer, en haut d'une page de requête
 	# simple...
 
-	my ($vqd) = $c =~ /vqd='(.+?)'/;
+	my ($vqd) = $c =~ /vqd="(.+?)"/;
 	my ($backend) = $c =~ /BackendDeepUrl\("(.+?)"/;
 	my ($nrj) = $c =~ /nrj\('(.+?)'/;
 	# say "images: vqd = $vqd";
@@ -59,25 +59,25 @@ sub search {
 	# la fameuse requête json qui renvoie tout, mais ça ne marche que si le machin a été validé par le fameux y.js ci-dessus (requête load), sinon ça renvoie un 403 (forbidden).
 	# Pour l'instant seule méthode trouvée : faire la requête par un navigateur d'abord... ! Pas terrible ouais...
 
-#	if (!$c) {
-#		# Cas d'erruer on tente de boucler 1 fois...
-#		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori");
-#		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
-#
-#		($vqd) = $c =~ /vqd='(.+?)'/;
-#		say "images: 2ème requête vqd=$vqd";
-#		$c = http::myget("https://duckduckgo.com/i.js?l=fr-fr&o=json&q=$q&vqd=$vqd&f=,,,,,&p=1");
-#	}
-#
-# 	if (!$c) {
-# 		# Cas d'erruer on tente de boucler 1 fois...
-# 		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
-# 		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
-#
-# 		($vqd) = $c =~ /vqd='(.+?)'/;
-# 		say "images: 3ème requête vqd=$vqd";
-# 		$c = http::myget("https://duckduckgo.com/i.js?l=fr-fr&o=json&q=$q&vqd=$vqd&f=,,,,,&p=1");
-# 	}
+	if (!$c) {
+		# Cas d'erruer on tente de boucler 1 fois...
+		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midory/taby*");
+		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
+
+		($vqd) = $c =~ /vqd="(.+?)"/;
+		say "images: 2ème requête vqd=$vqd";
+		$c = http::myget("https://duckduckgo.com/i.js?l=fr-fr&o=json&q=$q&vqd=$vqd&f=,,,,,&p=1");
+	}
+
+ 	if (!$c) {
+ 		# Cas d'erruer on tente de boucler 1 fois...
+ 		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
+ 		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
+
+ 		($vqd) = $c =~ /vqd="(.+?)"/;
+ 		say "images: 3ème requête vqd=$vqd";
+ 		$c = http::myget("https://duckduckgo.com/i.js?l=fr-fr&o=json&q=$q&vqd=$vqd&f=,,,,,&p=1");
+ 	}
 	# Décodage du js... !
 	$c =~ s/^.+results"\:/{"results":/;
 	$c =~ s/,"vqd.+/}/;
