@@ -384,6 +384,12 @@ sub list_files {
 		if (-d $service) {
 			if ($conf{$tri} eq "hasard") {
 				push @paths,bsd_glob("$service/*");
+				for (my $n=0; $n<=$#paths; $n++) {
+					if ($paths[$n] =~ /(jpg|png|m3u|txt|lyrics|doc)$/) {
+						splice @paths,$n,1;
+						redo;
+					}
+				}
 				next;
 			}
 			$name .= "/";
@@ -1125,6 +1131,8 @@ sub run_mplayer2 {
 		}
 		if ($source =~ /(dvb|freeboxtv)/) {
 			push @list,("-ss","-3","--keep-open");
+		} elsif ($source =~ /flux/) {
+			push @list,("--force-seekable=yes");
 		}
 	}
 	if ($audio) {
