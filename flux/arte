@@ -114,7 +114,11 @@ sub handle_hash {
 				  $count++;
 				  say $url0,$_,($audio ? " $audio" : ""),($subs ? " $subs" : "");
 			  } elsif ($_ ne "") {
-				  say STDERR "m3u: ligne non reconnue : $_.";
+				  my $url0 = $url;
+				  $url0 =~ s/^(.+)\/.+?$/$1\//;
+				  $count++;
+				  say $url0,$_,($audio ? " $audio" : ""),($subs ? " $subs" : "");
+				  # say STDERR "m3u: ligne non reconnue : $_.";
 			  }
 		  }
 		  next;
@@ -136,6 +140,7 @@ sub handle_hash {
 
 sub decode_prg {
     $_ = shift;
+	say STDERR "decode_prg: ",Dumper($_);
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
 			decode_prg($_->{data}) if ($_->{data});
@@ -167,7 +172,7 @@ sub decode_type {
     $_ = shift;
 	my $base = 0;
 	$base = 1 if ($arg[0] =~ /^vid:/);
-	say STDERR "decode_type ",ref($_);
+	# say STDERR "decode_type ",ref($_)," : ",Dumper($_);
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
 			# say STDERR "decode_type: type : $_->{type}, argbase $arg[$base]";
@@ -180,20 +185,20 @@ sub decode_type {
 				}
 			}
 			# say STDERR "decode_type code $code cat $cat";
-			if ($_->{data}) { # eq "HOME") {
-				my $data = $_->{data};
+			if ($_->{content}{data}) { # eq "HOME") {
+				my $data = $_->{content}{data};
 				$data = $#$data;
 				if ($data > -1 && $_->{title} !~ /^Banner/i) {
 					# filtre les entrées vides de l'index ! (et les
 					# bannières)
 					if ($cat eq $code || $str =~ /vid:/ || $str =~ /^Guide/) {
-						decode_prg($_->{data});
+						decode_prg($_->{content}{data});
 					} elsif (!$cat && $_->{title}) {
 						say $_->{title};
 						say "$str/cat:$code";
 					}
 				}
-			} elsif ($_->{type}) { # catégories de vidéos
+			} elsif ($_->{title}) { # catégories de vidéos
                 if (!$arg[$base] && $_->{title}) {
 # Note : y a des entrées sans titre avec comme type "banner", mais y en a
 # plusieurs. Je suppose que c'est lié aux vidéos
@@ -224,6 +229,7 @@ sub decode_type {
 
 sub decode_main {
     $_ = shift;
+	# say STDERR "decode_main $_";
     if (ref($_) eq "HASH") {
         my %hash = %$_;
         if ($hash{props}) { # racine du nouveau hash 2017
@@ -241,7 +247,7 @@ sub decode_main {
 			# say STDERR "decode_main: code $code";
 			# say STDERR "hash ",Dumper(%hash);
             return decode_type($hash{pages}{list}{"$code"}{zones}) if ($code);
-            return decode_type($hash{props}{pageProps}{initialPage}{zones});
+            return decode_type($hash{props}{pageProps}{props}{page}{value}{zones});
         } else {
             die "decode_main: pas de tvguide : ".Dumper($_);
         }
@@ -251,6 +257,7 @@ sub decode_main {
 
 sub decode_html {
 	my ($code,$url0) = @_;
+	say STDERR "decode_html code $code url $url0";
 	my $json;
 	# say STDERR "decode_html: myget pour $code.html $url0";
 	my $html = myget($url0,"cache/arte/$code.html",7);
@@ -345,14 +352,17 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 		$streams = myget($url,"cache/arte/$code",7);
 		$json = decode_json($streams);
 		$hash = $json->{data}{attributes}{streams};
+		say STDERR "got json ",Dumper($json);
 	}
 	say "encoding: latin1"; # c'est toujours du json...
     if ((!$hash || ref($hash) ne "HASH") && !$json) {
 # 1 on récupère la page html liée
+		say STDERR "case no hash";
 		$hash = decode_html($code,$url0);
 		# A priori ces pages html sont des indexes
 		say "list";
     } else {
+		say STDERR "hash $hash ref ",ref($hash);
 		say "direct";
 	}
 	$url = undef;
