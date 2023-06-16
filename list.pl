@@ -656,6 +656,18 @@ sub read_list {
 	} elsif ($source =~ /^Fichiers/) {
 		list_files();
 	} elsif ($source eq "flux") {
+		if ($serv =~ /^http/) {
+			load_file2($chan,$serv,$flav);
+			for (my $n=0; $n<=$#list; $n++) {
+				my ($name,$serv,$flav,$audio,$video) = get_name($list[$n]);
+				$name = lc($name);
+				if ($name eq $chan) {
+					$found = $n;
+					return;
+				}
+			}
+			return;
+		}
 		my $num = 1;
 		if (!$base_flux) {
 			@list = ();
@@ -1264,7 +1276,7 @@ sub load_file2 {
 				$name = $1;
 				$pic = undef;
 				if ($name =~ s/^\-1 //) {
-					my ($header,$nom) = split(/\,/,$name);
+					my ($header,$nom) = split(/"\,/,$name);
 					if ($nom) {
 						my @tab = split(/ /,$header);
 						foreach (@tab) {
@@ -2024,6 +2036,9 @@ sub commands {
 		}
 	} elsif ($cmd =~ /^F(\d+)$/) { # Touche de fonction
 		my $nb = $1-2;
+		# reset de serv : c'est à cause de la nouvelle réaction si on lance l'interface avec source=flux et serv qui pointe sur une adresse http
+		# si on veut que l'adresse soit rechargée, il vaut mieux l'effacer ici, sinon on ne peut plus atteindre le menu général de flux !
+		$serv = undef;
 		if ($nb > $#modes || $nb == 14) {
 			$source = "menu";
 			if ($watch) {

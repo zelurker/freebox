@@ -65,6 +65,7 @@ sub conv_channel {
 		"numero 23" => "numéro 23",
 	);
 	$channel =~ s/ \(hd\)//i;
+	$channel =~ s/TV5Monde France.+/TV5 Monde FBS/;
 	$channel =~ s/ \xe2\x92\xbc//;
 	$channel =~ s/ fhd$//i;
 	$channel =~ s/ (fr|ch|us|se|br)$//i;
