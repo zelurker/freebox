@@ -995,6 +995,37 @@ sub run_mplayer2 {
 
 	if ($serv =~ / http/) {
 		($serv,$audio,$sub) = split / /,$serv;
+		if ($audio =~ /.+\/(.+?\.m3u8)$/) {
+			# mpv ne supporte pas l'audio venant d'un m3u, c'est le format
+			# plutôt tordu choisi par arte, même pour les flux qui ne sont
+			# pas en direct... A priori le format donne toujours la même
+			# url pour ce qui n'est pas en direct, donc on va extraire
+			# ça...
+			my $code = $1;
+			my $m3u = http::myget($audio,"cache/arte/$code",7);
+			say "run_mplayer2: audio m3u lu from cache/arte/$code";
+			my $last = undef;
+			my $error = undef;
+			foreach (split /\n/,$m3u) {
+				next if (/^#/);
+				next if (!$_);
+				# on est obligé de supposer que c'est la même url partout
+				if ($last && $last ne $_) {
+					say "reconstitution audio impossible, last $last puis $_";
+					$error = 1;
+					last;
+				}
+				$last = $_;
+			}
+			if ($error) {
+				say "pas de reconstitution";
+			} else {
+				my $url0 = $audio;
+				$url0 =~ s/^(.+)\/.+?$/$1\//;
+				$audio = $url0.$last;
+				say "audio reconstitué : $audio";
+			}
+		}
 	}
 	if ($serv =~ /^get,.+/) {
 		# lien get : download géré par le plugin
@@ -1123,7 +1154,7 @@ sub run_mplayer2 {
 		}
 		if ($source =~ /(dvb|freeboxtv)/) {
 			push @list,("-ss","-3","--keep-open");
-		} elsif ($source =~ /flux/) {
+		} elsif ($source =~ /flux/ && $serv !~ /m3u/) {
 			push @list,("--force-seekable=yes");
 		}
 	}

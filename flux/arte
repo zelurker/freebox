@@ -264,7 +264,7 @@ sub decode_html {
 	say STDERR "decode_html code $code url $url0";
 	my $json;
 	# say STDERR "decode_html: myget pour $code.html $url0";
-	my $html = myget($url0,"cache/arte/$code.html",7);
+	my $html = myget($url0,"cache/arte/$code.html",1/24.0/30);
 # on récupère l'url de l'iframe video...
 	my ($json) = $html =~ /application\/json">({.+})<\//;
 	if ($json) {
