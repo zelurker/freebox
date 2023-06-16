@@ -453,7 +453,7 @@ debut:
 		# c'est qu'un autre site a exactement les mêmes ! Difficile à
 		# détecter, le + simple c'est de l'écarter explicitement pour
 		# l'instant
-		next if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|a l'envers|brouillard|)$/i ||
+		next if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|a l'envers|brouillard|ton autre chemin|)$/i ||
 			$artist =~ / dion/i));
 		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/ ||
 			$u =~ /songlyrics.com/) {
