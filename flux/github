@@ -6,13 +6,13 @@ Public Sénat
 https://www.publicsenat.fr/direct
 CNews
 https://www.dailymotion.com/embed/video/x3b68jn
-franceinfo:
+franceinfo
 https://www.youtube.com/c/franceinfo/live
 France 24
 https://www.youtube.com/c/FRANCE24/live
 Africanews
 https://www.youtube.com/c/Africanewsfr/live
-L'Équipe
+L'équipe
 https://www.dailymotion.com/embed/video/x2lefik
 France Inter
 https://www.youtube.com/c/FranceInter/live
@@ -58,3 +58,7 @@ TV5 Monde FBS
 https://ott.tv5monde.com/Content/HLS/Live/channel(fbs)/index.m3u8
 TV5 Monde Europe
 https://ott.tv5monde.com/Content/HLS/Live/channel(europe)/index.m3u8
+Liste m3u principale
+https://iptv-org.github.io/iptv/index.m3u
+liste m3u french
+https://iptv-org.github.io/iptv/languages/fra.m3u

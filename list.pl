@@ -1256,23 +1256,47 @@ sub load_file2 {
 		my $num = 1;
 		my $name = "";
 		my @pic = ();
+		my $pic = undef;
 		foreach (split /\n/,$cont) {
 			next if (/^\#EXTM3U/);
 			s/\r//; # pour ête sûr !
 			if (/^#EXTINF:\-?\d*\,(.+)/ || /^#EXTINF:(.+)/) {
 				$name = $1;
+				$pic = undef;
+				if ($name =~ s/^\-1 //) {
+					my ($header,$nom) = split(/\,/,$name);
+					if ($nom) {
+						my @tab = split(/ /,$header);
+						foreach (@tab) {
+							my ($var,$value) = split(/=/);
+							if ($var eq "tvg-logo") {
+								$pic = $value;
+								$pic =~ s/^"//;
+								$pic =~ s/"$//;
+								$pic = chaines::setup_image($pic,\@pic);
+							}
+						}
+						$name = $nom;
+						$name =~ s/ \(\d+p\)//;
+						$name =~ s/ http.+//;
+					}
+				}
 			} elsif (/^#/) {
 				next;
 			} elsif ($name) {
 				$serv = $_;
-				my $pic = undef;
 				if ($tv) {
 					$pic = chaines::get_chan_pic($name,\@pic);
 				} elsif ($radio) {
 					$pic = get_radio_pic($name,\@pic);
 				}
-				print "push $num,$name,$serv (tv $tv radio $radio)\n";
-				my @cur = ($num++,"$name $serv",$serv,undef,undef,undef,undef,$pic);
+				print "push $num,$name,$serv (tv $tv radio $radio) pic $pic\n";
+				my @cur;
+				if ($serv =~ /^http/) {
+					@cur = ($num++,$name,$serv,undef,undef,undef,undef,$pic);
+				} else {
+					@cur = ($num++,"$name $serv",$serv,undef,undef,undef,undef,$pic);
+				}
 				push @list,[\@cur];
 				# $name = undef;
 			} elsif (-f "$serv$_") { # liste de fichiers locaux
@@ -1281,6 +1305,7 @@ sub load_file2 {
 				$serv = $_;
 			}
 		}
+		update_pics(\@pic);
 		if ($#list == 0) { # 1 seule entrée dans le m3u
 			@list = @old;
 			$cont = undef;
