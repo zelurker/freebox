@@ -18,12 +18,24 @@ my $utf = $ENV{LANG} =~ /utf/i;
 splice @arg,1,1 if ($cat);
 # my $guide = $arg[0] =~ /Guide/;
 
+sub disp_available() {
+	if ($_->{availability}) {
+		my $t = $_->{availability}{start};
+		if ($t =~ /(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+)Z/) {
+			my $t = timegm($6,$5,$4,$3,$2-1,$1-1900);
+			my ($sec,$min,$hour,$mday,$mon,$year) = localtime($t);
+			print "$mday/",$mon+1,"/",$year+1900," ",sprintf("%02d:%02d:%02d ",$hour,$min,$sec);
+		}
+	}
+	say $_->{title},($_->{subtitle} ? " - ".$_->{subtitle} : "");
+}
+
 sub handle_hash {
   my ($hash,$code) = @_;
   my $count = 0;
   foreach (@$hash) {
-	  if ($_->{data}) {
-		  handle_hash($_->{data},$code);
+	  if ($_->{content}{data}) {
+		  handle_hash($_->{content}{data},$code);
 		  next;
 	  }
 	  $count++;
@@ -132,7 +144,7 @@ sub handle_hash {
 		  }
 	  } else {
 		  # on suppose que c'est un index...
-		  say $_->{title};
+		  disp_available();
 		  say "vid:$_->{programId},$_->{url}";
 	  }
   }
@@ -145,15 +157,7 @@ sub decode_prg {
         foreach (@$_) {
 			decode_prg($_->{data}) if ($_->{data});
             if (ref($_) eq "HASH" && $_->{programId}) {
-				if ($_->{availability}) {
-					my $t = $_->{availability}{start};
-					if ($t =~ /(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+)Z/) {
-						my $t = timegm($6,$5,$4,$3,$2-1,$1-1900);
-						my ($sec,$min,$hour,$mday,$mon,$year) = localtime($t);
-						print "$mday/",$mon+1,"/",$year+1900," ",sprintf("%02d:%02d:%02d ",$hour,$min,$sec);
-					}
-				}
-                say $_->{title},($_->{subtitle} ? " - ".$_->{subtitle} : "");
+				disp_available();
                 my $url = $_->{url};
 				$url = "http://www.arte.tv$url" if ($url !~ /^http/);
                 $url =~ s/\//|/g; # pour que l'url puisse être passée en argument, on a pas le droit au /
@@ -270,7 +274,8 @@ sub decode_html {
 		if ($@) {
 			die "arte: couille dans le potage au niveau json $?:$@\n";
 		}
-		return $json->{props}{pageProps}{initialPage}{zones};
+		# say "decode_html: got json ",Dumper($json);
+		return $json->{props}{pageProps}{props}{page}{value}{zones};
 	}
 
 	my ($url) = $html =~ /iframe allow.+?src="(.+?)"/;
