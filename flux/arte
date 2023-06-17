@@ -102,6 +102,7 @@ sub handle_hash {
 				  close(F);
 			  }
 		  }
+		  my $legende;
 		  foreach (split /\n/,$m3u) {
 			  next if (/^#EXTM3U/);
 			  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=128000,CODECS="mp4a.40.2"
@@ -110,7 +111,8 @@ sub handle_hash {
 				  if (/,RESOLUTION=(\d+x\d+)/) {
 					  my $res = $1;
 					  if (/,CODECS="(.+?)"/) {
-						  say "$res ".($band/1000)."kbps $label";
+						  $legende = "$res ".($band/1000)."kbps $label";
+						  say $legende;
 					  }
 				  }
 				  next;
@@ -120,17 +122,14 @@ sub handle_hash {
 			  } elsif (/^http/) {
 				  $count++;
 				  say "get,$_";
-			  } elsif (/^media/) {
+			  } elsif ((/^media/ || $_ ne "") && $legende) {
 				  my $url0 = $url;
 				  $url0 =~ s/^(.+)\/.+?$/$1\//;
 				  $count++;
+				  say $url0,$_,($audio ? " $audio" : ""),($subs ? " $subs" : "");
+				  say "Enregistrer $legende";
 				  say "get,$code,",$url0,$_,($audio ? ",$audio" : ""),($subs ? ",$subs" : "");
-			  } elsif ($_ ne "") {
-				  my $url0 = $url;
-				  $url0 =~ s/^(.+)\/.+?$/$1\//;
-				  $count++;
-				  say "get,$code,",$url0,$_,($audio ? ",$audio" : ""),($subs ? ",$subs" : "");
-				  # say STDERR "m3u: ligne non reconnue : $_.";
+				  $legende = undef;
 			  }
 		  }
 		  next;
@@ -357,6 +356,7 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 		$streams = myget($url,"cache/arte/$code",7);
 		$json = decode_json($streams);
 		$hash = $json->{data}{attributes}{streams};
+		say STDERR "got hash ",Dumper($hash)," from json ",Dumper($json);
 		# say STDERR "got json ",Dumper($json);
 	}
 	say "encoding: latin1"; # c'est toujours du json...
