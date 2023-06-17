@@ -249,7 +249,8 @@ sub setup_output {
 	# En cas d'attente on bloquerait d'autant à chaque commande vers info
 	# ou list c'est totalement insupportable. Normalement ce n'est plus
 	# nécessaire
-	while (1) {
+	my $count = 0;
+	while ($count < 4) {
 		# Par contre on attend au moins l'1 des 2 parce qu'avec coro on
 		# arrive souvent là avant que bmovl ne soit prêt !
 		if (open(F,"<video_size") || open(F,"<desktop")) {
@@ -264,6 +265,7 @@ sub setup_output {
 			last;
 		}
 		sleep 1;
+		$count++;
 	}
 	if (!$long) {
 		$long = $height*2/3;
