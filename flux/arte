@@ -124,12 +124,12 @@ sub handle_hash {
 				  my $url0 = $url;
 				  $url0 =~ s/^(.+)\/.+?$/$1\//;
 				  $count++;
-				  say $url0,$_,($audio ? " $audio" : ""),($subs ? " $subs" : "");
+				  say "get,$code,",$url0,$_,($audio ? ",$audio" : ""),($subs ? ",$subs" : "");
 			  } elsif ($_ ne "") {
 				  my $url0 = $url;
 				  $url0 =~ s/^(.+)\/.+?$/$1\//;
 				  $count++;
-				  say $url0,$_,($audio ? " $audio" : ""),($subs ? " $subs" : "");
+				  say "get,$code,",$url0,$_,($audio ? ",$audio" : ""),($subs ? ",$subs" : "");
 				  # say STDERR "m3u: ligne non reconnue : $_.";
 			  }
 		  }
@@ -152,7 +152,7 @@ sub handle_hash {
 
 sub decode_prg {
     $_ = shift;
-	say STDERR "decode_prg: ",Dumper($_);
+	# say STDERR "decode_prg: ",Dumper($_);
     if (ref($_) eq "ARRAY") {
         foreach (@$_) {
 			decode_prg($_->{data}) if ($_->{data});
@@ -357,7 +357,7 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 		$streams = myget($url,"cache/arte/$code",7);
 		$json = decode_json($streams);
 		$hash = $json->{data}{attributes}{streams};
-		say STDERR "got json ",Dumper($json);
+		# say STDERR "got json ",Dumper($json);
 	}
 	say "encoding: latin1"; # c'est toujours du json...
     if ((!$hash || ref($hash) ne "HASH") && !$json) {
@@ -375,6 +375,57 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
     exit(0);
 } elsif ($str =~ /^get,(.+)/) {
     my $url = $1;
+	say STDERR "arte: reçu lien get: $url";
+	if ($url =~ /,/ || $url =~ /m3u8$/) {
+		# urls de flux arte, si espaces on a video + audio + ss titres, et à chaque fois un m3u...
+		my ($code) = $url =~ /^(.+?),/; # Le 1er mot séparé par un espace du reste est le code
+		$url =~ s/^(.+?),//;
+		say STDERR "arte: code $code";
+		my $pid = fork();
+		unlink("livetv/$code.mkv");
+		if (!$pid) {
+			my @tab = split(/,/,$url);
+			my @cmd = ("ffmpeg","-y","-v","panic");
+			foreach (@tab) {
+				push @cmd,("-i",$_);
+			}
+			push @cmd,"livetv/$code.mkv";
+			say STDERR "arte: exec ",join(" ",@cmd);
+			exec(@cmd) || say "can't exec ",join(" ",@cmd);
+		}
+		open(F,">post.kill") || die "can't create post.kill";
+		print F $pid;
+		close(F);
+
+		# now wait a bit for the file to grow...
+
+		my $count = 0;
+		my $found = 0;
+		while ($count < 10) {
+			if (open(F,"file livetv/$code.mkv|")) {
+				while (<F>) {
+					say STDERR "arte: got from file: $_";
+					if (/Matroska/) {
+						$found = 1;
+						last;
+					}
+				}
+				close(F);
+			}
+			last if ($found);
+			sleep(1);
+			$count++;
+		}
+		say STDERR "arte: sortie attente, count $count, found $found";
+		say STDERR "arte: on ajoute 2s...";
+		sleep(2);
+		say "livetv/$code.mkv";
+		exit(0);
+	}
+
+	# Les flux simples d'avant, je crois qu'il n'en reste plus en fait, tout a été migré vers du m3u8... !
+	# Enfin dans le doute je laisse ce bout de code, pas très long...
+
     my ($file) = $url =~ /.+\/(.+?)$/;
     $file = "cache/arte/$file";
     print STDERR "arte: file $file from url $url\n";

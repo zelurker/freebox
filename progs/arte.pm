@@ -121,6 +121,7 @@ sub get {
 	}
  	return undef if (!$code);
 	$code =~ s/,.+//;
+	$code =~ s/,//;
 
 	my ($f,$json);
 
@@ -157,11 +158,11 @@ sub get {
 				if (!open($f,"<cache/arte/$last_code.html")) {
 					$f = undef;
 				} else {
-					say "progs/arte: lecture cache/arte/$last_code.html";
+					say STDERR "progs/arte: lecture cache/arte/$last_code.html";
 				}
 			}
 		} else {
-			say "progs/arte: lecture cache/arte/$code";
+			say STDERR "progs/arte: lecture cache/arte/$code";
 		}
 	}
 
@@ -223,6 +224,15 @@ sub get {
 		$img,
 		0,0,
 		$date);
+	say STDERR "progs/arte: code $code. test mkv...";
+	if (-f "livetv/$code.mkv" && ! -f "livetv/$code.mkv.info") {
+		say STDERR "progs/arte: création info";
+		open(F,">livetv/$code.mkv.info") || die "can't create livetv/$code.mkv.info";
+		say F "pic:$img $title";
+		say F $sub;
+		say F $sum;
+		close(F);
+	}
 	return \@tab;
 }
 

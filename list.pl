@@ -631,7 +631,7 @@ sub read_list {
 		my $num = 1;
 		my $pat;
 		if ($source eq "livetv") {
-			$pat = "livetv/*.ts";
+			$pat = "livetv/*.ts livetv/*.mkv";
 		} else {
 			$pat = "records/*";
 		}
@@ -1154,8 +1154,10 @@ sub run_mplayer2 {
 		}
 		if ($source =~ /(dvb|freeboxtv)/) {
 			push @list,("-ss","-3","--keep-open");
-		} elsif ($source =~ /flux/ && $serv !~ /m3u/) {
+		} elsif ($source =~ /flux/ && $serv !~ /(m3u|mkv)/) {
 			push @list,("--force-seekable=yes");
+		} elsif ($source =~ /flux/ && $serv =~ /mkv/) {
+			push @list,"--keep-open";
 		}
 	}
 	if ($audio) {
@@ -1207,6 +1209,13 @@ sub check_player2 {
 	$child_checker = AnyEvent->child(pid => $pid_player2, cb => sub {
 			my ($pid,$status) = @_;
 			print "list: fin de mplayer, pid $pid, status $status\n";
+			if (open(F,"<post.kill")) {
+				my $kill = <F>;
+				close(F);
+				say "post.kill found, sending TERM to $kill";
+				kill "TERM",$kill;
+				unlink("post.kill");
+			}
 			if ($pid == $pid_player2 && !$quit_mplayer) {
 				# récupère la source réelle
 				# sinon on peut avoir un bug de boucle en lisant une vidéo puis en ouvrant la liste des fichiers sons pendant que la vidéo joue et quitter
