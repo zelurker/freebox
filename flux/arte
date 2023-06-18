@@ -141,8 +141,12 @@ sub handle_hash {
 				  say "audio only: ".($1/1000)."kbps codecs:$2";
 				  next;
 			  } elsif (/^http/) {
+				  # il y a des flux différés avec audio + vidéo en 1 seule url, dans ce cas là ils sont dans ce format généralement
 				  $count++;
-				  say "get,$_";
+				  say "$_";
+				  say "Enregistrer $legende";
+				  s/,/virgule/g;
+				  say "get,$code,$_";
 			  } elsif ((/^media/ || $_ ne "") && $legende) {
 				  my $url0 = $url;
 				  $url0 =~ s/^(.+)\/.+?$/$1\//;
@@ -409,6 +413,7 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 			my @tab = split(/,/,$url);
 			my @cmd = ("ffmpeg","-y","-v","panic");
 			foreach (@tab) {
+				s/virgule/,/g; # qui l'eut cru ? Ils ont réussi à coller une virgule dans une url, et en nom de répertoire en + !
 				push @cmd,("-i",$_);
 			}
 			push @cmd,"livetv/$code.mkv";
