@@ -163,8 +163,8 @@ sub decode_prg {
 				say "$str/vid:$_->{programId},$url";
             } # note : certains programmes genre vod n'ont pas de programid, on affiche donc pas
         }
-	} elsif ($_->{data}) {
-		decode_prg($_->{data});
+	} elsif ($_->{content}{data}) {
+		decode_prg($_->{content}{data});
     } else {
         die "decode_prg: pas de tableau ? : data ",$_{data}," dumper ",Dumper($_);
     }
@@ -237,13 +237,6 @@ sub decode_main {
         my %hash = %$_;
         if ($hash{props}) { # racine du nouveau hash 2017
 			# et encore après ça...
-			if ($str =~ /^result:/) {
-				# say STDERR "dans recherche, hash : ",Dumper(%hash); # $hash{pageProps};
-				foreach (@{$hash{props}{pageProps}{initialPage}{zones}}) {
-					decode_prg($_);
-				}
-				return;
-			}
 			# non mais sans déconner, on se demande bien d'où vient se
 			# HOME_fr_{} à la con ???
 			my $code = $hash{pages}{currentCode};
@@ -251,6 +244,12 @@ sub decode_main {
 			# say STDERR "hash ",Dumper(%hash);
             return decode_type($hash{pages}{list}{"$code"}{zones}) if ($code);
             return decode_type($hash{props}{pageProps}{props}{page}{value}{zones});
+		} elsif ($str =~ /^result:/ && $hash{value}) {
+			# say STDERR "dans recherche, hash : ",Dumper(%hash); # $hash{pageProps};
+			foreach (@{$hash{value}{zones}}) {
+				decode_prg($_);
+			}
+			return;
         } else {
             die "decode_main: pas de tvguide : ".Dumper($_);
         }
@@ -356,7 +355,7 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 		$streams = myget($url,"cache/arte/$code",7);
 		$json = decode_json($streams);
 		$hash = $json->{data}{attributes}{streams};
-		say STDERR "got hash ",Dumper($hash)," from json ",Dumper($json);
+		# say STDERR "got hash ",Dumper($hash)," from json ",Dumper($json);
 		# say STDERR "got json ",Dumper($json);
 	}
 	say "encoding: latin1"; # c'est toujours du json...
@@ -434,7 +433,8 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 
 my $page;
 if ($str =~ /^result:(.+)/) {
-	my $url = "http://www.arte.tv/fr/search/?q=$1";
+	#	my $url = "http://www.arte.tv/fr/search/?q=$1";
+	my $url = "https://www.arte.tv/api/rproxy/emac/v4/fr/web/pages/SEARCH/?query=$1";
 	$page = myget($url);
 } elsif ($str =~ /^concerts/) {
 	$page = myget("https://www.arte.tv/fr/videos/arte-concert/","cache/arte/concert0",1/12.0);
@@ -454,10 +454,14 @@ my $capture = 0;
 my $json;
 # le json dans de l'html c'est toujours merdique, ça vient de changer en
 # avril 2017... !
-foreach (split(/\n/,$page)) {
-    if (/({"props":.+})/) {
-        $json = decode_entities($1);
-    }
+if ($page =~ /^{"/) {
+	$json = $page;
+} else {
+	foreach (split(/\n/,$page)) {
+		if (/({"props":.+})/) {
+			$json = decode_entities($1);
+		}
+	}
 }
 eval  {
     $json = decode_json( $json);
