@@ -990,11 +990,23 @@ sub mount_dvd() {
 
 sub run_mplayer2 {
 	my ($name,$src,$serv,$flav,$audio,$video) = @_;
+	my $index;
 	my $sub;
 	# out::clear("list_coords");
 
-	if ($serv =~ / http/) {
-		($serv,$audio,$sub) = split / /,$serv;
+	if ($serv =~ / /) {
+		my @tracks = split / /,$serv;
+		foreach (@tracks) {
+			if (/aud:(.+)/) {
+				$audio = $1;
+			} elsif (/sub:(.+)/) {
+				$sub = $1;
+			} elsif (/index:(.+)/) {
+				$index = $1;
+			}
+		}
+		$serv =~ s/ .+//;
+		say "run_mplayer2: serv en fin : $serv";
 		if ($audio =~ /.+\/(.+?\.m3u8)$/) {
 			# mpv ne supporte pas l'audio venant d'un m3u, c'est le format
 			# plutôt tordu choisi par arte, même pour les flux qui ne sont
@@ -1174,6 +1186,9 @@ sub run_mplayer2 {
 	if ($sub) {
 		# mpv seulement
 		push @list,("--sub-file=$sub");
+	}
+	if ($index) {
+		push @list,("--chapters-file=$index");
 	}
 	push @list,("-cdrom-device","/dev/$cd") if ($cd);
 	# fichier local (commence par /) -> pas de cache !
@@ -1379,7 +1394,7 @@ sub load_file2 {
 		}
 		return 0 if ($cont && $serv =~ /m3u$/);
 	}
-	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac|ts)$/i) {
+	if ($serv !~ /^cddb/ && $serv !~ /(mp3|ogg|flac|mpc|wav|aac|flac|ts)$/i && $serv !~ / /) {
 	    # Gestion des pls supprimée, mplayer semble les gérer
 	    # très bien lui même.
 		my $old = $serv;

@@ -31,8 +31,29 @@ sub disp_available() {
 }
 
 sub handle_hash {
-  my ($hash,$code) = @_;
+  my ($hash,$code,$chapters) = @_;
   my $count = 0;
+  my $nb_chap = 0;
+  # say STDERR "arte: handle_hash ",Dumper($hash);
+  if ($chapters) {
+	  open(F,">livetv/$code.ffmeta");
+	  # entête obligatoire sinon il prend ça pour un fichier de sous titres !!!
+	  say F ";FFMETADATA1";
+	  # la balise end est obligatoire aussi, sinon on perd le nom ! Manque de bol c'est pas filé dans le hash d'arte, donc on répare ça ici
+	  for (my $n=1; $n<=$#$chapters; $n++) {
+		  $$chapters[$n-1]->{end} = $$chapters[$n]->{startTime};
+	  }
+	  foreach (@{$chapters}) {
+		  say F "[CHAPTER]";
+		  say F "TIMEBASE=1/1";
+		  say F "START=",$_->{startTime};
+		  say F "END=",$_->{end};
+		  say F "title=$_->{title}";
+		  $nb_chap++;
+	  }
+	  close(F);
+  }
+
   foreach (@$hash) {
 	  if ($_->{content}{data}) {
 		  handle_hash($_->{content}{data},$code);
@@ -126,9 +147,9 @@ sub handle_hash {
 				  my $url0 = $url;
 				  $url0 =~ s/^(.+)\/.+?$/$1\//;
 				  $count++;
-				  say $url0,$_,($audio ? " $audio" : ""),($subs ? " $subs" : "");
+				  say $url0,$_,($audio ? " aud:$audio" : ""),($subs ? " sub:$subs" : "").($nb_chap ? " index:livetv/$code.ffmeta" : "");
 				  say "Enregistrer $legende";
-				  say "get,$code,",$url0,$_,($audio ? ",$audio" : ""),($subs ? ",$subs" : "");
+				  say "get,$code,",$url0,$_,($audio ? ",$audio" : ""),($subs ? ",$subs" : "").($nb_chap ? ",livetv/$code.ffmeta" : "");
 				  $legende = undef;
 			  }
 		  }
@@ -349,12 +370,14 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
         print F $str;
         close(F);
     }
-	my ($url,$streams,$json,$hash);
+	my ($url,$streams,$json,$hash,$chapters);
 	if ($code =~ /\d/ && $code !~ /^RC/) { # un code normal contient un nombre
 		$url = "https://api.arte.tv/api/player/v2/config/fr/$code";
 		$streams = myget($url,"cache/arte/$code",7);
 		$json = decode_json($streams);
+		say STDERR "json avant les streams: ",Dumper($json);
 		$hash = $json->{data}{attributes}{streams};
+		$chapters = $json->{data}{attributes}{chapters}{elements};
 		# say STDERR "got hash ",Dumper($hash)," from json ",Dumper($json);
 		# say STDERR "got json ",Dumper($json);
 	}
@@ -370,12 +393,12 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 		say "direct";
 	}
 	$url = undef;
-	handle_hash($hash,$code);
+	handle_hash($hash,$code,$chapters);
     exit(0);
 } elsif ($str =~ /^get,(.+)/) {
     my $url = $1;
 	say STDERR "arte: reçu lien get: $url";
-	if ($url =~ /,/ || $url =~ /m3u8$/) {
+	if ($url =~ /,/ || $url =~ /m3u8/) {
 		# urls de flux arte, si espaces on a video + audio + ss titres, et à chaque fois un m3u...
 		my ($code) = $url =~ /^(.+?),/; # Le 1er mot séparé par un espace du reste est le code
 		$url =~ s/^(.+?),//;
