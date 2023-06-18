@@ -19,6 +19,12 @@ splice @arg,1,1 if ($cat);
 # my $guide = $arg[0] =~ /Guide/;
 
 sub disp_available() {
+    if ($_->{mainImage}{url}) {
+		my $pic = $_->{mainImage}{url};
+		# il y a probablement d'autres tailles, mais je les connais pas ! J'ai récupérée celle là dans firefox par l'inspecteur
+		$pic =~ s/__SIZE__/400x225/;
+		print "pic:$pic ";
+	}
 	if ($_->{availability}) {
 		my $t = $_->{availability}{start};
 		if ($t =~ /(\d+)\-(\d+)-(\d+)T(\d+):(\d+):(\d+)Z/) {
@@ -286,7 +292,6 @@ sub decode_html {
 	my ($code,$url0) = @_;
 	say STDERR "decode_html code $code url $url0";
 	my $json;
-	# say STDERR "decode_html: myget pour $code.html $url0";
 	my $html = myget($url0,"cache/arte/$code.html",1/24.0/30);
 # on récupère l'url de l'iframe video...
 	my ($json) = $html =~ /application\/json">({.+})<\//;
@@ -297,7 +302,7 @@ sub decode_html {
 		if ($@) {
 			die "arte: couille dans le potage au niveau json $?:$@\n";
 		}
-		# say "decode_html: got json ",Dumper($json);
+		# say STDERR "decode_html: got json ",Dumper($json);
 		return $json->{props}{pageProps}{props}{page}{value}{zones};
 	}
 
