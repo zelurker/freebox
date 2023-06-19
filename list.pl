@@ -994,7 +994,7 @@ sub run_mplayer2 {
 	my $sub;
 	# out::clear("list_coords");
 
-	if ($serv =~ / /) {
+	if ($serv =~ / (aud|sub|index):/) {
 		my @tracks = split / /,$serv;
 		foreach (@tracks) {
 			if (/aud:(.+)/) {
