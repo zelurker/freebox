@@ -36,6 +36,33 @@ sub disp_available() {
 	say $_->{title},($_->{subtitle} ? " - ".$_->{subtitle} : "");
 }
 
+sub check_media {
+  # on se retrouve des fois avec des m3u8 qui pointent tout le temps sur le même fichier
+  # dans ce cas là le m3u8 n'a aucun sens et on passe directement le fichier...
+  my ($url0,$media) = @_;
+  my ($root,$suf) = $media =~ /(.+\/)(.+)/;
+  if ($suf =~ /m3u8$/) {
+	  my $raw = myget($url0.$media,"cache/$suf",7);
+	  my $last = undef;
+	  my $error = undef;
+	  foreach (split /\n/,$raw) {
+		  next if (/^#/);
+		  next if (!$_);
+		  # on est obligé de supposer que c'est la même url partout
+		  if ($last && $last ne $_) {
+			  say STDERR "arte: reconstitution media impossible, last $last puis $_";
+			  $error = 1;
+			  last;
+		  }
+		  $last = $_;
+	  }
+	  if (!$error) {
+		  $media = $root.$last;
+	  }
+  }
+  $media;
+}
+
 sub handle_hash {
   my ($hash,$code,$chapters) = @_;
   my $count = 0;
@@ -79,6 +106,7 @@ sub handle_hash {
 				  my $url0 = $url;
 				  my $aud = $1;
 				  $url0 =~ s/^(.+)\/.+?$/$1\//;
+				  $aud = check_media($url0,$aud);
 				  $audio = $url0.$aud;
 			  }
 			  if (/^#EXT-X-MEDIA:TYPE=SUBTITLES.*URI="(.+)"/) {
@@ -156,10 +184,12 @@ sub handle_hash {
 			  } elsif ((/^media/ || $_ ne "") && $legende) {
 				  my $url0 = $url;
 				  $url0 =~ s/^(.+)\/.+?$/$1\//;
+				  my $media = check_media($url0,$_);
+
 				  $count++;
-				  say $url0,$_,($audio ? " aud:$audio" : ""),($subs ? " sub:$subs" : "").($nb_chap ? " index:livetv/$code.ffmeta" : "");
+				  say $url0,$media,($audio ? " aud:$audio" : ""),($subs ? " sub:$subs" : "").($nb_chap ? " index:livetv/$code.ffmeta" : "");
 				  say "Enregistrer $legende";
-				  say "get,$code,",$url0,$_,($audio ? ",$audio" : ""),($subs ? ",$subs" : "").($nb_chap ? ",livetv/$code.ffmeta" : "");
+				  say "get,$code,",$url0,$media,($audio ? ",$audio" : ""),($subs ? ",$subs" : "").($nb_chap ? ",livetv/$code.ffmeta" : "");
 				  $legende = undef;
 			  }
 		  }
@@ -384,7 +414,7 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 		$url = "https://api.arte.tv/api/player/v2/config/fr/$code";
 		$streams = myget($url,"cache/arte/$code",7);
 		$json = decode_json($streams);
-		say STDERR "json avant les streams: ",Dumper($json);
+		# say STDERR "json avant les streams: ",Dumper($json);
 		$hash = $json->{data}{attributes}{streams};
 		$chapters = $json->{data}{attributes}{chapters}{elements};
 		# say STDERR "got hash ",Dumper($hash)," from json ",Dumper($json);
@@ -416,7 +446,7 @@ if ($arg[$#arg] =~ /vid:(.+)/ || $arg[0] =~ /vid:(.+)/) {
 		unlink("livetv/$code.mkv");
 		if (!$pid) {
 			my @tab = split(/,/,$url);
-			my @cmd = ("ffmpeg","-y","-v","panic");
+			my @cmd = ("ffmpeg","-y","-v","error");
 			foreach (@tab) {
 				s/virgule/,/g; # qui l'eut cru ? Ils ont réussi à coller une virgule dans une url, et en nom de répertoire en + !
 				push @cmd,("-i",$_);
