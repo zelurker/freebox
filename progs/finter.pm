@@ -40,6 +40,8 @@ sub update_prog_html($) {
 	my ($base,$date) = $url =~ /^(.+?)-(.+)/;
 	if ($base eq "finter") {
 		$url = "https://www.franceinter.fr/programmes/$date";
+	} elsif ($base eq "franceinfo") {
+		$url = "https://www.radiofrance.fr/franceinfo/grille-programmes?date=$date";
 	} elsif ($base eq "fmusique") {
 		$url = "https://www.francemusique.fr/programmes/$date";
 	} elsif ($base eq "fculture") {
@@ -103,8 +105,8 @@ sub update_prog_json($) {
 
 sub update {
 	my ($p,$channel,$offset) = @_;
-	return undef if (lc($channel) !~ /france (inter|culture|musique|bleu )/ &&
-	lc($channel) !~ /(le mouv|fip)/);
+	return undef if ($channel ne "franceinfo" && lc($channel) !~ /france (inter|culture|musique|bleu )/ &&
+		lc($channel) !~ /(le mouv|fip)/);
 	$offset = 0 if (!defined($offset));
 
 	print STDERR "finter:update called channel $channel\n" if ($debug);
@@ -240,4 +242,5 @@ sub init_time {
 }
 
 1;
+
 
