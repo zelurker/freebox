@@ -109,7 +109,6 @@ sub update {
 		lc($channel) !~ /(le mouv|fip)/);
 	$offset = 0 if (!defined($offset));
 
-	print STDERR "finter:update called channel $channel\n" if ($debug);
 	my ($suffix) = $channel =~ /france (.+)/;
 	if ($suffix) {
 		$file = "f$suffix";

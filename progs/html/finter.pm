@@ -62,6 +62,7 @@ sub decode_html {
 	my $pos = 0;
 	my $date;
 	my $prev_start;
+	my $keep_date = undef;
 	my $rtab2 = $p->{chaines}->{lc($name)};
 	if ($rtab2) {
 		$prev_start = $$rtab2[$#$rtab2][3];
@@ -78,7 +79,11 @@ sub decode_html {
 
 		if ($instr eq "div") {
 			my $class = get_tag($sub,"class");
-			if ($class =~ /^TimeSlotContainer/) {
+			if ($class =~ /^date-time-field/) {
+				$date = get_tag($l,"value");
+				$keep_date = 1;
+			}
+			if ($class =~ /^(TimeSlotContainer|ProgramTimeline)/) {
 				my $body = substr($l,$sub_pos+1);
 				my $end_pos = find_closing_tag($body,0,"div");
 				$pos += $end_pos;
@@ -91,7 +96,23 @@ sub decode_html {
 					my ($year,$month,$day,$hour,$min,$sec) = $class =~ /(....)-(..)-(..)T(..):(..):(..)/;
 					$date = "$day/$month/$year" if (!$date);
 					$start = timegm_nocheck($sec,$min,$hour,$day,$month-1,$year-1900);
+				} else {
+					$btn = index($body,"<div class=\"time ");
+					if ($btn >= 0) {
+						$btn = index($body,">",$btn+1)+1;
+						$sub_pos = find_closing_tag($body,$btn+1,"div")-1;
+						$start = substr($body,$btn,$sub_pos-$btn-1);
+						($start,$end) = $start =~ /(.+) - (.+)/;
+						my ($hstart,$mstart) = $start =~ /(\d+)h(\d+)/;
+						my ($hend,$mend) = $end =~ /(\d+)h(\d+)/;
+						my ($mday,$mon,$year) = split (/\//,$date);
+						$mon--;
+						$year -= 1900;
+						$start = timegm_nocheck(0,$mstart,$hstart,$mday,$mon,$year);
+						$end = timegm_nocheck(0,$mend,$hend,$mday,$mon,$year);
+					}
 				}
+
 				$btn = index($body,"<picture");
 				if ($btn >= 0) {
 					$sub_pos = find_closing_tag($body,$btn+1,"figure");
@@ -103,6 +124,13 @@ sub decode_html {
 					$sub_pos = find_closing_tag($body,$btn+1,"span")-1;
 					$btn = index($body,">",$btn+1)+1;
 					$title = substr($body,$btn,$sub_pos-$btn-1);
+				} else {
+					$btn = index($body,"<div class=\"title svelte");
+					if ($btn >= 0) {
+						$btn = index($body,">",$btn+1)+1;
+						$sub_pos = find_closing_tag($body,$btn+1,"div")-1;
+						$title = substr($body,$btn,$sub_pos-$btn-1);
+					}
 				}
 				$btn = index($body,"<p class=\"TimeSlotContent-subtitle");
 				if ($btn >= 0) {
@@ -240,7 +268,8 @@ sub decode_html {
 			"","",$img,0,0,$date);
 		$p->insert(\@tab,$rtab,600);
 		$prev_start = $start;
-		($title,$start,$end,$desc,$date,$img) = undef;
+		($title,$start,$end,$desc,$img) = undef;
+		$date = undef if (!$keep_date);
 		redo;
 	}
 	$rtab;
