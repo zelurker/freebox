@@ -377,6 +377,8 @@ sub commands {
 		$fadeout = $refresh = undef;
 		out::clear("info_coords");
 		$cleared = 1;
+		say "bmovl::image";
+		out::send_bmovl("image");
 	} elsif ($cmd =~ s/^unload //) {
 		# envoyé par le script lua de mpv pour indiquer qu'il quitte
 		my ($name,$src,$serv) = get_cur_name();
@@ -530,8 +532,6 @@ sub commands {
 				$info{$name}->{progress} = "$pos - $dur";
 				read_stream_info(time(),$channel,$info{$name});
 			}
-		} else {
-			say "progress: cleared $cleared name $name eq ",conv($channel);
 		}
 	} elsif ($cmd =~ /^lyrics/) {
 		my ($name,$src) = get_cur_name();

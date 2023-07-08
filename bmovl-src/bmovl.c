@@ -1372,7 +1372,8 @@ static int image(int argc, char **argv) {
 	printf("image: SDL_RenderCopy error: %s (%d)\n",SDL_GetError(),ret);
     }
     // SDL_DestroyTexture(tex);
-    // SDL_RenderPresent(renderer);
+    // RenderPresent obligatoire pour les cas d'effacement
+    SDL_RenderPresent(renderer);
 #else
     SDL_BlitSurface(s,&r,sdl_screen,&dst);
     SDL_UpdateRect(sdl_screen,0,0,0,0);
