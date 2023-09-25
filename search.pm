@@ -16,6 +16,22 @@ sub search {
 
 	my $mech = init();
 	eval {
+		$mech->get("https://www.duckduckgo.com/");
+		$mech->submit_form(
+			form_number => 1,
+			fields      => {
+				"q" => $q,
+			}
+		);
+	};
+	return $mech;
+}
+
+sub search_yahoo {
+	my $q = shift;
+
+	my $mech = init();
+	eval {
 		$mech->get("https://fr.search.yahoo.com/search");
 		$mech->submit_form(
 			form_number => 1,
