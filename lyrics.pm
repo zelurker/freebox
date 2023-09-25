@@ -13,6 +13,7 @@ use v5.10;
 use lib ".";
 use search;
 use myutf;
+use Data::Dumper;
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
 
@@ -386,10 +387,12 @@ sub get_lyrics {
 			$id3v1 = 1;
 		  my ($track,$album,$comment,$year,$genre);
 		  ($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
+		  say STDERR "title from autoinfo: $title";
           # read some information from the tag
 		  my $id3v1 = $mp3->{ID3v1};
 		  $artist = $id3v1->artist;
 		  $title = $id3v1->title if (length($title) <= length($id3v1->title));
+		  say STDERR "title final id3v1: $title";
 		  say "lyrics: using id3v1";
   	    } else {
 			my ($track,$album,$comment,$year,$genre);
@@ -401,6 +404,16 @@ sub get_lyrics {
 		};
 		if ($@) {
 			say "eval while updating tags: $@";
+		}
+		if (exists $mp3->{ID3v2}) {
+			my $lyrics = $mp3->{ID3v2}->get_frame("USLT"); # Unsynchronized lyric/text transcription
+			if (ref($lyrics) eq "HASH") {
+				say "lyrics: got lyrics from id3v2 tag USLT";
+				my $lyrics = $lyrics->{Text};
+				$lyrics =~ s/\r//g;
+				$lyrics =~ s/\x{2019}/'/g;
+				return $lyrics;
+			}
 		}
 	}
 
