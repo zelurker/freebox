@@ -589,9 +589,13 @@ static int list(int fifo, int argc, char **argv)
 	if (names[nb2] && !longlist ) {
 	    // On essaye d'abord de charger une image pré-dimensionnée
 	    char name[1024];
-	    strcpy(name,names[nb2]);
+	    strncpy(name,names[nb2],1024);
+	    name[1023] = 0;
 	    char *s = strrchr(name,'.');
-	    sprintf(s,"-%d.png",h);
+	    if (s)
+		sprintf(s,"-%d.png",h);
+	    else
+		printf("bmovl: can't find png in %s\n",name);
 	    chan[nb2] = IMG_Load(name);
 	    if (!chan[nb2]) chan[nb2] = IMG_Load(names[nb2]);
 	    if (chan[nb2] && (chan[nb2]->h > h || chan[nb2]->w > larg/4)) {
