@@ -384,14 +384,11 @@ sub get_lyrics {
 		my $id3v1;
 		$mp3->get_tags;
 		if (exists $mp3->{ID3v1}) {
-			$id3v1 = 1;
+			$id3v1 = $mp3->{ID3v1};
 		  my ($track,$album,$comment,$year,$genre);
-		  ($title, $track, $artist, $album, $comment, $year, $genre) = $mp3->autoinfo();
-		  say STDERR "title from autoinfo: $title";
+		  $title = $id3v1->title;
           # read some information from the tag
-		  my $id3v1 = $mp3->{ID3v1};
 		  $artist = $id3v1->artist;
-		  $title = $id3v1->title if (length($title) <= length($id3v1->title));
 		  say STDERR "title final id3v1: $title";
 		  say "lyrics: using id3v1";
   	    } else {
@@ -466,8 +463,10 @@ debut:
 		# c'est qu'un autre site a exactement les mêmes ! Difficile à
 		# détecter, le + simple c'est de l'écarter explicitement pour
 		# l'instant
-		next if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|a l'envers|brouillard|ton autre chemin|)$/i ||
-			$artist =~ / dion/i));
+		if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|a l'envers|brouillard|ton autre chemin|)$/i ||
+			$artist =~ / dion/i)) {
+			next;
+		}
 		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/ ||
 			$u =~ /songlyrics.com/) {
 			my $old = $_;
@@ -490,6 +489,8 @@ debut:
 				print "lyrics: rejet sur le titre, texte : $text, title $title, artist $artist.\n";
 			}
 			$_ = $old;
+		} else {
+			say STDERR "lyrics: link not recognized : $u";
 		}
 		next if ($_->text =~ /youtube/i || $u =~ /youtube/);
 	}
