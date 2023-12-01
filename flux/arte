@@ -102,18 +102,26 @@ sub handle_hash {
 		  my ($audio,$subs);
 		  foreach (split /\n/,$m3u) {
 			  next if (/^#EXTM3U/);
-			  if (/^#EXT-X-MEDIA:TYPE=AUDIO.+URI="(.+?)"/) {
+			  if (/^#EXT-X-MEDIA:TYPE=AUDIO.*DEFAULT=YES.*URI="(.+?)"/) {
 				  my $url0 = $url;
 				  my $aud = $1;
-				  $url0 =~ s/^(.+)\/.+?$/$1\//;
-				  $aud = check_media($url0,$aud);
-				  $audio = $url0.$aud;
+				  if ($aud =~ /^http/) {
+					  $audio = $aud;
+				  } else {
+					  $url0 =~ s/^(.+)\/.+?$/$1\//;
+					  $aud = check_media($url0,$aud);
+					  $audio = $url0.$aud;
+				  }
 			  }
-			  if (/^#EXT-X-MEDIA:TYPE=SUBTITLES.*URI="(.+)"/) {
+			  if (/^#EXT-X-MEDIA:TYPE=SUBTITLES.*DEFAULT=YES.*URI="(.+)"/) {
 				  my $url0 = $url;
 				  my $aud = $1;
-				  $url0 =~ s/^(.+)\/.+?$/$1\//;
-				  $subs = $url0.$aud;
+				  if ($aud =~ /^http/) {
+					  $subs = $aud;
+				  } else {
+					  $url0 =~ s/^(.+)\/.+?$/$1\//;
+					  $subs = $url0.$aud;
+				  }
 				  # Obligé de pré-traiter les subs parce que mpv disjoncte quand il y a des styles dedans... !
 				  my ($file) = $subs =~ /^.+\/(.+?)$/;
 				  my $text = myget($subs,"cache/arte/$file",7);
@@ -177,6 +185,12 @@ sub handle_hash {
 			  } elsif (/^http/) {
 				  # il y a des flux différés avec audio + vidéo en 1 seule url, dans ce cas là ils sont dans ce format généralement
 				  $count++;
+				  if ($audio) {
+					  $_ .= " aud:$audio";
+				  }
+				  if ($subs) {
+					  $_ .= " subs:$subs";
+				  }
 				  say "$_";
 				  say "Enregistrer $legende";
 				  s/,/virgule/g;
