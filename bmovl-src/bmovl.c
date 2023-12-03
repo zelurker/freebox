@@ -125,7 +125,7 @@ static TTF_Font *open_font(int fsize) {
     return font;
 }
 
-static int image(int argc, char **argv);
+static int image(int argc, char **argv,int renderpresent);
 
 static void clear_rect(SDL_Surface *sf,int x, int y, int *indents)
 {
@@ -452,16 +452,16 @@ static int info(int fifo, int argc, char **argv)
 	}
 	/* printf("bmovl: blit %d %d %d %d avec width %d height %d\n",
 			sf->w,sf->h,x,y,width,height); */
-	blit(fifo, sf, x, y, -40, 0,1);
 	infox = x; infoy = y; // pour mode_list
-	send_command(fifo,"SHOW\n");
 	// printf("bmovl: show done\n");
 	f = fopen("info_coords","w");
 	fprintf(f,"%d %d %d %d ",sf->w, sf->h,
 			x, y);
 	fclose(f);
 	if (sdl_screen && *bg_pic)
-	    image(1,NULL);
+	    image(1,NULL,0);
+	blit(fifo, sf, x, y, -40, 0,1);
+	send_command(fifo,"SHOW\n");
 
 	return 0;
 }
@@ -812,32 +812,28 @@ again:
 #endif
 	}
     }
-    // Sans le clear à 1 ici, l'affichage du bandeau d'info par blit fait
-    // apparaitre des déchets autour de la liste. Ca ne devrait pas arriver.
-    // Pour l'instant le meilleur contournement c'est ça.
-    if (mode_list) {
-	blit(fifo, sf_list, listx, listy, -40, 0,0);
-	blit(fifo, sf_mode, x, y, -40, 0,1);
-	SDL_FreeSurface(sf_mode);
-    } else {
-	blit(fifo, sf_list, x, y, -40, 1,0);
-	listx = x; listy = y; listh = sf_list->h;
-    }
 
     // Clean up
 
-    int info=0;
-    send_command(fifo,"SHOW\n");
     free(source);
     for (n=0; n<nb; n++) {
 	free(list[n]);
 	if (chan[n]) SDL_FreeSurface(chan[n]);
     }
     TTF_CloseFont(font);
-    if (sdl_screen && *bg_pic && info <= 0) {
+    if (sdl_screen && *bg_pic) {
 	printf("actualisation image après list\n");
-	image(1,NULL);
+	image(1,NULL,0);
     }
+    if (mode_list) {
+	blit(fifo, sf_list, listx, listy, -40, 0,0);
+	blit(fifo, sf_mode, x, y, -40, 0,1);
+	SDL_FreeSurface(sf_mode);
+    } else {
+	blit(fifo, sf_list, x, y, -40, 0,0);
+	listx = x; listy = y; listh = sf_list->h;
+    }
+    send_command(fifo,"SHOW\n");
     return 0;
 }
 
@@ -1038,7 +1034,7 @@ static void redraw_screen() {
 	}
     }
     if (*bg_pic) {
-	image(1,NULL);
+	image(1,NULL,0);
     }
     if (sf) {
 	FILE *f = fopen("info_coords","r");
@@ -1266,7 +1262,7 @@ static int vignettes(int argc, char **argv) {
     return 0;
 }
 
-static int image(int argc, char **argv) {
+static int image(int argc, char **argv,int renderpresent) {
     static int picw,pich;
     if (argc != 2 && argc != 1) {
 	printf("image: argc = %d\n",argc);
@@ -1385,7 +1381,7 @@ static int image(int argc, char **argv) {
     }
     // SDL_DestroyTexture(tex);
     // RenderPresent obligatoire pour les cas d'effacement
-    SDL_RenderPresent(renderer);
+    if (renderpresent) SDL_RenderPresent(renderer);
 #else
     SDL_BlitSurface(s,&r,sdl_screen,&dst);
     SDL_UpdateRect(sdl_screen,0,0,0,0);
@@ -1510,7 +1506,7 @@ int main(int argc, char **argv) {
 		else if (!strcmp(cmd,"ALPHA"))
 		    alpha(fifo,argc,myargv);
 		else if (!strcmp(cmd,"image"))
-		    image(argc,myargv);
+		    image(argc,myargv,1);
 		else if (!strcmp(cmd,"vignettes"))
 		    vignettes(argc,myargv);
 		else if (!strcmp(cmd,"numero"))
