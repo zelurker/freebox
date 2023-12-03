@@ -2,8 +2,10 @@
 
 # Gestion des listes
 
+# Ces 3 use pour avoir un use common::sense sans utf8... !!!
 use strict;
-use v5.10; # say
+use warnings;
+use feature qw(current_sub bareword_filehandles evalbytes fc indirect multidimensional say state switch);
 use Coro::Socket;
 use Coro;
 use Coro::Handle;
@@ -37,7 +39,7 @@ use Time::HiRes qw(usleep);
 
 our $latin = ($ENV{LANG} !~ /UTF/i);
 our %dir = ();
-our $dvd;
+our ($dvd,$filter);
 our $encoding;
 our ($inotify,$watch);
 use Linux::Inotify2;
@@ -770,6 +772,7 @@ sub read_list {
 				}
 				chomp $mode_flux;
 			} else {
+				$filter = undef;
 				if (!open(F,"<flux/$base_flux")) {
 					return;
 				}
@@ -1321,19 +1324,26 @@ sub load_file2 {
 				next;
 			} elsif ($name) {
 				$serv = $_;
-				if ($tv) {
-					$pic = chaines::get_chan_pic($name,\@pic);
-				} elsif ($radio) {
-					$pic = get_radio_pic($name,\@pic);
+				if (!$filter || $name =~ /$filter/i) {
+					if (!@list) {
+						say STDERR "*** ajout Filtre... $num";
+						my @cur = ($num++,"Filtre...","Filtre");
+						push @list,[\@cur];
+					}
+					if ($tv) {
+						$pic = chaines::get_chan_pic($name,\@pic);
+					} elsif ($radio) {
+						$pic = get_radio_pic($name,\@pic);
+					}
+					print "push $num,$name,$serv (tv $tv radio $radio) pic $pic\n";
+					my @cur;
+					if ($serv =~ /^http/) {
+						@cur = ($num++,$name,$serv,undef,undef,undef,undef,$pic);
+					} else {
+						@cur = ($num++,"$name $serv",$serv,undef,undef,undef,undef,$pic);
+					}
+					push @list,[\@cur];
 				}
-				print "push $num,$name,$serv (tv $tv radio $radio) pic $pic\n";
-				my @cur;
-				if ($serv =~ /^http/) {
-					@cur = ($num++,$name,$serv,undef,undef,undef,undef,$pic);
-				} else {
-					@cur = ($num++,"$name $serv",$serv,undef,undef,undef,undef,$pic);
-				}
-				push @list,[\@cur];
 				# $name = undef;
 			} elsif (-f "$serv$_") { # liste de fichiers locaux
 				push @list,[[$num++,$_,"$serv$_"]];
@@ -1627,14 +1637,24 @@ sub commands {
 			if ($source =~ "flux" && $base_flux) {
 				if ($base_flux =~ /\//) {
 					$base_flux =~ s/(.+)\/.+/$1/;
-					pop @tab_serv;
+					my $removed = pop @tab_serv;
 					if ($base_flux =~ /\//) {
 						$mode_flux = "list";
-						my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-						$serv = $tab_serv[$#tab_serv];
-						$list[$found] = [[$found,$name,$serv,$flav,$audio,$video]];
-						($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
-						print "left: après màj $name,$serv,$flav,$audio,$video\n";
+						say "mode_flux reset to list, base_flux $base_flux removed $removed tab_serv : ",join(",",@tab_serv);
+						if ($removed eq $tab_serv[$#tab_serv]) { # approximation ! il faudrait un truc mieux que ça pour récupérer mode_flux
+							# Une pauvre tentative de détection quand on revient d'un filtre...
+							say "reset filter & mode_flux";
+							$mode_flux = "";
+							$filter = undef;
+							$serv = $removed;
+						} else {
+							my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+							$serv = $tab_serv[$#tab_serv];
+							$list[$found] = [[$found,$name,$serv,$flav,$audio,$video]];
+							say "maj $found,$name,$serv base_flux $base_flux";
+							($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
+							print "left: après màj $name,$serv,$flav,$audio,$video\n";
+						}
 					} else {
 						$mode_flux = "";
 					}
@@ -1845,6 +1865,15 @@ sub commands {
 			}
 		} elsif ($source =~ /^(flux|cd)/) {
 			print "list: serv $serv source pour lancement $source/$base_flux mode_flux $mode_flux\n";
+			if ($serv =~ /^Filtre/) {
+				$serv = `./zen "Filtre (regex)"`;
+				my $exit = $serv =~ /EXIT="gtk-ok"/;
+				if ($exit) {
+					($filter) = $serv =~ /ENTRY="(.+?)"/;
+				}
+				say "filter = $filter base_flux $base_flux mode_flux $mode_flux tab_serv ",join(",",@tab_serv);
+				$serv = $tab_serv[$#tab_serv];
+			}
 			if (!$base_flux) {
 				$base_flux = $name;
 				$base_flux =~ s/pic:.+? //;
@@ -2092,6 +2121,7 @@ sub commands {
 				$found = 0;
 			}
 		}
+		disp_list($cmd) if (-f "list_coords");
 		if ($source =~ /^Fichiers /) {
 			my ($name,$serv,$flav,$audio,$video) = get_name($list[$found]);
 			if ($name =~ /\/$/) { # Répertoire
@@ -2101,7 +2131,6 @@ sub commands {
 			}
 		}
 		$cmd = "zap1";
-		disp_list($cmd) if (-f "list_coords");
 		goto again;
 	} elsif ($cmd eq "prevchan") {
 		reset_current() if (! -f "list_coords");
