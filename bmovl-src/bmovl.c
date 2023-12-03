@@ -643,8 +643,10 @@ static int list(int fifo, int argc, char **argv)
 	hlist = maxh - fsize;
 
 again:
-    if (sf_list && !mode_list)
+    if (sf_list && !mode_list) {
 	SDL_FreeSurface(sf_list);
+	sf_list = NULL;
+    }
     SDL_Surface *sf_mode;
     if (mode_list)
 	sf_mode = create_surface(wlist+4*2,hlist+4*2);
@@ -660,7 +662,13 @@ again:
 	hlist += y-htitle;
 	htitle = y;
 	x = y = 4;
-	SDL_FreeSurface(mode_list ? sf_mode : sf_list);
+	if (mode_list) {
+	    SDL_FreeSurface(sf_mode);
+	    sf_mode = NULL;
+	} else {
+	    SDL_FreeSurface(sf_list);
+	    sf_list = NULL;
+	}
 	goto again;
     }
     x += numw+4; // aligné après les numéros
@@ -837,7 +845,7 @@ int clear(int fifo, int argc, char **argv)
 {
 	char buff[2048];
 	sprintf(buff,"CLEAR %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4]);
-	return send_command(fifo, buff) != strlen(buff);
+	return send_command(fifo, buff) != ((int)strlen(buff));
 }
 
 int alpha(int fifo, int argc, char **argv)
@@ -877,7 +885,7 @@ int alpha(int fifo, int argc, char **argv)
     char buff[2048];
     sprintf(buff,"ALPHA %s %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4],
 	    argv[5]);
-    return send_command(fifo, buff) != strlen(buff);
+    return send_command(fifo, buff) != ((int)strlen(buff));
 }
 
 static int nb_keys,*keys;
