@@ -403,7 +403,26 @@ sub get_lyrics {
 			say "eval while updating tags: $@";
 		}
 		if (exists $mp3->{ID3v2}) {
-			my $lyrics = $mp3->{ID3v2}->get_frame("USLT"); # Unsynchronized lyric/text transcription
+			say "id3v2 found";
+			my $id3v2 = $mp3->{ID3v2};
+			my $lyrics = $id3v2->get_frame("USLT"); # Unsynchronized lyric/text transcription
+			if (!$lyrics) {
+				# Je ne sais pas si on trouve beaucoup ce genre d'encodage, 1 seul fichier ici comme ça jusqu'ici :
+				# au lieu d'avoir l'USLT dans une frame normale, il regroupe ça en + de plein d'autres infos dans une frame TXXX
+				# donc il faut commencer par faire un get_frames dessus qui retourne une liste avec toutes les infos là-dedans
+				# puis aller à la pêche au USLT dedans... ! Un vrai merdier ! Enfin on y arrive quand même, mais là ça devient tordu.
+				# Je garde le code pour l'instant, mais pour le fichier que j'ai en exemple de ça, les paroles de genius.com sont mieux !
+				my ($name,@info) = $id3v2->get_frames('TXXX');
+				for my $info (@info) {
+					if (ref $info) {
+						if ($info->{Description} eq "USLT") {
+							$lyrics = $info;
+							last;
+						}
+					}
+				}
+			}
+
 			if (ref($lyrics) eq "HASH") {
 				say "lyrics: got lyrics from id3v2 tag USLT";
 				my $lyrics = $lyrics->{Text};
