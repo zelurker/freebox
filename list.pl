@@ -1179,6 +1179,7 @@ sub run_mplayer2 {
 	push @list,("-hr-mp3-seek") if ($serv =~ /mp3$/ && $player =~ /^mplayer/);
 	push @list,("-vo","null") if ($serv =~ /(ogg|mp3|mpc|flac)$/i && $player eq "mpv");
 	push @list,("-demuxer","lavf") if ($player eq "mplayer" && $serv =~ /\.ts$/);
+	push @list,("--script-opts=ytdl_hook-try_ytdl_first=yes") if ($serv =~ /^http.*dailymotion/);
 	for (my $n=0; $n<=$#list; $n++) {
 		last if ($n > $#list);
 		if (!$list[$n]) {
