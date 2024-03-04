@@ -77,15 +77,15 @@ sub decode_html {
 		my ($desc,$title,$img);
 		$pos = $sub_pos;
 
-		if ($instr eq "div") {
+		if ($instr eq "li") {
 			my $class = get_tag($sub,"class");
 			if ($class =~ /^date-time-field/) {
 				$date = get_tag($l,"value");
 				$keep_date = 1;
 			}
-			if ($class =~ /^(TimeSlotContainer|ProgramTimeline)/) {
+			if ($class =~ /^TimeSlot/) {
 				my $body = substr($l,$sub_pos+1);
-				my $end_pos = find_closing_tag($body,0,"div");
+				my $end_pos = find_closing_tag($body,0,"li");
 				$pos += $end_pos;
 				$body = substr($body,0,$end_pos);
 				my $btn = index($body,"<time ");
@@ -96,6 +96,7 @@ sub decode_html {
 					my ($year,$month,$day,$hour,$min,$sec) = $class =~ /(....)-(..)-(..)T(..):(..):(..)/;
 					$date = "$day/$month/$year" if (!$date);
 					$start = timegm_nocheck($sec,$min,$hour,$day,$month-1,$year-1900);
+					say "start from datetime $start";
 				} else {
 					$btn = index($body,"<div class=\"time ");
 					if ($btn >= 0) {
@@ -115,15 +116,16 @@ sub decode_html {
 
 				$btn = index($body,"<picture");
 				if ($btn >= 0) {
-					$sub_pos = find_closing_tag($body,$btn+1,"figure");
+					$sub_pos = find_closing_tag($body,$btn+1,"picture");
 					$sub = substr($body,$btn,$sub_pos-$btn-1);
 					$img = get_tag($sub,"srcset");
 				}
-				$btn = index($body,"<span class=\"TimeSlotContent-title");
+				$btn = index($body,"<div class=\"TimeSlot-info");
 				if ($btn >= 0) {
-					$sub_pos = find_closing_tag($body,$btn+1,"span")-1;
+					$btn = index($body,"<a ",$btn+1)+1;
+					$sub_pos = index($body,"</a",$btn+1);
 					$btn = index($body,">",$btn+1)+1;
-					$title = substr($body,$btn,$sub_pos-$btn-1);
+					$title = substr($body,$btn,$sub_pos-$btn);
 				} else {
 					$btn = index($body,"<div class=\"title svelte");
 					if ($btn >= 0) {
@@ -132,9 +134,9 @@ sub decode_html {
 						$title = substr($body,$btn,$sub_pos-$btn-1);
 					}
 				}
-				$btn = index($body,"<p class=\"TimeSlotContent-subtitle");
+				$btn = index($body,"<div class=\"TimeSlot-subtitle");
 				if ($btn >= 0) {
-					$sub_pos = find_closing_tag($body,$btn+1,"p")-1;
+					$sub_pos = find_closing_tag($body,$btn+1,"div")-1;
 					$btn = index($body,">",$btn+1)+1;
 					$desc = substr($body,$btn,$sub_pos-$btn-1);
 				}
