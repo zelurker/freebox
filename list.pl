@@ -608,7 +608,7 @@ sub read_list {
 		for (my $n=1; $n<=27; $n++) {
 			foreach (keys %$chan) {
 				my ($id,$logo,$nom,$num) = @{$chan->{$_}};
-				if ($num == $n) {
+				if (defined($num) && $num == $n) {
 					push @tnt,$nom;
 					last;
 				}
@@ -1779,6 +1779,9 @@ sub commands {
 		}
 		read_list();
 		close_mode() if ($mode_opened);
+	} elsif ($cmd =~ /^open (.+)/) {
+		say "list: open $1.";
+		return load_file2($source,$1);
 	} elsif ($cmd =~ /^zap(1|2)/) {
 		# zap1 : zappe sur la sélection en cours
 		# zap2 : zappe sur le nom de chaine passé en paramètre
@@ -2232,6 +2235,7 @@ sub disp_list {
 	$nb_elem = 16;
 	$nb_elem = $#list+1 if ($nb_elem > $#list);
 
+	$found = 0 if (!$found);
 	if ($#list >= 0) {
 		$found -= $#list+1 while ($found > $#list);
 		$found += $#list+1 while ($found < 0);

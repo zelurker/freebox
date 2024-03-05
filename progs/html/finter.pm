@@ -79,6 +79,7 @@ sub decode_html {
 		$json = $js->allow_barekey()->decode($json);
 		# $json = $js->decode($json);
 		# say "json ",Dumper($json);
+		# exit(1);
 		# say "grid $json->{grid} steps $json->{grid}->{steps}";
 		my $grid = $json->{grid}->{steps};
 		my $date = $json->{date};
@@ -99,6 +100,8 @@ sub decode_html {
 			my $start = $_->{startTime};
 			my $end = $_->{endTime};
 			my $img = $exp->{visual}->{webpSrc};
+			my $podcast = $_->{media}->{sources}->[0]{url};
+			$desc .= " pod:$podcast" if ($podcast);
 			my $id = $_->{id};
 			if ($id) {
 				mkdir "cache/finter";
@@ -111,6 +114,8 @@ sub decode_html {
 					my $sdesc = $exp->{title};
 					my $start = $_->{startTime};
 					my $end = $_->{endTime};
+					my $podcast = $_->{media}->{sources}->[0]{url};
+					$sdesc .= " pod:$podcast" if ($podcast);
 					my ($ssec,$smin,$shour) = localtime($start);
 					my ($esec,$emin,$ehour) = localtime($end);
 					myutf::mydecode(\$title);

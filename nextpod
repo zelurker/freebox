@@ -1,0 +1,4 @@
+#!/bin/sh
+
+echo nextpod | socat stdio unix:sock_info
+

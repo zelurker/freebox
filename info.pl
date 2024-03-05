@@ -53,6 +53,8 @@ $have_fb = out::have_freebox() if ($net);
 our $have_dvb = 1; # (-f "$ENV{HOME}/.mplayer/channels.conf" && -d "/dev/dvb");
 our $reader;
 my $recordings = records->new();
+our (@podcast,$num_pod);
+
 
 our ($lastprog,$last_chan,$last_long);
 our ($channel,$long);
@@ -341,7 +343,15 @@ sub disp_prog {
 	$$sub[6] = "" if (!$$sub[6]);
 	# Bizarrerie utf : sub[6] doit être séparé par des virgules et pas
 	# directement entre les guillemets... Différence de format ?
-	print $out "\n$$sub[2]\n\n",$$sub[6],"\n$$sub[7]\n";
+	my $details = $$sub[6];
+	@podcast = ();
+	my $n = 0;
+	while ($details =~ s/pod:(http.+)/"podcast ".($n == $num_pod ? "(m)" : "(n,N)")/e) {
+		push @podcast,$1;
+		$n++;
+	}
+
+	print $out "\n$$sub[2]\n\n",$details,"\n$$sub[7]\n";
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
 	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
 	out::close_fifo($out);
@@ -379,6 +389,25 @@ sub commands {
 		$cleared = 1;
 		say "bmovl::image";
 		out::send_bmovl("image");
+	} elsif ($cmd eq "podcast") {
+		if (@podcast && $num_pod <= $#podcast) {
+			out::send_cmd_list("open $podcast[$num_pod]");
+		}
+	} elsif ($cmd eq "nextpod") {
+		if ($num_pod < $#podcast) {
+			$num_pod++;
+		} else {
+			$num_pod = 0;
+		}
+
+		disp_prog($lastprog,$last_long) if ($lastprog);
+	} elsif ($cmd eq "prevpod") {
+		if ($num_pod > 0) {
+			$num_pod--;
+		} else {
+			$num_pod = $#podcast;
+		}
+		disp_prog($lastprog,$last_long) if ($lastprog);
 	} elsif ($cmd =~ s/^unload //) {
 		# envoyé par le script lua de mpv pour indiquer qu'il quitte
 		my ($name,$src,$serv) = get_cur_name();
@@ -465,10 +494,13 @@ sub commands {
 				myutf::mydecode(\$lyrics);
 				$info{$name}->{lyrics} = $lyrics;
 			}
-			if ($lastprog) {
-				disp_prog($lastprog,$last_long);
-			} else {
-				read_stream_info(time(),$channel,$info{$name});
+			my ($name,$source,$serv) = out::get_current();
+			if (!grep($serv eq $_,@podcast)) {
+				if ($lastprog) {
+					disp_prog($lastprog,$last_long);
+				} else {
+					read_stream_info(time(),$channel,$info{$name});
+				}
 			}
 			if ($info{$name}->{metadata}->{genre} =~ /podcast/i && $info{$name}->{metadata}->{album}) {
 				my $title = lyrics::pure_ascii($info{$name}->{metadata}->{title});
@@ -501,10 +533,13 @@ sub commands {
 			}
 		}
 		if (!$cleared && (!$channel || $name eq conv($channel)) && $src !~ /^flux\/podcasts/) {
-			if ($lastprog && $channel eq $last_chan) {
-				disp_prog($lastprog,$last_long);
-			} else {
-				read_stream_info(time(),$channel,$info{$name});
+			my ($name,$source,$serv) = out::get_current();
+			if (!grep($serv eq $_,@podcast)) {
+				if ($lastprog && $channel eq $last_chan) {
+					disp_prog($lastprog,$last_long);
+				} else {
+					read_stream_info(time(),$channel,$info{$name});
+				}
 			}
 		}
 	} elsif ($cmd =~ s/^progress //) {
@@ -567,9 +602,11 @@ sub commands {
 		}
 	} elsif ($cmd eq "nextprog" || $cmd eq "right") {
 		undef $refresh;
+		undef @podcast;
 		disp_prog($prog[$reader]->next($last_chan),$last_long);
 	} elsif ($cmd eq "prevprog" || $cmd eq "left") {
 		undef $refresh;
+		undef @podcast;
 		disp_prog($prog[$reader]->prev($last_chan),$last_long);
 	} elsif ($cmd =~ /^(next|prev)$/) {
 	    # Ces commandes sont juste passées à bmovl sans rien changer
