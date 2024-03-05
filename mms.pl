@@ -10,7 +10,7 @@ my $debug = 0;
 
 sub get_mms {
 	my $url = shift;
-	return $url if ($url =~ /(mp4|mp3|avi|mov|asf|\d\d)$/);
+	return $url if ($url =~ /(mp4|mp3|avi|mov|asf|m4a|\d\d)$/);
 	my $useragt = "Mozilla/5.0 (X11; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0";
 	my $browser = LWP::UserAgent->new(keep_alive => 0,
 		agent =>$useragt);
