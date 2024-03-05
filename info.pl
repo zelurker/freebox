@@ -346,7 +346,7 @@ sub disp_prog {
 	my $details = $$sub[6];
 	@podcast = ();
 	my $n = 0;
-	while ($details =~ s/pod:(http.+)/"podcast ".($n == $num_pod ? "(m)" : "(n,N)")/e) {
+	while ($details =~ s/pod:(http.+)/"podcast ".($n == $num_pod ? "(b)" : "(n,N)")/e) {
 		push @podcast,$1;
 		$n++;
 	}

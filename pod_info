@@ -5,7 +5,5 @@
 if [ -f info_coords ]; then
 	# un bandeau d'info est actif
 	echo podcast | socat stdio unix:sock_info
-else
-	echo cycle mute | socat stdio unix:mpvsocket
 fi
 
