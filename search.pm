@@ -16,7 +16,7 @@ sub search {
 
 	my $mech = init();
 	eval {
-		$mech->get("https://www.duckduckgo.com/");
+		$mech->get("https://html.duckduckgo.com/html");
 		$mech->submit_form(
 			form_number => 1,
 			fields      => {

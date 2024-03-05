@@ -487,7 +487,7 @@ sub commands {
 			$channel = $name0;
 			$source = $src;
 			$lastprog = undef if ($channel ne $last_chan);
-			if ($info{$name}->{metadata}->{genre} !~ /podcast/i) {
+			if ($info{$name}->{metadata}->{genre} !~ /podcast/i && !$info{$name}->{metadata}->{podcast}) {
 				# fourni par finter au moins, bah sinon on fera une requête
 				# pour rien... !
 				my $lyrics = lyrics::get_lyrics($serv,$info{$name}->{metadata}->{artist},$info{$name}->{metadata}->{title});
@@ -502,13 +502,13 @@ sub commands {
 					read_stream_info(time(),$channel,$info{$name});
 				}
 			}
-			if ($info{$name}->{metadata}->{genre} =~ /podcast/i && $info{$name}->{metadata}->{album}) {
+			if ($info{$name}->{metadata}->{genre} =~ /podcast/i && !$info{$name}->{metadata}->{podcast} && $info{$name}->{metadata}->{album}) {
 				my $title = lyrics::pure_ascii($info{$name}->{metadata}->{title});
 				if (handle_images($info{$name}->{metadata}->{album}." - $title") ||
 					handle_images($title) ||
 					handle_images($info{$name}->{metadata}->{album})) {
 				}
-			} else {
+			} elsif ($info{$name}->{metadata}->{artist} && $info{$name}->{metadata}->{title}) {
 				handle_images($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
 			}
 		} elsif ($info{$name}->{metadata}->{end} &&	$info{$name}->{metadata}->{title}) { # cas des chapitres matroshka
