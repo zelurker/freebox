@@ -90,8 +90,9 @@ sub decode_html {
 
 		foreach (@$grid) {
 			my $exp = $_->{expression};
-			next if (!$exp);
+			$exp = $_->{concept} if (!$exp);
 			my $title = $exp->{visual}->{legend};
+			next if (!$title);
 			my $desc = $exp->{title};
 			# la majorité du prog inter est en latin1, mais certains champs peuvent contenir de l'utf8 !!!
 			# seul moyen pour éviter le désastre : ré-encoder tous les champs texte, ce que je fais ici
@@ -103,14 +104,17 @@ sub decode_html {
 			my $podcast = $_->{media}->{sources}->[0]{url};
 			$desc .= " pod:$podcast" if ($podcast);
 			my $id = $_->{id};
-			if ($id) {
+			if ($id && $_->{hasChildren}) {
 				mkdir "cache/finter";
-				my $sub = http::myget("https://www.radiofrance.fr/franceinter/api/grid/$id","cache/finter/$id",7);
+				# age du cache : 1/24 parce que le podcast arrive après l'émission... et c variable en + le temps que ça prend
+				# donc on met 1h tant pis
+				my $sub = http::myget("https://www.radiofrance.fr/franceinter/api/grid/$id","cache/finter/$id",1/24);
 				my $j = decode_json($sub);
 				foreach (@$j) {
 					my $exp = $_->{expression};
-					next if (!$exp);
+					$exp = $_->{concept} if (!$exp);
 					my $title = $exp->{visual}->{legend};
+					next if (!$title);
 					my $sdesc = $exp->{title};
 					my $start = $_->{startTime};
 					my $end = $_->{endTime};
