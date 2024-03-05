@@ -207,7 +207,7 @@ sub insert {
 		$fin = $$rtab[$#$rtab][4];
 		if ($fin < $$rtab2[3] && $$rtab2[3] - $fin < $min_delay) { # 10 minutes pour finter
 			push @$rtab, [ undef, $$rtab2[1],
-			   ($fin % 3600 == 0 && $$rtab2[3]-$fin < 600 ? "Flash ?" : "Programme inconnu"),
+			   "Flash ?",
 				$fin,$$rtab2[3], "",
 				"",
 				"","",undef,0,0,$$rtab2[12]];

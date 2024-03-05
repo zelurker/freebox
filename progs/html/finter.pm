@@ -2,9 +2,10 @@ package progs::html::finter;
 
 use HTML::Entities;
 use Time::Local "timelocal_nocheck", "timegm_nocheck";
-# use Cpanel::JSON::XS qw(decode_json);
+use Cpanel::JSON::XS qw(decode_json);
 use common::sense;
 use Data::Dumper;
+use http;
 
 sub get_tag {
 	my ($s,$t) = @_;
@@ -68,6 +69,57 @@ sub decode_html {
 		$prev_start = $$rtab2[$#$rtab2][3];
 		say "prev_start init ".disp_date($prev_start);
 	}
+	my ($json) = $l =~ /{(metadata:.+)},"uses/;
+	# /const data = (\[.+?\]);/;
+	# /(grid:{.+}),date/;
+	if ($json) {
+		$json = "{$json}";
+		my $js = new Cpanel::JSON::XS;
+		$json = $js->allow_barekey()->decode($json);
+		# $json = $js->decode($json);
+		# say "json ",Dumper($json);
+		# say "grid $json->{grid} steps $json->{grid}->{steps}";
+		my $grid = $json->{grid}->{steps};
+		my $date = $json->{date};
+		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($date);
+		$mon++;
+		$year += 1900;
+		$date = "$mday/$mon/$year";
+
+		foreach (@$grid) {
+			my $exp = $_->{expression};
+			next if (!$exp);
+			my $title = $exp->{visual}->{legend};
+			my $desc = $exp->{title};
+			my $start = $_->{startTime};
+			my $end = $_->{endTime};
+			my $img = $exp->{visual}->{webpSrc};
+			my $id = $_->{id};
+			if ($id) {
+				mkdir "cache/finter";
+				my $sub = http::myget("https://www.radiofrance.fr/franceinter/api/grid/$id","cache/finter/$id",7);
+				my $j = decode_json($sub);
+				foreach (@$j) {
+					my $exp = $_->{expression};
+					next if (!$exp);
+					my $title = $exp->{visual}->{legend};
+					my $sdesc = $exp->{title};
+					my $start = $_->{startTime};
+					my $end = $_->{endTime};
+					my ($ssec,$smin,$shour) = localtime($start);
+					my ($esec,$emin,$ehour) = localtime($end);
+					$desc .= sprintf("\n%d:%02d - %d:%02d $title - $sdesc",$shour,$smin,$ehour,$emin);
+				}
+			}
+			my @tab = (undef, $name, $title, $start,
+				$end, "",
+				$desc,
+				"","",$img,0,0,$date);
+			$p->insert(\@tab,$rtab,600);
+		}
+		return $rtab;
+	}
+
 	while (($pos = index($l,"<",$pos))>= 0) {
 		my $bl = index($l," ",$pos);
 		my $instr = substr($l,$pos+1,$bl-$pos-1);
