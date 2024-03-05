@@ -128,7 +128,7 @@ sub update {
 	my $res;
 	for ($use_json = 0; $use_json <= 1; $use_json++) {
 		# print "use_json $use_json file $file\n";
-		if (!-f "cache/$file") {
+		if (!-f "cache/$file" || (-M "cache/$file")>1/24) {
 			if ($use_json) {
 				$res = update_prog_json($file);
 			} else {
