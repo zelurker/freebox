@@ -6,6 +6,7 @@ use Cpanel::JSON::XS qw(decode_json);
 use common::sense;
 use Data::Dumper;
 use http;
+use myutf;
 
 sub get_tag {
 	my ($s,$t) = @_;
@@ -91,6 +92,10 @@ sub decode_html {
 			next if (!$exp);
 			my $title = $exp->{visual}->{legend};
 			my $desc = $exp->{title};
+			# la majorité du prog inter est en latin1, mais certains champs peuvent contenir de l'utf8 !!!
+			# seul moyen pour éviter le désastre : ré-encoder tous les champs texte, ce que je fais ici
+			myutf::mydecode(\$title);
+			myutf::mydecode(\$desc);
 			my $start = $_->{startTime};
 			my $end = $_->{endTime};
 			my $img = $exp->{visual}->{webpSrc};
@@ -108,7 +113,9 @@ sub decode_html {
 					my $end = $_->{endTime};
 					my ($ssec,$smin,$shour) = localtime($start);
 					my ($esec,$emin,$ehour) = localtime($end);
-					$desc .= sprintf("\n%d:%02d - %d:%02d $title - $sdesc",$shour,$smin,$ehour,$emin);
+					myutf::mydecode(\$title);
+					myutf::mydecode(\$sdesc);
+					$desc .= sprintf("\n%d:%02d : $title - $sdesc",$shour,$smin);
 				}
 			}
 			my @tab = (undef, $name, $title, $start,
