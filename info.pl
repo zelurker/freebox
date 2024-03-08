@@ -34,6 +34,7 @@ use progs::series;
 use progs::arte;
 use images;
 use myutf;
+use Cpanel::JSON::XS qw(decode_json);
 
 our %info; # hash pour stocker les stream_info
 our $cleared = 1;
@@ -344,6 +345,31 @@ sub disp_prog {
 	# Bizarrerie utf : sub[6] doit être séparé par des virgules et pas
 	# directement entre les guillemets... Différence de format ?
 	my $details = $$sub[6];
+	if ($$sub[7] && ($source eq "flux" && $base_flux eq "stations")) {
+		my $id = $$sub[7];
+		$$sub[7] = undef;
+		mkdir "cache/finter";
+		# age du cache : 1/24 parce que le podcast arrive après l'émission... et c variable en + le temps que ça prend
+		# donc on met 1h tant pis
+		my $sub = http::myget("https://www.radiofrance.fr/franceinter/api/grid/$id","cache/finter/$id",1/24);
+		my $j = decode_json($sub);
+		foreach (@$j) {
+			my $exp = $_->{expression};
+			$exp = $_->{concept} if (!$exp);
+			my $title = $exp->{visual}->{legend};
+			next if (!$title);
+			my $sdesc = $exp->{title};
+			my $start = $_->{startTime};
+			my $end = $_->{endTime};
+			my $podcast = $_->{media}->{sources}->[0]{url};
+			$sdesc .= " pod:$podcast" if ($podcast);
+			my ($ssec,$smin,$shour) = localtime($start);
+			my ($esec,$emin,$ehour) = localtime($end);
+			myutf::mydecode(\$title);
+			myutf::mydecode(\$sdesc);
+			$details .= sprintf("\n%d:%02d : $title - $sdesc",$shour,$smin);
+		}
+	}
 	@podcast = ();
 	my $n = 0;
 	while ($details =~ s/pod:(http.+)/"podcast ".($n == $num_pod ? "(b)" : "(n,N)")/e) {

@@ -104,33 +104,10 @@ sub decode_html {
 			my $podcast = $_->{media}->{sources}->[0]{url};
 			$desc .= " pod:$podcast" if ($podcast);
 			my $id = $_->{id};
-			if ($id && $_->{hasChildren}) {
-				mkdir "cache/finter";
-				# age du cache : 1/24 parce que le podcast arrive après l'émission... et c variable en + le temps que ça prend
-				# donc on met 1h tant pis
-				my $sub = http::myget("https://www.radiofrance.fr/franceinter/api/grid/$id","cache/finter/$id",1/24);
-				my $j = decode_json($sub);
-				foreach (@$j) {
-					my $exp = $_->{expression};
-					$exp = $_->{concept} if (!$exp);
-					my $title = $exp->{visual}->{legend};
-					next if (!$title);
-					my $sdesc = $exp->{title};
-					my $start = $_->{startTime};
-					my $end = $_->{endTime};
-					my $podcast = $_->{media}->{sources}->[0]{url};
-					$sdesc .= " pod:$podcast" if ($podcast);
-					my ($ssec,$smin,$shour) = localtime($start);
-					my ($esec,$emin,$ehour) = localtime($end);
-					myutf::mydecode(\$title);
-					myutf::mydecode(\$sdesc);
-					$desc .= sprintf("\n%d:%02d : $title - $sdesc",$shour,$smin);
-				}
-			}
 			my @tab = (undef, $name, $title, $start,
 				$end, "",
 				$desc,
-				"","",$img,0,0,$date);
+				($_->{hasChildren} ? $id : undef),"",$img,0,0,$date);
 			$p->insert(\@tab,$rtab,600);
 		}
 		return $rtab;
