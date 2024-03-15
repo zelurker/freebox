@@ -345,8 +345,8 @@ sub disp_prog {
 	# Bizarrerie utf : sub[6] doit être séparé par des virgules et pas
 	# directement entre les guillemets... Différence de format ?
 	my $details = $$sub[6];
-	if ($$sub[7] && ($source eq "flux" && $base_flux eq "stations")) {
-		my $id = $$sub[7];
+	my $id = $$sub[7];
+	if ($id && ($source eq "flux" && $base_flux eq "stations")) {
 		$$sub[7] = undef;
 		mkdir "cache/finter";
 		# age du cache : 1/24 parce que le podcast arrive après l'émission... et c variable en + le temps que ça prend
@@ -383,6 +383,7 @@ sub disp_prog {
 	out::close_fifo($out);
 	setup_fadeout($long);
 	$last_long = $long;
+	$$sub[7] = $id;
 #	print "last_long = $last_long from disp_prog\n";
 }
 
