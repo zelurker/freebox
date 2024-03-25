@@ -352,7 +352,11 @@ sub disp_prog {
 		# age du cache : 1/24 parce que le podcast arrive après l'émission... et c variable en + le temps que ça prend
 		# donc on met 1h tant pis
 		my $sub = http::myget("https://www.radiofrance.fr/franceinter/api/grid/$id","cache/finter/$id",1/24);
-		my $j = decode_json($sub);
+		my $j = undef;
+		eval {
+			# ça peut foirer pour franceinfo par exemple où le prog télérama a tendance à prendre la priorité !
+			$j = decode_json($sub);
+		};
 		foreach (@$j) {
 			my $exp = $_->{expression};
 			$exp = $_->{concept} if (!$exp);
