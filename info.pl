@@ -566,7 +566,7 @@ sub commands {
 		if (!$cleared && (!$channel || $name eq conv($channel)) && $src !~ /^flux\/podcasts/) {
 			my ($name,$source,$serv) = out::get_current();
 			if (!grep($serv eq $_,@podcast)) {
-				if ($lastprog && $channel eq $last_chan) {
+				if ($channel eq $last_chan) {
 					disp_prog($lastprog,$last_long);
 				} else {
 					read_stream_info(time(),$channel,$info{$name});
