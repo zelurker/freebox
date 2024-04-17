@@ -71,12 +71,20 @@ sub decode_html {
 		say "prev_start init ".disp_date($prev_start);
 	}
 	my ($json) = $l =~ /{(metadata:.+)},"uses/;
+	$json =~ s/^metadata:{kirby.+?metadata/metadata/;
 	# /const data = (\[.+?\]);/;
 	# /(grid:{.+}),date/;
 	if ($json) {
 		$json = "{$json}";
 		my $js = new Cpanel::JSON::XS;
-		$json = $js->allow_barekey()->decode($json);
+		eval {
+			$json = $js->allow_barekey()->decode($json);
+		};
+		if ($@) {
+			say "progs:html:finter: error json: $@. json:$json";
+			return undef;
+		}
+
 		# $json = $js->decode($json);
 		# say "json ",Dumper($json);
 		# exit(1);
