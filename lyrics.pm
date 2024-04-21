@@ -413,7 +413,10 @@ sub get_lyrics {
 				$lyrics = decode_entities($lyrics) if ($lyrics);
 				say "got old format id3v2 lyrics in COMM tag $lyrics";
 				$lyrics .= "\nParoles extraites d'un tag COMM USLT";
-				return $lyrics;
+
+				# Finalement il faudrait ne garder ces paroles que si une recherche sur le net foire, elles sont d'une qualité médiocre la plupart du temps quand elles sont là
+				$lyrics = undef;
+				# return $lyrics;
 			}
 			if (!$lyrics) {
 				# Je ne sais pas si on trouve beaucoup ce genre d'encodage, 1 seul fichier ici comme ça jusqu'ici :
