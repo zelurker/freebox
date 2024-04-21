@@ -525,8 +525,8 @@ sub commands {
 				myutf::mydecode(\$lyrics);
 				$info{$name}->{lyrics} = $lyrics;
 			}
-			my ($name,$source,$serv) = out::get_current();
 			if (!grep($serv eq $_,@podcast)) {
+				my ($name,$source,$serv) = out::get_current();
 				if ($lastprog) {
 					disp_prog($lastprog,$last_long);
 				} else {
