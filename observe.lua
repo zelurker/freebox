@@ -60,7 +60,7 @@ function on_abitrate(name,value)
 	if not value then
 		return
 	end
-	if not vcodec then
+	if not vcodec or string.find(vcodec,"JPEG") then
 		local acodec = mp.get_property("audio-codec-name")
 		if not acodec then
 			return
@@ -102,7 +102,7 @@ function timing(name,value)
 		return
 	end
 	local vcodec = mp.get_property("video-codec")
-	if vcodec and not vcodec:match("^mjpeg") then
+	if vcodec and not vcodec:match("^mjpeg") and not string.find(vcodec,"JPEG") then
 		return
 	end
 	value = math.floor(value)
