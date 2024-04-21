@@ -407,6 +407,15 @@ sub get_lyrics {
 			my $id3v2 = $mp3->{ID3v2};
 			my $lyrics = $id3v2->get_frame("USLT"); # Unsynchronized lyric/text transcription
 			if (!$lyrics) {
+				# Note que ces paroles contenues dans des tags n'ont pas l'air d'avoir quoi que ce soit d'officiel, trouvé des fautes d'orthographe flagrantes dans un mp3 de Goldman (veiller tard)
+				# qui sont corrigées par les paroles de genius...
+				$lyrics = $mp3->select_id3v2_frame_by_descr("COMM(fre,fra,eng,#0)[USLT]");
+				$lyrics = decode_entities($lyrics) if ($lyrics);
+				say "got old format id3v2 lyrics in COMM tag $lyrics";
+				$lyrics .= "\nParoles extraites d'un tag COMM USLT";
+				return $lyrics;
+			}
+			if (!$lyrics) {
 				# Je ne sais pas si on trouve beaucoup ce genre d'encodage, 1 seul fichier ici comme ça jusqu'ici :
 				# au lieu d'avoir l'USLT dans une frame normale, il regroupe ça en + de plein d'autres infos dans une frame TXXX
 				# donc il faut commencer par faire un get_frames dessus qui retourne une liste avec toutes les infos là-dedans
