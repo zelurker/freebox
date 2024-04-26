@@ -316,7 +316,7 @@ sub pure_ascii {
 	# Vire les accents et la ponctuation
 	$_ = shift;
 	$_ = lc($_);
-	s/\(.+?\)//;
+	s/\(.+?(\)|$)//; # tombé sur un titre en id3v2 sans parenthèse fermante parce que tronqué !!!
 	s/–/-/g; # un tiret en utf8 !
 	s/(œ|\xc5\x93)/oe/g;
 	s/([àâ]|\xc3\xa0)/a/g;
@@ -363,7 +363,6 @@ sub get_lyrics {
 		$ogg = Ogg::Vorbis::Header->new($file);
 		($artist) = $ogg->comment("ARTIST");
 		($artist) = $ogg->comment("artist") if (!$artist);
-		($title) = $ogg->comment("TITLE");
 		($title) = $ogg->comment("title") if (!$title);
 		# Normalement on devrait pouvoir stocker les paroles dans un tag
 		# vorbis, sauf qu'ils sont supers intolérants, on a le droit qu'à
@@ -406,18 +405,6 @@ sub get_lyrics {
 			say "id3v2 found";
 			my $id3v2 = $mp3->{ID3v2};
 			my $lyrics = $id3v2->get_frame("USLT"); # Unsynchronized lyric/text transcription
-			if (!$lyrics) {
-				# Note que ces paroles contenues dans des tags n'ont pas l'air d'avoir quoi que ce soit d'officiel, trouvé des fautes d'orthographe flagrantes dans un mp3 de Goldman (veiller tard)
-				# qui sont corrigées par les paroles de genius...
-				$lyrics = $mp3->select_id3v2_frame_by_descr("COMM(fre,fra,eng,#0)[USLT]");
-				$lyrics = decode_entities($lyrics) if ($lyrics);
-				say "got old format id3v2 lyrics in COMM tag $lyrics";
-				$lyrics .= "\nParoles extraites d'un tag COMM USLT";
-
-				# Finalement il faudrait ne garder ces paroles que si une recherche sur le net foire, elles sont d'une qualité médiocre la plupart du temps quand elles sont là
-				$lyrics = undef;
-				# return $lyrics;
-			}
 			if (!$lyrics) {
 				# Je ne sais pas si on trouve beaucoup ce genre d'encodage, 1 seul fichier ici comme ça jusqu'ici :
 				# au lieu d'avoir l'USLT dans une frame normale, il regroupe ça en + de plein d'autres infos dans une frame TXXX
@@ -528,6 +515,16 @@ debut:
 	if (!$lyrics && $artist eq "Fredericks Goldman Jones") {
 		$artist = "Jean-jacques Goldman";
 		goto debut;
+	}
+	if (!$lyrics) {
+		# Note que ces paroles contenues dans des tags n'ont pas l'air d'avoir quoi que ce soit d'officiel, trouvé des fautes d'orthographe flagrantes dans un mp3 de Goldman (veiller tard)
+		# qui sont corrigées par les paroles de genius...
+		$lyrics = $mp3->select_id3v2_frame_by_descr("COMM(fre,fra,eng,#0)[USLT]");
+		if ($lyrics) {
+			$lyrics = decode_entities($lyrics);
+			say "got old format id3v2 lyrics in COMM tag $lyrics (".length($lyrics).")";
+			$lyrics .= "\nParoles extraites d'un tag COMM USLT";
+		}
 	}
 	if (!$lyrics) {
 		print "get_lyrics: url inconnue : $u pas de paroles ?\n";
