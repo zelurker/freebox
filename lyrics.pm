@@ -516,7 +516,7 @@ debut:
 		$artist = "Jean-jacques Goldman";
 		goto debut;
 	}
-	if (!$lyrics) {
+	if (!$lyrics && $mp3) {
 		# Note que ces paroles contenues dans des tags n'ont pas l'air d'avoir quoi que ce soit d'officiel, trouvé des fautes d'orthographe flagrantes dans un mp3 de Goldman (veiller tard)
 		# qui sont corrigées par les paroles de genius...
 		$lyrics = $mp3->select_id3v2_frame_by_descr("COMM(fre,fra,eng,#0)[USLT]");
