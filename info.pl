@@ -517,7 +517,7 @@ sub commands {
 			}
 			$channel = $name0;
 			$source = $src;
-			$lastprog = undef if ($channel ne $last_chan);
+			$lastprog = undef if ($channel ne $last_chan && $channel ne "flux"); # channel eq "flux" -> podcast direct par touche b
 			if ($info{$name}->{metadata}->{genre} !~ /podcast/i && !$info{$name}->{metadata}->{podcast}) {
 				# fourni par finter au moins, bah sinon on fera une requête
 				# pour rien... !
@@ -563,7 +563,7 @@ sub commands {
 				$info{$name}->{lyrics} = $lyrics;
 			}
 		}
-		if (!$cleared && (!$channel || $name eq conv($channel)) && $src !~ /^flux\/podcasts/) {
+		if (!$cleared && (!$channel || $name eq conv($channel)) && $src !~ /^flux\/podcasts/ && !$info{$name}->{progress}) {
 			my ($name,$source,$serv) = out::get_current();
 			if (!grep($serv eq $_,@podcast)) {
 				if ($channel eq $last_chan) {
@@ -581,9 +581,9 @@ sub commands {
 		my ($name,$src) = get_cur_name();
 		# au niveau du lua on ne peut pas savoir si un flux doit ou pas
 		# envoyer progress, on ne peut le bloquer qu'ici...
-		return if ($src =~ /^flux\/(stations|ecoute_directe|freetuxtv)/);
+		# return if ($src =~ /^flux\/(stations|ecoute_directe|freetuxtv)/);
 		$name .= "&$src";
-		if (!$cleared && ($name eq conv($channel) || $src =~ /^Fichiers son/) ) { # && $src !~ /^flux\/podcasts/) {
+		if (!$cleared && ($name eq conv($channel) || $src =~ /^(Fichiers son|flux\/stations)/ ) ) { # && $src !~ /^flux\/podcasts/) {
 			# Ne pas afficher de progress sur les podcasts, conflit avec
 			# l'info progs/podcasts
             # A noter que ça pourrait être pas mal d'avoir le progress
@@ -596,6 +596,7 @@ sub commands {
 				$pos = sprintf("%02d:%02d:%02d",$pos/3600,($pos/60)%60,$pos%60);
 				$dur = sprintf("%02d:%02d:%02d",$dur/3600,($dur/60)%60,$dur%60);
 				$info{$name}->{progress} = "$pos - $dur";
+				say "displaying progress";
 				read_stream_info(time(),$channel,$info{$name});
 			}
 		}
