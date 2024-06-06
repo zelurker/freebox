@@ -61,7 +61,7 @@ sub search {
 
 	if (!$c) {
 		# Cas d'erruer on tente de boucler 1 fois...
-		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
+		# system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
 		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
 
 		($vqd) = $c =~ /vqd="(.+?)"/;
@@ -71,7 +71,7 @@ sub search {
 
  	if (!$c) {
  		# Cas d'erruer on tente de boucler 1 fois...
- 		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
+		# system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; killall midori; rm -f ~/.config/midori/tabby*");
  		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
 
  		($vqd) = $c =~ /vqd="(.+?)"/;
