@@ -516,8 +516,12 @@ sub commands {
 				unshift @{$info{$name}->{tracks}},@track;
 			}
 			$channel = $name0;
-			$source = $src;
-			$lastprog = undef if ($channel ne $last_chan && $channel ne "flux"); # channel eq "flux" -> podcast direct par touche b
+			# le source = $src ici crée la merde quand on lit un podcast à partir de france inter dans flux/stations, on va essayer sans pour voir...
+			# $source = $src;
+			if ($channel ne $last_chan && $channel ne "flux") {
+				$lastprog = undef; # channel eq "flux" -> podcast direct par touche b
+				say "lastprog = undef on channel $channel ne last_chan $last_chan";
+			}
 			if ($info{$name}->{metadata}->{genre} !~ /podcast/i && !$info{$name}->{metadata}->{podcast}) {
 				# fourni par finter au moins, bah sinon on fera une requête
 				# pour rien... !
@@ -578,12 +582,14 @@ sub commands {
 		# champ progress à l'époque de mplayer, maintenant elle a en brut
 		# la position et la durée, les 2 en secondes
 		my ($pos,$dur) = split(/ /,$cmd);
-		my ($name,$src) = get_cur_name();
+		my ($name,$src,$serv) = get_cur_name();
 		# au niveau du lua on ne peut pas savoir si un flux doit ou pas
 		# envoyer progress, on ne peut le bloquer qu'ici...
 		# return if ($src =~ /^flux\/(stations|ecoute_directe|freetuxtv)/);
 		$name .= "&$src";
-		if (!$cleared && ($name eq conv($channel) || $src =~ /^(Fichiers son|flux\/stations)/ ) ) { # && $src !~ /^flux\/podcasts/) {
+		# Note : pirouette pas terrible, pour réussir à afficher le progress pendant les podcasts on teste podcast dans l'url !
+		# pour l'instant ça marche, masi faudra pas s'étonner si un de ces jours ça marche plus !
+		if (!$cleared && $name eq conv($channel) && ($src =~ /^(Fichiers son)/ || $serv =~ /podcast/ ) ) { # && $src !~ /^flux\/podcasts/) {
 			# Ne pas afficher de progress sur les podcasts, conflit avec
 			# l'info progs/podcasts
             # A noter que ça pourrait être pas mal d'avoir le progress
@@ -596,7 +602,6 @@ sub commands {
 				$pos = sprintf("%02d:%02d:%02d",$pos/3600,($pos/60)%60,$pos%60);
 				$dur = sprintf("%02d:%02d:%02d",$dur/3600,($dur/60)%60,$dur%60);
 				$info{$name}->{progress} = "$pos - $dur";
-				say "displaying progress";
 				read_stream_info(time(),$channel,$info{$name});
 			}
 		}
