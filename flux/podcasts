@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 
-use strict;
 use Date::Parse;
 # xml::simple est vraiment obligatoire ici, format xml trop variable
 use XML::Simple;
@@ -8,8 +7,11 @@ use Data::Dumper;
 use WWW::Mechanize;
 use HTML::Entities;
 use link_get;
-use v5.10;
 use search;
+use Cpanel::JSON::XS qw(decode_json);
+use strict;
+use v5.10; # script en utf8, common::sense est utf8 seulement
+use myutf;
 
 # Refonte complète, on abandonne podcasters qui est pourri finalement
 # et on ne va garder que des résultats google pour les recherches...
@@ -81,24 +83,27 @@ if ($str =~ /^(.+) (http.+)/) { # demande d'abonnement
 	@_ = <F>;
 	close(F);
 	$_ = join("\n",@_);
-	my $ref = XMLin($_);
-	my $item = $ref->{channel}->{item};
-	my $found = 0;
-	foreach (@$item) {
-		if ($_->{enclosure}->{url} eq $str) {
-			print STDERR "génération $file.info\n";
-			$found = 1;
-			open(F,">$file.info");
-			my $img = $ref->{"channel"}->{image}->{url};
-			print F ($img ? "pic:$img " : ""),$_->{title},"\n",$_->{"itunes:subtitle"},"\n";
-			print F $_->{description},"\n";
-			close(F);
-			last;
+	if (!/^\\"/) { # json par apple podcast ou google
+		my $ref = XMLin($_);
+		my $item = $ref->{channel}->{item};
+		my $found = 0;
+		foreach (@$item) {
+			if ($_->{enclosure}->{url} eq $str) {
+				print STDERR "génération $file.info\n";
+				$found = 1;
+				open(F,">$file.info");
+				my $img = $ref->{"channel"}->{image}->{url};
+				print F ($img ? "pic:$img " : ""),$_->{title},"\n",$_->{"itunes:subtitle"},"\n";
+				print F $_->{description},"\n";
+				close(F);
+				last;
+			}
+		}
+		if (!$found) {
+			print STDERR "problem, could not find url in pod file !\n";
 		}
 	}
-	if (!$found) {
-		print STDERR "problem, could not find url in pod file !\n";
-	}
+	say STDERR "link_get: file $file str $str size $size";
 	link_get::link_get($file,$str,$size);
 }
 $str =~ s/ /\+/g;
@@ -147,6 +152,25 @@ my $encoding = "";
 my $content = 0;
 my ($link,$title,$desc,$img,$date);
 print STDERR "*** type $type\n";
+if (/"submit" value="Accept all/) {
+	# le formulaire de google pour accepter les cookies !
+	# Vu qu'on ne gère même pas de cookie jar ici on peut acepter tout ce qu'ils veulent !
+	eval {
+		$mech->submit("Submit all");
+	};
+	if ($@) {
+		say STDERR "apparemment on a pas trouvé le submit all !";
+		say STDERR "erreur : $@ et $!";
+		say STDERR "duming to out...";
+		open(F,">out");
+		print F $_;
+		close(F);
+		exit(0);
+	}
+	say STDERR "called submit on accept all";
+	$_ = $mech->content(charset => "utf8");
+}
+
 if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 	header("direct");
 	my $char = chr(8217); # apostrophe ?
@@ -209,8 +233,91 @@ if (/^<\?xml/ || /^<rss xml/ || $type =~ /(application|text).xml/) {
 		print "\nget,",$_->{enclosure}->{length},":",$_->{enclosure}->{url},"\n";
 	}
 	exit(0);
+} elsif (/(\\"episodes\\":{.+?})}}/) {
+	say STDERR "trouvé podcast apple";
+	my $json = $1;
+	my $title;
+	if (/({"\@context.+})\n/) {
+		my $header = $1;
+		($title) = $header =~ /"name":"(.+?)"/;
+	}
+	header("direct");
+	if ($r && open(F,">","pod")) {
+		print F $json;
+		close(F);
+	}
+	my $found = 0;
+	foreach (@abo) {
+		if ($_ eq $str) {
+			$found = 1;
+			last;
+		}
+	}
+	print STDERR "trouvé abonnement\n" if ($found && $debug);
+	if (!$found) {
+		print "S'abonner\n$title $str\n";
+	}
+	$json =~ s/\\"/"/g;
+	$json =~ s/\\"/"/g;
+	myutf::mydecode(\$json); # l'arme absolue anti "wide character"
+	$json = "{$json}}}";
+	eval {
+		$json = decode_json($json);
+	};
+	if ($@) {
+		say STDERR "podcast: erreur in decode_json : $@";
+		open(F,">json");
+		print F $json;
+		close(F);
+		say STDERR "json sauvé";
+		if ($@ =~ /offset (\d+)/) {
+			say STDERR "json offset $1, trying left side then...";
+			$json = substr($json,0,$1);
+			eval {
+				$json = decode_json($json);
+			};
+			if ($@) {
+				say STDERR "ça foire encore : $@";
+			}
+		}
+		exit(0) if ($@);
+	}
+	foreach (@{$json->{episodes}->{data}}) {
+		say $_->{attributes}->{name};
+		say "get,0:",$_->{attributes}->{assetUrl};
+	}
+	exit(0);
+} elsif (/data:(\[null.+?\]), side/) {
+	say STDERR "google podcasts found";
+	my $found = 0;
+	header("direct");
+	my $json = $1;
+	myutf::mydecode(\$json);
+	$json = decode_json($json);
+	# say Dumper($json);
+	my $title = $json->[1][0][0][1];
+	my $url_xml = $json->[1][0][0][4][1];
+	foreach (@abo) {
+		if ($_ eq $str) {
+			$found = 1;
+			last;
+		}
+	}
+	print STDERR "trouvé abonnement\n" if ($found && $debug);
+	if (!$found) {
+		print "S'abonner\n$title $str\n";
+	}
+	foreach (@{$json->[1][0]}) {
+		say $_->[8];
+		say $_->[13];
+	}
+	exit(0);
 }
 
+say STDERR "unknown html, dumping to out";
+open(F,">out");
+print F $_;
+close(F);
 # Ici on interprête le résultat de la recherche...
 header("list");
 my $u = $mech->uri;
