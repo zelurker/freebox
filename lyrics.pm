@@ -52,6 +52,8 @@ sub handle_lyrics {
 			}
 			if ($lyr) {
 				s/<br \/>/\n/;
+				s/\t+//;
+				$_ = decode_entities($_);
 				if (s/<\/p>//) {
 					$lyr = 0;
 				}
