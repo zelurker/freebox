@@ -366,6 +366,7 @@ sub get_lyrics {
 		($artist) = $ogg->comment("ARTIST");
 		($artist) = $ogg->comment("artist") if (!$artist);
 		($title) = $ogg->comment("title") if (!$title);
+		($title) = $ogg->comment("TITLE") if (!$title);
 		# Normalement on devrait pouvoir stocker les paroles dans un tag
 		# vorbis, sauf qu'ils sont supers intolérants, on a le droit qu'à
 		# de l'ascii standard. Pour les retours charriots ça va encore,
@@ -483,7 +484,7 @@ debut:
 		# c'est qu'un autre site a exactement les mêmes ! Difficile à
 		# détecter, le + simple c'est de l'écarter explicitement pour
 		# l'instant
-		if ($u =~ /genius.com/ && ($title =~ /^(nuit|c'est pas d'l'amour|il part|serre moi|des votres|des vies|juste apres|ma seule amour|a l'envers|brouillard|ton autre chemin|)$/i ||
+		if ($u =~ /genius.com/ && ($artist =~ /goldman/i ||
 			$artist =~ / dion/i)) {
 			next;
 		}
