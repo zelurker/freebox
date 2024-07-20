@@ -52,7 +52,7 @@ sub handle_lyrics {
 			}
 			if ($lyr) {
 				s/<br \/>/\n/;
-				s/\t+//;
+				s/\t+/    /;
 				$_ = decode_entities($_);
 				if (s/<\/p>//) {
 					$lyr = 0;
@@ -488,6 +488,9 @@ debut:
 			$artist =~ / dion/i)) {
 			next;
 		}
+		next if ($u =~ /songlyrics/ && $title =~ /je marche seul/i);
+		# je marche seul sur songlyrics : les paroles sont bonnes mais à la fin il reprend le 1er refrain avant de reprendre le 2nd, ce n'est pas indiqué !
+
 		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/ ||
 			$u =~ /songlyrics.com/) {
 			my $old = $_;
