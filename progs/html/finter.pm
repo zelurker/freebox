@@ -100,6 +100,7 @@ sub decode_html {
 			my $exp = $_->{expression};
 			$exp = $_->{concept} if (!$exp);
 			my $title = $exp->{visual}->{legend};
+			$title = $_->{concept}->{title} if (!$title);
 			next if (!$title);
 			my $desc = $exp->{title};
 			# la majorité du prog inter est en latin1, mais certains champs peuvent contenir de l'utf8 !!!
@@ -109,6 +110,7 @@ sub decode_html {
 			my $start = $_->{startTime};
 			my $end = $_->{endTime};
 			my $img = $exp->{visual}->{webpSrc};
+			$img = $_->{concept}->{visual}->{webpSrc} if (!$img);
 			my $podcast = $_->{media}->{sources}->[0]{url};
 			$desc .= " pod:$podcast" if ($podcast);
 			my $id = $_->{id};
