@@ -396,7 +396,7 @@ sub list_files {
 			}
 			$name .= "/";
 		}
-		next if ($name =~ /\.(nfo|lyrics)$/i);
+		next if ($name =~ /\.(nfo|lyrics|srt)$/i);
 
 		push @list,[[$num++,$name,$service,-M $service]];
 	}
