@@ -6,7 +6,7 @@ use strict;
 use Coro::LWP;
 use WWW::Mechanize;
 use HTML::Entities;
-use Ogg::Vorbis::Header;
+# use Ogg::Vorbis::Header;
 use MP3::Tag;
 use utf8;
 use v5.10;
@@ -362,19 +362,19 @@ sub get_lyrics {
 		$mp3 = $ogg = 0;
 	}
 	if ($ogg) {
-		$ogg = Ogg::Vorbis::Header->new($file);
-		($artist) = $ogg->comment("ARTIST");
-		($artist) = $ogg->comment("artist") if (!$artist);
-		($title) = $ogg->comment("title") if (!$title);
-		($title) = $ogg->comment("TITLE") if (!$title);
-		# Normalement on devrait pouvoir stocker les paroles dans un tag
-		# vorbis, sauf qu'ils sont supers intolérants, on a le droit qu'à
-		# de l'ascii standard. Pour les retours charriots ça va encore,
-		# mais pour les accents c'est un merdier sans nom (possibilité de
-		# le faire à partir des définitions des accents html en recopiant à
-		# partir de la table, mais c'est trop chiant), donc on laisse
-		# tomber les tags vorbis pour les paroles, .lyrics uniquement !
-		print "ogg artist $artist title $title\n";
+#		$ogg = Ogg::Vorbis::Header->new($file);
+#		($artist) = $ogg->comment("ARTIST");
+#		($artist) = $ogg->comment("artist") if (!$artist);
+#		($title) = $ogg->comment("title") if (!$title);
+#		($title) = $ogg->comment("TITLE") if (!$title);
+#		# Normalement on devrait pouvoir stocker les paroles dans un tag
+#		# vorbis, sauf qu'ils sont supers intolérants, on a le droit qu'à
+#		# de l'ascii standard. Pour les retours charriots ça va encore,
+#		# mais pour les accents c'est un merdier sans nom (possibilité de
+#		# le faire à partir des définitions des accents html en recopiant à
+#		# partir de la table, mais c'est trop chiant), donc on laisse
+#		# tomber les tags vorbis pour les paroles, .lyrics uniquement !
+#		print "ogg artist $artist title $title\n";
 	}
 	if ($mp3) {
 		$mp3 = MP3::Tag->new($file);
