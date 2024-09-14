@@ -1095,7 +1095,6 @@ sub run_mplayer2 {
 	$filter .= "," if ($filter);
 	$filter .= "screenshot" if ($player !~ /^mpv/);
 	my @list;
-	@list = ("perl","filter_mplayer.pl") if ($player =~ /mplayer/); # pour mpv à priori filter_mplayer va devenir inutile !
 	push @list, ($player,$dvd1,
 		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
 		# Apparemment options interdites avec vdpau, sinon on perd la synchro !
