@@ -339,7 +339,7 @@ sub pure_ascii {
 sub get_lyrics {
 	my ($file,$artist,$title) = @_;
 	my $lyrics = "";
-	if (open(F,"<","$file.lyrics")) {
+	if ($file !~ /\.(7z|rar|zip)$/ && open(F,"<","$file.lyrics")) {
 		while (<F>) {
 			$lyrics .= $_;
 		}
@@ -519,7 +519,7 @@ debut:
 	$lyrics =~ s/\x{2019}/'/g;
 	$lyrics =~ s/\x{0153}/oe/g; # bizarre c'est sensé être supporté par perl5...
 
-	if ($file !~ /^http/) {
+	if ($file !~ /^http/ && $file !~ /\.(7z|rar|zip)$/) {
 		# Sans déconner, vu la complexité des tags mp3 je me demande si je
 		# devrais pas plutôt stocker dans un fichier .lyrics pour tout le
 		# monde ? Enfin bon...
@@ -548,6 +548,7 @@ debut:
 			close(F);
 		}
 	}
+	say "lyrics: returning $lyrics";
 	return $lyrics;
 }
 
