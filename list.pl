@@ -434,8 +434,8 @@ sub list_files {
 	unshift @list,[[$num++,"Tri par nom","tri par nom"],
 		[$num++,"Tri par date", "tri par date"],
 		[$num++,"Tri aléatoire", "tri par hasard"]];
-	my ($chan,$source,$serv) = out::get_current();
-	reset_current() if ($source =~ /^Fichiers/); # replace $found sur le fichier indiqué dans current si il y est ! Sans ça, l'indice de liste sauvé dans ~/.freebox/conf_fichiers supplante le nom de fichier !
+	my ($chan,$source0,$serv) = out::get_current();
+	reset_current() if ($source0 =~ /^Fichiers/ && $source0 eq $source); # replace $found sur le fichier indiqué dans current si il y est ! Sans ça, l'indice de liste sauvé dans ~/.freebox/conf_fichiers supplante le nom de fichier !
 	if (!$watch || $watch->{dirs}[0] ne $conf{$path}) {
 		print "màj watch\n";
 		$watch->cancel if ($watch);
