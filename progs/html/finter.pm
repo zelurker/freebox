@@ -70,21 +70,33 @@ sub decode_html {
 		$prev_start = $$rtab2[$#$rtab2][3];
 		say "prev_start init ".disp_date($prev_start);
 	}
-	my ($json) = $l =~ /{(metadata:.+)},"uses/;
-	$json =~ s/^metadata:{kirby.+?metadata/metadata/;
-	# /const data = (\[.+?\]);/;
-	# /(grid:{.+}),date/;
-	if ($json) {
-		$json = "{$json}";
-		my $js = new Cpanel::JSON::XS;
-		eval {
-			$json = $js->allow_barekey()->decode($json);
-		};
-		if ($@) {
-			say "progs:html:finter: error json: $@. json:$json";
+	my $json;
+	while(1) {
+		$l =~ s/{(metadata:.+?)},"uses//;
+		$json = $1;
+		next if ($json !~ /tracking/);
+		$json =~ s/^metadata:{kirby.+?metadata/metadata/;
+		# /const data = (\[.+?\]);/;
+		# /(grid:{.+}),date/;
+		if ($json) {
+			$json = "{$json}";
+			my $js = new Cpanel::JSON::XS;
+			eval {
+				say "trying json $json";
+				$json = $js->allow_barekey()->decode($json);
+			};
+			next if ($@);
+			last;
+		} else {
+			say "progs/html/finter no json after some tries";
+			open(F,">trash");
+			print F $l;
+			close(F);
 			return undef;
 		}
-
+	}
+	say "sortie boucle json $json";
+	if ($json) {
 		# $json = $js->decode($json);
 		# say "json ",Dumper($json);
 		# exit(1);
