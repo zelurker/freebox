@@ -66,9 +66,11 @@ cd ~/free
 
 ça permet d'avoir un pc spécialisé pour ça.
 Note que certaines applis n'aiment pas qu'on aie pas de gestionnaire de
-fenêtre, donc dernièrement j'utilise e16 pour en avoir un de base. Entre
-autres elles ne passent plus en plein écran sans gestionnaire de fenêtre,
-tu parles d'un truc bugué !
+fenêtre, donc dernièrement j'utilise e16, openbox ou windowmaker pour en avoir
+un de base. Entre autres elles ne passent plus en plein écran sans gestionnaire
+de fenêtre, tu parles d'un truc bugué ! Ca peut être aussi pratique au minimum
+si y a un problème de focus sur le dialogue de recherche quand on fait une
+recherche !
 
 Normalement le script de lancement vérifie les dépendances et demande
 l'installation des programmes externes nécessaires. Et pour les modules
@@ -82,11 +84,11 @@ PERL_MB_OPT="--install_base \"~/perl5\""; export PERL_MB_OPT;
 PERL_MM_OPT="INSTALL_BASE=~/perl5"; export PERL_MM_OPT;
 
 Le programme C qui sert d'interface écran quand il n'y a pas de lecteur
-vidéo actif, bmovl, supporte sdl ou sdl2 mais je continue à utiliser sdl1
-par habitude. Là aussi le script de lancement va essayer de le compiler si
-il ne trouve pas l'executable, il a besoin par défaut de sdl1.2 et de
-sdl-image, les versions de développement dans les distribs qui font la
-différence.
+vidéo actif, bmovl, supporte sdl ou sdl2. Au minimum sdl2 permet de reconnaitre
+les touches multimédia du clavier éventuellement. Là aussi le script de
+lancement va essayer de le compiler si il ne trouve pas l'executable, il a
+besoin par défaut de sdl1.2 et de sdl-image ou équivalent pour sdl2, les
+versions de développement dans les distribs qui font la différence.
 
 En fait vu que ma télé dans la salle n'a pas de tuner tnt, la seule façon
 de regarder la télé est d'utiliser cette interface, donc je continue à
@@ -95,8 +97,7 @@ moi, et je la mets sur github pour que ça soit + simple de la transférer
 d'un ordo à l'autre. Français uniquement évidemment. Si ça intéresse du
 monde vous pouvez toujours m'envoyer un mail si vous voulez des infos !
 
-Note pour youtube-dl : vu qu'ils viennent de supprimer le dépot github pour
-des raisons de dmca, on peut pour l'instant le récupérer sur son site là :
-https://yt-dl.org/downloads/latest/youtube-dl
-puis faire chmod +x sur le fichier résultat.
-
+Note pour youtube-dl : le plugin youtube étant une énorme prise de tête vu
+qu'ils s'amusent à changer l'html de leurs pages régulièrement je l'ai laissé
+tomber pour l'instant, désolé ! En ce moment c'est yt-dlp qui a remplacé
+youtube-dl de toute façon.
