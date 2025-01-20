@@ -958,7 +958,17 @@ sub mount_dvd() {
 		while (<$f>) {
 			chomp;
 			if (/drive name:[ \t]*(.+)/) {
-				$dvd = "/dev/$1";
+				$dvd = $1;
+				my @dvd = split /\t/,$dvd;
+				say "got nb dvd $#dvd: ",join(",",@dvd);
+				if ($#dvd > 0) {
+					my $zen = "zenity --list --title dvd --column devices ".join(" ",@dvd);
+					say "zen $zen";
+					$dvd = `$zen`;
+					chomp $dvd;
+				}
+				$dvd = "/dev/$dvd";
+				say "got dvd $dvd";
 			} elsif (/Can read DVD.+1/) {
 				last;
 			}
