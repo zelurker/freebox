@@ -1083,12 +1083,11 @@ sub run_mplayer2 {
 			$cache = 5000;
 		}
 	}
-	my ($dvd1,@dvd2);
+	my (@dvd1,@dvd2);
 	if ($serv =~ /iso$/i || $src eq "dvd") {
 		if ($flav eq "mpv dvdnav") {
 			$player = "mpv";
-			$dvd1 = "-dvd-device";
-			$serv = $dvd;
+			@dvd1 = ("-dvd-device",$dvd);
 			@dvd2 = ("--no-cache");
 			push @dvd2, "dvdnav://";
 		} elsif ($flav eq "vlc") {
@@ -1107,7 +1106,7 @@ sub run_mplayer2 {
 	$filter .= "," if ($filter);
 	$filter .= "screenshot" if ($player !~ /^mpv/);
 	my @list;
-	push @list, ($player,$dvd1,
+	push @list, ($player,@dvd1,
 		# Il faut passer obligatoirement nocorrect-pts avec -(hard)framedrop
 		# Apparemment options interdites avec vdpau, sinon on perd la synchro !
 #			"-framedrop", # "-nocorrect-pts",
