@@ -41,9 +41,26 @@ sub handle_lyrics {
 	$_ = $mech->content(decoded_by_headers => 1);
 	my $lyrics = "";
 	my $start = undef;
-	if ($u =~ /songlyrics.com/) {
+	my $lyr = 0;
+	if ($u =~ /azlyrics/) {
+		say "azlyrics url $u";
+		foreach (split /\n/,$_) {
+			s/\r//;
+			if (s/Usage of azlyrics//i) {
+				$lyr = 1;
+			}
+			if ($lyr) {
+				s/\t+/    /;
+				$_ = decode_entities($_);
+				if (s/<\/div>//) {
+					$lyr = 0;
+				}
+				$lyrics .= "$_\n";
+				last if (!$lyr);
+			}
+		}
+	} elsif ($u =~ /songlyrics.com/) {
 		print "lyricsfreak.com url $u\n";
-		my $lyr = 0;
 		foreach (split /\n/,$_) {
 			s/\r//;
 			if (s/<p id="songLyrics.+?>//i) {
@@ -62,7 +79,6 @@ sub handle_lyrics {
 		}
 	} elsif ($u =~ /lyricsfreak.com/) {
 		print "lyricsfreak.com url $u\n";
-		my $lyr = 0;
 		foreach (split /\n/,$_) {
 			s/\r//;
 			if (/class="lyrictxt/) {
@@ -83,7 +99,6 @@ sub handle_lyrics {
 			}
 		}
 	} elsif ($u =~ /musique.ados.fr/) {
-		my $lyr = 0;
 		foreach (split /\n/,$_) {
 			$lyr = 1 if (/<div class="contenu/);
 			if ($lyr > 0 && $lyr < 2) {
@@ -97,7 +112,6 @@ sub handle_lyrics {
 			}
 		}
 	} elsif ($u =~ /genius.com/) {
-		my $lyr = 0;
 		my $footer = undef;
 		foreach (split /\n/,$_) {
 			s/\r//;
@@ -135,7 +149,6 @@ sub handle_lyrics {
 			}
 		}
 	} elsif ($u =~ /paroles-musique.com/) {
-		my $lyr = 0;
 		foreach (split /\n/,$_) {
 			s/\r//;
 			if (s/<div id="lyrics">//) {
@@ -382,6 +395,7 @@ sub get_lyrics {
 		}
 		say "lyrics: artist: $artist, title: $title";
 		eval {
+			say "calling update_tags";
 			$mp3->update_tags if ($title && !$id3v1);
 		};
 		if ($@) {
@@ -432,6 +446,7 @@ sub get_lyrics {
 				# En fait MP3::Tag sait déduire l'artiste et le titre du nom de
 				# fichier donc cette partie là n'est normalement jamais
 				# executée, on va garder quand même au cas où mais bon... !
+				say "title_set ?!!";
 				$mp3->title_set($title);
 				$mp3->artist_set($artist);
 				$mp3->update_tags();
@@ -470,7 +485,7 @@ debut:
 		# je marche seul sur songlyrics : les paroles sont bonnes mais à la fin il reprend le 1er refrain avant de reprendre le 2nd, ce n'est pas indiqué !
 
 		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/ ||
-			$u =~ /songlyrics.com/) {
+			$u =~ /(songlyrics.com|azlyrics)/) {
 			my $old = $_;
 			my $text = pure_ascii($_->text);
 			my $tit = $title;
