@@ -1147,7 +1147,7 @@ sub run_mplayer2 {
 			dbmclose %bookmarks;
 		}
 		if ($source =~ /(dvb|freeboxtv)/) {
-			push @list,("--start=-3","--keep-open");
+			push @list,("--start=-5","--keep-open");
 		} elsif ($source =~ /flux/ && $serv !~ /(m3u|mkv)/) {
 			push @list,("--force-seekable=yes");
 		} elsif ($source =~ /flux/ && $serv =~ /mkv/) {
