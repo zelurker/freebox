@@ -119,7 +119,7 @@ if ($debug && !$str) {
 	} elsif ($str && $str !~ /^http/) {
 		print STDERR "requête de recherche sur $str\n"; # if ($debug);
 		$str =~ s/\+/ /g;
-		$mech = search::search("podcast rss $str");
+		$mech = search::search("flux rss $str");
 	} elsif ($str) {
 		print STDERR "debug: get $str\n" if ($debug);
 		$r = $mech->get($str);
@@ -339,6 +339,15 @@ if ($u =~ /google\./) {
 } else {
 	my ($host) = $u =~ /https?:\/\/(.+?)\//;
 	print STDERR "host for filtering $host\n";
+	while (s/link rel(.+?)>//) {
+		my $body = $1;
+		my ($title) = $body =~ /title="(.+?)"/;
+		my ($url) = $body =~ /href="(.+?)"/;
+		if ($url =~ /xml$/) {
+			say "$title\n$url";
+			exit(0); # Pas la peine d'aller + loin !
+		}
+	}
 	foreach ($mech->links) {
 		my $u = $_->url;
 		next if ($u !~ /^http/ || $_->text =~ /^ *$/);
