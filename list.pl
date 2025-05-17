@@ -213,7 +213,8 @@ sub cd_menu {
 		$error = 0;
 		# mplayer2 inclut un test pour quitter tout de suite si y a pas de cd
 		# mplayer passe 3 plombes dans ce cas là !
-		open(F,"mplayer2 -cdrom-device $cd cddb:// -nocache -identify -frames 0|");
+		# mpv n'a plus de support cd apparemment, donc on repasse à mplayer...
+		open(F,"mplayer -cdrom-device $cd cddb:// -nocache -identify -frames 0|");
 		my $track;
 		@list = @list_cdda = ();
 		my ($artist,@duree);
