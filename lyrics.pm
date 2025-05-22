@@ -115,7 +115,8 @@ sub handle_lyrics {
 		my $footer = undef;
 		foreach (split /\n/,$_) {
 			s/\r//;
-			if (s/^.+?<div data-lyrics-container[^>]+class="Lyrics.+?">//i) {
+			#			if (s/^.+?<div data-lyrics-container[^>]+class="Lyrics.+?">//i) {
+			if (s/^.+ LyricsHeader.+//) { # tentative de remplacement tag de départ 22/5/25
 				$lyr = 1;
 			}
 			if ($lyr) {
