@@ -72,10 +72,11 @@ sub decode_html {
 	}
 	my $json;
 	while(1) {
-		$l =~ s/{(metadata:.+?)},"uses//;
+		$l =~ s/{(metadata:.+?)},"?uses//;
 		$json = $1;
+		die "progs/html/finter: pb json!!!\n" if (!$json || $json eq "inter");
 		next if ($json !~ /tracking/);
-		$json =~ s/^metadata:{kirby.+?metadata/metadata/;
+		$json =~ s/^.+{kirby.+?metadata/metadata/;
 		# /const data = (\[.+?\]);/;
 		# /(grid:{.+}),date/;
 		if ($json) {
