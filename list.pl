@@ -612,6 +612,7 @@ sub read_list {
 			foreach (keys %$chan) {
 				my ($id,$logo,$nom,$num) = @{$chan->{$_}};
 				if (defined($num) && $num == $n) {
+					say "push tnt $nom num $num";
 					push @tnt,$nom;
 					last;
 				}
@@ -623,9 +624,6 @@ sub read_list {
 			my $service = $fields[0];
 			my $name = $service;
 			$name =~ s/\(.+\)//; # name sans le transpondeur
-			if ($num <= 27 && $name ne $tnt[$num-1]) {
-				$name = $tnt[$num-1];
-			}
 			my $pic = chaines::get_chan_pic($name,\@pic);
 			push @list,[[$num++,$name,$service,undef,undef,undef,undef,$pic]];
 		}
