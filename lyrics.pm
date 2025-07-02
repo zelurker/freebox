@@ -17,12 +17,15 @@ use Data::Dumper;
 our $latin = ($ENV{LANG} !~ /UTF/i);
 
 sub handle_lyrics {
-	my ($mech,$u) = @_;
+	my ($mech,$u,$file) = @_;
 	eval {
 		$mech->get($u);
 	};
 	if ($@) {
 		print "handle_lyrics: got error $!: $@\n";
+		if ($u =~ /genius/) {
+			return get_manual($file,$u);
+		}
 		return undef;
 	}
 	$mech->save_content("page.html");
@@ -60,7 +63,6 @@ sub handle_lyrics {
 			}
 		}
 	} elsif ($u =~ /songlyrics.com/) {
-		print "lyricsfreak.com url $u\n";
 		foreach (split /\n/,$_) {
 			s/\r//;
 			if (s/<p id="songLyrics.+?>//i) {
@@ -78,7 +80,6 @@ sub handle_lyrics {
 			}
 		}
 	} elsif ($u =~ /lyricsfreak.com/) {
-		print "lyricsfreak.com url $u\n";
 		foreach (split /\n/,$_) {
 			s/\r//;
 			if (/class="lyrictxt/) {
@@ -116,7 +117,10 @@ sub handle_lyrics {
 		foreach (split /\n/,$_) {
 			s/\r//;
 			#			if (s/^.+?<div data-lyrics-container[^>]+class="Lyrics.+?">//i) {
-			if (s/^.+ LyricsHeader.+//) { # tentative de remplacement tag de départ 22/5/25
+			# Et recorrection du tag de départ genius (7/2025) : c dangereux, pas sûr que ça soit fiable dans la durée, on verra bien...
+			# Le filtrage du h2 et pour virer un Idea Lyrics qui se place en tête des paroles parfois
+			if (s/^.+class="?LyricsHeader__Title.+?>//) {
+				s/<h2.+?<\/h2>//i;
 				$lyr = 1;
 			}
 			if ($lyr) {
@@ -350,6 +354,28 @@ sub pure_ascii {
 	$_;
 }
 
+sub get_manual {
+	# Traitement manuel pour les url sans solution pour l'instant, où ça devient clairement + simple de copier à la main le texte d'un navigateur plutôt que de s'entêter à trouver
+	# des contournements.
+	# Donc ici on ouvre un éditeur sur les paroles et un navigateur sur l'url des paroles, et y a plus qu'à. Sites à problèmes :
+	# musixmatch : obfuscation tarée des styles pour rendre l'extraction auto des paroles quasi impossible
+	# paroles-musique.com: un bouton à cliquer au milieu qui dépend d'une grosse lib js externe
+	# genius a une espèce de captcha automatique je brancherai ici en cas de 403.
+	# Note : l'appel pour lancer gvim retourne aussitôt, et celui pour ouvrir l'url retourne aussi si y a déjà un navigateur d'ouvert, dans ce cas là on ne pourra pas récupérer
+	# les paroles. Autrement si y a pas de navigateur ouvert, le fermer après avoir sauvé les paroles dans l'éditeur, elles seront récupérées comme ça.
+	# Si y avait déjà un navigateur, bin il faudra relire la chanson pour pouvoir relire les paroles !
+	my ($mech,$u) = @_;
+
+	system("gvim \"$mech.lyrics\"");
+	system("xdg-open \"$u\"");
+	if (open(F,"<$mech.lyrics")) {
+		@_ = <F>;
+		close(F);
+		my $lyrics = join("",@_);
+		return $lyrics;
+	}
+}
+
 sub get_lyrics {
 	my ($file,$artist,$title) = @_;
 	my $lyrics = "";
@@ -456,8 +482,9 @@ sub get_lyrics {
 	}
 	my $r;
 	my $orig = $title;
-	$title =~ s/ \(\d+\)//; # année éventuelle à la fin (sun)
+	$title =~ s/ \(.+?\)//; # truc entre ()
 	$title = pure_ascii($title);
+	$title =~ s/ \[.+?\]//; # vire chaine entre [] après le titre éventuelle
 	$title =~ s/ en duo.+//; # à tout hasard... !
 	if ($title =~ /jeanine medicament blues/i) {
 		$artist = "Jean-jacques Goldman";
@@ -485,7 +512,8 @@ debut:
 		next if ($u =~ /songlyrics/ && $title =~ /je marche seul/i);
 		# je marche seul sur songlyrics : les paroles sont bonnes mais à la fin il reprend le 1er refrain avant de reprendre le 2nd, ce n'est pas indiqué !
 
-		if ($u =~ /(musiclyrics.com|musique.ados.fr|paroles-musique.com|genius.com|lyricsfreak.com|parolesmania.com|musixmatch.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/ ||
+		# lyricsfreak.com retiré le 2/7/2005 : accents remplacés par ? sur la page html, erreurs d'orthographe, qualité pourrie !!!
+		if ($u =~ /(musiclyrics.com|musique.ados.fr|genius.com|parolesmania.com|flashlyrics.com|lyrics.wikia.com|lyricsmania.com|greatsong.net)/ ||
 			$u =~ /(songlyrics.com|azlyrics)/) {
 			my $old = $_;
 			my $text = pure_ascii($_->text);
@@ -501,7 +529,8 @@ debut:
 					say "Traitement du cache...";
 					$u =~ s/\%(..)/chr(hex($1))/ge;
 				}
-				$lyrics = handle_lyrics($mech,$u);
+				say "paroles à partir de $u";
+				$lyrics = handle_lyrics($mech,$u,$file);
 				last if ($lyrics);
 			} else {
 				print "lyrics: rejet sur le titre, texte : $text, title $title, artist $artist.\n";
@@ -511,6 +540,15 @@ debut:
 			say STDERR "lyrics: link not recognized : $u";
 		}
 		next if ($_->text =~ /youtube/i || $u =~ /youtube/);
+	}
+	if (!$lyrics) {
+		foreach ($mech->links) {
+			$u = $_->url;
+			if ($u =~ /(paroles.net|lyricsondemand.com|lyricsmode.com|musixwatch.com|paroles-musique.com)/) {
+				$lyrics = get_manual($file,$u);
+				last if ($lyrics);
+			}
+		}
 	}
 	if (!$lyrics && $artist eq "Fredericks Goldman Jones") {
 		$artist = "Jean-jacques Goldman";
