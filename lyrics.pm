@@ -366,6 +366,7 @@ sub get_manual {
 	# Si y avait déjà un navigateur, bin il faudra relire la chanson pour pouvoir relire les paroles !
 	my ($mech,$u) = @_;
 
+	return undef if (! -f "/usr/bin/gvim");
 	system("gvim \"$mech.lyrics\"");
 	system("xdg-open \"$u\"");
 	if (open(F,"<$mech.lyrics")) {
