@@ -2,6 +2,13 @@
 
 export PERL_USE_UNSAFE_INC=1
 
+# on attend le réseau, c'est ici car en lancement au boot l'interface arrive avant le réseau et c'est emmerdant!
+count=0
+while ! ping -w 3 -c 2 8.8.8.8 >& /dev/null && [ $count -lt 3 ]; do
+	sleep 3
+	count=$(( $count + 1 ))
+done
+
 # unzip est pour cpan en fait
 for n in wget socat mpv unzip ffprobe; do
 if ! type $n > /dev/null 2> /dev/null; then
