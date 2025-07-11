@@ -912,6 +912,7 @@ sub switch_mode {
 	$found = 0 if ($found > $#modes);
 	$source = $modes[$found];
 	print "switch_mode: source = $source\n";
+	out::send_cmd_info("switch_mode $source");
 	$base_flux = undef;
 	@tab_serv = ();
 	if ($watch) {

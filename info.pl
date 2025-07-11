@@ -420,6 +420,10 @@ sub commands {
 		$cleared = 1;
 		say "bmovl::image";
 		out::send_bmovl("image");
+	} elsif ($cmd =~ /^switch_mode (.+)/) {
+		$source = $1;
+		$base_flux = undef;
+		$refresh = undef;
 	} elsif ($cmd eq "podcast") {
 		if (@podcast && $num_pod <= $#podcast) {
 			out::send_cmd_list("open $podcast[$num_pod]");
