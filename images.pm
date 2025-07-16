@@ -60,8 +60,8 @@ sub search {
 	# Pour l'instant seule méthode trouvée : faire la requête par un navigateur d'abord... ! Pas terrible ouais...
 
 	if (!$c) {
-		# Cas d'erruer on tente de boucler 1 fois...
-		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; sleep 1; killall midori; sleep 1; rm -f ~/.config/midori ~/.local/share/midori ~/.midori");
+		# Cas d'erreur on tente de boucler 1 fois...
+		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 8; midori -e tab-close; sleep 1; killall midori; sleep 1; rm -rf ~/.config/midori ~/.local/share/midori ~/.midori");
 		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
 
 		($vqd) = $c =~ /vqd="(.+?)"/;
@@ -70,8 +70,8 @@ sub search {
 	}
 
  	if (!$c) {
- 		# Cas d'erruer on tente de boucler 1 fois...
-		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 7; midori -e tab-close; sleep 1; killall midori; sleep 1; rm -f ~/.config/midori ~/.local/share/midori ~/.midori");
+ 		# Cas d'erreur on tente de boucler 1 fois...
+		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 8; midori -e tab-close; sleep 1; killall midori; sleep 1; rm -rf ~/.config/midori ~/.local/share/midori ~/.midori");
  		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
 
  		($vqd) = $c =~ /vqd="(.+?)"/;
