@@ -150,6 +150,10 @@ sub valid {
 		$sub = decode_entities($sub);
 		$$rtab[7] = $sub;
 	}
+	$r =~ /div class="ratingStarsList(.+?)<\/div/s;
+	my $stars = $1;
+	my $nb = $stars =~ s/\#star//g;
+	$$rtab[10] = $nb;
 }
 
 1;
