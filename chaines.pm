@@ -9,6 +9,7 @@ use out;
 use v5.10;
 use Encode;
 use progs::telerama;
+use myutf;
 
 our %chan;
 our $latin = ($ENV{LANG} !~ /UTF/i);
@@ -25,6 +26,8 @@ sub conv_channel {
 		# soupçonne telerama d'avoir complètement changé toute sa base,
 		# donc il est fort possible que tout ça soit périmé !
 		"NT1" => "NT 1",
+		"BFM TV" => "BFMTV",
+		"LCI" => "LCI - La Chaîne Info",
 		"France Ô" => "france ô",
 		"L'Equipe 21" => "L'Equipe",
 		"Poker Channel" => "The Poker Channel",
@@ -34,7 +37,7 @@ sub conv_channel {
 		"TV5 Monde" => "TV5MONDE",
 		"france o" => "France Ô",
 		"NRJ12" => "NRJ 12",
-		"LCP" => "La chaîne parlementaire",
+		"LCP" => "La Chaîne parlementaire",
 		"Onzeo" => "Onzéo",
 		"TEVA" => "Téva",
 		"Equidia live" => "Equidia",
@@ -103,7 +106,8 @@ sub conv_channel {
 	$channel = lc($channel);
 	foreach (keys %corresp) {
 		if (lc($_) eq $channel) {
-			return  lc($corresp{$_});
+			say "conv_channel -> ",myutf::get_mydecode(lc($corresp{$_}));
+			return  myutf::get_mydecode(lc($corresp{$_}));
 		}
 	}
 	return lc($channel);
@@ -237,15 +241,93 @@ sub getListeChaines($) {
 	return \%chan;
 }
 
+sub get_tag($$) {
+	# retourne un hash avec les valeurs des paramètres du tag
+	my ($sub,$tag) = @_;
+	my ($info) = $sub =~ /<$tag (.+?)>/;
+	my %truc = ();
+	while ($info =~ s/([^ ]+?)=(".+?")//) {
+		my $info = $1;
+		my $val = $2;
+		$info =~ s/"//g;
+		$val =~ s/"//g;
+		$truc{$info} = $val;
+	}
+	%truc;
+}
+
+sub get_tag_value {
+	my ($s,$t) = @_;
+	if ($s =~ /$t"?="(.+?)"/) { # la version normale, avec des "
+		return $1;
+	}
+	if ($s =~ /$t"?="?(.+?)"?([ >]|$)/) { # sinon on essaye de deviner !
+		return $1;
+	}
+	undef;
+}
+
+sub getListeChaines_tloisir {
+	my $r = http::myget("https://www.programme-tv.net/_esi/channel-list/?bouquet=perso&modal=0","liste_tloisir",30);
+	my %ordre = ();
+	my $num = 1;
+	my @tnt = (
+               192,
+               4,
+               80,
+               78,
+               47,
+               118,
+               111,
+               234,
+               119, # w9
+               195,
+               446,
+               482, # gulli
+               481, # bfmtv
+               226, # cnews
+               112, # lci
+               2111, # franceinfo
+               458, # cstar
+               4139, # t18
+               1404,
+               1401,
+               1403,
+               1402,
+               1400,
+               1399,
+		   );
+	foreach (@tnt) {
+		$ordre{$_} = $num++;
+	}
+	while ($r =~ s/<li class="channelList-item(.+?)<\/li//s) {
+		my $info = $1;
+		next if ($info =~ /seeMore/);
+		my $id = get_tag_value($info,"data-channelId");
+		my $slug = get_tag_value($info,"data-channelSlug");
+		say "id $id slug $slug";
+		my %hash = get_tag($info,"a");
+		say "prog ",$hash{href}," title ",$hash{title};
+		my ($logo) = $info =~ /: url\((.+?)\);/;
+		say "logo $logo";
+		$chan{lc($hash{title})} = [$id,$logo,$hash{title},$ordre{$id},$hash{href}];
+	}
+	my @keys = keys %chan;
+	say "keys $#keys";
+
+	return \%chan;
+}
 sub get_chan_pic {
 	my ($name,$rpic) = @_;
 #	if ($name =~ /^Nolife/) {
 #		return setup_image(1500);
 #	}
 	if (!%chan) {
+		say "get_chan_pic: j'ai pas les chans";
 		getListeChaines(out::have_net());
 	}
 	$name = conv_channel($name);
+	say "get_chan_pic $name -> $chan{$name}[1]";
 	return setup_image($chan{$name}[1],$rpic);
 }
 

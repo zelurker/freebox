@@ -605,19 +605,20 @@ sub read_list {
 		@list = ();
 		my $num = 1;
 		my @pic = ();
-		my $chan = chaines::getListeChaines($net);
+		my $chan = chaines::getListeChaines_tloisir($net);
 		$encoding = "latin1";
 		my @tnt;
 		for (my $n=1; $n<=27; $n++) {
 			foreach (keys %$chan) {
 				my ($id,$logo,$nom,$num) = @{$chan->{$_}};
 				if (defined($num) && $num == $n) {
-					say "push tnt $nom num $num";
+					say "push tnt $nom num $num clé $_";
 					push @tnt,$nom;
 					last;
 				}
 			}
 		}
+		say "au final tnt : $#tnt";
 		while (<$f>) {
 			chomp;
 			my @fields = split(/\:/);

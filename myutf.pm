@@ -188,4 +188,10 @@ sub mydecode {
 	}
 }
 
+sub get_mydecode($) {
+	my $str = shift;
+	mydecode(\$str);
+	$str;
+}
+
 1;

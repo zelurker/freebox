@@ -46,11 +46,16 @@ sub new {
 	my $p = bless {
 		chaines => (),
 	},$class;
-	if ($class =~ /(telerama|hbo)/) {
+	if ($class =~ /(telerama|hbo|tloisir)/) {
 		# Init spécifique à télérama, mais il y a des classes qui
 		# surchargent donc faut faire attention !!!
 		$p->{net} = $net = $mynet;
-		$chan = chaines::getListeChaines($net);
+		if ($class =~ /tloisir/) {
+			$chan = chaines::getListeChaines_tloisir($net);
+			mkdir "cache/tloisir";
+		} else {
+			$chan = chaines::getListeChaines($net);
+		}
 		$p->{chaines} = \%chaines;
 		$p->{list} = $chan;
 		if ($class =~ /telerama/) {
