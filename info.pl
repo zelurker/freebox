@@ -21,6 +21,7 @@ use EV;
 use records;
 use lyrics;
 use AnyEvent::HTTP;
+use http;
 
 use out;
 require "radios.pl";
@@ -96,14 +97,10 @@ sub myget {
 		utime(undef,undef,$name);
 	} else {
 		async {
-			if ($raw = get $url) {
-				if (open(F,">$name")) {
-					syswrite(F,$raw,length($raw));
-					close(F);
-				}
+			if ($raw = http::myget($url,$name)) {
 				refresh();
 			} else {
-				print "couldn't get image $url\n";
+				print "couldn't get image $url.\n";
 			}
 		};
 	}
@@ -269,7 +266,6 @@ sub disp_prog {
 	}
 	encoding($sub);
 	$prog[$reader]->valid($sub,\&refresh);
-	print "disp_long : long:$long\n";
 	$lastprog = $sub;
 	$last_chan = $$sub[1];
 	my $start = $$sub[3];

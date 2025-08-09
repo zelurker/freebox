@@ -17,6 +17,7 @@ my %chaines;
 sub update {
 	my ($p,$channel,$offset) = @_;
 	my $prog = $p->{list}->{$channel}[4];
+	my $label = $p->{list}->{$channel}[2];
 	return undef if ($offset); # que le jour même pour l'instant
 	if (!$prog) {
 		$p->error("pas de prog pour cette chaine");
@@ -42,6 +43,18 @@ sub update {
 			last if (!$img);
 			if ($img =~ /data-src/) {
 				$img =~ /data-src="(.+?)"/; $img = $1;
+				my $size;
+				if ($img =~ /, /) {
+					($size) = $img =~ /(\d+)x/;
+					foreach (split /, /,$img) {
+						my ($s2) = /(\d+)x/;
+						if ($s2 > $size) {
+							say "found greater size $s2 > $size";
+							$size = $s2;
+							$img = $_;
+						}
+					}
+				}
 			} else {
 				$img =~ /src="(.+?)"/; $img = $1;
 			}
@@ -74,8 +87,8 @@ sub update {
 			}
 			$stop = $start + $duration;
 			# say "nb $nb got img $img start $start title $title details $details duration $duration stop $stop sub $sub";
-			my @sub = (1, # num ?
-				$details,$title,
+			my @sub = ($details, # num ?
+				$label,$title,
 				$start,$stop,
 				"", # genre, on l'a mais en s'en fout
 				$sub,"",
@@ -95,6 +108,47 @@ sub update {
 		}
 
 		return $chaines{$channel};
+	}
+}
+
+sub valid {
+	my ($p,$rtab,$refresh) = @_;
+	# la chance de valider avant affichage, de quoi récupérer les trucs qui manquent
+	my $url = $$rtab[0];
+	my ($prog) = $url =~ /.+\/(.+)/;
+	$prog =~ s/\/$//;
+	$url = "https://www.programme-tv.net$url" if ($url =~ /^\//);
+	my $img;
+	my $r = http::myget($url,"cache/tloisir/$prog");
+	while($r =~ s/<div class="pictureTagGenerator(.+?)<div//s) {
+		$img = $1;
+		next if ($img =~ /noPlaceHolder/i);
+		next if ($img =~ /url\(/);
+		last if (!$img || $img =~ /<img/);
+	}
+	$img =~ /srcset="(.+?)"/;
+	my $set = $1;
+	$img =~ /src="(.+?)"/;
+	$img = $1;
+	my ($size) = $img =~ /(\d+)x/;
+	foreach (split /, /,$set) {
+		my ($s2) = /(\d+)x/;
+		if ($s2 > $size) {
+			$size = $s2;
+			s/ \d+w$//;
+			$img = $_;
+		}
+	}
+	$$rtab[9] = $img;
+	my $sub;
+	if ($r =~ s/div class="synopsis-text">(.+?)<\/div//s ||
+		$r =~ s/<span class="programCollectionSeason.episodesListItemSynopsisText.+?>(.+?)<\/span>//s) {
+		$sub = $1;
+		$sub =~ s/ +/ /g;
+		$sub =~ s/(\n|\r)//g;
+		$sub =~ s/^ //;
+		$sub = decode_entities($sub);
+		$$rtab[7] = $sub;
 	}
 }
 

@@ -322,6 +322,7 @@ sub get_cache($) {
 		my $base = $1;
 		$file = $2;
 		$base = "cache/$base";
+		$base =~ s/\~/-/g;
 		make_path($base);
 		$file = $base.$file;
 		print STDERR "cache $file\n";
