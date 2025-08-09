@@ -106,6 +106,7 @@ sub update {
 				$chaines{$channel} = [\@sub];
 			}
 		}
+		$p->{chaines} = \%chaines; # pour prev/next prog
 
 		return $chaines{$channel};
 	}
