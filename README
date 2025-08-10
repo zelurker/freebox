@@ -101,3 +101,19 @@ Note pour youtube-dl : le plugin youtube étant une énorme prise de tête vu
 qu'ils s'amusent à changer l'html de leurs pages régulièrement je l'ai laissé
 tomber pour l'instant, désolé ! En ce moment c'est yt-dlp qui a remplacé
 youtube-dl de toute façon.
+
+1 mot sur le fonctionnement : l'idée était aussi de s'amuser avec les
+communications inter process, donc l'appli en utilise plusieurs : info.pl pour
+la bandeau d'info, list.pl pour la liste verticale, bmovl pour l'affichage par
+défaut quand mpv n'est pas lancé, tout ce beau monde communiquant par des
+sockets locales maintenant. Quand mpv est lancé, il prend la priorité pour
+l'affichage et les commandes clavier. Note : certaines commandes claviers ne
+sont plus reconnues dans mpv, genre * et / au pavé numérique qui servent à avoir
+le programme d'avant ou d'après dans le bandeau d'info, mais on peut utiliser
+les flèches de curseur droite et gauche pour compenser. Les commandes externes
+utilisées et nécessaires pour un bon fonctionnement : wget (podcasts), socat
+(communications inter process), unzip juste pour décompresser une fonte
+téléchargeable sur le net, zenity ou gtkdialog pour afficher les dialogues de
+recherche.
+Les commandes clavier lancent des scripts shell qui font passer la commande par
+socat au process concerné. Voilà ça résume le fonctionnement général !
