@@ -1,7 +1,7 @@
 Une interface vidéo que j'ai faite pour remplacer celle de la freebox que
 j'aimais pas, après avoir testé mythtv que j'ai trouvé lourd et rempli de
 bugs. L'idée c'est d'avoir un truc simple, le + court possible, et
-facilement extensible, et utilisable entièrement au clavier, j'utiliser un
+facilement extensible, et utilisable entièrement au clavier, j'utilise un
 clavier sans fil comme télécommande en fait. C'est essentiellement écrit en
 perl, avec un peu de C, et ça utilise principalement mpv depuis juillet
 2018.
@@ -28,12 +28,12 @@ Les fonctionnalités :
  - les chansons en local, avec affichage des paroles dans le bandeau d'info
    et d'images en rapport avec la chanson récupérées sur google images
    pendant la lecture (ça marche aussi avec les radios et les cds audios).
- - Les flux réseau : arte (arte+7), youtube (par youtube-dl maintenant),
-   radios du web (+ d'1 centaine actuellement, on peut facilement en
-   ajouter d'autres), podcasts avec recherche utilisant google, shoutcast,
-   et toutes les chaines france-tv.
-   Pour les radios, la plupart n'indiquent leur programme que dans le flux
-   transmis donc c'est du temps réel, mais on a le programme de la journée
+ - Les flux réseau : arte (arte+7), youtube (abandonné pour l'instant, ils
+   changent trop souvent leur html), radios du web (+ d'1 centaine actuellement,
+   on peut facilement en ajouter d'autres), podcasts avec recherche utilisant
+   google, shoutcast, et des chaines de télé web, essentiellement la liste
+   github.  Pour les radios, la plupart n'indiquent leur programme que dans le
+   flux transmis donc c'est du temps réel, mais on a le programme de la journée
    pour les radio france (inter, culture, musique, france bleu).
  - lancement d'applis ! Ca a l'air bête, mais vu que le pc est sans souris,
    c'est pratique de pouvoir lancer des trucs comme des jeux.
