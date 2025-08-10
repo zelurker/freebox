@@ -24,14 +24,16 @@ sub conv_time {
 sub update {
 	my ($p,$channel,$offset) = @_;
 	my $prog = $p->{list}->{$channel}[4];
+	my ($base,$suffix) = $prog =~ /^(.+)(\/.+)/;
 	my $label = $p->{list}->{$channel}[2];
-	return undef if ($offset); # que le jour même pour l'instant
 	if (!$prog) {
 		$p->error("pas de prog pour cette chaine");
 		return undef;
 	}
 
-	my ($sec,$min,$hour,$mday,$mon,$year) = localtime();
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time()+$offset*24*3600);
+	my $orig = $#{$chaines{$channel}};
+	$prog = $base.sprintf("/%d-%02d-%02d",$year+1900,$mon+1,$mday).$suffix;
 	my $chan = $channel;
 	$chan =~ s/ /-/g;
 	my $f = sprintf("%02d%02d%d-$chan",$mday,$mon+1,$year+1900);
@@ -94,9 +96,10 @@ sub update {
 			$duration = $1;
 			if ($duration =~ /(\d+)h(\d+)min/) {
 				$duration = $2*60 + $1*3600;
-			} else {
-				$duration =~ /(\d+)min/;
+			} elsif ($duration =~ /(\d+)min/) {
 				$duration = $1*60;
+			} elsif ($duration =~ /(\d+)h/) {
+				$duration = $1*3600;
 			}
 			$stop = $start + $duration;
 			# say "got img $img start ",conv_time($start)," title $title details $details duration $duration stop ",conv_time($stop)," sub $sub";
@@ -120,6 +123,10 @@ sub update {
 			}
 		}
 		$p->{chaines} = \%chaines; # pour prev/next prog
+		if ($orig > 0) {
+			my @tab = sort { $$a[3] <=> $$b[3] } @{$chaines{$channel}};
+			$chaines{$channel} = \@tab;
+		}
 
 		return $chaines{$channel};
 	}
@@ -158,6 +165,9 @@ sub valid {
 	if ($r =~ s/div class="synopsis-text">(.+?)<\/div//s ||
 		$r =~ s/<span class="programCollectionSeason.episodesListItemSynopsisText.+?>(.+?)<\/span>//s) {
 		$sub = $1;
+		$sub =~ s/&nbsp;/ /g; # caractère bizarre au lieu de l'espace pour decode_entities!
+		$sub =~ s/<span.+?>//g;
+		$sub =~ s/<\/span>//g;
 		$sub =~ s/ +/ /g;
 		$sub =~ s/(\n|\r)//g;
 		$sub =~ s/^ //;
