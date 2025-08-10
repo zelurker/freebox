@@ -10,6 +10,7 @@ use v5.10;
 use Encode;
 use progs::telerama;
 use myutf;
+use HTML::Entities;
 
 our %chan;
 our $latin = ($ENV{LANG} !~ /UTF/i);
@@ -110,7 +111,7 @@ sub conv_channel {
 			return  myutf::get_mydecode(lc($corresp{$_}));
 		}
 	}
-	return lc($channel);
+	return myutf::get_mydecode(lc($channel));
 }
 
 sub get_browser {
@@ -310,6 +311,7 @@ sub getListeChaines_tloisir {
 		say "prog ",$hash{href}," title ",$hash{title};
 		my ($logo) = $info =~ /: url\((.+?)\);/;
 		say "logo $logo";
+		$hash{title} = decode_entities($hash{title});
 		$chan{lc($hash{title})} = [$id,$logo,$hash{title},$ordre{$id},$hash{href}];
 	}
 	my @keys = keys %chan;

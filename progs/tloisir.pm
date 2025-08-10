@@ -14,6 +14,13 @@ use Data::Dumper;
 
 my %chaines;
 
+sub conv_time {
+	my $time = shift;
+	# convertit en affichable, debugage uniquement
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($time);
+	sprintf("%d/%d/%d, %02d:%02d",$mday,$mon+1,$year+1900,$hour,$min);
+}
+
 sub update {
 	my ($p,$channel,$offset) = @_;
 	my $prog = $p->{list}->{$channel}[4];
@@ -31,16 +38,18 @@ sub update {
 	my $r = http::myget($prog,"cache/tloisir/$f");
 	if ($r) {
 		my ($img,$start,$title,$details,$duration,$sub,$stop);
-		my $nb = 0;
 		while (1) {
 			($img,$start,$title,$details,$duration,$sub) = undef;
-			while($r =~ s/<div class="pictureTagGenerator(.+?)<div//s) {
+			while($r =~ s/data-broadcast-id(.+?)<\/div//s) {
 				$img = $1;
 				next if ($img =~ /noPlaceHolder/i);
 				next if ($img =~ /url\(/);
-				last if (!$img || $img =~ /<img/);
+				last if (!$img || $img =~ /<(img|svg)/);
 			}
-			last if (!$img);
+			if (!$img) {
+				say "sortie sur pas d'image";
+				last;
+			}
 			if ($img =~ /data-src/) {
 				$img =~ /data-src="(.+?)"/; $img = $1;
 				my $size;
@@ -56,7 +65,11 @@ sub update {
 					}
 				}
 			} else {
-				$img =~ /src="(.+?)"/; $img = $1;
+				if ($img =~ /src="(.+?)"/) {
+					$img = $1;
+				} else {
+					$img = undef;
+				}
 			}
 			$r =~ s/<p class="mainBroadcastCard-startingHour.+?>(.+?)<\/p//s;
 			$start = $1;
@@ -86,7 +99,7 @@ sub update {
 				$duration = $1*60;
 			}
 			$stop = $start + $duration;
-			# say "nb $nb got img $img start $start title $title details $details duration $duration stop $stop sub $sub";
+			# say "got img $img start ",conv_time($start)," title $title details $details duration $duration stop ",conv_time($stop)," sub $sub";
 			my @sub = ($details, # num ?
 				$label,$title,
 				$start,$stop,
