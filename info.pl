@@ -379,7 +379,13 @@ sub disp_prog {
 
 	print $out "\n$$sub[2]\n\n",$details,"\n$$sub[7]\n";
 	print $out "$$sub[11]\n" if ($$sub[11]); # Critique
-	print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
+	if ($$sub[10]) {
+		if ($$sub[10] =~ /^\d+$/) {
+			print $out "*"x$$sub[10] if ($$sub[10]); # Etoiles
+		} else {
+			print $out $$sub[10];
+		}
+	}
 	out::close_fifo($out);
 	setup_fadeout($long);
 	$last_long = $long;

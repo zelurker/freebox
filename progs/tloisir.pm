@@ -174,10 +174,20 @@ sub valid {
 		$sub = decode_entities($sub);
 		$$rtab[7] = $sub;
 	}
-	$r =~ /div class="ratingStarsList(.+?)<\/div/s;
-	my $stars = $1;
-	my $nb = $stars =~ s/\#star//g;
-	$$rtab[10] = $nb;
+	while ($r =~ s/li class="overview-stickerInfoListItem(.+?)<\/li>//s) {
+		my $info = $1;
+		$info =~ /strong>(.+)<\/strong>(.+)/;
+		$sub = "" if (!defined($sub));
+		$sub .= "$1$2\n";
+		$$rtab[7] = $sub;
+	}
+	while ($r =~ s/<span class="ratingsReport-typeTitle">(.+?)<\/span>.+?([\d\.]+)<\/span>//s) {
+		my $stars = "$1 : $2";
+		next if ($stars =~ /^votre note/i);
+		$$rtab[10] = "" if (!$$rtab[10]);
+		$$rtab[10] .= "\n" if ($$rtab[10]);
+		$$rtab[10] .= $stars;
+	}
 }
 
 1;
