@@ -114,6 +114,10 @@ les flèches de curseur droite et gauche pour compenser. Les commandes externes
 utilisées et nécessaires pour un bon fonctionnement : wget (podcasts), socat
 (communications inter process), unzip juste pour décompresser une fonte
 téléchargeable sur le net, zenity ou gtkdialog pour afficher les dialogues de
-recherche.
+recherche, ffprobe pour confirmer qu'on a bien les streams audio et video dans
+un fichier vidéo qui arrive, midori nécessaire pour réussir à passer le barrage
+javascript de la recherche par image de bing (enfin duckduckgo mais ils
+utilisent bing), note: la conf de midori est effacée à chaque fois, il ne sert
+que pour faire une requête et après j'efface tout à chaque fois).
 Les commandes clavier lancent des scripts shell qui font passer la commande par
 socat au process concerné. Voilà ça résume le fonctionnement général !
