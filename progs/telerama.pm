@@ -407,9 +407,6 @@ sub update {
 
 sub get {
 	my ($p,$channel,$source,$base_flux) = @_;
-	if (ref($p) =~ /(telerama|tloisir)/ && ($source ne "dvb" || $source ne "freeboxtv")) {
-		return undef;
-	}
 	$p->{name} = $channel;
 	$channel = chaines::conv_channel($channel);
 	my $rtab = $p->{chaines}->{$channel};
@@ -423,7 +420,7 @@ sub get {
 		print "get: rien trouvé pour $channel\n";
 	}
 	if (!$rtab || $#$rtab < 0) {
-		if (ref($p) =~ /(telerama|tloisir)/ && ($source eq "dvb" || $source eq "freeboxtv")) {
+		if (ref($p) =~ /telerama/ && ($source eq "dvb" || $source eq "freeboxtv")) {
 			$p->error("Chaine inconnue : ".$p->{name});
 		}
 		return undef;
