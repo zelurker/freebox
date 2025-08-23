@@ -72,6 +72,7 @@ sub get_cur_name {
 	# Récupère le nom de la chaine courrante
 	my ($name,$source,$serv) = out::get_current();
 	myutf::mydecode(\$source);
+	myutf::mydecode(\$name);
 	$source =~ s/flux\/stations\/.+/flux\/stations/;
 	return (lc($name),$source,$serv);
 }
