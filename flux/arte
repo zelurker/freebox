@@ -283,6 +283,8 @@ sub decode_type {
 # affichées dans la bannière de haut d'écran, on laisse
 # tomber à priori...
                     print $_->{title}."\n$str$code\n";
+				} elsif ($arg[$base] eq "concerts") {
+                    print $_->{title}."\n$str/$code\n";
                 } elsif ($code eq $arg[$base]) {
 					my ($code,$url);
 					if ($_->{link}{url}) {
@@ -330,8 +332,23 @@ sub decode_main {
         }
     } elsif (ref($_) eq "ARRAY") {
 		my $hash = $_->[1][3];
-		return decode_type($hash->{page}{zones});
-		exit(0);
+		if ($hash->{page}{zones}) {
+			return decode_type($hash->{page}{zones});
+		} else {
+			# apparemment le guide n'est plus à la même adresse, tu parles d'un merdier... !
+			$hash = $_->[2][3];
+			if ($hash->{data}{value}{zones}) {
+				return decode_type($hash->{data}{value}{zones});
+			}
+			# et arte concerts non plus !!!
+			# le 4 est carrément un undef, on peut s'attendre à ce que ça change un de ces 4 !!!
+			$hash = $_->[5][3];
+			if ($hash->{page}{zones}) {
+				return decode_type($hash->{page}{zones});
+			}
+			say STDERR "decode_main: paumé, je trouve pas les zones";
+			exit(0);
+		}
 	}
 
     die "decode_main: pas de hash ?";
