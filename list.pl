@@ -689,6 +689,11 @@ sub read_list {
 			$encoding = "";
 			if (-x "flux/$b") {
 
+				# 2025/09 : on autorise un plugin ultra simplifié pour youtube:
+				# si la 1ère chose qu'il renvoie c'est Recherche, on fait une recherche standard
+				# Si c'est un lien http, refile ça à mpv.
+				# Ca permet de faire un plugin ultra court qui n'appelle rien directement, ni le dialogue de recherche, ni mpv.
+
 				# Ok, ça peut être valable d'expliquer les retours des plugins
 				# executables :
 				# si ça commence par http ou mms -> lien direct
@@ -727,6 +732,7 @@ sub read_list {
 					# gauche !!!
 					print "reset serv\n";
 				}
+loop_recherche:
 				if ($serv =~ /^Recherche/) {
 					my ($libelle) = $serv =~ /^Recherche\:(.+)/;
 					$libelle = "A chercher (regex)" if (!$libelle);
@@ -771,6 +777,14 @@ sub read_list {
 				while ($mode_flux =~ /encoding/) {
 					$encoding = $mode_flux;
 					$mode_flux = <F>;
+				}
+				if ($mode_flux =~ /^Recherche/) {
+					$serv = $mode_flux;
+					close(F);
+					goto loop_recherche;
+				} elsif ($mode_flux =~ /^http/) {
+					close(F);
+					return load_file2($source,$mode_flux);
 				}
 				chomp $mode_flux;
 			} else {
