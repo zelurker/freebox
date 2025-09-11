@@ -16,13 +16,28 @@ if (!$str) {
 say STDERR "obtenu $str";
 $str =~ s/^result://;
 my $mech = search::search($str);
+$mech->save_content("page.html");
+my @yt;
 foreach ($mech->links) {
 	my $u = $_->url;
-	if ($u =~ /youtube/) {
-		say STDERR "on envoie le lien $u";
-		say "$u";
-		exit(0);
+	if ($u =~ /youtube.com.watch/) {
+		next if (!$_->text);
+		next if ($_->text =~ /^www.youtube/);
+		next if ($u eq $yt[$#yt]);
+		push @yt, $_->text;
+		push @yt, $u;
 	}
+}
+if ($#yt == 1) { # 1 seule url
+	say $yt[1];
+	exit(0);
+} elsif ($#yt > 1) {
+	say "direct";
+	for (my $n=0; $n<=$#yt; $n+=2) {
+		say $yt[$n];
+		say $yt[$n+1];
+	}
+	exit(0);
 }
 say "Désolé, pas trouvé de lien youtube";
 exit(0);
