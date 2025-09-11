@@ -1,180 +1,29 @@
 #!/usr/bin/perl
 
-use strict;
-use http;
-use HTML::Entities;
-use v5.10;
-use lib ".";
+use common::sense;
+use search;
 
-binmode STDERR; # ,":utf8";
-binmode STDOUT; # ,":utf8";
+# une refonte ultra simplifiÃ©e du plugin youtube :
+# puisqu'on s'en sort pas avec le dÃ©codage html, on fait une approche inverse : on demande un titre, qu'on cherche sur un moteur de recherche
+# si on trouve un line youtube, on le passe directement Ã  mpv, fin de l'histoire !
+# TODO: ajouter une option pour enregistrer la vidÃ©o sur disque en option, pour l'instant il lit directrement sans garder aucune trace
+
 my $str = shift @ARGV;
-my $debug = 0; # infos
-my $dump = 0;  # dump toute l'entrée ligne par ligne
-$str =~ s/^result\://;
-if ($str =~ /^get,(.+)/) {
-	say $1;
-	exit(0);
-} elsif ($str !~ /^http/ || $str =~ /channel/) {
-	print STDERR "str $str sending list\n";
-	print "list\n";
-	print "Recherche\nRecherche\n"; # Transmis en mode list (ne contient pas //)
-}
-$str =~ s/ /\+/g;
-if ($debug && !$str) {
-	# Mode debug : on lit à partir de stdin, passer une page sauvée de youtube
-	# de préférence
-	binmode STDIN; # ,":utf8";
-	@_ = <>;
-	$_ = join("",@_);
-	# On passe str = "http" quand c'est le traitement d'une page de vidéo
-	# passer str="" pour un index de vidéos
-	$str = "http://channel";
-} else {
-	if ($str && $str !~ /^http/) {
-		$_ = http::myget( "http://www.youtube.com/results?search_query=$str&oq=$str");
-	} elsif ($str) {
-		print "debug: get $str\n" if ($debug);
-		$_ = http::myget($str);
-	} else {
-		$_ = http::myget("http://www.youtube.com/");
-	}
-}
-if (/encoding="(.+?)"/) {
-	print "encoding: $1\n";
-}
-
-if (!$debug) {
-	open(F,">yt.html");
-	print F $_;
-	close(F);
-}
-my $suffix;
-if ($str =~ /^http/ && $str !~ /channel/) {
-	# Extrait les formats vidéos de la page
-	print "direct\n";
-	my ($title) = /<title>(.+?)<\/title/;
-	$title =~ s/ \- YouTube$//;
-
-	($suffix) = $str =~ /v=(.+)/;
-	my $start_tag = "url_encoded_fmt_stream_map";
-	handle_tag($start_tag,$title);
-
-	mkdir "cache/yt";
-	# On aimerait bien sauver sous le nom du suffix pour qu'il soit unique,
-	# sauf qu'il n'arrive jamais jusqu'au bandeau d'info, ça reste une
-	# valeur intermédiaire gérée par list vu que le dernier argument est la
-	# vidéo elle même... Résultat : faut utiliser le titre !!!
-	my ($upload) = $_ =~ /div id="watch-uploader-info">(.+?)<\/div/;
-	my ($info) = $_ =~ /div id="watch-description-text".*?>(.+?)<\/div/;
-	$info = decode_entities($info);
-	my $img = "http://i.ytimg.com/vi/$suffix/mqdefault.jpg";
-	open(F,">cache/yt/$suffix");
-	print F "pic:$img $title\nUploader : $upload\n$info\n";
-	close(F);
+if (!$str) {
+	say "Recherche";
 	exit(0);
 }
-my ($name,$url);
-my %list = ();
-my $content = 0;
-my ($link,$text,$img,$data_text,$data_link);
-foreach (split /\n/) {
-	s/\&\#(..)\;/chr($1)/ge;
-	print "debug:$_\n" if ($dump);
-	# A priori les content ne sont plus utilisés, faudrait faire le ménage
-	# un de ces 4... enfin pour l'instant je laisse ça là...
-	if (/div class="result-item-main-content/ ||
-		/class="yt-lockup-ellipsize"/) {
-		$content = 1;
-		print STDERR "*** debug: content $content\n" if ($debug);
-	}
-	if (/div class="feed-item-content"/) {
-		$content = 2;
-		print STDERR "*** debug: content $content\n" if ($debug);
-	}
-	if (/div class="yt-lockup2/) {
-		# Autres résultats de recherche
-		$content = 3;
-		print STDERR "*** debug: content $content\n" if ($debug);
-	}
-	# Note : le texte du titre est apparemment souvent sur la même ligne
-	# que l'image d'après, donc il faut absolument traiter ça en 1er !
-	if (/yt-lockup-title.+?title="(.+?)"/) {
-		$data_text = $1;
-		print STDERR "debug: data_text = $data_text\n" if ($debug);
-	}
-	if ($data_link && $data_text) {
-		if ($img =~ /^\/\//) {
-			$img = "http:$img";
-		} elsif (!$img) {
-			my ($id) = $data_link =~ /v=(.+)/;
-			# On reconstitue l'image à partir de l'id vidéo, ça vaut mieux,
-			# tout se mélange là-dedans !
-			$img = "http://i.ytimg.com/vi/$id/mqdefault.jpg";
-			print STDERR "image reconstituée d'après id video\n" if ($debug);
-		}
-		if ($debug) {
-			print STDERR "debug: data pic $img link $data_link text $data_text\n";
-		} else {
-			print ($img ? "pic:$img " : "");
-			if (!utf8::valid($data_text)) {
-				die "problème $data_text\n";
-			}
-			print $data_text;
-			print "\nhttp://www.youtube.com$data_link\n";
-		}
-		$data_link = $data_text = $img = "";
-	}
-
-	if (/href="(.+?)".*yt-thumb-simple.+?src="(.+?)"/) {
-		$link = $1;
-		my $truc = $2;
-		if ($truc =~ /jpg$/) {
-			$img = $truc;
-			# Le texte doit être en dernier !!!
-			$data_text = undef;
-			print STDERR "debug: img = $truc link $link (ident clip-inner)\n" if ($debug);
-		}
-#		} elsif ($debug) {
-#			print STDERR "debug: failed to recognize image $truc (ident clip-inner\n";
-	}
-	$img = $1 if (/data\-thumb="(.+?)"/);
-   	if (/data-sessionlink.*href="(.+?)"/ || /href="(.+?)".*data-sessionlink/) {
-		$data_link = $1;
-		$data_link = "" if ($data_link !~ /(watch|channel)/);
-		print STDERR "debug: data_link = $data_link\n" if ($debug);
-	}
-	if ($content == 1) {
-		if (/href="(\/.+?)".*?\>(.+)<\/a/) {
-			my ($url,$text) = ($1,$2);
-			$img = "http:$img" if ($img =~ /^\/\//);
-			print ($img ? "pic:$img " : "");
-			print "$text\nhttp://www.youtube.com$url\n";
-			$img = undef;
-			$content = 0;
-		}
-	} elsif ($content == 3) {
-		if (/yt-lockup2-title.*title="(.+?)"/) {
-			$_ = $1;
-			$img = "http:$img" if ($img =~ /^\/\//);
-			if ($debug) {
-				print STDERR "debug: content3 pic $img link $link text $_\n";
-			} else {
-				print ($img ? "pic:$img " : "");
-				print "$_\nhttp://www.youtube.com$link\n";
-			}
-			$link = $content = undef;
-		}
+say STDERR "obtenu $str";
+$str =~ s/^result://;
+my $mech = search::search($str);
+foreach ($mech->links) {
+	my $u = $_->url;
+	if ($u =~ /youtube/) {
+		say STDERR "on envoie le lien $u";
+		say "$u";
+		exit(0);
 	}
 }
+say "DÃ©solÃ©, pas trouvÃ© de lien youtube";
+exit(0);
 
-sub handle_tag {
-	open(F,"youtube-dl -F \"$str\"|");
-	while(<F>) {
-		if (/^(\d+)/) {
-			print;
-			say "--ytdl-format=$1 $str";
-		}
-	}
-	close(F);
-}
