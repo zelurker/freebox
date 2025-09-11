@@ -328,7 +328,12 @@ sub decode_main {
         } else {
             die "decode_main: pas de tvguide : ".Dumper($_);
         }
-    }
+    } elsif (ref($_) eq "ARRAY") {
+		my $hash = $_->[1][3];
+		return decode_type($hash->{page}{zones});
+		exit(0);
+	}
+
     die "decode_main: pas de hash ?";
 }
 
@@ -534,9 +539,17 @@ my $json;
 if ($page =~ /^{"/) {
 	$json = $page;
 } else {
-	foreach (split(/\n/,$page)) {
-		if (/({"props":.+})/) {
-			$json = decode_entities($1);
+	if ($page =~ /7:(\[\[.+\]\])\\n/) {
+		$json = $1;
+		$json =~ s/\\"/"/g;
+		$json =~ s/\\\\"/\\"/g;
+		$json = decode_entities($json);
+		say STDERR "json from test ",length($json);
+	} else {
+		foreach (split(/\n/,$page)) {
+			if (/({"props":.+})/) {
+				$json = decode_entities($1);
+			}
 		}
 	}
 }
