@@ -23,6 +23,8 @@ sub conv_time {
 
 sub update {
 	my ($p,$channel,$offset) = @_;
+	# On peut se retrouver en plugin par défaut donc il faut traiter les cas chaine inconnue en 1er
+	return undef if (!$p->{list}->{$channel});
 	my $prog = $p->{list}->{$channel}[4];
 	my ($base,$suffix) = $prog =~ /^(.+)(\/.+)/;
 	my $label = $p->{list}->{$channel}[2];
