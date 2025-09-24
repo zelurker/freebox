@@ -23,9 +23,6 @@ sub handle_lyrics {
 	};
 	if ($@) {
 		print "handle_lyrics: got error $!: $@\n";
-		if ($u =~ /genius/) {
-			return get_manual($file,$u);
-		}
 		return undef;
 	}
 	$mech->save_content("page.html");
@@ -547,7 +544,7 @@ debut:
 			$u = $_->url;
 			if ($u =~ /(paroles.net|lyricsondemand.com|lyricsmode.com|musixwatch.com|paroles-musique.com)/) {
 				$lyrics = get_manual($file,$u);
-				last if ($lyrics);
+				last;
 			}
 		}
 	}
