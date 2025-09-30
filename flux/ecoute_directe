@@ -20,13 +20,20 @@ $mech->save_content("page.html");
 say "direct" if (!$radio);
 
 my (%name,%rc);
-foreach (split /\n/,$mech->content) {
-	if (/ch = "(.+?)"/) {
-		say "$1";
+if ($radio) {
+	foreach (split /\n/,$mech->content) {
+		if (/ch = "(.+?)"/) {
+			# Just le lien extrait vers l'écoute mp3
+			say "$1";
+			exit(0);
+		}
 	}
-	if (/href="(.+?)".+class="radio">(.+?)</ && !$radio) {
-		$name{$2} = $1;
-		say "$2\nget,$1";
+}
+foreach ($mech->links) {
+	if ($_->text && $_->text !~ /^www/) {
+		last if ($_->url =~ /^http/);
+		say $_->text;
+		say "get,",$_->url;
 	}
 }
 
