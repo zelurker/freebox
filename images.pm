@@ -61,7 +61,7 @@ sub search {
 
 	if (!$c) {
 		# Cas d'erreur on tente de boucler 1 fois...
-		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 9; midori -e tab-close; sleep 1; killall midori; sleep 1; rm -rf ~/.config/midori ~/.local/share/midori ~/.midori");
+		system("($ENV{BROWSER} \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 9; killall $ENV{BROWSER}; sleep 1; rm -rf ~/.config/$ENV{BROWSER} ~/.local/share/$ENV{BROWSER} ~/.$ENV{BROWSER}");
 		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
 
 		($vqd) = $c =~ /vqd="(.+?)"/;
@@ -71,7 +71,7 @@ sub search {
 
  	if (!$c) {
  		# Cas d'erreur on tente de boucler 1 fois...
-		system("(midori \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 9; midori -e tab-close; sleep 1; killall midori; sleep 1; rm -rf ~/.config/midori ~/.local/share/midori ~/.midori");
+		system("($ENV{BROWSER} \"https://duckduckgo.com/?q=$q&t=h_&iax=images&ia=images\" &); sleep 9; killall $ENV{BROWSER}; sleep 1; rm -rf ~/.config/$ENV{BROWSER} ~/.local/share/$ENV{BROWSER} ~/.$ENV{BROWSER}");
  		$c = http::myget("https://duckduckgo.com/?q=$q&t=h_");
 
  		($vqd) = $c =~ /vqd="(.+?)"/;
