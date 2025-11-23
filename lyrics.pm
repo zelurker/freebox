@@ -542,7 +542,7 @@ debut:
 	if (!$lyrics) {
 		foreach ($mech->links) {
 			$u = $_->url;
-			if ($u =~ /(paroles.net|lyricsondemand.com|lyricsmode.com|musixwatch.com|paroles-musique.com)/) {
+			if ($u =~ /(paroles.net|lyricsmode.com|musixwatch.com|paroles-musique.com)/) {
 				$lyrics = get_manual($file,$u);
 				last;
 			}
