@@ -747,7 +747,12 @@ loop_recherche:
 						$tab_serv[1] = $serv;
 					} else {
 						$serv = undef;
-						splice @tab_serv,$#tab_serv;
+						if (@tab_serv) {
+							splice @tab_serv,$#tab_serv;
+						} else {
+							$source = "menu";
+							return;
+						}
 						$base_flux =~ s/^(.+?)\/.+$/$1/;
 					}
 				} elsif ($serv =~ /^\+/) { # commence par + -> reset base_flux
@@ -1151,7 +1156,7 @@ sub run_mplayer2 {
 	push @list,("-identify","-stop-xscreensaver","-input",
 		"nodefault-bindings:conf=$pwd/input.conf:file=fifo_cmd") if ($player =~ /^mplayer/); # pas reconnu par mpv !
 	if ($player =~ /^mpv/) {
-		push @list,("-stop-screensaver","--input-ipc-server=mpvsocket","--script=observe.lua",
+		push @list,("--no-audio-display","-stop-screensaver","--input-ipc-server=mpvsocket","--script=observe.lua",
 			"--input-conf=input-mpv.conf","--quiet");
 		if ($serv !~ /^get,/ && $source !~ /(dvb|freeboxtv)/ && $src !~ /arte/) {
 			my %bookmarks;
