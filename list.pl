@@ -1250,8 +1250,6 @@ sub check_player2 {
 				say "killing remux ($pid_remux)";
 				kill "TERM" => $pid_remux;
 				$pid_remux = 0;
-			} else {
-				say "pid_remux = $pid_remux";
 			}
 			if ($pid == $pid_player2) { # qui a pu changer à cause de l'appel à commands...
 				$pid_player2 = 0;
