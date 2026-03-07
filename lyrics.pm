@@ -67,6 +67,7 @@ sub handle_lyrics {
 			}
 			if ($lyr) {
 				s/<br \/>/\n/;
+				s/<br>/\n/;
 				s/\t+/    /;
 				$_ = decode_entities($_);
 				if (s/<\/p>//) {
@@ -481,6 +482,7 @@ sub get_lyrics {
 	my $r;
 	my $orig = $title;
 	$title =~ s/ \(.+?\)//; # truc entre ()
+	$title =~ s/ \(.+//; # et cas où la ) est coupée !
 	$title = pure_ascii($title);
 	$title =~ s/ \[.+?\]//; # vire chaine entre [] après le titre éventuelle
 	$title =~ s/ en duo.+//; # à tout hasard... !
