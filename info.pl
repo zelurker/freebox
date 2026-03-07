@@ -513,7 +513,7 @@ sub commands {
 			}
 		}
 
-		if ($info{$name}->{metadata}->{artist} && $info{$name}->{metadata}->{end} &&
+		if ($info{$name}->{metadata}->{artist} && # $info{$name}->{metadata}->{end} &&
 			$info{$name}->{metadata}->{title}) {
 			my @track = ($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
 			if (!$info{$name}->{tracks}) {
@@ -562,8 +562,11 @@ sub commands {
 		my ($name,$src,$serv) = get_cur_name();
 		$name .= "&$src";
 		$info{$name}->{codec} = "$codec $bitrate";
-		if (!$info{$name}->{metadata}->{artist} && !$info{$name}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i) { # normalement on reçoit les tags avant le codec...
+		if (!$info{$name}->{metadata}->{artist} && !$info{$name}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i &&
+		!$info{$name}->{lyrics_sent}) { # normalement on reçoit les tags avant le codec...
 			say "got name $name src $src serv $serv et pas de tags, on y va... !";
+			$info{$name}->{lyrics_sent} = 1; # surtout utile quand la cxion est lente et que la réponse met longtemps à arriver
+			# mais ça peut être TRES utile dans certains cas avec le vpn !
 			my $lyrics = lyrics::get_lyrics($serv);
 			if ($lyrics) {
 				$serv =~ s/^.+\///;
