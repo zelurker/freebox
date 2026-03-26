@@ -27,7 +27,7 @@ use out;
 require "radios.pl";
 
 use progs::tloisir;
-use progs::hbo;
+# use progs::hbo;
 use progs::finter;
 use progs::podcasts;
 use progs::files;
@@ -221,7 +221,7 @@ push @prog, progs::podcasts->new($net);
 push @prog, progs::files->new($net);
 push @prog, progs::series->new($net);
 push @prog, progs::arte->new($net);
-push @prog, progs::hbo->new($net);
+# push @prog, progs::hbo->new($net);
 
 # read_prg:
 my $path = "sock_info";

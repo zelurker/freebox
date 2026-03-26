@@ -54,7 +54,8 @@ sub new {
 			$chan = chaines::getListeChaines_tloisir($net);
 			mkdir "cache/tloisir";
 		} else {
-			$chan = chaines::getListeChaines($net);
+			# ça semble appelé pour hbo seulement, on va désactiver hbo pour l'instant
+			$chan = chaines::getListeChaines_tloisir($net);
 		}
 		$p->{chaines} = \%chaines;
 		$p->{list} = $chan;
