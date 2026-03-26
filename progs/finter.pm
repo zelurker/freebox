@@ -39,7 +39,7 @@ sub update_prog_html($) {
 	my $url = $file;
 	my ($base,$date) = $url =~ /^(.+?)-(.+)/;
 	if ($base eq "finter") {
-		$url = "https://www.franceinter.fr/programmes/$date";
+		$url = "https://www.radiofrance.fr/franceinter/grille-programmes?date=$date";
 	} elsif ($base eq "franceinfo") {
 		$url = "https://www.radiofrance.fr/franceinfo/grille-programmes?date=$date";
 	} elsif ($base eq "fmusique") {

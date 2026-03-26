@@ -72,11 +72,12 @@ sub decode_html {
 	}
 	my $json;
 	while(1) {
-		$l =~ s/{(metadata:.+?)},"?uses//;
+		$l =~ s/data = {(.+?)};//;
 		$json = $1;
+		$json =~ s/void 0/0/g;
 		die "progs/html/finter: pb json!!!\n" if (!$json || $json eq "inter");
-		next if ($json !~ /tracking/);
-		$json =~ s/^.+{kirby.+?metadata/metadata/;
+		# next if ($json !~ /tracking/);
+		# $json =~ s/^.+{kirby.+?metadata/metadata/;
 		# /const data = (\[.+?\]);/;
 		# /(grid:{.+}),date/;
 		if ($json) {
@@ -86,7 +87,10 @@ sub decode_html {
 				say "trying json $json";
 				$json = $js->allow_barekey()->decode($json);
 			};
-			next if ($@);
+			if ($@) {
+				say "pb json: $@";
+				next;
+			}
 			last;
 		} else {
 			say "progs/html/finter no json after some tries";
@@ -96,10 +100,9 @@ sub decode_html {
 			return undef;
 		}
 	}
-	say "sortie boucle json $json";
+	say "json ",Dumper($json);
 	if ($json) {
 		# $json = $js->decode($json);
-		# say "json ",Dumper($json);
 		# exit(1);
 		# say "grid $json->{grid} steps $json->{grid}->{steps}";
 		my $grid = $json->{grid}->{steps};
