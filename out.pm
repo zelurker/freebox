@@ -321,7 +321,14 @@ sub get_cache($) {
 		# on cache dans nom_du_serveur/path/file c'est le mieux
 		my $base = $1;
 		$file = $2;
-		$base = "cache/$base";
+		if ($file =~ /^\d+x\d+$/) { # finit par une taille d'image sans extension, france inter 2026... !
+			my @bout = split /\//,$pic;
+			$file = $bout[$#bout-1]."-".$bout[$#bout].".webp"; # colle les 2 dernières parties ensemble
+			$base = "cache/".join("/",@bout[2..$#bout-2])."/";
+		} else {
+			$base = "cache/$base";
+		}
+		say "*** get_cache $pic -> base $base file $file";
 		$base =~ s/\~/-/g;
 		make_path($base);
 		$file = $base.$file;
