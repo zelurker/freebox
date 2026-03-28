@@ -1,7 +1,7 @@
 package progs::html::finter;
 
 use HTML::Entities;
-use Time::Local "timelocal_nocheck", "timegm_nocheck";
+use Time::Local qw(timelocal_nocheck timegm_nocheck);
 use Cpanel::JSON::XS qw(decode_json);
 use common::sense;
 use Data::Dumper;
@@ -59,10 +59,9 @@ sub check_start {
 }
 
 sub decode_html {
-	my ($p,$l,$name) = @_;
+	my ($p,$l,$name,$date) = @_;
 	my $rtab = [];
 	my $pos = 0;
-	my $date;
 	my $prev_start;
 	my $keep_date = undef;
 	my $rtab2 = $p->{chaines}->{lc($name)};
@@ -100,36 +99,49 @@ sub decode_html {
 			return undef;
 		}
 	}
-	say "json ",Dumper($json);
+	# say "json ",Dumper($json);
+	# say "keys ",join(", ",keys(%$json));
+	my @keys = keys(%$json);
 	if ($json) {
 		# $json = $js->decode($json);
 		# exit(1);
 		# say "grid $json->{grid} steps $json->{grid}->{steps}";
-		my $grid = $json->{grid}->{steps};
-		my $date = $json->{date};
+		my $grid;
+		foreach (@keys) {
+			if ($_ =~ /loadProgramGrid/) {
+				$grid = $json->{$_};
+				say "grid $grid";
+				last;
+			}
+		}
 		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($date);
 		$mon++;
 		$year += 1900;
 		$date = "$mday/$mon/$year";
 
+		my $site;
 		foreach (@$grid) {
-			my $exp = $_->{expression};
-			$exp = $_->{concept} if (!$exp);
-			my $title = $exp->{visual}->{legend};
-			$title = $_->{concept}->{title} if (!$title);
+			my $title = $_->{titleProps}->{title};
 			next if (!$title);
-			my $desc = $exp->{title};
+			my $desc = $_->{titleProps}->{text};
 			# la majorité du prog inter est en latin1, mais certains champs peuvent contenir de l'utf8 !!!
 			# seul moyen pour éviter le désastre : ré-encoder tous les champs texte, ce que je fais ici
 			myutf::mydecode(\$title);
 			myutf::mydecode(\$desc);
-			my $start = $_->{startTime};
+			my $start = $_->{startTimeUnix};
 			my $end = $_->{endTime};
-			my $img = $exp->{visual}->{webpSrc};
-			$img = $_->{concept}->{visual}->{webpSrc} if (!$img);
-			my $podcast = $_->{media}->{sources}->[0]{url};
-			$desc .= " pod:$podcast" if ($podcast);
+			my $img = $_->{visual}->{src}."/".$_->{visual}->{width}."x".$_->{visual}->{height};
+			($site) = $img =~ /^(https:\/\/.+?)\// if (!$site);
+			# my $podcast = $site.$_->{titleProps}->{href};
+			# en fin de compte ce lien podcast pointe sur la page d'index des podcasts de l'émission
+			# pour le podcast lui même il faut utiliser une url qui lache un flux à partir d'une date de début et une date de fin, du genre :
+			# https://stream.radiofrance.fr/franceinter/franceinter_hifi.m3u8?endDate=2026-03-28T13%3A59%3A59.000Z&id=radiofrance&startDate=2026-03-28T13:04:50.000Z
+			# bon pour l'instant on va temporiser, parce qu'ici on a même pas l'heure de fin, donc c'est à gérer au niveau d'info.pl...
+			# $desc .= " pod:$podcast" if ($podcast);
+			# mais à priori ça doit être très simple à insérer dans info
+			# c dommage pour ceux qui attendent un bon vieux flux de fichiers mp3 comme avant, y en a plus... !
 			my $id = $_->{id};
+			# say "insertion name $name title $title start $start end $end desc $desc id $id img $img date $date podcast $podcast";
 			my @tab = (undef, $name, $title, $start,
 				$end, "",
 				$desc,

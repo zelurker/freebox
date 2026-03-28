@@ -11,10 +11,9 @@ use progs::telerama;
 use progs::html::finter;
 use progs::html::fb;
 use progs::json;
-use Time::Local "timegm_nocheck";
+use Time::Local qw(timelocal_nocheck timegm_nocheck);
 use Cpanel::JSON::XS qw(decode_json);
 use Data::Dumper;
-use Time::Local "timelocal_nocheck";
 use Encode;
 use v5.10;
 use HTML::Entities;
@@ -119,7 +118,8 @@ sub update {
 	$file =~ s/[^a-zA-Z0-9_]//g;
 	my $name = $p->{name};
 
-	my ($sec,$min,$hour,$mday,$mon,$year) = localtime(time()+$offset*3600*24);
+	my $date = time()+$offset*3600*24;
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($date);
 	if ($hour < 5 && !$offset && $channel =~ /france /) { # Avant 5h c'est le prog de la veille
 		($sec,$min,$hour,$mday,$mon,$year) = localtime(time()-24*3600);
 	}
@@ -153,7 +153,7 @@ sub update {
 	my $rtab2;
 	my $json;
     if (!$use_json) {
-		$rtab2 = progs::html::finter::decode_html($p,$res,"$name");
+		$rtab2 = progs::html::finter::decode_html($p,$res,"$name",$date);
 	} else {
 		eval  {
 			$json = decode_json $res;
