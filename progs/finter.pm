@@ -46,7 +46,7 @@ sub update_prog_html($) {
 	} elsif ($base eq "fculture") {
 		$url = "https://www.franceculture.fr/programmes/$date";
 	} elsif ($fb{$base}) {
-		$url = $fb{$base};
+		$url = $fb{$base}."?date=$date";
 	} else {
 		# html pas supporté !
 		say "prog html pas supporté : $base";

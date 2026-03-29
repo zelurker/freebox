@@ -5,7 +5,6 @@ use Time::Local qw(timelocal_nocheck timegm_nocheck);
 use Cpanel::JSON::XS qw(decode_json);
 use common::sense;
 use Data::Dumper;
-use http;
 use myutf;
 
 sub get_tag {
@@ -73,6 +72,12 @@ sub decode_html {
 	while(1) {
 		$l =~ s/data = {(.+?)};//;
 		$json = $1;
+		if (!$json) {
+			($json) = $l =~ /"body":"({.+})/; # fbleu
+			$json =~ s/\\"/"/g;
+			$json =~ s/\\\\"/\\"/g;
+			$json =~ s/"}$//;
+		}
 		$json =~ s/void 0/0/g;
 		die "progs/html/finter: pb json!!!\n" if (!$json || $json eq "inter");
 		# next if ($json !~ /tracking/);
@@ -80,14 +85,13 @@ sub decode_html {
 		# /const data = (\[.+?\]);/;
 		# /(grid:{.+}),date/;
 		if ($json) {
-			$json = "{$json}";
+			$json = "{$json}" if ($json !~ /^{/);
 			my $js = new Cpanel::JSON::XS;
 			eval {
 				$json = $js->allow_barekey()->decode($json);
 			};
 			if ($@) {
-				say "pb json: $@";
-				next;
+				die "pb json: $@, json $json";
 			}
 			last;
 		} else {
@@ -113,7 +117,18 @@ sub decode_html {
 				last;
 			}
 		}
+		if (!$grid) { # fbleu encore...
+			my $morning = $json->{context}->{ProgramGridLocale}->{morning};
+			my $afternoon = $json->{context}->{ProgramGridLocale}->{afternoon};
+			my $evening = $json->{context}->{ProgramGridLocale}->{evening};
+			my $midday = $json->{context}->{ProgramGridLocale}->{midday};
+			push @$morning,@$midday;
+			push @$morning,@$afternoon;
+			push @$morning,@$evening;
+			$grid = $morning;
+		}
 		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($date);
+		my $zero = timelocal_nocheck(0,0,0,$mday,$mon,$year);
 		$mon++;
 		$year += 1900;
 		$date = "$mday/$mon/$year";
@@ -121,23 +136,30 @@ sub decode_html {
 		my $site;
 		foreach (@$grid) {
 			my $title = $_->{titleProps}->{title};
+			$title = $_->{title} if (!$title);
 			next if (!$title);
-			my $desc = $_->{titleProps}->{text};
+			my $desc = $_->{titleProps}->{text} || $_->{description};
 			# la majorité du prog inter est en latin1, mais certains champs peuvent contenir de l'utf8 !!!
 			# seul moyen pour éviter le désastre : ré-encoder tous les champs texte, ce que je fais ici
 			myutf::mydecode(\$title);
 			myutf::mydecode(\$desc);
-			my $start = $_->{startTimeUnix};
-			my $end = $_->{endTime};
-			my $img = $_->{visual}->{src}."/".$_->{visual}->{width}."x".$_->{visual}->{height};
+			my $start = $_->{startTimeUnix} || $_->{start};
+			my $end = $_->{endTime} || $_->{end};
+			if ($start =~ /(\d+)h(\d+)/) {
+				$start = $zero + $1*3600 + $2;
+				$end =~ /(\d+)h(\d+)/;
+				$end = $zero + $1*3600 + $2;
+			}
+
+			my $img = $_->{visual}->{src}."/".$_->{visual}->{width}."x".$_->{visual}->{height} || $_->{visual}->{mobile}->{url};
 			($site) = $img =~ /^(https:\/\/.+?)\// if (!$site);
 			my $podcast;
 			#			if (!$_->{isLive}) {
-			$desc .= "\npod:https://www.radiofrance.fr/transistor/aod/".$_->{playerId};
+			$desc .= "\npod:https://www.radiofrance.fr/transistor/aod/".$_->{playerId} if ($_->{playerId});
 			#			}
 
 			my $id = $_->{id};
-			# say "insertion name $name title $title start $start end $end desc $desc id $id img $img date $date podcast $podcast";
+			# say "insertion name $name title $title start ",scalar localtime($start)," end ",scalar localtime($end)," desc $desc id $id img $img date $date podcast $podcast";
 			my @tab = (undef, $name, $title, $start,
 				$end, "",
 				$desc,
