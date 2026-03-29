@@ -132,14 +132,11 @@ sub decode_html {
 			my $end = $_->{endTime};
 			my $img = $_->{visual}->{src}."/".$_->{visual}->{width}."x".$_->{visual}->{height};
 			($site) = $img =~ /^(https:\/\/.+?)\// if (!$site);
-			# my $podcast = $site.$_->{titleProps}->{href};
-			# en fin de compte ce lien podcast pointe sur la page d'index des podcasts de l'émission
-			# pour le podcast lui même il faut utiliser une url qui lache un flux à partir d'une date de début et une date de fin, du genre :
-			# https://stream.radiofrance.fr/franceinter/franceinter_hifi.m3u8?endDate=2026-03-28T13%3A59%3A59.000Z&id=radiofrance&startDate=2026-03-28T13:04:50.000Z
-			# bon pour l'instant on va temporiser, parce qu'ici on a même pas l'heure de fin, donc c'est à gérer au niveau d'info.pl...
-			# $desc .= " pod:$podcast" if ($podcast);
-			# mais à priori ça doit être très simple à insérer dans info
-			# c dommage pour ceux qui attendent un bon vieux flux de fichiers mp3 comme avant, y en a plus... !
+			my $podcast;
+			if (!$_->{isLive}) {
+				$desc .= "\npod:https://www.radiofrance.fr/transistor/aod/".$_->{playerId};
+			}
+
 			my $id = $_->{id};
 			# say "insertion name $name title $title start $start end $end desc $desc id $id img $img date $date podcast $podcast";
 			my @tab = (undef, $name, $title, $start,

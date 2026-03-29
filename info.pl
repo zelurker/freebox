@@ -363,7 +363,7 @@ sub disp_prog {
 			my $start = $_->{startTime};
 			my $end = $_->{endTime};
 			my $podcast = $_->{media}->{sources}->[0]{url};
-			$sdesc .= " pod:$podcast" if ($podcast);
+			$sdesc .= "\npod:$podcast" if ($podcast);
 			my ($ssec,$smin,$shour) = localtime($start);
 			my ($esec,$emin,$ehour) = localtime($end);
 			myutf::mydecode(\$title);
@@ -429,6 +429,22 @@ sub commands {
 		$refresh = undef;
 	} elsif ($cmd eq "podcast") {
 		if (@podcast && $num_pod <= $#podcast) {
+			my $podcast = $podcast[$num_pod];
+			if ($podcast =~ /transistor/) { # la façon 2026 d'inter de passer des podcasts : de + en + de requêtes indirectes supplémentaires !
+				my ($id) = $podcast =~ /.+\/(.+)/;
+				my $json2 = http::myget($podcast,"cache/".$id,7);
+				if ($json2) {
+					eval {
+						$json2 = decode_json($json2);
+					};
+					if ($@) {
+						say "json2 decoding failed: $@";
+					} else {
+						$podcast = $json2->{sources}[0]->{url}; # on se fiche à priori de savoir si c du m4a ou du mp3 ou autre chose
+						$podcast[$num_pod] = $podcast;
+					}
+				}
+			}
 			out::send_cmd_list("open $podcast[$num_pod]");
 		}
 	} elsif ($cmd eq "nextpod") {
