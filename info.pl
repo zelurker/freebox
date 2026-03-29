@@ -596,7 +596,9 @@ sub commands {
 		if (!$cleared && (!$channel || $name eq conv($channel)) && $src !~ /^flux\/podcasts/ && !$info{$name}->{progress}) {
 			my ($name,$source,$serv) = out::get_current();
 			if (!grep($serv eq $_,@podcast)) {
-				if ($channel eq $last_chan) {
+				# petit hack sur $channel eq "flux" pour avoir un affichage stable
+				# quand on déclenche un podcast à partir du bandeau d'info...
+				if ($channel eq $last_chan || $channel eq "flux") {
 					disp_prog($lastprog,$last_long);
 				} else {
 					read_stream_info(time(),$channel,$info{$name});
