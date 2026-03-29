@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Gère l'appui sur la touche i
+# Gère l'appui sur la touche b (podcast à partir du bandeau d'info)
 
 if [ -f info_coords ]; then
 	# un bandeau d'info est actif
