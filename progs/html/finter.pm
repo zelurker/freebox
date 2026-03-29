@@ -83,7 +83,6 @@ sub decode_html {
 			$json = "{$json}";
 			my $js = new Cpanel::JSON::XS;
 			eval {
-				say "trying json $json";
 				$json = $js->allow_barekey()->decode($json);
 			};
 			if ($@) {
@@ -133,9 +132,9 @@ sub decode_html {
 			my $img = $_->{visual}->{src}."/".$_->{visual}->{width}."x".$_->{visual}->{height};
 			($site) = $img =~ /^(https:\/\/.+?)\// if (!$site);
 			my $podcast;
-			if (!$_->{isLive}) {
-				$desc .= "\npod:https://www.radiofrance.fr/transistor/aod/".$_->{playerId};
-			}
+			#			if (!$_->{isLive}) {
+			$desc .= "\npod:https://www.radiofrance.fr/transistor/aod/".$_->{playerId};
+			#			}
 
 			my $id = $_->{id};
 			# say "insertion name $name title $title start $start end $end desc $desc id $id img $img date $date podcast $podcast";
