@@ -331,7 +331,6 @@ sub get_cache($) {
 		$base =~ s/\~/-/g;
 		make_path($base);
 		$file = $base.$file;
-		print STDERR "cache $file\n";
 	} elsif (-f $pic) { # un nom de fichier direct ?
 		return $pic;
 	} elsif ($pic =~ /.+\/(.+)/) {

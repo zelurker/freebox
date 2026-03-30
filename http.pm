@@ -14,7 +14,6 @@ sub myget {
 	# et $age age du cache avant update en jours (nb à virgule ok)
 
 	my ($url,$cache,$age) = @_;
-	say "myget url $url";
 	if ($cache) {
 		$age = 1 if (!$age);
 		my ($dir) = $cache =~ /^(.+)\//;

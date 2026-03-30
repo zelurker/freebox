@@ -821,7 +821,6 @@ sub handle_result {
 		$name .= ".$ext";
 		if (-f $name) {
 			utime(undef,undef,$name);
-			print "handle_result: using cache $name\n";
 			out::send_bmovl_utf("image $name");
 		} else {
 			my $referer = $url;
@@ -849,7 +848,6 @@ sub handle_result {
 						handle_images();
 						return;
 					}
-					print "handle_result: calling image $pic\n";
 					out::send_bmovl_utf("image $pic");
 				} else {
 					handle_images();
@@ -860,7 +858,6 @@ sub handle_result {
 			interval => 25,
 			cb => sub { handle_images(); });
 	} else {
-		print "handle_result: fin de liste!\n";
 		out::send_bmovl("vignettes") if ($has_vignettes);
 		$time = undef;
 	}
@@ -870,10 +867,8 @@ sub handle_images {
 	my $cur = shift;
 	$cur = $old_titre if (!$cur);
 	$old_titre = $cur;
-	print "handle_image: $cur net $net.\n";
 	return if (!$net);
 	if (!@cur_images || $cur_images[0] ne $cur) {
-		print "handle_image: reset search\n";
 		# Reset de la recherche précédente si pas finie !
 		if ($cur_images[1]) {
 			my $result = $cur_images[1];
@@ -894,7 +889,6 @@ sub handle_images {
 		push @cur_images,$result;
 		handle_result($result);
 	} else {
-		print "handle_image calling handle_result\n";
 		my $result = $cur_images[1];
 		handle_result($result);
 	}
