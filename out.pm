@@ -328,7 +328,6 @@ sub get_cache($) {
 		} else {
 			$base = "cache/$base";
 		}
-		say "*** get_cache $pic -> base $base file $file";
 		$base =~ s/\~/-/g;
 		make_path($base);
 		$file = $base.$file;
