@@ -62,7 +62,7 @@ our ($lastprog,$last_chan,$last_long);
 our ($channel,$long);
 our @days = ("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi",
 	"Samedi");
-our ($source,$base_flux,$serv);
+our ($source,$base_flux,$serv,$name,$src);
 
 $SIG{PIPE} = sub { print "info: sigpipe ignoré\n" };
 our $fadeout;
@@ -70,10 +70,10 @@ our $refresh;
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
-	my ($name,$source,$serv) = out::get_current();
-	myutf::mydecode(\$source);
+	($name,$src,$serv) = out::get_current();
+	myutf::mydecode(\$src);
 	myutf::mydecode(\$name);
-	$source =~ s/flux\/stations\/.+/flux\/stations/;
+	$src =~ s/flux\/stations\/.+/flux\/stations/;
 	return (lc($name),$source,$serv);
 }
 
@@ -139,10 +139,8 @@ sub read_stream_info {
 	# de chaine, genre une radio et une chaine de télé qui ont le même
 	# nom... Pour l'instant pas d'idée sur comment éviter ça...
 	if (!$rinfo) {
-		my ($name,$src) = get_cur_name();
-		$name .= "&$src";
 		if ($name eq conv($cmd)) {
-			$rinfo = $info{$name};
+			$rinfo = $info{"$name&$src"};
 		} else {
 			return;
 		}
@@ -442,9 +440,7 @@ sub commands {
 					} else {
 						$podcast = $json2->{sources}[0]->{url}; # on se fiche à priori de savoir si c du m4a ou du mp3 ou autre chose
 						$podcast[$num_pod] = $podcast;
-						my ($name,$src,$serv) = get_cur_name();
-						$name .= "&$src";
-						$info{$name}->{podcast} = 1;
+						$info{"$name&$src"}->{podcast} = 1;
 					}
 				}
 			}
@@ -467,7 +463,6 @@ sub commands {
 		disp_prog($lastprog,$last_long) if ($lastprog);
 	} elsif ($cmd =~ s/^unload //) {
 		# envoyé par le script lua de mpv pour indiquer qu'il quitte
-		my ($name,$src,$serv) = get_cur_name();
 		if ($src =~ /^flux\/podcasts/) {
 			# le nom du fichier est renvoyé par la commande unload,
 			# pratique pour les cas indirects comme les podcasts !
@@ -578,32 +573,30 @@ sub commands {
 	} elsif ($cmd =~ /^codec/) {
 		my ($codec,$bitrate);
 		($cmd,$codec,$bitrate) = split / /,$cmd;
-		my ($name,$src,$serv) = get_cur_name();
-		$name .= "&$src";
-		$info{$name}->{codec} = "$codec $bitrate";
-		if (!$info{$name}->{metadata}->{artist} && !$info{$name}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i &&
-		!$info{$name}->{lyrics_sent}) { # normalement on reçoit les tags avant le codec...
-			say "got name $name src $src serv $serv et pas de tags, on y va... !";
-			$info{$name}->{lyrics_sent} = 1; # surtout utile quand la cxion est lente et que la réponse met longtemps à arriver
+		$info{"$name&$src"}->{codec} = "$codec $bitrate";
+		if (!$info{"$name&$src"}->{metadata}->{artist} && !$info{"$name&$src"}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i &&
+		!$info{"$name&$src"}->{lyrics_sent}) { # normalement on reçoit les tags avant le codec...
+			say "got name $name&$src src $src serv $serv et pas de tags, on y va... !";
+			$info{"$name&$src"}->{lyrics_sent} = 1; # surtout utile quand la cxion est lente et que la réponse met longtemps à arriver
 			# mais ça peut être TRES utile dans certains cas avec le vpn !
 			my $lyrics = lyrics::get_lyrics($serv);
 			if ($lyrics) {
 				$serv =~ s/^.+\///;
 				$serv =~ /^(.+) ?\- ?(.+)\./;
-				$info{$name}->{metadata}->{artist} = $1;
-				$info{$name}->{metadata}->{title} = $2;
+				$info{"$name&$src"}->{metadata}->{artist} = $1;
+				$info{"$name&$src"}->{metadata}->{title} = $2;
 				myutf::mydecode(\$lyrics);
-				$info{$name}->{lyrics} = $lyrics;
+				$info{"$name&$src"}->{lyrics} = $lyrics;
 			}
 		}
-		if (!$cleared && (!$channel || $name eq conv($channel) || $info{$name}->{podcast}) && $src !~ /^flux\/podcasts/ && !$info{$name}->{progress}) {
+		if (!$cleared && (!$channel || "$name&$src" eq conv($channel) || $info{"$name&$src"}->{podcast}) && $src !~ /^flux\/podcasts/ && !$info{"$name&$src"}->{progress}) {
 			if (!grep($serv eq $_,@podcast)) {
 				# petit hack sur $channel eq "flux" pour avoir un affichage stable
 				# quand on déclenche un podcast à partir du bandeau d'info...
 				if ($channel eq $last_chan || $channel eq "flux") {
-					disp_prog($lastprog,$last_long,$info{$name}->{podcast});
+					disp_prog($lastprog,$last_long,$info{"$name&$src"}->{podcast});
 				} else {
-					read_stream_info(time(),$channel,$info{$name});
+					read_stream_info(time(),$channel,$info{"$name&$src"});
 				}
 			}
 		}
@@ -612,27 +605,19 @@ sub commands {
 		# champ progress à l'époque de mplayer, maintenant elle a en brut
 		# la position et la durée, les 2 en secondes
 		my ($pos,$dur) = split(/ /,$cmd);
-		my ($name,$src,$serv) = get_cur_name();
 		# au niveau du lua on ne peut pas savoir si un flux doit ou pas
 		# envoyer progress, on ne peut le bloquer qu'ici...
 		# return if ($src =~ /^flux\/(stations|ecoute_directe|freetuxtv)/);
-		$name .= "&$src";
-		# Note : pirouette pas terrible, pour réussir à afficher le progress pendant les podcasts on teste podcast dans l'url !
-		# pour l'instant ça marche, masi faudra pas s'étonner si un de ces jours ça marche plus !
-		if (!$cleared && ($info{$name}->{podcast} || ($name eq conv($channel) && ($src =~ /^(Fichiers son)/ || $serv =~ /podcast/ )) )) { # && $src !~ /^flux\/podcasts/) {
-			# Ne pas afficher de progress sur les podcasts, conflit avec
-			# l'info progs/podcasts
-            # A noter que ça pourrait être pas mal d'avoir le progress
-            # quand même... à voir un de ces jours !
+		if (!$cleared && ($info{"$name&$src"}->{podcast} || ("$name&$src" eq conv($channel) && ($src =~ /^(Fichiers son)/ || $serv =~ /podcast/ )) )) {
 			if ($lastprog) {
 				$$lastprog[3] = timelocal_nocheck($pos,0,0,$mday,$mon,$year);
 				$$lastprog[4] = timelocal_nocheck($dur,0,0,$mday,$mon,$year);
-				disp_prog($lastprog,$last_long,$info{$name}->{podcast});
+				disp_prog($lastprog,$last_long,$info{"$name&$src"}->{podcast});
 			} else {
 				$pos = sprintf("%02d:%02d:%02d",$pos/3600,($pos/60)%60,$pos%60);
 				$dur = sprintf("%02d:%02d:%02d",$dur/3600,($dur/60)%60,$dur%60);
-				$info{$name}->{progress} = "$pos - $dur";
-				read_stream_info(time(),$channel,$info{$name});
+				$info{"$name&$src"}->{progress} = "$pos - $dur";
+				read_stream_info(time(),$channel,$info{"$name&$src"});
 			}
 		}
 	} elsif ($cmd =~ /^lyrics/) {
@@ -682,9 +667,7 @@ sub commands {
 		out::send_bmovl($cmd);
 	} elsif ($cmd =~ /^(up|down)$/) {
 		$cmd = out::send_list(($cmd eq "up" ? "next" : "prev")." $last_chan");
-		my ($name,$src) = get_cur_name();
-		$name .= "&$src";
-		$channel = $cmd if (!$info{$name}->{podcast});
+		$channel = $cmd if (!$info{"$name&$src"}->{podcast});
 		print "got channel :$channel from up/down.\n";
 		$long = $last_long;
 	} elsif ($cmd eq "zap1") {
@@ -770,7 +753,7 @@ sub disp_channel {
 # 2 l'afficheur de base pour les fichiers (stream_info)
 	if (!$sub) {
 		if ($name eq conv($channel)) {
-			read_stream_info(time(),$channel,$info{"$name&$src"});
+			read_stream_info(time(),$channel,$info{"$name"});
 			return;
 		}
 	}
