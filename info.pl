@@ -260,7 +260,7 @@ sub disp_duree($) {
 
 sub disp_prog {
 	$cleared = 0;
-	my ($sub,$long) = @_;
+	my ($sub,$long,$podcast) = @_;
 	if (!$sub) {
 		print "info: disp_prog sans sub !\n";
 		return;
@@ -275,7 +275,7 @@ sub disp_prog {
 	my $date = timelocal_nocheck(0,0,12,$date[0],$date[1]-1,$date[2]-1900);
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday) = localtime($date);
 	my $time;
-	if ($last_chan eq "podcasts") {
+	if ($last_chan eq "podcasts" || $podcast) {
 		$time = $start;
 	} else {
 		$time = time();
@@ -442,6 +442,9 @@ sub commands {
 					} else {
 						$podcast = $json2->{sources}[0]->{url}; # on se fiche à priori de savoir si c du m4a ou du mp3 ou autre chose
 						$podcast[$num_pod] = $podcast;
+						my ($name,$src,$serv) = get_cur_name();
+						$name .= "&$src";
+						$info{$name}->{podcast} = 1;
 					}
 				}
 			}
@@ -529,7 +532,7 @@ sub commands {
 			}
 		}
 
-		if ($info{$name}->{metadata}->{artist} && # $info{$name}->{metadata}->{end} &&
+		if ($info{$name}->{metadata}->{artist} && $info{$name}->{metadata}->{end} &&
 			$info{$name}->{metadata}->{title}) {
 			my @track = ($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
 			if (!$info{$name}->{tracks}) {
@@ -538,14 +541,14 @@ sub commands {
 				return if (${$info{$name}->{tracks}}[0] eq $track[0] && $source !~ /^Fichiers/);
 				unshift @{$info{$name}->{tracks}},@track;
 			}
-			$channel = $name0;
+			$channel = $name0 if (!$info{$name}->{podcast});
 			# le source = $src ici crée la merde quand on lit un podcast à partir de france inter dans flux/stations, on va essayer sans pour voir...
 			# $source = $src;
 			if ($channel ne $last_chan && $channel ne "flux") {
 				$lastprog = undef; # channel eq "flux" -> podcast direct par touche b
 				say "lastprog = undef on channel $channel ne last_chan $last_chan";
 			}
-			if ($info{$name}->{metadata}->{genre} !~ /podcast/i && !$info{$name}->{metadata}->{podcast}) {
+			if ($info{$name}->{metadata}->{genre} !~ /podcast/i && !$info{$name}->{metadata}->{podcast} && !$info{$name}->{metadata}->{copyright} =~ /Radio/i) {
 				# fourni par finter au moins, bah sinon on fera une requête
 				# pour rien... !
 				my $lyrics = lyrics::get_lyrics($serv,$info{$name}->{metadata}->{artist},$info{$name}->{metadata}->{title});
@@ -593,13 +596,12 @@ sub commands {
 				$info{$name}->{lyrics} = $lyrics;
 			}
 		}
-		if (!$cleared && (!$channel || $name eq conv($channel)) && $src !~ /^flux\/podcasts/ && !$info{$name}->{progress}) {
-			my ($name,$source,$serv) = out::get_current();
+		if (!$cleared && (!$channel || $name eq conv($channel) || $info{$name}->{podcast}) && $src !~ /^flux\/podcasts/ && !$info{$name}->{progress}) {
 			if (!grep($serv eq $_,@podcast)) {
 				# petit hack sur $channel eq "flux" pour avoir un affichage stable
 				# quand on déclenche un podcast à partir du bandeau d'info...
 				if ($channel eq $last_chan || $channel eq "flux") {
-					disp_prog($lastprog,$last_long);
+					disp_prog($lastprog,$last_long,$info{$name}->{podcast});
 				} else {
 					read_stream_info(time(),$channel,$info{$name});
 				}
@@ -617,7 +619,7 @@ sub commands {
 		$name .= "&$src";
 		# Note : pirouette pas terrible, pour réussir à afficher le progress pendant les podcasts on teste podcast dans l'url !
 		# pour l'instant ça marche, masi faudra pas s'étonner si un de ces jours ça marche plus !
-		if (!$cleared && $name eq conv($channel) && ($src =~ /^(Fichiers son)/ || $serv =~ /podcast/ ) ) { # && $src !~ /^flux\/podcasts/) {
+		if (!$cleared && ($info{$name}->{podcast} || ($name eq conv($channel) && ($src =~ /^(Fichiers son)/ || $serv =~ /podcast/ )) )) { # && $src !~ /^flux\/podcasts/) {
 			# Ne pas afficher de progress sur les podcasts, conflit avec
 			# l'info progs/podcasts
             # A noter que ça pourrait être pas mal d'avoir le progress
@@ -625,7 +627,7 @@ sub commands {
 			if ($lastprog) {
 				$$lastprog[3] = timelocal_nocheck($pos,0,0,$mday,$mon,$year);
 				$$lastprog[4] = timelocal_nocheck($dur,0,0,$mday,$mon,$year);
-				disp_prog($lastprog,$last_long);
+				disp_prog($lastprog,$last_long,$info{$name}->{podcast});
 			} else {
 				$pos = sprintf("%02d:%02d:%02d",$pos/3600,($pos/60)%60,$pos%60);
 				$dur = sprintf("%02d:%02d:%02d",$dur/3600,($dur/60)%60,$dur%60);
@@ -680,8 +682,10 @@ sub commands {
 		out::send_bmovl($cmd);
 	} elsif ($cmd =~ /^(up|down)$/) {
 		$cmd = out::send_list(($cmd eq "up" ? "next" : "prev")." $last_chan");
-		$channel = $cmd;
-		print "got channel :$channel.\n";
+		my ($name,$src) = get_cur_name();
+		$name .= "&$src";
+		$channel = $cmd if (!$info{$name}->{podcast});
+		print "got channel :$channel from up/down.\n";
 		$long = $last_long;
 	} elsif ($cmd eq "zap1") {
 		out::send_list("zap2 $last_chan");
@@ -737,6 +741,8 @@ sub disp_channel {
 # Ici on a obtenu la chaine, on cherche un afficheur
 	chomp $channel;
 	chomp $long if ($long);
+	my ($name,$src) = get_cur_name();
+	$name .= "&$src";
 	$cleared = 0;
 	$fadeout = $refresh = undef;
 	print "disp_channel: entrée avec channel=$channel long:$long\n";
@@ -763,8 +769,7 @@ sub disp_channel {
 	$lastprog = undef;
 # 2 l'afficheur de base pour les fichiers (stream_info)
 	if (!$sub) {
-		my ($name,$src) = get_cur_name();
-		if ($name."&$src" eq conv($channel)) {
+		if ($name eq conv($channel)) {
 			read_stream_info(time(),$channel,$info{"$name&$src"});
 			return;
 		}
@@ -801,7 +806,7 @@ sub disp_channel {
 
 	# Si on arrive là, on a le texte à afficher dans sub, y a plus qu'à y
 	# aller !
-	disp_prog($sub,$long) if ($sub && $to_disp eq $channel);
+	disp_prog($sub,$long,$info{$name}->{podcast}) if ($sub && $to_disp eq $channel);
 }
 
 sub handle_result {
