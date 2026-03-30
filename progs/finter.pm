@@ -37,6 +37,11 @@ sub update_prog_html($) {
 	my $file = shift;
 	my $url = $file;
 	my ($base,$date) = $url =~ /^(.+?)-(.+)/;
+	$date =~ /(\d+)-(\d+)-(\d+)/; # passé au format an-mois-année, qui reste le bon format pour france bleu
+	if (!$fb{$base}) {
+		$date = "$3-$2-$1"; # pour les autres ça s'inverse en 2026 !!!
+	}
+
 	if ($base eq "finter") {
 		$url = "https://www.radiofrance.fr/franceinter/grille-programmes?date=$date";
 	} elsif ($base eq "franceinfo") {
@@ -52,6 +57,7 @@ sub update_prog_html($) {
 		say "prog html pas supporté : $base";
 		return undef;
 	}
+	say "chaines::request $url";
 	my ($status,$prog) = chaines::request($url);
 	print STDERR "update_prog: got status $status\n" if ($debug && $prog);
 	return if (!$prog);
