@@ -5,10 +5,10 @@ use v5.10;
 
 my $r;
 do {
-	$r = system("perl -c $ARGV[0] 2> log");
+	$r = system("perl -c $ARGV[0] 2> /tmp/logpcheck");
 	my $handled = 0;
 	if ($r >> 8) {
-		open(F,"<log") || die "can't open log";
+		open(F,"</tmp/logpcheck") || die "can't open /tmp/logpcheck";
 		while(<F>) {
 			if (/Can't locate (.+?) in/) {
 				$handled = 1;
@@ -19,9 +19,10 @@ do {
 		}
 		close(F);
 		if (!$handled) {
-			system("cat log");
+			system("cat /tmp/logpcheck");
 			die "can't handle this error ($ARGV[0])";
 		}
 	}
 } while ($r);
+unlink "/tmp/logpcheck";
 
