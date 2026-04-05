@@ -62,7 +62,7 @@ our ($lastprog,$last_chan,$last_long);
 our ($channel,$long);
 our @days = ("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi",
 	"Samedi");
-our ($source,$base_flux,$serv,$name,$src);
+our ($source,$base_flux,$serv,$name);
 
 $SIG{PIPE} = sub { print "info: sigpipe ignoré\n" };
 our $fadeout;
@@ -70,10 +70,10 @@ our $refresh;
 
 sub get_cur_name {
 	# Récupère le nom de la chaine courrante
-	($name,$src,$serv) = out::get_current();
-	myutf::mydecode(\$src);
+	($name,$source,$serv) = out::get_current();
+	myutf::mydecode(\$source);
 	myutf::mydecode(\$name);
-	$src =~ s/flux\/stations\/.+/flux\/stations/;
+	$source =~ s/flux\/stations\/.+/flux\/stations/;
 	return (lc($name),$source,$serv);
 }
 
@@ -139,9 +139,11 @@ sub read_stream_info {
 	# de chaine, genre une radio et une chaine de télé qui ont le même
 	# nom... Pour l'instant pas d'idée sur comment éviter ça...
 	if (!$rinfo) {
-		if ($name eq conv($cmd)) {
-			$rinfo = $info{"$name&$src"};
+		# say "read_stream_info: name ",lc($name),"&$source eq conv(cmd) ",conv($cmd)," cmd $cmd";
+		if (lc($name)."&$source" eq conv($cmd)) {
+			$rinfo = $info{"$name&$source"};
 		} else {
+			# say "read_stream_info: bye";
 			return;
 		}
 	}
@@ -440,7 +442,7 @@ sub commands {
 					} else {
 						$podcast = $json2->{sources}[0]->{url}; # on se fiche à priori de savoir si c du m4a ou du mp3 ou autre chose
 						$podcast[$num_pod] = $podcast;
-						$info{"$name&$src"}->{podcast} = 1;
+						$info{"$name&$source"}->{podcast} = 1;
 					}
 				}
 			}
@@ -463,7 +465,7 @@ sub commands {
 		disp_prog($lastprog,$last_long) if ($lastprog);
 	} elsif ($cmd =~ s/^unload //) {
 		# envoyé par le script lua de mpv pour indiquer qu'il quitte
-		if ($src =~ /^flux\/podcasts/) {
+		if ($source =~ /^flux\/podcasts/) {
 			# le nom du fichier est renvoyé par la commande unload,
 			# pratique pour les cas indirects comme les podcasts !
 			utime(undef,undef,$cmd);
@@ -536,7 +538,11 @@ sub commands {
 				return if (${$info{$name}->{tracks}}[0] eq $track[0] && $source !~ /^Fichiers/);
 				unshift @{$info{$name}->{tracks}},@track;
 			}
-			$channel = $name0 if (!$info{$name}->{podcast});
+			if (!$info{$name}->{podcast}) {
+				# say "channel was $channel";
+				$channel = $name0;
+				# say "channel $channel = name0 $name0";
+			}
 			# le source = $src ici crée la merde quand on lit un podcast à partir de france inter dans flux/stations, on va essayer sans pour voir...
 			# $source = $src;
 			if ($channel ne $last_chan && $channel ne "flux") {
@@ -555,7 +561,8 @@ sub commands {
 				if ($lastprog) {
 					disp_prog($lastprog,$last_long);
 				} else {
-					read_stream_info(time(),$channel,$info{$name});
+					# say "appel read_stream_info name $name source $source";
+					read_stream_info(time(),$name,$info{$name});
 				}
 			}
 			if ($info{$name}->{metadata}->{genre} =~ /podcast/i && !$info{$name}->{metadata}->{podcast} && $info{$name}->{metadata}->{album}) {
@@ -573,30 +580,36 @@ sub commands {
 	} elsif ($cmd =~ /^codec/) {
 		my ($codec,$bitrate);
 		($cmd,$codec,$bitrate) = split / /,$cmd;
-		$info{"$name&$src"}->{codec} = "$codec $bitrate";
-		if (!$info{"$name&$src"}->{metadata}->{artist} && !$info{"$name&$src"}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i &&
-		!$info{"$name&$src"}->{lyrics_sent}) { # normalement on reçoit les tags avant le codec...
-			say "got name $name&$src src $src serv $serv et pas de tags, on y va... !";
-			$info{"$name&$src"}->{lyrics_sent} = 1; # surtout utile quand la cxion est lente et que la réponse met longtemps à arriver
+		$info{"$name&$source"}->{codec} = "$codec $bitrate";
+		if (!$info{"$name&$source"}->{metadata}->{artist} && !$info{"$name&$source"}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i &&
+		!$info{"$name&$source"}->{lyrics_sent}) { # normalement on reçoit les tags avant le codec...
+			say "got name $name&$source src $source serv $serv et pas de tags, on y va... !";
+			$info{"$name&$source"}->{lyrics_sent} = 1; # surtout utile quand la cxion est lente et que la réponse met longtemps à arriver
 			# mais ça peut être TRES utile dans certains cas avec le vpn !
 			my $lyrics = lyrics::get_lyrics($serv);
 			if ($lyrics) {
 				$serv =~ s/^.+\///;
 				$serv =~ /^(.+) ?\- ?(.+)\./;
-				$info{"$name&$src"}->{metadata}->{artist} = $1;
-				$info{"$name&$src"}->{metadata}->{title} = $2;
+				$info{"$name&$source"}->{metadata}->{artist} = $1;
+				$info{"$name&$source"}->{metadata}->{title} = $2;
 				myutf::mydecode(\$lyrics);
-				$info{"$name&$src"}->{lyrics} = $lyrics;
+				$info{"$name&$source"}->{lyrics} = $lyrics;
 			}
 		}
-		if (!$cleared && (!$channel || "$name&$src" eq conv($channel) || $info{"$name&$src"}->{podcast}) && $src !~ /^flux\/podcasts/ && !$info{"$name&$src"}->{progress}) {
+		# say "codec: $name&$source eq conv(channel) ",conv($channel);
+		if (!$cleared && (!$channel || lc($name)."&$source" eq conv($channel) || $info{"$name&$source"}->{podcast})) {
+			#			&& $source !~ /^flux\/podcasts/ && !$info{"$name&$source"}->{progress}) {
+			# say "affichage codec";
 			if (!grep($serv eq $_,@podcast)) {
+				# say "et sans les podcasts";
 				# petit hack sur $channel eq "flux" pour avoir un affichage stable
 				# quand on déclenche un podcast à partir du bandeau d'info...
-				if ($channel eq $last_chan || $channel eq "flux") {
-					disp_prog($lastprog,$last_long,$info{"$name&$src"}->{podcast});
+				if ($lastprog && $channel eq $last_chan || $channel eq "flux") {
+					# say "codec appelle disp_prog";
+					disp_prog($lastprog,$last_long,$info{"$name&$source"}->{podcast});
 				} else {
-					read_stream_info(time(),$channel,$info{"$name&$src"});
+					# say "codec appelle read_stream_info channel $channel";
+					read_stream_info(time(),$channel,$info{"$name&$source"});
 				}
 			}
 		}
@@ -608,16 +621,16 @@ sub commands {
 		# au niveau du lua on ne peut pas savoir si un flux doit ou pas
 		# envoyer progress, on ne peut le bloquer qu'ici...
 		# return if ($src =~ /^flux\/(stations|ecoute_directe|freetuxtv)/);
-		if (!$cleared && ($info{"$name&$src"}->{podcast} || ("$name&$src" eq conv($channel) && ($src =~ /^(Fichiers son)/ || $serv =~ /podcast/ )) )) {
+		if (!$cleared && ($info{"$name&$source"}->{podcast} || (lc($name)."&$source" eq conv($channel) && ($source =~ /^(Fichiers son)/ || $serv =~ /podcast/ )) )) {
 			if ($lastprog) {
 				$$lastprog[3] = timelocal_nocheck($pos,0,0,$mday,$mon,$year);
 				$$lastprog[4] = timelocal_nocheck($dur,0,0,$mday,$mon,$year);
-				disp_prog($lastprog,$last_long,$info{"$name&$src"}->{podcast});
+				disp_prog($lastprog,$last_long,$info{"$name&$source"}->{podcast});
 			} else {
 				$pos = sprintf("%02d:%02d:%02d",$pos/3600,($pos/60)%60,$pos%60);
 				$dur = sprintf("%02d:%02d:%02d",$dur/3600,($dur/60)%60,$dur%60);
-				$info{"$name&$src"}->{progress} = "$pos - $dur";
-				read_stream_info(time(),$channel,$info{"$name&$src"});
+				$info{"$name&$source"}->{progress} = "$pos - $dur";
+				read_stream_info(time(),$channel,$info{"$name&$source"});
 			}
 		}
 	} elsif ($cmd =~ /^lyrics/) {
@@ -667,7 +680,7 @@ sub commands {
 		out::send_bmovl($cmd);
 	} elsif ($cmd =~ /^(up|down)$/) {
 		$cmd = out::send_list(($cmd eq "up" ? "next" : "prev")." $last_chan");
-		$channel = $cmd if (!$info{"$name&$src"}->{podcast});
+		$channel = $cmd if (!$info{"$name&$source"}->{podcast});
 		print "got channel :$channel from up/down.\n";
 		$long = $last_long;
 	} elsif ($cmd eq "zap1") {
@@ -696,6 +709,8 @@ sub commands {
 			$serv = "";
 		}
 		$channel = $cmd;
+		# say "fin de prog: channel $channel name $name source $source base_flux $base_flux";
+		# say "fin de prog: channel $channel name $name source $source base_flux $base_flux";
 		# Note : prog appelle disp_channel pour recalculer le programme
 		# pas disp_prog qui réaffiche un programme qu'on a déjà !
 		disp_channel();
@@ -752,7 +767,9 @@ sub disp_channel {
 	$lastprog = undef;
 # 2 l'afficheur de base pour les fichiers (stream_info)
 	if (!$sub) {
+		# say "disp_channel: name $name eq conv(channel) ",conv($channel);
 		if ($name eq conv($channel)) {
+			# say "read_stream_info from disp_channel";
 			read_stream_info(time(),$channel,$info{"$name"});
 			return;
 		}
@@ -761,6 +778,7 @@ sub disp_channel {
 # 3 affichage par défaut, peut quand même y avoir des paroles des fois !
 	if (!$sub) {
 		# Pas trouvé la chaine
+		# say "disp_channel: par défaut";
 		my $time = time();
 		my $out = out::setup_output("bmovl-src/bmovl","",$long);
 		$cmd =~ s/pic:(.+?) //;
