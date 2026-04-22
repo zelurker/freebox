@@ -20,6 +20,7 @@ use EV;
 # use Time::HiRes qw(gettimeofday tv_interval);
 use records;
 use lyrics;
+use AnyEvent;
 use AnyEvent::HTTP;
 use http;
 
@@ -470,6 +471,7 @@ sub commands {
 			# pratique pour les cas indirects comme les podcasts !
 			utime(undef,undef,$cmd);
 		}
+		say "images arrêtées sur unload";
 		$time = undef;
 	} elsif ($cmd eq "tracks") {
 		my ($name,$src) = get_cur_name();
@@ -565,16 +567,20 @@ sub commands {
 					read_stream_info(time(),$name,$info{$name});
 				}
 			}
+			say "test image...";
 			if ($info{$name}->{metadata}->{genre} =~ /podcast/i && !$info{$name}->{metadata}->{podcast} && $info{$name}->{metadata}->{album}) {
 				my $title = lyrics::pure_ascii($info{$name}->{metadata}->{title});
+				say "cas 1 d'images";
 				if (handle_images($info{$name}->{metadata}->{album}." - $title") ||
 					handle_images($title) ||
 					handle_images($info{$name}->{metadata}->{album})) {
 				}
 			} elsif ($info{$name}->{metadata}->{artist} && $info{$name}->{metadata}->{title}) {
+				say "cas 2 d'images : ",$info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title};
 				handle_images($info{$name}->{metadata}->{artist}." - ".$info{$name}->{metadata}->{title});
 			}
 		} elsif ($info{$name}->{metadata}->{end} &&	$info{$name}->{metadata}->{title}) { # cas des chapitres matroshka
+			say "cas read_stream_info";
 			read_stream_info(time(),$channel,$info{$name});
 		}
 	} elsif ($cmd =~ /^codec/) {
@@ -872,11 +878,13 @@ sub handle_result {
 				}
 			};
 		}
+		say "images 25s";
 		$time = AnyEvent->timer(after => 25,
 			interval => 25,
-			cb => sub { handle_images(); });
+			cb => sub { say "cb handle_images"; handle_images(); });
 	} else {
 		out::send_bmovl("vignettes") if ($has_vignettes);
+		say "images: plus d'images, arrêt du timeout";
 		$time = undef;
 	}
 }
@@ -885,8 +893,11 @@ sub handle_images {
 	my $cur = shift;
 	$cur = $old_titre if (!$cur);
 	$old_titre = $cur;
+	say "appel handle_images";
+	say "handle_images: pas de réso" if (!$net);
 	return if (!$net);
 	if (!@cur_images || $cur_images[0] ne $cur) {
+		say "handle_images reset";
 		# Reset de la recherche précédente si pas finie !
 		if ($cur_images[1]) {
 			my $result = $cur_images[1];
@@ -901,8 +912,15 @@ sub handle_images {
 #		}
 #		close(F);
 		# $has_vignettes = 1;
-		out::send_bmovl("vignettes") if ($has_vignettes);
+		# out::send_bmovl("vignettes") if ($has_vignettes);
 		my $result = $agent->{tab};
+		for (my $n=0; $n<=$#$result; $n++) {
+			if ($$result[$n]->{imgurl} =~ /alamy/) {
+				delete $$result[$n];
+				redo;
+			}
+		}
+		say "handle_images: $#$result images";
 		return 0 if ($#$result == -1);
 		push @cur_images,$result;
 		handle_result($result);
