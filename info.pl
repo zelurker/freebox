@@ -919,6 +919,14 @@ sub handle_images {
 				delete $$result[$n];
 				redo;
 			}
+			for (my $x=0; $x<$n; $x++) {
+				# Le tbnid semble être une identification de l'image en filtrant les espaces, sert à éliminer les doublons pour les sites qui ont plusieurs fois la même image
+				# dans plusieurs résolutions !
+				if ($$result[$x]->{tbnid} eq $$result[$n]->{tbnid}) {
+					delete $$result[$n];
+					last;
+				}
+			}
 		}
 		say "handle_images: $#$result images";
 		return 0 if ($#$result == -1);
