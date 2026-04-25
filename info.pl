@@ -537,7 +537,10 @@ sub commands {
 			if (!$info{$name}->{tracks}) {
 				$info{$name}->{tracks} = \@track;
 			} else {
-				return if (${$info{$name}->{tracks}}[0] eq $track[0] && $source !~ /^Fichiers/);
+				if (${$info{$name}->{tracks}}[0] eq $track[0] && $source !~ /^Fichiers/) {
+					say "return précipité";
+					return;
+				}
 				unshift @{$info{$name}->{tracks}},@track;
 			}
 			if (!$info{$name}->{podcast}) {
@@ -551,7 +554,7 @@ sub commands {
 				$lastprog = undef; # channel eq "flux" -> podcast direct par touche b
 				say "lastprog = undef on channel $channel ne last_chan $last_chan";
 			}
-			if ($info{$name}->{metadata}->{genre} !~ /podcast/i && !$info{$name}->{metadata}->{podcast} && !$info{$name}->{metadata}->{copyright} =~ /Radio/i) {
+			if ($info{$name}->{metadata}->{genre} !~ /podcast/i && !$info{$name}->{metadata}->{podcast} && $info{$name}->{metadata}->{copyright} !~ /Radio/i) {
 				# fourni par finter au moins, bah sinon on fera une requête
 				# pour rien... !
 				my $lyrics = lyrics::get_lyrics($serv,$info{$name}->{metadata}->{artist},$info{$name}->{metadata}->{title});
