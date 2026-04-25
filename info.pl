@@ -413,7 +413,7 @@ sub commands {
 	# A priori utile juste pour prog
 	$long = $old_long if ($cmd !~ /^prog /);
 
-	print "info: reçu commande $cmd long:$long.\n" if ($cmd !~ /^progress/);
+	print "info: reçu commande $cmd long:$long.\n" if ($cmd !~ /^(progress|codec)/);
 	# for (my $n=0; $n<length($cmd); $n++) {
 	# 	print sprintf("%02x ",ord(substr($cmd,$n,1)));
 	# }
