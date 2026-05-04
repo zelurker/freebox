@@ -140,7 +140,7 @@ sub read_stream_info {
 	# de chaine, genre une radio et une chaine de télé qui ont le même
 	# nom... Pour l'instant pas d'idée sur comment éviter ça...
 	if (!$rinfo) {
-		# say "read_stream_info: name ",lc($name),"&$source eq conv(cmd) ",conv($cmd)," cmd $cmd";
+		say "read_stream_info: name ",lc($name),"&$source eq conv(cmd) ",conv($cmd)," cmd $cmd";
 		if (lc($name)."&$source" eq conv($cmd)) {
 			$rinfo = $info{"$name&$source"};
 		} else {
@@ -562,11 +562,10 @@ sub commands {
 				$info{$name}->{lyrics} = $lyrics;
 			}
 			if (!grep($serv eq $_,@podcast)) {
-				my ($name,$source,$serv) = out::get_current();
+				# my ($name,$source,$serv) = out::get_current();
 				if ($lastprog) {
 					disp_prog($lastprog,$last_long);
 				} else {
-					# say "appel read_stream_info name $name source $source";
 					read_stream_info(time(),$name,$info{$name});
 				}
 			}
@@ -588,26 +587,28 @@ sub commands {
 		}
 	} elsif ($cmd =~ /^codec/) {
 		my ($codec,$bitrate);
+		my ($name,$src,$serv) = get_cur_name();
+		$name .= "&$src";
 		($cmd,$codec,$bitrate) = split / /,$cmd;
-		$info{"$name&$source"}->{codec} = "$codec $bitrate";
-		if (!$info{"$name&$source"}->{metadata}->{artist} && !$info{"$name&$source"}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i &&
-		!$info{"$name&$source"}->{lyrics_sent}) { # normalement on reçoit les tags avant le codec...
-			say "got name $name&$source src $source serv $serv et pas de tags, on y va... !";
-			$info{"$name&$source"}->{lyrics_sent} = 1; # surtout utile quand la cxion est lente et que la réponse met longtemps à arriver
+		$info{"$name"}->{codec} = "$codec $bitrate";
+		if (!$info{"$name"}->{metadata}->{artist} && !$info{$name}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i &&
+		!$info{$name}->{lyrics_sent}) { # normalement on reçoit les tags avant le codec...
+			say "got name $name serv $serv et pas de tags, on y va... !";
+			$info{$name}->{lyrics_sent} = 1; # surtout utile quand la cxion est lente et que la réponse met longtemps à arriver
 			# mais ça peut être TRES utile dans certains cas avec le vpn !
 			my $lyrics = lyrics::get_lyrics($serv);
 			if ($lyrics) {
 				$serv =~ s/^.+\///;
 				$serv =~ /^(.+) ?\- ?(.+)\./;
-				$info{"$name&$source"}->{metadata}->{artist} = $1;
-				$info{"$name&$source"}->{metadata}->{title} = $2;
+				$info{$name}->{metadata}->{artist} = $1;
+				$info{$name}->{metadata}->{title} = $2;
 				myutf::mydecode(\$lyrics);
-				$info{"$name&$source"}->{lyrics} = $lyrics;
+				$info{$name}->{lyrics} = $lyrics;
 			}
 		}
 		# say "codec: $name&$source eq conv(channel) ",conv($channel);
-		if (!$cleared && (!$channel || lc($name)."&$source" eq conv($channel) || $info{"$name&$source"}->{podcast})) {
-			#			&& $source !~ /^flux\/podcasts/ && !$info{"$name&$source"}->{progress}) {
+		if (!$cleared && (!$channel || lc($name)."&$source" eq conv($channel) || $info{$name}->{podcast})) {
+			#			&& $source !~ /^flux\/podcasts/ && !$info{$name}->{progress}) {
 			# say "affichage codec";
 			if (!grep($serv eq $_,@podcast)) {
 				# say "et sans les podcasts";
@@ -615,10 +616,10 @@ sub commands {
 				# quand on déclenche un podcast à partir du bandeau d'info...
 				if ($lastprog && $channel eq $last_chan || $channel eq "flux") {
 					# say "codec appelle disp_prog";
-					disp_prog($lastprog,$last_long,$info{"$name&$source"}->{podcast});
+					disp_prog($lastprog,$last_long,$info{$name}->{podcast});
 				} else {
-					# say "codec appelle read_stream_info channel $channel";
-					read_stream_info(time(),$channel,$info{"$name&$source"});
+					say "*** codec appelle read_stream_info channel $channel name&source: $name&$source";
+					read_stream_info(time(),$channel,$info{$name});
 				}
 			}
 		}
@@ -627,6 +628,7 @@ sub commands {
 		# champ progress à l'époque de mplayer, maintenant elle a en brut
 		# la position et la durée, les 2 en secondes
 		my ($pos,$dur) = split(/ /,$cmd);
+		$name = lc($name); # Aucune idée pourquoi il n'est plus en minuscules ici !
 		# au niveau du lua on ne peut pas savoir si un flux doit ou pas
 		# envoyer progress, on ne peut le bloquer qu'ici...
 		# return if ($src =~ /^flux\/(stations|ecoute_directe|freetuxtv)/);
