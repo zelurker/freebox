@@ -130,7 +130,11 @@ sub conv {
 	# fonction utilitaire pour formater correctement chaine / source /
 	# base_flux pour comparaison
 	my $cmd = shift;
-	chaines::conv_channel($cmd)."&$source" . ($base_flux ? "/$base_flux" : "");
+	my $ret = chaines::conv_channel($cmd)."&$source";
+	if ($ret !~ /\//) {
+		$ret .=  ($base_flux ? "/$base_flux" : "");
+	}
+	$ret;
 }
 
 sub read_stream_info {
@@ -546,7 +550,7 @@ sub commands {
 			if (!$info{$name}->{podcast}) {
 				# say "channel was $channel";
 				$channel = $name0;
-				# say "channel $channel = name0 $name0";
+				# say "channel $channel init from metadata";
 			}
 			# le source = $src ici crée la merde quand on lit un podcast à partir de france inter dans flux/stations, on va essayer sans pour voir...
 			# $source = $src;
@@ -587,28 +591,31 @@ sub commands {
 		}
 	} elsif ($cmd =~ /^codec/) {
 		my ($codec,$bitrate);
-		my ($name,$src,$serv) = get_cur_name();
-		$name .= "&$src";
+		# A priori cet appel à get_cur_name est inutile, on a déjà $name $source et $serv aux valeurs correctes
+		# ça ne permet que de faire name .= "&src" ensuite sur une valeur locale
+		# donc remplacé par un = ($name,$source), mais pas testé les podcasts, donc je laisse ce commentaire
+		my ($nam,$src) = ($name,$source);
+		$nam .= "&$src";
 		($cmd,$codec,$bitrate) = split / /,$cmd;
-		$info{"$name"}->{codec} = "$codec $bitrate";
-		if (!$info{"$name"}->{metadata}->{artist} && !$info{$name}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i &&
-		!$info{$name}->{lyrics_sent}) { # normalement on reçoit les tags avant le codec...
-			say "got name $name serv $serv et pas de tags, on y va... !";
-			$info{$name}->{lyrics_sent} = 1; # surtout utile quand la cxion est lente et que la réponse met longtemps à arriver
+		$info{"$nam"}->{codec} = "$codec $bitrate";
+		if (!$info{"$nam"}->{metadata}->{artist} && !$info{$nam}->{lyrics} && $serv !~ /^http/ && $serv =~ /(mp3|ogg)$/i &&
+		!$info{$nam}->{lyrics_sent}) { # normalement on reçoit les tags avant le codec...
+			say "got name $nam serv $serv et pas de tags, on y va... !";
+			$info{$nam}->{lyrics_sent} = 1; # surtout utile quand la cxion est lente et que la réponse met longtemps à arriver
 			# mais ça peut être TRES utile dans certains cas avec le vpn !
 			my $lyrics = lyrics::get_lyrics($serv);
 			if ($lyrics) {
 				$serv =~ s/^.+\///;
 				$serv =~ /^(.+) ?\- ?(.+)\./;
-				$info{$name}->{metadata}->{artist} = $1;
-				$info{$name}->{metadata}->{title} = $2;
+				$info{$nam}->{metadata}->{artist} = $1;
+				$info{$nam}->{metadata}->{title} = $2;
 				myutf::mydecode(\$lyrics);
-				$info{$name}->{lyrics} = $lyrics;
+				$info{$nam}->{lyrics} = $lyrics;
 			}
 		}
-		# say "codec: $name&$source eq conv(channel) ",conv($channel);
-		if (!$cleared && (!$channel || lc($name)."&$source" eq conv($channel) || $info{$name}->{podcast})) {
-			#			&& $source !~ /^flux\/podcasts/ && !$info{$name}->{progress}) {
+		# say "codec: ",lc($nam)," source $source eq conv(channel) ",conv($channel);
+		if (!$cleared && (!$channel || lc($nam) eq conv($channel) || $info{$nam}->{podcast})) {
+			#			&& $source !~ /^flux\/podcasts/ && !$info{$nam}->{progress}) {
 			# say "affichage codec";
 			if (!grep($serv eq $_,@podcast)) {
 				# say "et sans les podcasts";
@@ -616,10 +623,10 @@ sub commands {
 				# quand on déclenche un podcast à partir du bandeau d'info...
 				if ($lastprog && $channel eq $last_chan || $channel eq "flux") {
 					# say "codec appelle disp_prog";
-					disp_prog($lastprog,$last_long,$info{$name}->{podcast});
+					disp_prog($lastprog,$last_long,$info{$nam}->{podcast});
 				} else {
-					say "*** codec appelle read_stream_info channel $channel name&source: $name&$source";
-					read_stream_info(time(),$channel,$info{$name});
+					say "*** codec appelle read_stream_info channel $channel name&source: $nam&$source";
+					read_stream_info(time(),$channel,$info{$nam});
 				}
 			}
 		}
@@ -720,8 +727,7 @@ sub commands {
 			$serv = "";
 		}
 		$channel = $cmd;
-		# say "fin de prog: channel $channel name $name source $source base_flux $base_flux";
-		# say "fin de prog: channel $channel name $name source $source base_flux $base_flux";
+		# say "*** fin de prog: channel $channel name $name source $source base_flux $base_flux";
 		# Note : prog appelle disp_channel pour recalculer le programme
 		# pas disp_prog qui réaffiche un programme qu'on a déjà !
 		disp_channel();
