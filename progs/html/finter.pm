@@ -79,7 +79,10 @@ sub decode_html {
 			$json =~ s/"}$//;
 		}
 		$json =~ s/void 0/0/g;
-		die "progs/html/finter: pb json!!!\n" if (!$json || $json eq "inter");
+		if (!$json || $json eq "inter") {
+			say "****** progs/html/finter: pb json!!! json $json\n";
+			return;
+		}
 		# next if ($json !~ /tracking/);
 		# $json =~ s/^.+{kirby.+?metadata/metadata/;
 		# /const data = (\[.+?\]);/;

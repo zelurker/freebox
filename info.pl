@@ -625,7 +625,6 @@ sub commands {
 					# say "codec appelle disp_prog";
 					disp_prog($lastprog,$last_long,$info{$nam}->{podcast});
 				} else {
-					say "*** codec appelle read_stream_info channel $channel name&source: $nam&$source";
 					read_stream_info(time(),$channel,$info{$nam});
 				}
 			}
