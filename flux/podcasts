@@ -119,7 +119,7 @@ if ($debug && !$str) {
 	} elsif ($str && $str !~ /^http/) {
 		print STDERR "requête de recherche sur $str\n"; # if ($debug);
 		$str =~ s/\+/ /g;
-		$mech = search::search("flux rss $str");
+		$mech = search::search("podcast $str");
 	} elsif ($str) {
 		print STDERR "debug: get $str\n" if ($debug);
 		$r = $mech->get($str);
@@ -346,6 +346,17 @@ if ($u =~ /google\./) {
 		if ($url =~ /xml$/) {
 			say "$title\n$url";
 			exit(0); # Pas la peine d'aller + loin !
+		}
+	}
+	foreach ($mech->links) {
+		my $u = $_->url;
+		next if ($u !~ /^http/ || $_->text =~ /^ *$/);
+		if ($u =~ /xml$/) {
+			my $text = $_->attrs->{"aria-label"};
+			if ($text) {
+				print $text,"\n$u\n";
+				exit(1);
+			}
 		}
 	}
 	foreach ($mech->links) {
