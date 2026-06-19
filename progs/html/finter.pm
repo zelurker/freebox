@@ -68,317 +68,71 @@ sub decode_html {
 		$prev_start = $$rtab2[$#$rtab2][3];
 		say "prev_start init ".disp_date($prev_start);
 	}
-	my $json;
-	while(1) {
-		$l =~ s/data = {(.+?)};//;
-		$json = $1;
-		if (!$json) {
-			($json) = $l =~ /"body":"({.+})/; # fbleu
-			$json =~ s/\\"/"/g;
-			$json =~ s/\\\\"/\\"/g;
-			$json =~ s/"}$//;
-		}
-		$json =~ s/void 0/0/g;
-		if (!$json || $json eq "inter") {
-			say "****** progs/html/finter: pb json!!! json $json\n";
-			return;
-		}
-		# next if ($json !~ /tracking/);
-		# $json =~ s/^.+{kirby.+?metadata/metadata/;
-		# /const data = (\[.+?\]);/;
-		# /(grid:{.+}),date/;
-		if ($json) {
-			$json = "{$json}" if ($json !~ /^{/);
-			my $js = new Cpanel::JSON::XS;
-			eval {
-				$json = $js->allow_barekey()->decode($json);
-			};
-			if ($@) {
-				die "pb json: $@, json $json";
-			}
-			last;
-		} else {
-			say "progs/html/finter no json after some tries";
-			open(F,">trash");
-			print F $l;
-			close(F);
-			return undef;
-		}
-	}
-	# say "json ",Dumper($json);
-	# say "keys ",join(", ",keys(%$json));
-	my @keys = keys(%$json);
-	if ($json) {
-		# $json = $js->decode($json);
-		# exit(1);
-		# say "grid $json->{grid} steps $json->{grid}->{steps}";
-		my $grid;
-		foreach (@keys) {
-			if ($_ =~ /loadProgramGrid/) {
-				$grid = $json->{$_};
-				say "grid $grid";
-				last;
-			}
-		}
-		if (!$grid) { # fbleu encore...
-			my $morning = $json->{context}->{ProgramGridLocale}->{morning};
-			my $afternoon = $json->{context}->{ProgramGridLocale}->{afternoon};
-			my $evening = $json->{context}->{ProgramGridLocale}->{evening};
-			my $midday = $json->{context}->{ProgramGridLocale}->{midday};
-			push @$morning,@$midday;
-			push @$morning,@$afternoon;
-			push @$morning,@$evening;
-			$grid = $morning;
-		}
-		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($date);
-		my $zero = timelocal_nocheck(0,0,0,$mday,$mon,$year);
-		$mon++;
-		$year += 1900;
-		$date = "$mday/$mon/$year";
+	# ── Extraction des émissions ─────────────────────────────────────────────────
+	my @programs;
+	my @blocks = split /(?=<div\s+__typename="Expression")/, $l;
 
-		my $site;
-		foreach (@$grid) {
-			my $title = $_->{titleProps}->{title};
-			$title = $_->{title} if (!$title);
-			next if (!$title);
-			my $desc = $_->{titleProps}->{text} || $_->{description};
-			# la majorité du prog inter est en latin1, mais certains champs peuvent contenir de l'utf8 !!!
-			# seul moyen pour éviter le désastre : ré-encoder tous les champs texte, ce que je fais ici
-			myutf::mydecode(\$title);
-			myutf::mydecode(\$desc);
-			my $start = $_->{startTimeUnix} || $_->{start};
-			my $end = $_->{endTime} || $_->{end};
-			if ($start =~ /(\d+)h(\d+)/) {
-				$start = $zero + $1*3600 + $2;
-				$end =~ /(\d+)h(\d+)/;
-				$end = $zero + $1*3600 + $2;
-			}
+	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($date);
+	my $zero = timelocal_nocheck(0,0,0,$mday,$mon,$year);
+	my $imgsize    = 400;
+	for my $block (@blocks) {
+		my ($conceptid)     = $block =~ /conceptid="([^"]+)"/;
+		my ($label)         = $block =~ /label="([^"]+)"/;
+		my ($starttimeunix) = $block =~ /starttimeunix="([^"]+)"/;
+		my ($islive)        = $block =~ /islive="([^"]+)"/;
+		my ($playerid)      = $block =~ /playerid="([^"]+)"/;
 
-			my $img = $_->{visual}->{src}."/".$_->{visual}->{width}."x".$_->{visual}->{height} || $_->{visual}->{mobile}->{url};
-			($site) = $img =~ /^(https:\/\/.+?)\// if (!$site);
-			my $podcast;
-			#			if (!$_->{isLive}) {
-			$desc .= "\npod:https://www.radiofrance.fr/transistor/aod/".$_->{playerId} if ($_->{playerId});
-			#			}
+		next unless defined $label && defined $starttimeunix;
 
-			my $id = $_->{id};
-			# say "insertion name $name title $title start ",scalar localtime($start)," end ",scalar localtime($end)," desc $desc id $id img $img date $date podcast $podcast";
-			my @tab = (undef, $name, $title, $start,
-				$end, "",
-				$desc,
-				($_->{hasChildren} ? $id : undef),"",$img,0,0,$date);
-			$p->insert(\@tab,$rtab,600);
+		# Titre : texte du premier <a href>
+		my ($href, $link_html) = $block =~ /<a\s+href="([^"]+)"[^>]*>(.*?)<\/a>/s;
+		next unless defined $href;
+
+		myutf::mydecode(\$link_html);
+		my $title = _clean_html($link_html);
+
+		# Sous-titre : <p class="... subtext ...">
+		my ($subtext_html) = $block =~ /class="[^"]*subtext[^"]*"[^>]*>(.*?)<\/p>/s;
+		myutf::mydecode(\$subtext_html);
+		my $subtitle = defined $subtext_html ? _clean_html($subtext_html) : '';
+
+		# Image : <img src="..."> — URL de base pikapi, on injecte la taille voulue
+		my ($img_src) = $block =~ /<img[^>]+src="([^"]+)"/;
+		my $img_url = '';
+		if (defined $img_src) {
+			# L'URL pikapi se termine par une taille (ex: /2048) — on la remplace
+			($img_url = $img_src) =~ s|/\d+$|/$imgsize|;
 		}
-		return $rtab;
-	}
 
-	while (($pos = index($l,"<",$pos))>= 0) {
-		my $bl = index($l," ",$pos);
-		my $instr = substr($l,$pos+1,$bl-$pos-1);
-		my $sub_pos = index($l,">",$pos);
-		my ($start,$end);
-		my $sub = substr($l,$pos+1,$sub_pos-$pos-1);
-		my ($desc,$title,$img);
-		$pos = $sub_pos;
+		# Lien podcast
+		my $podcast_url = defined $playerid
+		? "https://www.radiofrance.fr/transistor/aod/$playerid"
+		: '';
+		$subtitle .= "\npod:$podcast_url" if ($podcast_url);
 
-		if ($instr eq "li") {
-			my $class = get_tag($sub,"class");
-			if ($class =~ /^date-time-field/) {
-				$date = get_tag($l,"value");
-				$keep_date = 1;
-			}
-			if ($class =~ /^TimeSlot/) {
-				my $body = substr($l,$sub_pos+1);
-				my $end_pos = find_closing_tag($body,0,"li");
-				$pos += $end_pos;
-				$body = substr($body,0,$end_pos);
-				my $btn = index($body,"<time ");
-				if ($btn >= 0) {
-					$sub_pos = index($body,">",$btn+1);
-					$sub = substr($body,$btn,$sub_pos-$btn-1);
-					$class = get_tag($sub,"datetime");
-					my ($year,$month,$day,$hour,$min,$sec) = $class =~ /(....)-(..)-(..)T(..):(..):(..)/;
-					$date = "$day/$month/$year" if (!$date);
-					$start = timegm_nocheck($sec,$min,$hour,$day,$month-1,$year-1900);
-					say "start from datetime $start";
-				} else {
-					$btn = index($body,"<div class=\"time ");
-					if ($btn >= 0) {
-						$btn = index($body,">",$btn+1)+1;
-						$sub_pos = find_closing_tag($body,$btn+1,"div")-1;
-						$start = substr($body,$btn,$sub_pos-$btn-1);
-						($start,$end) = $start =~ /(.+) - (.+)/;
-						my ($hstart,$mstart) = $start =~ /(\d+)h(\d+)/;
-						my ($hend,$mend) = $end =~ /(\d+)h(\d+)/;
-						my ($mday,$mon,$year) = split (/\//,$date);
-						$mon--;
-						$year -= 1900;
-						$start = timegm_nocheck(0,$mstart,$hstart,$mday,$mon,$year);
-						$end = timegm_nocheck(0,$mend,$hend,$mday,$mon,$year);
-					}
-				}
-
-				$btn = index($body,"<picture");
-				if ($btn >= 0) {
-					$sub_pos = find_closing_tag($body,$btn+1,"picture");
-					$sub = substr($body,$btn,$sub_pos-$btn-1);
-					$img = get_tag($sub,"srcset");
-				}
-				$btn = index($body,"<div class=\"TimeSlot-info");
-				if ($btn >= 0) {
-					$btn = index($body,"<a ",$btn+1)+1;
-					$sub_pos = index($body,"</a",$btn+1);
-					$btn = index($body,">",$btn+1)+1;
-					$title = substr($body,$btn,$sub_pos-$btn);
-				} else {
-					$btn = index($body,"<div class=\"title svelte");
-					if ($btn >= 0) {
-						$btn = index($body,">",$btn+1)+1;
-						$sub_pos = find_closing_tag($body,$btn+1,"div")-1;
-						$title = substr($body,$btn,$sub_pos-$btn-1);
-					}
-				}
-				$btn = index($body,"<div class=\"TimeSlot-subtitle");
-				if ($btn >= 0) {
-					$sub_pos = find_closing_tag($body,$btn+1,"div")-1;
-					$btn = index($body,">",$btn+1)+1;
-					$desc = substr($body,$btn,$sub_pos-$btn-1);
-				}
-				say "start $start date $date title $title img $img";
-			} else {
-				next;
-			}
-		}
-		elsif ($instr eq "article") { # finter avant 2022... !
-			# bien pratique france inter ils ont ajouté un tag <article>
-			# pour séparer leurs programmes.
-			# Par contre y a ni heure de fin, ni durée, donc faut deviner,
-			# un peu le bordel... Y des zolies images par contre ! :)
-			$start = get_tag($sub,"data-start-time");
-			my $class0 = get_tag($sub,"class");
-			my $rubrique = $class0 =~ / step/;
-			my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start+3600);
-			$date = sprintf("$mday/%d/%d",$mon+1,$year+1900);
-			$end = timelocal_nocheck(0,0,$hour,$mday,$mon,$year);
-			my $body = substr($l,$sub_pos+1);
-			$body =~ s/<\/article.+//s;
-			my $tit;
-			while ($body =~ s/<a (.+?)>//s) {
-				my $args = $1;
-				my $class;
-				if ($args =~ /class="(.+?)"/) {
-					$class = $1;
-				}
-				if ($args =~ /title="(.+?)"/) {
-					$tit = $1;
-				}
-				# print "tit $tit args $args\n";
-				if ($class =~ /emission-title/) {
-					$title = $tit;
-					# Après faut sortir tout de suite de la boucle !!!
-					# $pos = index($l,"<span>",$pos+1);
-					# last;
-				} elsif ($class =~ /content-title/) { # || !$class) {
-					$desc = $tit;
-				}
-			}
-			if ($body =~ s/<img(.+?)>//s) {
-				my $args = $1;
-				if ($args =~ /data-(.+?)-src="(.+?)"/) {
-					$img = $2;
-				} elsif ($args =~ / src="(.+?)"/) {
-					$img = $1;
-				}
-			}
-			if ($rubrique) {
-				# donc les rubriques d'une émission, le titre et l'image
-				# sont récupérées dans l'émission, càd le dernier programme
-				# stocké dans $rtab
-				$img = $$rtab[$#$rtab][9];
-				$title = $$rtab[$#$rtab][2];
-			}
-		} elsif ($instr eq "div") { # fmusique
-			$start = get_tag($sub,"data-start-time");
-			$end = get_tag($sub,"data-end-time"); # fculture
-			next if (!$start);
-			my $body = substr($l,$sub_pos+1);
-			my $end_pos = find_closing_tag($body,0,"div");
-
-			# On ne fait pas pos += end_pos parce que quand il y a des sous
-			# programmes, appelés rubriques dans leur programme, ils
-			# apparaissent avec exactement le même format, donc autant les
-			# laisser se faire traiter par la boucle principale !
-			# $pos += $end_pos;
-
-			$body = substr($body,0,$end_pos);
-			($title) = $body =~ /<h2.*?>(.+?)<\/h2>/s;
-			($desc) = $body =~ /<h3.+?>(.+?)<\/h3>/s;
-			($desc) = $body =~ /<div class=".+?subtitle">(.+?)<\//s if (!$desc);
-			my ($duration) = $body =~ /<div class=".+?duration">(.+?)<\/div/s;
-			my ($h,$m) = (0,0);
-			if ($duration =~ /h/) {
-				($h,$m) = $duration =~ /(\d+) ?h ?(\d+)/;
-				($h) = $duration =~ /(\d+) ?h/ if (!$h);
-			}
-			$duration =~ /(\d+) ?m/;
-			$m = $1 if (!$m);
-			$end = $start + $h*3600+$m*60;
-			my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start+3600);
-			$date = sprintf("$mday/%d/%d",$mon+1,$year+1900);
-			my ($args) = $body =~ /<img(.+?)>/s;
-			if ($args) {
-				# pas d'images sur france culture !
-				$args =~ s/dejavu-src="(.+?)"//;
-				$img = $1;
-				$args =~ s/src="(.+?)"//;
-				$img = $1 if (!$img);
-			}
-			# et sur fculture y a des retours à la ligne et des espaces en
-			# trop dans les champs donc faut un peu filtrer...
-			$title =~ s/[\r\n]//g;
-			$desc =~ s/[\r\n]//g;
-			$title =~ s/^ +//;
-			$desc =~ s/^ +//;
-		} elsif ($instr eq "li") { # fbleu
-			next if ($sub !~ /class="emission/);
-			my $body = substr($l,$sub_pos+1);
-			my $end_pos = find_closing_tag($body,0,"li");
-			my ($time,$date) = $p->init_time();
-			$body = substr($body,0,$end_pos);
-			my ($hd,$hf) = $body =~ /div class="quand">(\d+h\d+).+?- (\d+h\d+)/s;
-			($title) = $body =~ /h3 class="titre">(.+?)<\/h3/;
-			my ($h,$m) = split(/h/,$hd);
-			$start = $time + $h*3600+$m*60;
-			($h,$m) = split(/h/,$hf);
-			$end = $time + $h*3600+$m*60;
-			$desc = "";
-			my $old_pos = $pos + $end_pos;
-			$pos = 0;
-			my $nb = 0;
-			while (($pos = index($body,'<li class="chronique',$pos+1)) >= 0) {
-				$end_pos = find_closing_tag($body,$pos+2,"li");
-				my $chro = substr($body,$pos,$end_pos-$pos);
-				$desc .= "$1 " if ($chro =~ /div class="horaire".+?(\d+h\d+)/s);
-				$desc .= "$1" if ($chro =~ /p class="titre.+?>(.+?)<\/p>/);
-				$desc .= " ($1)" if ($chro =~ /class="titre">(.+?)<\/a/);
-				$desc .= "\n";
-			}
-			$pos = $old_pos;
-		} else {
-			$pos++;
-			next;
-		}
-		my @tab = (undef, $name, $title, $start,
-			$end, "",
-			$desc,
-			"","",$img,0,0,$date);
+		my @tab = (undef, $name, $title, $starttimeunix,
+			undef, # end time
+			"",
+			$subtitle,
+			undef,"",$img_url,0,0,$date);
 		$p->insert(\@tab,$rtab,600);
-		$prev_start = $start;
-		($title,$start,$end,$desc,$img) = undef;
-		$date = undef if (!$keep_date);
-		redo;
 	}
-	$rtab;
+	return $rtab;
+}
+
+# ── Helpers ──────────────────────────────────────────────────────────────────
+sub _clean_html {
+    my ($s) = @_;
+    $s =~ s/<[^>]+>//g;
+    $s =~ s/&amp;/&/g;
+    $s =~ s/&lt;/</g;
+    $s =~ s/&gt;/>/g;
+    $s =~ s/&quot;/"/g;
+    $s =~ s/&#039;/'/g;
+	# the next line if uncommented breaks utf8 encoding!
+	#    $s =~ s/\s+/ /g;
+    $s =~ s/^\s+|\s+$//g;
+    $s;
 }
 
 1;

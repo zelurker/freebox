@@ -321,6 +321,14 @@ sub get_cache($) {
 		# on cache dans nom_du_serveur/path/file c'est le mieux
 		my $base = $1;
 		$file = $2;
+		if ($file eq "400") {
+			# Exception pour les images fixes à 400 !
+			$base =~ /(.+\/)(.+)/;
+			$base = $1;
+			$file = $2;
+			$file =~ s/\/$//;
+			$file .= ".webp";
+		}
 		if ($file =~ /^\d+x\d+$/) { # finit par une taille d'image sans extension, france inter 2026... !
 			my @bout = split /\//,$pic;
 			$file = $bout[$#bout-1]."-".$bout[$#bout].".webp"; # colle les 2 dernières parties ensemble
