@@ -1,60 +1,13 @@
 package progs::html::finter;
 
-use HTML::Entities;
 use Time::Local qw(timelocal_nocheck timegm_nocheck);
-use Cpanel::JSON::XS qw(decode_json);
 use common::sense;
-use Data::Dumper;
 use myutf;
-
-sub get_tag {
-	my ($s,$t) = @_;
-	if ($s =~ /$t"?="(.+?)"/) { # la version normale, avec des "
-		return $1;
-	}
-	if ($s =~ /$t"?="?(.+?)"?([ >]|$)/) { # sinon on essaye de deviner !
-		return $1;
-	}
-	undef;
-}
-
-sub find_closing_tag {
-	my ($body,$pos,$tag) = @_;
-	my $level = 1;
-	while ($level && ($pos = index($body,$tag,$pos+1))>=0) {
-		if (substr($body,$pos-2,2) eq "</") {
-			$level--;
-		} elsif (substr($body,$pos-1,1) eq "<") {
-			$level++;
-		}
-	}
-	$pos;
-}
 
 sub disp_date {
 	my $start = shift;
 	my ($sec,$min,$hour,$mday,$mon,$year) = localtime($start);
 	return sprintf("%d/%d/%d %02d:%02d",$mday,$mon+1,$year+1900,$hour,$min);
-}
-
-sub check_start {
-	my ($ref, $prev_start) = @_;
-	# les programmes de la nuit de finter sont pétés en avril 22, les
-	# heures indiquent l'heure de la 1ère diffusion pour les redifs !
-	if ($$ref < $prev_start-3600) {
-		# on teste avec prev_start-3600 parce qu'ils collent leur playlist
-		# de la nuit comme bouche trou si il reste de la place, mais vu
-		# qu'on est obligé de mettre 1h pour chaque programme, y a des
-		# jours où il en reste pas, elle doit être plutôt courte cette
-		# playlist... !
-		my ($sec,$min,$hour,$mday,$mon,$year) = localtime($prev_start+3600);
-		if ($hour == 0 && $min == 0) { # journal de 23h, c'est encore pire !
-			($sec,$min,$hour,$mday,$mon,$year) = localtime($prev_start+15*60); # on dit 23h15 pour le suivant ? C'est variable, mais si c'est pas indiqué... !
-			$$ref = timelocal_nocheck(0,$min,$hour,$mday,$mon,$year);
-			return;
-		}
-		$$ref = timelocal_nocheck(0,5,$hour,$mday,$mon,$year);
-	}
 }
 
 sub decode_html {
