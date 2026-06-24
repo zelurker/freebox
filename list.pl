@@ -1751,6 +1751,11 @@ sub commands {
 	} elsif ($cmd eq "reject") {
 		my $file = $list[$found][0][2];
 		print "fichier à effacer $file\n";
+		if ($file eq "." || $file eq "..") {
+			say "refusé";
+			return;
+		}
+		exit(0);
 		if ($source =~ /^(Fichiers|Enregistrements|livetv)/) {
 			$conf{"sel_$source"} = $found; # garde le même index après read_list
 			if (-d "$file") {
