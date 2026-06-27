@@ -12,6 +12,8 @@ sub disp_date {
 
 sub decode_html {
 	my ($p,$l,$name,$date) = @_;
+	# c'est à moitié con, la date passée est au format localtime, mais la date à stocker pour le prog doit être au format j/m/a. get_date de finter fait ça très bien.
+	$date = $p->get_date($date);
 	my $rtab = [];
 	my $pos = 0;
 	my $prev_start;
