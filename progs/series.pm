@@ -51,6 +51,7 @@ sub get {
 	return undef if ($source !~ /Fichiers v/);
 
 	$channel =~ s/\[.+\] ?//g;
+	$channel =~ s/\(.+?\) //g;
 	if ($channel !~ /^(.+)[ \.]s(\d+)e(\d+)/i) {
 		print STDERR "series: format de nom incorrect $channel\n";
 		return undef;
