@@ -306,16 +306,12 @@ sub getListeChaines_tloisir {
 		next if ($info =~ /seeMore/);
 		my $id = get_tag_value($info,"data-channelId");
 		my $slug = get_tag_value($info,"data-channelSlug");
-		say "id $id slug $slug";
 		my %hash = get_tag($info,"a");
-		say "prog ",$hash{href}," title ",$hash{title};
 		my ($logo) = $info =~ /: url\((.+?)\);/;
-		say "logo $logo";
 		$hash{title} = decode_entities($hash{title});
 		$chan{lc($hash{title})} = [$id,$logo,$hash{title},$ordre{$id},$hash{href}];
 	}
 	my @keys = keys %chan;
-	say "keys $#keys";
 
 	return \%chan;
 }
