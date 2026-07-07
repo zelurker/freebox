@@ -30,7 +30,7 @@ sub dateheure {
 
 sub core {
 	my $sub = shift;
-	print dateheure($$sub[3]),"  ",dateheure($$sub[4])," $$sub[2] desc:$$sub[6] dtails:$$sub[7]\n";
+	print dateheure($$sub[3]),"  ",dateheure($$sub[4])," $$sub[2] desc:$$sub[6] dtails:$$sub[7] date:$$sub[12]\n";
 	if ($$sub[9] && !$show) {
 		$show = 1;
 		my $c = chaines::request($$sub[9]);
