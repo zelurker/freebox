@@ -5,40 +5,16 @@ Accent 4
 http://str0.creacast.com/accent4
 Ado
 http://start-adofm.ice.infomaniak.ch/start-adofm-high.mp3
-Alouette
-http://www.alouette.fr/alouette.m3u http://www.alouette.fr/zenon/xml_out/alouette_onair_drupal.php
-Alpes 1
-http://alpes1gap.ice.infomaniak.ch/alpes1gap-high.mp3 http://grandgrenoble.alpes1.com/winradio/prog.xml
 Alternantes
 http://diffusion.lafrap.fr/alternantes.mp3
-BFM Business
-https://hls-bfmbusiness.nextradiotv.com/ssai/128k/media.m3u8?aggregator=BFMBusiness_audio_web%20%20%20%20%20%20%20%20&bpkio_serviceid=7de32147a4f1055ba7b4ea40ecb88c41&bpkio_sessionid=10d0d14c194-974fe608-1592-48c7-856c-70c5ee8a98ed&category=all&channel_name=BFMBusiness&delivery=progressive&dmp_segment=%20%20%20%20%20%20%20%20&env=%20%20%20%20%20%20%20%20&gdpr=%20%20%20%20%20%20%20%20&gdpr_consent=%20%20%20%20%20%20%20%20&genre=Business&listenerid=98e3f048-7a1b-5df3-a83c-467b82aca10aELID&lmt=0&mm_sp&player_name=BFMBusiness_audio_web&sessionid=98e3f048-7a1b-5df3-a83c-467b82aca10aELID&skip_ads=0&url=https%3A//www.bfmtv.com/economie/en-direct/bfmbusiness-radio/%20%20%20%20%20%20%20%20&lid=98e3f048-7a1b-5df3-a83c-467b82aca10aELID&CMSD=tb%3D224448%26ot%3Dm%26sf%3Dh%26b%3D224448
 Bide et Musique
 http://www.bide-et-musique.com/playlist-hq.m3u
 C9 Radio
 http://stream.c9.fr/c9.mp3
 Chérie FM
 https://streaming.nrjaudio.fm/ou2n2epw5hs7?origine=playercherie&aw_0_req.userConsentV2=&aw_0_1st.station=
-Chérie ZEN
-http://cdn.nrjaudio.fm/adwz1/fr/30203/aac_64.mp3?awparams=companionAds:true;playerid:CHERIE-ZEN&origine=playercherie
-Chérie POP
-http://cdn.nrjaudio.fm/adwz1/fr/56237/aac_64.mp3?awparams=companionAds:true;playerid:CHERIE-POP-LOVE&origine=playercherie
-Chérie love songs
-http://cdn.nrjaudio.fm/adwz1/fr/30207/aac_64.mp3?awparams=companionAds:true;playerid:CHERIE-LOVE-SONGS&origine=playercherie
-Contact
-http://radio-contact.ice.infomaniak.ch/radio-contact-high.mp3
-Euradio Nantes
-http://80.82.229.202/euradio.mp3
 FG
 https://radiofg.impek.com/fg.mp3
-FG Chic
-http://www.radiofg.com/streams/fgc.pls
-FG Deep Dance
-http://www.radiofg.com/streams/fgd.pls
-FG Underground
-http://www.radiofg.com/streams/fgu.pls
-FG Starter
-http://www.radiofg.com/streams/fgv.pls
 FIP
 http://direct.fipradio.fr/live/fip-midfi.mp3
 France bleu Gascogne
@@ -53,24 +29,8 @@ France Inter
 https://stream.radiofrance.fr/franceinter/franceinter_hifi.m3u8?id=radiofrance
 France Musique
 http://direct.francemusique.fr/live/francemusique-midfi.mp3
-Frequence Terre
-http://sv3.vestaradio.com:8010/;stream.mp3
 Generations
 http://generationfm.ice.infomaniak.ch/generationfm-high.mp3
-Hit West
-http://broadcast.infomaniak.ch/hitwest-high.mp3
-Hot Mix Radio - 80
-http://www.hotmixradio.fr/stream/hotmix80.m3u
-Hot Mix Radio - 90
-http://www.hotmixradio.fr/stream/hotmix90.m3u
-Hot Mix Radio - 100% Hits
-http://www.hotmixradio.fr/stream/hotmixHIT.m3u
-Hot Mix Radio - Funky
-http://www.hotmixradio.fr/stream/funky.m3u
-Hot Mix Radio - House Dance
-http://www.hotmixradio.fr/stream/hotmix.m3u
-Hot Mix Radio - Rock & Pop
-http://www.hotmixradio.fr/stream/hotmixrock.m3u
 Jazz Radio
 http://jazzradio.ice.infomaniak.ch/jazzradio-high.mp3
 Kif Cool
@@ -79,14 +39,6 @@ La Grosse Radio
 http://www.lagrosseradio.com/son/stream/192.m3u
 Le Mouv'
 http://direct.mouv.fr/ts/mouv-midfi.mp3
-M2 Radio - Chillout
-http://www.m2radio.fr/pls/m2chillout_winamp.m3u
-M2 Radio - Love
-http://www.m2radio.fr/pls/m2love_winamp.m3u
-M2 Radio - Sunshine
-http://www.m2radio.fr/pls/m2sunshine.m3u
-Maxi 80
-http://www.maxi80.com/ecoute/maxi80.m3u
 MFM
 http://mfm.ice.infomaniak.ch/mfm-128.mp3
 MFM 100% Enfoirés
@@ -99,10 +51,6 @@ MFM Culte 80 90
 http://mfmwr-016.ice.infomaniak.ch/mfmwr-010.mp3
 NRJ
 http://cdn.nrjaudio.fm/audio1/fr/30001/mp3_128.mp3?origine=frequence-radio
-Nostalgie
-http://cdn.nrjaudio.fm/audio1/fr/30601/mp3_128.mp3?origine=fluxradio
-Nostalgie Légendes
-http://cdn.nrjaudio.fm/adwz1/fr/55196/aac_64.mp3?awparams=companionAds%3Atrue;playerid:Nostalgie-Legendes&origine=playerweb
 Oui FM
 http://ouifm.ice.infomaniak.ch/ouifm-high.mp3
 Oui FM Alternatif
@@ -111,8 +59,6 @@ Oui FM Collector
 http://ouifm3.ice.infomaniak.ch/ouifm3.mp3
 Oui FM Indé
 http://ouifm5.ice.infomaniak.ch/ouifm5.aac
-Prun
-http://streaming.prun.net/streamprun
 Puls Radio
 http://www.pulsradio.com/pls/puls-adsl.m3u
 Puls Radio - Version 8.0
@@ -121,8 +67,6 @@ Puls Radio - Version 9.0
 http://www.pulsradio.com/pls/pulsV90-adsl.m3u
 Puls Radio - Version Trance
 http://www.pulsradio.com/pls/pulstrance-adsl.m3u
-Radio Bresse
-http://91.121.62.121:7350/;
 Radio Classique
 http://players.creacast.com/creacast/classique/playlist.pls
 R'courchevel
@@ -141,14 +85,6 @@ RFM 80's
 https://rfm.lmn.fm/rfm-wr4.aac
 RFM Collector
 https://rfm.lmn.fm/rfm-wr1.aac
-RMC
-http://rmcinfo.cdn.dvmr.fr/rmcinfo
-RTL
-http://streaming.radio.rtl.fr/rtl-1-44-128 http://radio.rtl.fr/live.js
-RTL 2
-http://streaming.radio.rtl2.fr/rtl2-1-44-128 http://radio.rtl2.fr/player.js
-Sun
-http://80.82.229.202/sunhd.mp3
 Top Music
 http://players.creacast.com/creacast/topmusic/playlist.m3u
 Vibration
