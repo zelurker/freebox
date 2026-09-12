@@ -126,6 +126,7 @@ my %icons = (
   "Radio Intensite" => "http://www.le28.com/images/bann/logo_intensite_v.gif",
   "Radio Junior" => "http://img.over-blog-kiwi.com/1/05/32/00/20150204/ob_bc0701_23158085logo-radio-junior-jpg.jpg",
   "Radio Latina" => "http://www.latina.fr/images/header/latina_premium.png",
+  "Radio Nova" => "https://www.nova.fr/wp-content/uploads/sites/2/2025/05/logo-t-1700x1030-3.png",
   "Radio Pulsar" => "http://www.bestseller-consulting.com/images/Image/Image/Logos/radio-pulsar1.jpg",
   "Radio RDL" => "https://ecouter.lesindesradios.net/logos/orange83.png",
   "Radio TeenTall" => "http://1.bp.blogspot.com/-skx7uKgFTD8/ULssmGzHcOI/AAAAAAAAAm4/suGjz-QaXvQ/s1600/RADIO%252BTEENTALL.jpg",
