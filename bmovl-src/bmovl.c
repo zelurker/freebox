@@ -1096,7 +1096,8 @@ static void handle_event(SDL_Event *event) {
 	    case SDL_WINDOWEVENT_HIT_TEST: printf("bmovl: hit test\n"); break;
 	    }
 	}
-	if (event->type != 0x200 && (event->type < 0x300 || event->type > 0x310))
+	if (event->type != 0x200 && (event->type < 0x300 || event->type > 0x310)  // skip key events
+	       	&& (event->type < 0x400 || event->type > 0x410)) // and mouse events
 	    printf("bmovl: event type %x\n",event->type);
 	return;
     }
