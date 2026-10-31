@@ -866,6 +866,13 @@ int clear(int fifo, int argc, char **argv)
 {
 	char buff[2048];
 	sprintf(buff,"CLEAR %s %s %s %s\n",argv[1],argv[2],argv[3],argv[4]);
+	if (sf_list && atoi(argv[1]) == listx && atoi(argv[2]) == listy) {
+	    SDL_FreeSurface(sf_list);
+	    sf_list = NULL;
+	} else if (sf && atoi(argv[1]) == infox && atoi(argv[2]) == infoy) {
+	    SDL_FreeSurface(sf);
+	    sf = NULL;
+	}
 	return send_command(fifo, buff) != ((int)strlen(buff));
 }
 
@@ -1050,6 +1057,7 @@ static int numero(int fifo, int argc, char **argv) {
 }
 
 static void handle_event(SDL_Event *event) {
+    FILE *f;
     if (!nb_keys) read_inputs();
 #ifndef SDL1
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_EXPOSED) {
@@ -1066,7 +1074,15 @@ static void handle_event(SDL_Event *event) {
 	    case SDL_WINDOWEVENT_SHOWN: printf("bmovl: window shown\n"); break;
 	    case SDL_WINDOWEVENT_HIDDEN: printf("bmovl: window hidden\n"); break;
 	    case SDL_WINDOWEVENT_MOVED: printf("bmovl: window moved\n"); break;
-	    case SDL_WINDOWEVENT_RESIZED: printf("bmovl: window resized\n"); break;
+	    case SDL_WINDOWEVENT_RESIZED: printf("bmovl: window resized\n");
+					 desktop_w = event->window.data1;
+					 desktop_h = event->window.data2;
+					 f = fopen("desktop","w");
+					 if (f) {
+					     fprintf(f,"%d\n%d\n",desktop_w,desktop_h);
+					     fclose(f);
+					 }
+					 break;
 	    case SDL_WINDOWEVENT_SIZE_CHANGED: printf("bmovl size changed\n"); break;
 	    case SDL_WINDOWEVENT_MINIMIZED: printf("bmovl: minimized\n"); break;
 	    case SDL_WINDOWEVENT_MAXIMIZED: printf("bmovl maximized\n"); break;
@@ -1461,10 +1477,6 @@ int main(int argc, char **argv) {
 	/* On ouvre une fenêtre quoi qu'il arrive. Ca sert de filtre de
 	 * commandes pour mplayer pour les cas où c'est un flux sans video */
 	init_video();
-	int x,y,w,h;
-	SDL_GetWindowSize(sdl_screen,&w,&h);
-	SDL_GetWindowPosition(sdl_screen,&x,&y);
-	printf("window après création: %d,%d,%d,%d\n",x,y,w,h);
 	TTF_Init();
 
 	while (1) {
