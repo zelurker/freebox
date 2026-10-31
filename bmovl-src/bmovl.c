@@ -39,6 +39,7 @@ static SDL_Texture *pic;
 #endif
 static int must_clear_screen;
 static SDL_Surface *sf;
+static SDL_Surface *sf_list;
 
 static void clear_screen() {
     if (sdl_screen) {
@@ -171,6 +172,32 @@ static SDL_Surface *extend_surface(SDL_Surface *s) {
     }
     return s;
 }
+
+#ifndef SDL1
+static void redraw_screen() {
+    if (sf_list) {
+	FILE *f = fopen("list_coords","r");
+	if (f) {
+	    fclose(f);
+	    blit(fifo, sf_list, listx, listy, -40, 1,0);
+	    printf("redraw_screen list\n");
+	}
+    }
+    if (*bg_pic) {
+	image(1,NULL,0);
+	printf("redraw_screen image\n");
+    }
+    if (sf) {
+	FILE *f = fopen("info_coords","r");
+	if (f) {
+	    fclose(f);
+	    blit(fifo, sf, infox, infoy, -40, 0,1);
+	    printf("redraw_screen infos %d,%d,%d,%d\n",infox,infoy,sf->w,sf->h);
+	}
+    }
+    SDL_RenderPresent(renderer);
+}
+#endif
 
 static int info(int fifo, int argc, char **argv)
 {
@@ -446,7 +473,7 @@ static int info(int fifo, int argc, char **argv)
 	    if (oldh > sf->h) {
 		char buff[2048];
 		sprintf(buff,"CLEAR %d %d %d %d\n",oldw,oldh-sf->h,oldx,oldy);
-		printf("info: %s",buff);
+		printf("bmovl: %s",buff);
 		send_command(fifo, buff);
 	    }
 	}
@@ -482,8 +509,6 @@ static int disp_list(SDL_Surface *sf, TTF_Font *font, int x, int y, char *list,
 	dy = put_string(sf,font,x,y,list,col,NULL);
     return dy;
 }
-
-static SDL_Surface *sf_list;
 
 static int list(int fifo, int argc, char **argv)
 {
@@ -1024,33 +1049,11 @@ static int numero(int fifo, int argc, char **argv) {
     return 0;
 }
 
-#ifndef SDL1
-static void redraw_screen() {
-    if (sf_list) {
-	FILE *f = fopen("list_coords","r");
-	if (f) {
-	    fclose(f);
-	    blit(fifo, sf_list, listx, listy, -40, 1,0);
-	}
-    }
-    if (*bg_pic) {
-	image(1,NULL,0);
-    }
-    if (sf) {
-	FILE *f = fopen("info_coords","r");
-	if (f) {
-	    fclose(f);
-	    blit(fifo, sf, infox, infoy, -40, 0,1);
-	}
-    }
-    SDL_RenderPresent(renderer);
-}
-#endif
-
 static void handle_event(SDL_Event *event) {
     if (!nb_keys) read_inputs();
 #ifndef SDL1
     if (event->type == SDL_WINDOWEVENT && event->window.event == SDL_WINDOWEVENT_EXPOSED) {
+	printf("bmovl: exposed event\n");
 	redraw_screen();
 	return;
     }
@@ -1059,7 +1062,26 @@ static void handle_event(SDL_Event *event) {
     if (event->type != SDL_KEYDOWN) {
 	if (event->type == SDL_WINDOWEVENT) {
 	    last_win = event->window.timestamp;
+	    switch(event->window.event) {
+	    case SDL_WINDOWEVENT_SHOWN: printf("bmovl: window shown\n"); break;
+	    case SDL_WINDOWEVENT_HIDDEN: printf("bmovl: window hidden\n"); break;
+	    case SDL_WINDOWEVENT_MOVED: printf("bmovl: window moved\n"); break;
+	    case SDL_WINDOWEVENT_RESIZED: printf("bmovl: window resized\n"); break;
+	    case SDL_WINDOWEVENT_SIZE_CHANGED: printf("bmovl size changed\n"); break;
+	    case SDL_WINDOWEVENT_MINIMIZED: printf("bmovl: minimized\n"); break;
+	    case SDL_WINDOWEVENT_MAXIMIZED: printf("bmovl maximized\n"); break;
+	    case SDL_WINDOWEVENT_RESTORED: printf("bmovl: restored\n"); break;
+	    case SDL_WINDOWEVENT_ENTER: printf("bmovl: window enter\n"); break;
+	    case SDL_WINDOWEVENT_LEAVE: printf("bmovl: leave\n"); break;
+	    case SDL_WINDOWEVENT_FOCUS_GAINED: printf("bmovl: focus gained\n"); break;
+	    case SDL_WINDOWEVENT_FOCUS_LOST: printf("bmovl: focus lost\n"); break;
+	    case SDL_WINDOWEVENT_CLOSE: printf("bmovl: close\n"); exit(1); break;
+	    case SDL_WINDOWEVENT_TAKE_FOCUS: printf("bmovl: take focus\n"); break;
+	    case SDL_WINDOWEVENT_HIT_TEST: printf("bmovl: hit test\n"); break;
+	    }
 	}
+	if (event->type != 0x200 && (event->type < 0x300 || event->type > 0x310))
+	    printf("bmovl: event type %x\n",event->type);
 	return;
     }
     int input = event->key.keysym.sym;
@@ -1439,6 +1461,10 @@ int main(int argc, char **argv) {
 	/* On ouvre une fenêtre quoi qu'il arrive. Ca sert de filtre de
 	 * commandes pour mplayer pour les cas où c'est un flux sans video */
 	init_video();
+	int x,y,w,h;
+	SDL_GetWindowSize(sdl_screen,&w,&h);
+	SDL_GetWindowPosition(sdl_screen,&x,&y);
+	printf("window après création: %d,%d,%d,%d\n",x,y,w,h);
 	TTF_Init();
 
 	while (1) {
@@ -1501,9 +1527,9 @@ int main(int argc, char **argv) {
 		} else if (!strcmp(cmd,"list-noinfo") || !strcmp(cmd,"fsel") ||
 			!strcmp(cmd,"mode_list") || !strcmp(cmd,"longlist")) {
 		    list(fifo,argc,myargv);
-		} else if (!strcmp(cmd,"CLEAR"))
+		} else if (!strcmp(cmd,"CLEAR")) {
 		    clear(fifo,argc,myargv);
-		else if (!strcmp(cmd,"ALPHA"))
+		} else if (!strcmp(cmd,"ALPHA"))
 		    alpha(fifo,argc,myargv);
 		else if (!strcmp(cmd,"image"))
 		    image(argc,myargv,1);
@@ -1519,6 +1545,10 @@ int main(int argc, char **argv) {
 	    }
 	    close(server);
 	    server = 0;
+#ifndef SDL1
+	    if (!fifo)
+		redraw_screen();
+#endif
 	}
 	// never reach this point
 	// TTF_Quit();

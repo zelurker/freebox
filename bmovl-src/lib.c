@@ -132,7 +132,7 @@ void init_video() {
 	    0,
 	    0,
 	    mode.w, mode.h,
-	    SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_BORDERLESS);
+	    SDL_WINDOW_SHOWN | SDL_WINDOW_MAXIMIZED | SDL_WINDOW_BORDERLESS |SDL_WINDOW_RESIZABLE);
     renderer = SDL_CreateRenderer(sdl_screen, -1, 0);
     SDL_Rect r;
     SDL_RenderGetViewport(renderer,&r);
@@ -245,7 +245,7 @@ blit(int fifo, SDL_Surface *bmp, int xpos, int ypos, int alpha, int clear, int i
 	// il faut initialiser w & h ici
 	r.w = bmp->w; r.h = bmp->h;
 	SDL_RenderCopy(renderer,tex,NULL,&r);
-	SDL_RenderPresent(renderer);
+	// SDL_RenderPresent(renderer);
 	SDL_DestroyTexture(tex);
 #endif
     } else if (!mpv) {
@@ -311,7 +311,8 @@ int send_command(int fifo,char *cmd) {
 	    if (mpv < 0) {
 		SDL_SetRenderDrawColor(renderer,0,0,0,SDL_ALPHA_OPAQUE);
 		SDL_RenderFillRect(renderer,&r);
-		SDL_RenderPresent(renderer);
+		// printf("renderpresent from send_command\n");
+		// SDL_RenderPresent(renderer);
 	    }
 #endif
 	    if (mpv == 0) {
