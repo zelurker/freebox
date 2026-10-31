@@ -1256,6 +1256,11 @@ sub check_player2 {
 				$child_checker = undef;
 				my $send_list = (-f "video_size");
 				unlink("fifo","fifo_cmd","mpvsocket","video_size");
+				# Alors c pas top comme méthode de synchro. Il n'y a plus vraiment de synchro avec la socket mpv en fait...
+				# Si la synchro foire c pas un drame, la fenêtre apparaitra peut-être trop petite si elle n'a pas la même taille que la fenêtre vidéo
+				# dans ce cas là toute commande comme bas ou haut lui fera reprendre sa taille normale
+				# 0.1s ça marche bien sur mon micro principal avec hyprland qui lui n'a pas la même taille de fenêtre
+				usleep(100000); # microseconds !!!
 				commands(\*STDERR,"list") if ($send_list);
 			}
 		});
@@ -1755,7 +1760,6 @@ sub commands {
 			say "refusé";
 			return;
 		}
-		exit(0);
 		if ($source =~ /^(Fichiers|Enregistrements|livetv)/) {
 			$conf{"sel_$source"} = $found; # garde le même index après read_list
 			if (-d "$file") {
