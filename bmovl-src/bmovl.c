@@ -69,12 +69,24 @@ static void clear_screen() {
  * mplayer peut quitter pendant qu'une commande est en cours, dans ce cas là
  * pour ne pas rester bloqué en lecture rien de mieux que le signal */
 static void disconnect(int signal) {
+    printf("disconnect %d\n",fifo);
     if (!fifo) return;
     close(fifo);
     must_clear_screen = 1; // pas d'appel direct, ça freeze des fois
 
     fifo = 0;
     unlink("video_size");
+    FILE *f = fopen("desktop","r");
+    if (f) {
+	printf("disconnect: re-read desktop\n");
+	unsigned char buf[20];
+	myfgets(buf,20,f);
+	desktop_w = atoi((char*)buf);
+	myfgets(buf,20,f);
+	desktop_h = atoi((char*)buf);
+	fclose(f);
+	printf("relecture %d,%d\n",desktop_w,desktop_h);
+    }
 }
 
 static void myalarm(int signal) {
@@ -180,19 +192,16 @@ static void redraw_screen() {
 	if (f) {
 	    fclose(f);
 	    blit(fifo, sf_list, listx, listy, -40, 1,0);
-	    printf("redraw_screen list\n");
 	}
     }
     if (*bg_pic) {
 	image(1,NULL,0);
-	printf("redraw_screen image\n");
     }
     if (sf) {
 	FILE *f = fopen("info_coords","r");
 	if (f) {
 	    fclose(f);
 	    blit(fifo, sf, infox, infoy, -40, 0,1);
-	    printf("redraw_screen infos %d,%d,%d,%d\n",infox,infoy,sf->w,sf->h);
 	}
     }
     SDL_RenderPresent(renderer);
