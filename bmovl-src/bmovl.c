@@ -1080,10 +1080,11 @@ static void handle_event(SDL_Event *event) {
 	if (event->type == SDL_WINDOWEVENT) {
 	    last_win = event->window.timestamp;
 	    switch(event->window.event) {
+		/*
 	    case SDL_WINDOWEVENT_SHOWN: printf("bmovl: window shown\n"); break;
 	    case SDL_WINDOWEVENT_HIDDEN: printf("bmovl: window hidden\n"); break;
-	    case SDL_WINDOWEVENT_MOVED: printf("bmovl: window moved\n"); break;
-	    case SDL_WINDOWEVENT_RESIZED: printf("bmovl: window resized\n");
+	    case SDL_WINDOWEVENT_MOVED: printf("bmovl: window moved\n"); break; */
+	    case SDL_WINDOWEVENT_RESIZED: // printf("bmovl: window resized\n");
 					 desktop_w = event->window.data1;
 					 desktop_h = event->window.data2;
 					 f = fopen("desktop","w");
@@ -1092,7 +1093,7 @@ static void handle_event(SDL_Event *event) {
 					     fclose(f);
 					 }
 					 break;
-	    case SDL_WINDOWEVENT_SIZE_CHANGED: printf("bmovl size changed\n"); break;
+/*	    case SDL_WINDOWEVENT_SIZE_CHANGED: printf("bmovl size changed\n"); break;
 	    case SDL_WINDOWEVENT_MINIMIZED: printf("bmovl: minimized\n"); break;
 	    case SDL_WINDOWEVENT_MAXIMIZED: printf("bmovl maximized\n"); break;
 	    case SDL_WINDOWEVENT_RESTORED: printf("bmovl: restored\n"); break;
@@ -1102,7 +1103,7 @@ static void handle_event(SDL_Event *event) {
 	    case SDL_WINDOWEVENT_FOCUS_LOST: printf("bmovl: focus lost\n"); break;
 	    case SDL_WINDOWEVENT_CLOSE: printf("bmovl: close\n"); exit(1); break;
 	    case SDL_WINDOWEVENT_TAKE_FOCUS: printf("bmovl: take focus\n"); break;
-	    case SDL_WINDOWEVENT_HIT_TEST: printf("bmovl: hit test\n"); break;
+	    case SDL_WINDOWEVENT_HIT_TEST: printf("bmovl: hit test\n"); break; */
 	    }
 	}
 	if (event->type != 0x200 && (event->type < 0x300 || event->type > 0x310)  // skip key events
